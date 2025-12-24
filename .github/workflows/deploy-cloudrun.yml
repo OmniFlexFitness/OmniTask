@@ -6,7 +6,7 @@ on:
       - live
 
 env:
-  PROJECT_ID: omniflex-b6099
+  PROJECT_ID: omnitask-475422
   REGION: us-east1
   SERVICE_NAME: omnitask
   ARTIFACT_REGISTRY: us-east1-docker.pkg.dev
