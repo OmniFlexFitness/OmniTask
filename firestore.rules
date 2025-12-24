@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated and part of OmniFlex workspace
+    function isAuthenticated() {
+      return request.auth != null; // TODO: Add domain check specifically if needed
+    }
+
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Refine later for Admin/Owner
+    }
+    
+    match /tasks/{taskId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
