@@ -31,7 +31,7 @@ export class AuthService {
   async loginWithGoogle() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({
-      hd: 'omniflex.com' // Hint to prompt for specific domain, but we must verify manually too
+      hd: 'omniflexfitness.com' // Hint to prompt for omniflexfitness.com domain
     });
 
     try {
@@ -40,9 +40,9 @@ export class AuthService {
       
       // Strict Domain Check
       // In a real app, this should also be enforced by Firebase Security Rules or Blocking Functions
-      if (!user.email?.endsWith('@omniflex.com')) {
+      if (!user.email?.endsWith('@omniflexfitness.com')) {
          await this.auth.signOut();
-         throw new Error('Unauthorized Access: OmniFlex account required.');
+         throw new Error('Unauthorized Access: OmniFlexFitness account required.');
       }
 
       await this.updateUserData(user);
@@ -67,7 +67,7 @@ export class AuthService {
       email: user.email!,
       displayName: user.displayName || 'User',
       photoURL: user.photoURL || '',
-      domain: 'omniflex.com',
+      domain: 'omniflexfitness.com',
       role: snap.exists() ? (snap.data() as UserProfile).role : 'user', // Default to user, preserve if exists
       createdAt: snap.exists() ? (snap.data() as UserProfile).createdAt : new Date(),
       lastLoginAt: new Date()

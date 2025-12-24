@@ -10,12 +10,13 @@ import { routes } from './app.routes';
 
 // Firebase configuration for OmniTask
 const firebaseConfig = {
-  apiKey: "AIzaSyD0ahULd8Yz3Mq5fVqgw06xeEOH535BQQ0",
-  authDomain: "omnitask-omniflex.firebaseapp.com",
-  projectId: "omnitask-omniflex",
-  storageBucket: "omnitask-omniflex.firebasestorage.app",
-  messagingSenderId: "636392647098",
-  appId: "1:636392647098:web:ace2826a941737dd0f1583"
+  apiKey: "AIzaSyDouVaWti7K0ZD8O8ql4gHW7x54CmJHnPE",
+  authDomain: "omniflex-b6099.firebaseapp.com",
+  projectId: "omniflex-b6099",
+  storageBucket: "omniflex-b6099.firebasestorage.app",
+  messagingSenderId: "843761856237",
+  appId: "1:843761856237:web:f15275ce02da8d26d0e6e4",
+  measurementId: "G-TS15N0RE9S"
 };
 
 export const appConfig: ApplicationConfig = {
