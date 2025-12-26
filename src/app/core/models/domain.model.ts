@@ -1,5 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
 
+type FirestoreDate = Timestamp | Date;
+
 export interface Project {
   id: string;
   name: string;
@@ -16,10 +18,12 @@ export interface Task {
   title: string;
   description: string; // Markdown
   assignedToId?: string;
+  assigneeName?: string;
   status: 'todo' | 'in-progress' | 'done';
   priority: 'low' | 'medium' | 'high';
-  dueDate?: Timestamp;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  dueDate?: FirestoreDate;
+  tags?: string[];
+  createdAt: FirestoreDate;
+  updatedAt: FirestoreDate;
   googleTaskId?: string;
 }
