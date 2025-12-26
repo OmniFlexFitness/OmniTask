@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
     <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black font-sans">
       <!-- Background Image with Cyberpunk Overlay -->
       <div class="absolute inset-0 z-0 select-none">
-        <img src="assets/images/background.jpg" alt="Background" class="w-full h-full object-cover">
+        <img src="src\assets\img\marble-brand-bg.jpeg" alt="Background" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
       </div>
 
