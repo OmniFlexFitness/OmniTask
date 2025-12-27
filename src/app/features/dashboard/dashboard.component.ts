@@ -297,6 +297,7 @@ export class DashboardComponent {
       titleControl?.setValue('');
       titleControl?.markAsDirty();
       titleControl?.markAsTouched();
+      titleControl?.updateValueAndValidity();
       return;
     }
 
