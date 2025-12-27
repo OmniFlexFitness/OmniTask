@@ -54,7 +54,11 @@ const DEFAULT_PROJECT_ID = 'demo-project';
               Cancel edit
             </button>
           </div>
-          <form class="px-4 py-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4" [formGroup]="taskForm" (ngSubmit)="saveTask()">
+          <form
+            class="px-4 py-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+            [formGroup]="taskForm"
+            (ngSubmit)="saveTask()"
+          >
             <div class="col-span-1 md:col-span-2">
               <label class="block text-sm font-medium text-gray-700">Title</label>
               <input
@@ -133,7 +137,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
               <button
                 type="submit"
                 [disabled]="taskForm.invalid"
-                class="px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                class="px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ editingTaskId() ? 'Update Task' : 'Add Task' }}
               </button>
@@ -150,7 +154,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
             <span class="text-sm text-gray-500">{{ tasks().length }} tasks</span>
           </div>
           <div class="divide-y divide-gray-200" *ngIf="tasks().length; else emptyState">
-            <article class="p-4 sm:p-6" *ngFor="let task of tasks()">
+            <article class="p-4 sm:p-6" *ngFor="let task of tasks(); trackBy: trackTaskById">
               <div class="flex items-start justify-between gap-4">
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
@@ -330,6 +334,10 @@ export class DashboardComponent {
     );
   }
 
+  trackTaskById(_: number, task: Task) {
+    return task.id;
+  }
+
   startEdit(task: Task) {
     this.editingTaskId.set(task.id);
     this.taskForm.patchValue({
@@ -365,6 +373,10 @@ export class DashboardComponent {
 
   formatDate(date: Date | string | number) {
     const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return 'Unknown date';
+    }
+
     return parsedDate.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric'
