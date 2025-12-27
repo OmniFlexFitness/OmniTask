@@ -304,7 +304,10 @@ export class DashboardComponent {
       .split(',')
       .map(tag => tag.trim())
       .filter(Boolean);
-    const dueDate = formValue.dueDate ? new Date(formValue.dueDate) : undefined;
+    const dueDate =
+      typeof formValue.dueDate === 'string' && formValue.dueDate.trim()
+        ? new Date(formValue.dueDate)
+        : undefined;
     const assigneeName = formValue.assigneeName.trim();
     const description = formValue.description.trim();
 
