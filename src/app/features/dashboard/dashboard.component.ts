@@ -338,17 +338,34 @@ export class DashboardComponent {
     this.resetForm();
   }
 
+  private previousStatuses = new Map<string, Task['status']>();
+
   toggleCompletion(id: string) {
     this.tasks.update(items =>
-      items.map(task =>
-        task.id === id
-          ? {
-              ...task,
-              status: task.status === 'done' ? 'in-progress' : 'done',
-              updatedAt: new Date()
-            }
-          : task
-      )
+      items.map(task => {
+        if (task.id !== id) {
+          return task;
+        }
+
+        const isCompleting = task.status !== 'done';
+        let newStatus: Task['status'];
+
+        if (isCompleting) {
+          // Store the previous incomplete status before marking as done
+          this.previousStatuses.set(task.id, task.status);
+          newStatus = 'done';
+        } else {
+          // Restore the previous status when unchecking, defaulting to 'todo'
+          newStatus = this.previousStatuses.get(task.id) ?? 'todo';
+          this.previousStatuses.delete(task.id);
+        }
+
+        return {
+          ...task,
+          status: newStatus,
+          updatedAt: new Date()
+        };
+      })
     );
   }
 
