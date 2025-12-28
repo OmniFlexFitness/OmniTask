@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { Timestamp } from '@angular/fire/firestore';
 import { AuthService } from '../../core/auth/auth.service';
 import { Task } from '../../core/models/domain.model';
 
@@ -273,7 +274,7 @@ export class DashboardComponent {
       if (!task.dueDate || task.status === 'done') {
         return false;
       }
-      const due = new Date(task.dueDate);
+      const due = task.dueDate instanceof Timestamp ? task.dueDate.toDate() : new Date(task.dueDate);
       const now = new Date();
       const threeDaysFromNow = new Date();
       threeDaysFromNow.setDate(now.getDate() + 3);
@@ -371,8 +372,13 @@ export class DashboardComponent {
     });
   }
 
-  formatDate(date: Date | string | number) {
-    const parsedDate = new Date(date);
+  formatDate(date: Date | string | number | Timestamp) {
+    let parsedDate: Date;
+    if (date instanceof Timestamp) {
+      parsedDate = date.toDate();
+    } else {
+      parsedDate = new Date(date);
+    }
     if (Number.isNaN(parsedDate.getTime())) {
       return 'Unknown date';
     }
@@ -383,8 +389,13 @@ export class DashboardComponent {
     });
   }
 
-  private toInputDate(date: Date | string | number) {
-    const parsedDate = new Date(date);
+  private toInputDate(date: Date | string | number | Timestamp) {
+    let parsedDate: Date;
+    if (date instanceof Timestamp) {
+      parsedDate = date.toDate();
+    } else {
+      parsedDate = new Date(date);
+    }
     return parsedDate.toISOString().slice(0, 10);
   }
 
