@@ -274,7 +274,7 @@ export class DashboardComponent {
       if (!task.dueDate || task.status === 'done') {
         return false;
       }
-      const due = task.dueDate instanceof Timestamp ? task.dueDate.toDate() : new Date(task.dueDate);
+      const due = this.convertToDate(task.dueDate);
       const now = new Date();
       const threeDaysFromNow = new Date();
       threeDaysFromNow.setDate(now.getDate() + 3);
@@ -373,12 +373,7 @@ export class DashboardComponent {
   }
 
   formatDate(date: Date | string | number | Timestamp) {
-    let parsedDate: Date;
-    if (date instanceof Timestamp) {
-      parsedDate = date.toDate();
-    } else {
-      parsedDate = new Date(date);
-    }
+    const parsedDate = this.convertToDate(date);
     if (Number.isNaN(parsedDate.getTime())) {
       return 'Unknown date';
     }
@@ -390,13 +385,15 @@ export class DashboardComponent {
   }
 
   private toInputDate(date: Date | string | number | Timestamp) {
-    let parsedDate: Date;
-    if (date instanceof Timestamp) {
-      parsedDate = date.toDate();
-    } else {
-      parsedDate = new Date(date);
-    }
+    const parsedDate = this.convertToDate(date);
     return parsedDate.toISOString().slice(0, 10);
+  }
+
+  private convertToDate(date: Date | string | number | Timestamp): Date {
+    if (date instanceof Timestamp) {
+      return date.toDate();
+    }
+    return new Date(date);
   }
 
   private findTask(id: string) {
