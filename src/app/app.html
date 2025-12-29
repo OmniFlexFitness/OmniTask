@@ -1,8 +1,11 @@
-<div class="min-h-screen relative overflow-hidden text-slate-100">
-  <div class="relative z-10 flex flex-col min-h-screen">
-    <app-navbar *ngIf="auth.currentUserSig()"></app-navbar>
-    <main class="flex-1 pb-12">
-      <router-outlet></router-outlet>
-    </main>
-  </div>
+<div class="min-h-screen bg-gray-100 flex flex-col">
+  <app-navbar *ngIf="auth.currentUserSig()"></app-navbar>
+  <main class="flex-grow">
+    <router-outlet></router-outlet>
+  </main>
+  <footer class="py-2 px-4 bg-gray-100">
+    <div class="max-w-7xl mx-auto text-center">
+      <span class="text-xs text-gray-500">v{{ version() }}</span>
+    </div>
+  </footer>
 </div>
