@@ -122,7 +122,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
               <input
                 type="text"
                 formControlName="tags"
-                placeholder="Comma-separated labels (e.g., frontend, client, backlog)"
+                placeholder="Comma-separated labels (e.g. frontend, client, backlog)"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
@@ -274,15 +274,11 @@ export class DashboardComponent {
       if (!task.dueDate || task.status === 'done') {
         return false;
       }
-      const due = this.toDateValue(task.dueDate);
-      if (!due) {
-        return false;
-      }
-      const today = this.startOfDay(new Date());
-      const threeDaysFromToday = this.startOfDay(new Date());
-      threeDaysFromToday.setDate(threeDaysFromToday.getDate() + 3);
-      const dueDateOnly = this.startOfDay(due);
-      return dueDateOnly >= today && dueDateOnly <= threeDaysFromToday;
+      const due = this.convertToDate(task.dueDate);
+      const now = new Date();
+      const threeDaysFromNow = new Date();
+      threeDaysFromNow.setDate(now.getDate() + 3);
+      return due >= now && due <= threeDaysFromNow;
     }).length
   );
 
@@ -292,41 +288,18 @@ export class DashboardComponent {
     }
 
     const formValue = this.taskForm.getRawValue();
-    const title = formValue.title.trim();
-    if (!title) {
-      const titleControl = this.taskForm.get('title');
-      titleControl?.setValue('');
-      titleControl?.markAsDirty();
-      titleControl?.markAsTouched();
-      titleControl?.updateValueAndValidity();
-      return;
-    }
-
     const tags = formValue.tags
       .split(',')
       .map(tag => tag.trim())
       .filter(Boolean);
-    
-    let dueDate: Date | undefined;
-    if (typeof formValue.dueDate === 'string') {
-      const trimmed = formValue.dueDate.trim();
-      if (trimmed) {
-        const parsed = new Date(trimmed);
-        if (!Number.isNaN(parsed.getTime())) {
-          dueDate = parsed;
-        }
-      }
-    }
-    
-    const assigneeName = formValue.assigneeName.trim();
-    const description = formValue.description.trim();
+    const dueDate = formValue.dueDate ? new Date(formValue.dueDate) : undefined;
 
     const newTask: Task = {
       id: this.editingTaskId() ?? crypto.randomUUID(),
       projectId: DEFAULT_PROJECT_ID,
-      title,
-      description,
-      assigneeName: assigneeName || undefined,
+      title: formValue.title,
+      description: formValue.description,
+      assigneeName: formValue.assigneeName || undefined,
       status: formValue.status,
       priority: formValue.priority,
       dueDate,
@@ -348,34 +321,17 @@ export class DashboardComponent {
     this.resetForm();
   }
 
-  private previousStatuses = new Map<string, Task['status']>();
-
   toggleCompletion(id: string) {
     this.tasks.update(items =>
-      items.map(task => {
-        if (task.id !== id) {
-          return task;
-        }
-
-        const isCompleting = task.status !== 'done';
-        let newStatus: Task['status'];
-
-        if (isCompleting) {
-          // Store the previous incomplete status before marking as done
-          this.previousStatuses.set(task.id, task.status);
-          newStatus = 'done';
-        } else {
-          // Restore the previous status when unchecking, defaulting to 'todo'
-          newStatus = this.previousStatuses.get(task.id) ?? 'todo';
-          this.previousStatuses.delete(task.id);
-        }
-
-        return {
-          ...task,
-          status: newStatus,
-          updatedAt: new Date()
-        };
-      })
+      items.map(task =>
+        task.id === id
+          ? {
+              ...task,
+              status: task.status === 'done' ? 'in-progress' : 'done',
+              updatedAt: new Date()
+            }
+          : task
+      )
     );
   }
 
@@ -398,7 +354,6 @@ export class DashboardComponent {
 
   deleteTask(id: string) {
     this.tasks.update(items => items.filter(task => task.id !== id));
-    this.previousStatuses.delete(id);
     if (this.editingTaskId() === id) {
       this.resetForm();
     }
@@ -417,9 +372,9 @@ export class DashboardComponent {
     });
   }
 
-  formatDate(date: Task['dueDate']) {
-    const parsedDate = this.toDateValue(date);
-    if (!parsedDate) {
+  formatDate(date: Date | string | number | Timestamp) {
+    const parsedDate = this.convertToDate(date);
+    if (Number.isNaN(parsedDate.getTime())) {
       return 'Unknown date';
     }
 
@@ -429,31 +384,26 @@ export class DashboardComponent {
     });
   }
 
-  private toInputDate(date: Task['dueDate']) {
-    const parsedDate = this.toDateValue(date);
-    if (!parsedDate) {
+  private toInputDate(date: Date | string | number | Timestamp) {
+    const parsedDate = this.convertToDate(date);
+    if (Number.isNaN(parsedDate.getTime())) {
       return '';
     }
-
     return parsedDate.toISOString().slice(0, 10);
+  }
+
+  private convertToDate(date: Date | string | number | Timestamp): Date {
+    if (date instanceof Timestamp) {
+      return date.toDate();
+    }
+    // Handle date-only strings to avoid timezone issues where 'YYYY-MM-DD' is parsed as UTC.
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return new Date(`${date}T00:00:00`);
+    }
+    return new Date(date);
   }
 
   private findTask(id: string) {
     return this.tasks().find(task => task.id === id);
-  }
-
-  private startOfDay(date: Date): Date {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-
-  private toDateValue(value: Task['dueDate']) {
-    if (!value) {
-      return null;
-    }
-
-    const parsedDate = value instanceof Timestamp ? value.toDate() : new Date(value);
-    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
   }
 }
