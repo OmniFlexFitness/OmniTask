@@ -386,6 +386,9 @@ export class DashboardComponent {
 
   private toInputDate(date: Date | string | number | Timestamp) {
     const parsedDate = this.convertToDate(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return '';
+    }
     return parsedDate.toISOString().slice(0, 10);
   }
 
