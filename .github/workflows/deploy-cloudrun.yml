@@ -58,7 +58,7 @@ jobs:
       - name: Generate version file
         run: |
           mkdir -p public
-          echo '{"version":"${{ steps.version.outputs.display_version }}"}' > public/version.json
+          echo "{\"version\":\"${{ steps.version.outputs.display_version }}\"}" > public/version.json
           cat public/version.json
 
       - name: Build Docker image

@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavbarComponent } from './core/layout/navbar.component';
 import { AuthService } from './core/auth/auth.service';
 import { VersionService } from './core/services/version.service';
+import { DEFAULT_VERSION } from './core/constants';
 
 @Component({
   selector: 'app-root',
@@ -16,7 +17,7 @@ import { VersionService } from './core/services/version.service';
 export class App implements OnInit {
   auth = inject(AuthService);
   versionService = inject(VersionService);
-  version = signal<string>('0.0.01');
+  version = signal<string>(DEFAULT_VERSION);
   private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
