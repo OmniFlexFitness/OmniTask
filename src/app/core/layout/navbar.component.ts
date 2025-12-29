@@ -8,7 +8,7 @@ import { AuthService } from '../auth/auth.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <nav class="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-cyan-500/30 shadow-lg shadow-purple-500/20 relative overflow-hidden ofx-plexus">
+    <nav class="sticky top-0 z-50 backdrop-blur-xl bg-[#040915]/90 border-b border-cyan-500/40 shadow-lg shadow-purple-500/25 relative overflow-hidden ofx-plexus ofx-grid-surface">
       <div class="pointer-events-none absolute inset-0 opacity-40 mix-blend-screen bg-[radial-gradient(circle_at_10%_20%,rgba(59,130,246,0.25),transparent_30%),radial-gradient(circle_at_90%_0%,rgba(236,72,153,0.25),transparent_32%)]"></div>
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div class="flex items-center justify-between h-16">
@@ -16,7 +16,7 @@ import { AuthService } from '../auth/auth.service';
             <div class="flex items-center gap-3">
               <div class="relative">
                 <span class="absolute -inset-1 rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 blur opacity-70"></span>
-                <span class="relative flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 border border-white/10 text-lg font-black tracking-tight shadow-[0_0_18px_rgba(59,130,246,0.35)]">OF</span>
+                <span class="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-cyan-400/30 text-lg font-black tracking-tight shadow-[0_0_22px_rgba(56,189,248,0.45)]">OF</span>
               </div>
               <div class="leading-tight">
                 <p class="text-[10px] uppercase tracking-[0.35em] text-cyan-200/70">OmniFlex</p>
@@ -28,15 +28,15 @@ import { AuthService } from '../auth/auth.service';
               <div class="ml-4 flex items-baseline space-x-2">
                 <a
                   routerLink="/"
-                  class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-100 border border-cyan-500/20 bg-white/5 hover:bg-white/10 hover:border-cyan-400/60 transition shadow-[0_0_18px_rgba(56,189,248,0.25)]"
+                  class="px-3 py-2 rounded-lg text-sm font-semibold text-white border border-cyan-500/30 bg-white/5 hover:bg-white/10 hover:border-cyan-400/70 transition shadow-[0_0_18px_rgba(56,189,248,0.35)]"
                 >Dashboard</a>
                 <a
                   routerLink="/projects"
-                  class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200/80 hover:text-white border border-transparent hover:border-cyan-400/40 hover:bg-white/5 transition"
+                  class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200/90 hover:text-white border border-cyan-400/20 hover:border-cyan-400/50 hover:bg-white/5 transition"
                 >Projects</a>
                 <a
                   routerLink="/tasks"
-                  class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200/80 hover:text-white border border-transparent hover:border-cyan-400/40 hover:bg-white/5 transition"
+                  class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200/90 hover:text-white border border-cyan-400/20 hover:border-cyan-400/50 hover:bg-white/5 transition"
                 >My Tasks</a>
               </div>
             </div>

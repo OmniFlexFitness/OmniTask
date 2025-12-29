@@ -12,7 +12,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10 ofx-plexus">
+    <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10 ofx-plexus ofx-grid-surface">
       <header class="space-y-3 relative">
         <p class="ofx-section-title">Mission Control</p>
         <div class="absolute -bottom-2 left-0 h-[2px] w-32 bg-gradient-to-r from-cyan-400 via-purple-500 to-transparent opacity-70"></div>
@@ -23,7 +23,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
               Welcome back, {{ auth.currentUserSig()?.displayName }}. Stay aligned with the OmniFlex flow.
             </p>
           </div>
-          <div class="ofx-panel px-4 py-3 flex items-center gap-3">
+          <div class="ofx-panel ofx-grid-surface px-4 py-3 flex items-center gap-3">
             <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_0_8px_rgba(16,185,129,0.15)]"></span>
             <div>
               <p class="text-[10px] uppercase tracking-[0.35em] text-cyan-200/70">Status</p>
@@ -34,24 +34,24 @@ const DEFAULT_PROJECT_ID = 'demo-project';
       </header>
 
       <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-indigo-900/60 to-slate-900/80 border border-cyan-500/20 shadow-[0_0_25px_rgba(56,189,248,0.2)]">
+        <div class="ofx-panel ofx-grid-surface p-6 bg-gradient-to-br from-slate-900/80 via-indigo-900/60 to-slate-900/80 border border-cyan-500/20 shadow-[0_0_25px_rgba(56,189,248,0.2)]">
           <p class="text-sm text-cyan-200/80">Open Tasks</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ openTaskCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-cyan-200/70 mt-3">Active</p>
         </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-fuchsia-900/50 to-slate-900/80 border border-fuchsia-500/25 shadow-[0_0_25px_rgba(236,72,153,0.18)]">
+        <div class="ofx-panel ofx-grid-surface p-6 bg-gradient-to-br from-slate-900/80 via-fuchsia-900/50 to-slate-900/80 border border-fuchsia-500/25 shadow-[0_0_25px_rgba(236,72,153,0.18)]">
           <p class="text-sm text-fuchsia-200/80">Due Soon</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ dueSoonCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-fuchsia-200/70 mt-3">Next 72 hours</p>
         </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-emerald-900/40 to-slate-900/80 border border-emerald-500/25 shadow-[0_0_25px_rgba(52,245,197,0.15)]">
+        <div class="ofx-panel ofx-grid-surface p-6 bg-gradient-to-br from-slate-900/80 via-emerald-900/40 to-slate-900/80 border border-emerald-500/25 shadow-[0_0_25px_rgba(52,245,197,0.15)]">
           <p class="text-sm text-emerald-200/80">Completed</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ completedTaskCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-emerald-200/70 mt-3">Cleared</p>
         </div>
       </section>
 
-      <section class="ofx-panel divide-y divide-white/5 ofx-plexus">
+      <section class="ofx-panel divide-y divide-white/5 ofx-plexus ofx-grid-surface">
         <div class="px-6 py-5 flex items-center justify-between flex-wrap gap-4">
           <div>
             <p class="ofx-section-title">Task Forge</p>
@@ -142,10 +142,10 @@ const DEFAULT_PROJECT_ID = 'demo-project';
           <div class="md:col-span-2 flex justify-end gap-3 pt-2 flex-wrap">
             <button
               type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium text-cyan-100/80 border border-cyan-500/30 bg-white/5 hover:bg-white/10 hover:border-cyan-400/70 transition"
-            (click)="resetForm()"
-          >
-            Reset
+              class="ofx-ghost-button"
+              (click)="resetForm()"
+            >
+              Reset
             </button>
             <button
               type="submit"
@@ -158,7 +158,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
         </form>
       </section>
 
-      <section class="ofx-panel ofx-plexus">
+      <section class="ofx-panel ofx-plexus ofx-grid-surface">
         <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between flex-wrap gap-3">
           <div>
             <p class="ofx-section-title">Active Streams</p>

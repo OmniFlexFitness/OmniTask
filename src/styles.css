@@ -6,20 +6,22 @@
   :root {
     color-scheme: dark;
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background-color: #030712;
+    background-color: #03050f;
   }
 
   body {
     @apply text-slate-100 min-h-screen;
     background-image:
-      radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.18) 0, transparent 30%),
-      radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12) 0, transparent 25%),
-      radial-gradient(circle at 60% 70%, rgba(236, 72, 153, 0.14) 0, transparent 35%),
-      linear-gradient(135deg, #040815 0%, #050b1f 40%, #0b1027 100%),
-      linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px),
-      linear-gradient(0deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
-    background-size: auto, auto, auto, auto, 140px 140px, 140px 140px;
-    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
+      radial-gradient(circle at 18% 22%, rgba(79, 70, 229, 0.28) 0, transparent 30%),
+      radial-gradient(circle at 82% 10%, rgba(56, 189, 248, 0.24) 0, transparent 28%),
+      radial-gradient(circle at 50% 68%, rgba(236, 72, 153, 0.22) 0, transparent 32%),
+      linear-gradient(135deg, #040715 0%, #050a1d 35%, #0b122d 100%),
+      repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.08) 0, rgba(56, 189, 248, 0.08) 1px, transparent 1px, transparent 120px),
+      repeating-linear-gradient(0deg, rgba(139, 92, 246, 0.08) 0, rgba(139, 92, 246, 0.08) 1px, transparent 1px, transparent 120px),
+      radial-gradient(circle at 10px 10px, rgba(120, 206, 255, 0.08) 0 2px, transparent 35%),
+      radial-gradient(circle at 50px 50px, rgba(168, 85, 247, 0.08) 0 2px, transparent 35%);
+    background-size: auto, auto, auto, auto, 160px 160px, 160px 160px, 160px 160px, 160px 160px;
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed, fixed, fixed;
   }
 
   ::selection {
@@ -29,26 +31,29 @@
 }
 
 .ofx-panel {
-  @apply relative overflow-hidden bg-slate-900/70 border border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/10 rounded-2xl;
+  @apply relative overflow-hidden bg-slate-950/70 border border-white/10 backdrop-blur-2xl shadow-2xl shadow-cyan-500/10 rounded-2xl;
+  background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(139, 92, 246, 0.1));
 }
 
 .ofx-panel::before {
   content: '';
   @apply absolute inset-[-1px] rounded-[18px] pointer-events-none;
   background-image:
-    linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(139, 92, 246, 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.12), transparent 35%),
-    radial-gradient(circle at 80% 60%, rgba(16, 185, 129, 0.12), transparent 35%);
-  background-size: 120px 120px, 120px 120px, auto, auto;
-  opacity: 0.6;
+    radial-gradient(circle at 18% 20%, rgba(56, 189, 248, 0.2), transparent 35%),
+    radial-gradient(circle at 82% 60%, rgba(168, 85, 247, 0.18), transparent 35%),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.12) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(139, 92, 246, 0.12) 1px, transparent 1px),
+    radial-gradient(circle at 8px 8px, rgba(120, 206, 255, 0.1) 0 2px, transparent 30%),
+    radial-gradient(circle at 36px 36px, rgba(168, 85, 247, 0.1) 0 2px, transparent 30%);
+  background-size: auto, auto, 140px 140px, 140px 140px, 140px 140px, 140px 140px;
+  opacity: 0.7;
   mix-blend-mode: screen;
 }
 
 .ofx-panel::after {
   content: '';
   @apply absolute inset-px rounded-2xl border border-white/10 pointer-events-none;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 20px 60px rgba(16, 24, 40, 0.45);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 24px 80px rgba(4, 7, 18, 0.65);
 }
 
 .ofx-section-title {
@@ -56,7 +61,8 @@
 }
 
 .ofx-gradient-button {
-  @apply relative overflow-hidden isolate flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-[0_10px_40px_rgba(56,189,248,0.35)] transition-all duration-300 border border-cyan-500/30;
+  @apply relative overflow-hidden isolate flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-[0_18px_45px_rgba(56,189,248,0.45)] transition-all duration-300 border border-cyan-500/30;
+  text-shadow: 0 0 18px rgba(59, 130, 246, 0.35);
 }
 
 .ofx-gradient-button::before {
@@ -76,10 +82,16 @@
 
 .ofx-gradient-button:hover::after {
   opacity: 1;
+  box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.35);
+}
+
+.ofx-gradient-button:hover {
+  transform: translateY(-2px) scale(1.01);
 }
 
 .ofx-input {
   @apply w-full rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/50 transition;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 10px 30px rgba(8, 12, 26, 0.75);
 }
 
 .ofx-plexus {
@@ -107,4 +119,29 @@
 
 .ofx-chip {
   @apply px-2 py-0.5 inline-flex items-center gap-2 text-xs font-semibold rounded-full border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_30px_rgba(56,189,248,0.15)];
+  background-image: linear-gradient(120deg, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.12));
+}
+
+.ofx-grid-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.ofx-grid-surface::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(96, 165, 250, 0.09) 0 1px, transparent 35%),
+    radial-gradient(circle at 30px 30px, rgba(168, 85, 247, 0.09) 0 1px, transparent 35%),
+    linear-gradient(120deg, rgba(56, 189, 248, 0.06), rgba(139, 92, 246, 0.06));
+  background-size: 80px 80px, 80px 80px, auto;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+.ofx-ghost-button {
+  @apply px-4 py-2 rounded-lg text-sm font-semibold border border-cyan-500/40 text-cyan-100/90 bg-white/5 hover:bg-white/10 shadow-[0_10px_30px_rgba(56,189,248,0.15)] transition;
 }

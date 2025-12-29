@@ -7,13 +7,14 @@ import { AuthService } from './auth.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black font-sans">
+    <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black font-sans ofx-grid-surface">
       <!-- Background Image with Cyberpunk Overlay -->
       <div class="absolute inset-0 z-0 select-none">
         <img src="assets/img/marble-brand-bg.jpeg" alt="Background" class="w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-950/40 to-fuchsia-800/20"></div>
-        <div class="absolute inset-0 mix-blend-screen opacity-60 bg-[repeating-linear-gradient(90deg,rgba(59,130,246,0.14)_0,rgba(59,130,246,0.14)_1px,transparent_1px,transparent_120px)]"></div>
-        <div class="absolute inset-0 mix-blend-screen opacity-60 bg-[repeating-linear-gradient(0deg,rgba(236,72,153,0.12)_0,rgba(236,72,153,0.12)_1px,transparent_1px,transparent_120px)]"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-950/50 to-fuchsia-800/25"></div>
+        <div class="absolute inset-0 mix-blend-screen opacity-70 bg-[repeating-linear-gradient(90deg,rgba(59,130,246,0.16)_0,rgba(59,130,246,0.16)_1px,transparent_1px,transparent_120px)]"></div>
+        <div class="absolute inset-0 mix-blend-screen opacity-70 bg-[repeating-linear-gradient(0deg,rgba(236,72,153,0.14)_0,rgba(236,72,153,0.14)_1px,transparent_1px,transparent_120px)]"></div>
+        <div class="absolute inset-0 mix-blend-screen opacity-50 bg-[radial-gradient(circle_at_20%_30%,rgba(56,189,248,0.25),transparent_40%),radial-gradient(circle_at_80%_50%,rgba(139,92,246,0.18),transparent_38%)]"></div>
       </div>
 
       <!-- Main Content Container -->
@@ -53,8 +54,8 @@ import { AuthService } from './auth.service';
           <div class="w-full max-w-sm relative group">
             <!-- Neon Glow Effect behind card -->
             <div class="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-            
-            <div class="relative bg-black/60 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
+
+            <div class="relative bg-black/60 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl ofx-grid-surface">
               <div class="text-center mb-8">
                 <h2 class="text-2xl font-bold text-white mb-2 tracking-wide">Identity Verification</h2>
                 <div class="h-1 w-16 bg-gradient-to-r from-purple-500 to-cyan-500 mx-auto rounded-full"></div>
