@@ -410,4 +410,30 @@ export class DashboardComponent {
   private findTask(id: string) {
     return this.tasks().find(task => task.id === id);
   }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'todo':
+        return 'bg-gray-800 text-gray-200 border-gray-700';
+      case 'in-progress':
+        return 'bg-blue-800 text-blue-200 border-blue-700';
+      case 'done':
+        return 'bg-emerald-800 text-emerald-200 border-emerald-700';
+      default:
+        return '';
+    }
+  }
+
+  getPriorityBadgeClass(priority: string): string {
+    switch (priority) {
+      case 'low':
+        return 'bg-gray-700 text-gray-100 border-gray-600';
+      case 'medium':
+        return 'bg-yellow-800 text-yellow-200 border-yellow-700';
+      case 'high':
+        return 'bg-rose-800 text-rose-200 border-rose-700';
+      default:
+        return '';
+    }
+  }
 }
