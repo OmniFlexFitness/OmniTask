@@ -12,6 +12,8 @@ import { AuthService } from './auth.service';
       <div class="absolute inset-0 z-0 select-none">
         <img src="assets/img/marble-brand-bg.jpeg" alt="Background" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-950/40 to-fuchsia-800/20"></div>
+        <div class="absolute inset-0 mix-blend-screen opacity-60 bg-[repeating-linear-gradient(90deg,rgba(59,130,246,0.14)_0,rgba(59,130,246,0.14)_1px,transparent_1px,transparent_120px)]"></div>
+        <div class="absolute inset-0 mix-blend-screen opacity-60 bg-[repeating-linear-gradient(0deg,rgba(236,72,153,0.12)_0,rgba(236,72,153,0.12)_1px,transparent_1px,transparent_120px)]"></div>
       </div>
 
       <!-- Main Content Container -->
@@ -61,9 +63,9 @@ import { AuthService } from './auth.service';
               <div class="space-y-6">
                 <button
                   (click)="login()"
-                  class="w-full relative overflow-hidden group/btn bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3"
+                  class="w-full relative overflow-hidden group/btn ofx-gradient-button py-4 px-6 rounded-xl text-white font-medium !border-white/20"
                 >
-                  <div class="absolute inset-0 w-0 bg-gradient-to-r from-purple-600/20 to-cyan-600/20 transition-all duration-[250ms] ease-out group-hover/btn:w-full"></div>
+                  <div class="absolute inset-0 w-0 bg-gradient-to-r from-purple-600/30 to-cyan-600/30 transition-all duration-[250ms] ease-out group-hover/btn:w-full"></div>
                   
                   <svg class="w-5 h-5 relative z-10 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>

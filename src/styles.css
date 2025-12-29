@@ -15,8 +15,11 @@
       radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.18) 0, transparent 30%),
       radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12) 0, transparent 25%),
       radial-gradient(circle at 60% 70%, rgba(236, 72, 153, 0.14) 0, transparent 35%),
-      linear-gradient(135deg, #040815 0%, #050b1f 40%, #0b1027 100%);
-    background-attachment: fixed;
+      linear-gradient(135deg, #040815 0%, #050b1f 40%, #0b1027 100%),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
+    background-size: auto, auto, auto, auto, 140px 140px, 140px 140px;
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
   }
 
   ::selection {
@@ -26,7 +29,26 @@
 }
 
 .ofx-panel {
-  @apply bg-slate-900/70 border border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/10 rounded-2xl;
+  @apply relative overflow-hidden bg-slate-900/70 border border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/10 rounded-2xl;
+}
+
+.ofx-panel::before {
+  content: '';
+  @apply absolute inset-[-1px] rounded-[18px] pointer-events-none;
+  background-image:
+    linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(139, 92, 246, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.12), transparent 35%),
+    radial-gradient(circle at 80% 60%, rgba(16, 185, 129, 0.12), transparent 35%);
+  background-size: 120px 120px, 120px 120px, auto, auto;
+  opacity: 0.6;
+  mix-blend-mode: screen;
+}
+
+.ofx-panel::after {
+  content: '';
+  @apply absolute inset-px rounded-2xl border border-white/10 pointer-events-none;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 20px 60px rgba(16, 24, 40, 0.45);
 }
 
 .ofx-section-title {
@@ -34,19 +56,55 @@
 }
 
 .ofx-gradient-button {
-  @apply relative overflow-hidden isolate flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all duration-300;
+  @apply relative overflow-hidden isolate flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-[0_10px_40px_rgba(56,189,248,0.35)] transition-all duration-300 border border-cyan-500/30;
 }
 
 .ofx-gradient-button::before {
   content: '';
-  @apply absolute inset-0 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-cyan-400 opacity-80 transition-all duration-300;
+  @apply absolute inset-0 bg-gradient-to-r from-cyan-500 via-indigo-600 to-fuchsia-500 opacity-80 transition-all duration-300;
   z-index: -1;
+}
+
+.ofx-gradient-button::after {
+  content: '';
+  @apply absolute inset-[2px] rounded-md bg-slate-950/80 opacity-0 transition-all duration-300;
 }
 
 .ofx-gradient-button:hover::before {
   filter: brightness(1.1);
 }
 
+.ofx-gradient-button:hover::after {
+  opacity: 1;
+}
+
 .ofx-input {
   @apply w-full rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/50 transition;
+}
+
+.ofx-plexus {
+  @apply relative overflow-hidden;
+}
+
+.ofx-plexus::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none opacity-60;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(56, 189, 248, 0.35), transparent 40%),
+    radial-gradient(circle at 80% 40%, rgba(192, 38, 211, 0.25), transparent 35%),
+    linear-gradient(125deg, rgba(52, 245, 197, 0.12), rgba(59, 130, 246, 0.1) 40%, rgba(139, 92, 246, 0.12) 70%, rgba(236, 72, 153, 0.1));
+  filter: drop-shadow(0 0 25px rgba(59, 130, 246, 0.35));
+}
+
+.ofx-plexus::after {
+  content: '';
+  @apply absolute inset-0 pointer-events-none opacity-40;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0, rgba(56, 189, 248, 0.1) 1px, transparent 1px, transparent 140px),
+    repeating-linear-gradient(0deg, rgba(139, 92, 246, 0.1) 0, rgba(139, 92, 246, 0.1) 1px, transparent 1px, transparent 140px);
+  mix-blend-mode: screen;
+}
+
+.ofx-chip {
+  @apply px-2 py-0.5 inline-flex items-center gap-2 text-xs font-semibold rounded-full border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_30px_rgba(56,189,248,0.15)];
 }

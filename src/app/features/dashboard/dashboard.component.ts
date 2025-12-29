@@ -12,9 +12,10 @@ const DEFAULT_PROJECT_ID = 'demo-project';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10">
-      <header class="space-y-3">
+    <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10 ofx-plexus">
+      <header class="space-y-3 relative">
         <p class="ofx-section-title">Mission Control</p>
+        <div class="absolute -bottom-2 left-0 h-[2px] w-32 bg-gradient-to-r from-cyan-400 via-purple-500 to-transparent opacity-70"></div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 class="text-4xl font-black text-white tracking-tight">Dashboard</h1>
@@ -33,24 +34,24 @@ const DEFAULT_PROJECT_ID = 'demo-project';
       </header>
 
       <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-indigo-900/60 to-slate-900/80 border border-cyan-500/20">
-          <p class="text-sm text-slate-300">Open Tasks</p>
+        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-indigo-900/60 to-slate-900/80 border border-cyan-500/20 shadow-[0_0_25px_rgba(56,189,248,0.2)]">
+          <p class="text-sm text-cyan-200/80">Open Tasks</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ openTaskCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-cyan-200/70 mt-3">Active</p>
         </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-fuchsia-900/50 to-slate-900/80 border border-fuchsia-500/25">
-          <p class="text-sm text-slate-300">Due Soon</p>
+        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-fuchsia-900/50 to-slate-900/80 border border-fuchsia-500/25 shadow-[0_0_25px_rgba(236,72,153,0.18)]">
+          <p class="text-sm text-fuchsia-200/80">Due Soon</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ dueSoonCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-fuchsia-200/70 mt-3">Next 72 hours</p>
         </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-emerald-900/40 to-slate-900/80 border border-emerald-500/25">
-          <p class="text-sm text-slate-300">Completed</p>
+        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-emerald-900/40 to-slate-900/80 border border-emerald-500/25 shadow-[0_0_25px_rgba(52,245,197,0.15)]">
+          <p class="text-sm text-emerald-200/80">Completed</p>
           <p class="mt-2 text-4xl font-bold text-white">{{ completedTaskCount() }}</p>
           <p class="text-xs uppercase tracking-[0.25em] text-emerald-200/70 mt-3">Cleared</p>
         </div>
       </section>
 
-      <section class="ofx-panel divide-y divide-white/5">
+      <section class="ofx-panel divide-y divide-white/5 ofx-plexus">
         <div class="px-6 py-5 flex items-center justify-between flex-wrap gap-4">
           <div>
             <p class="ofx-section-title">Task Forge</p>
@@ -141,10 +142,10 @@ const DEFAULT_PROJECT_ID = 'demo-project';
           <div class="md:col-span-2 flex justify-end gap-3 pt-2 flex-wrap">
             <button
               type="button"
-              class="px-4 py-2 rounded-lg text-sm font-medium text-slate-200 border border-white/10 hover:bg-white/5 transition"
-              (click)="resetForm()"
-            >
-              Reset
+            class="px-4 py-2 rounded-lg text-sm font-medium text-cyan-100/80 border border-cyan-500/30 bg-white/5 hover:bg-white/10 hover:border-cyan-400/70 transition"
+            (click)="resetForm()"
+          >
+            Reset
             </button>
             <button
               type="submit"
@@ -157,7 +158,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
         </form>
       </section>
 
-      <section class="ofx-panel">
+      <section class="ofx-panel ofx-plexus">
         <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between flex-wrap gap-3">
           <div>
             <p class="ofx-section-title">Active Streams</p>
@@ -167,7 +168,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
           <span class="text-sm text-slate-300">{{ tasks().length }} tasks</span>
         </div>
         <div class="divide-y divide-white/5" *ngIf="tasks().length; else emptyState">
-          <article class="p-5 sm:p-6 hover:bg-white/5 transition border-b border-white/5 last:border-0" *ngFor="let task of tasks(); trackBy: trackTaskById">
+          <article class="p-5 sm:p-6 hover:bg-white/5 hover:shadow-[0_0_25px_rgba(56,189,248,0.25)] transition border-b border-white/5 last:border-0" *ngFor="let task of tasks(); trackBy: trackTaskById">
             <div class="flex items-start justify-between gap-4 flex-wrap">
               <div class="space-y-2">
                 <div class="flex items-center gap-3 flex-wrap">
@@ -181,7 +182,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
                     {{ task.title }}
                   </h3>
                   <span
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
+                    class="ofx-chip"
                     [ngClass]="{
                       'bg-emerald-500/15 text-emerald-200 border-emerald-500/20': task.status === 'done',
                       'bg-amber-500/15 text-amber-100 border-amber-500/25': task.status === 'in-progress',
@@ -191,7 +192,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
                     {{ task.status | titlecase }}
                   </span>
                   <span
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
+                    class="ofx-chip"
                     [ngClass]="{
                       'bg-fuchsia-500/15 text-fuchsia-100 border-fuchsia-500/25': task.priority === 'high',
                       'bg-amber-500/15 text-amber-100 border-amber-500/25': task.priority === 'medium',
@@ -212,7 +213,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
                     Due {{ formatDate(task.dueDate) }}
                   </span>
                   <ng-container *ngIf="task.tags?.length">
-                    <span *ngFor="let tag of task.tags" class="px-2 py-0.5 bg-white/5 text-slate-100 border border-white/10 rounded-full text-xs">
+                    <span *ngFor="let tag of task.tags" class="ofx-chip bg-white/5 text-slate-100">
                       {{ tag }}
                     </span>
                   </ng-container>
