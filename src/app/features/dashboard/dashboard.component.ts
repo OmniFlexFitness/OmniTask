@@ -122,7 +122,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
               <input
                 type="text"
                 formControlName="tags"
-                placeholder="Comma-separated labels (e.g. frontend, client, backlog)"
+                placeholder="Comma-separated labels (e.g., frontend, client, backlog)"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
@@ -278,10 +278,11 @@ export class DashboardComponent {
       if (!due) {
         return false;
       }
-      const now = new Date();
-      const threeDaysFromNow = new Date();
-      threeDaysFromNow.setDate(now.getDate() + 3);
-      return due >= now && due <= threeDaysFromNow;
+      const today = this.startOfDay(new Date());
+      const threeDaysFromToday = this.startOfDay(new Date());
+      threeDaysFromToday.setDate(threeDaysFromToday.getDate() + 3);
+      const dueDateOnly = this.startOfDay(due);
+      return dueDateOnly >= today && dueDateOnly <= threeDaysFromToday;
     }).length
   );
 
@@ -305,10 +306,18 @@ export class DashboardComponent {
       .split(',')
       .map(tag => tag.trim())
       .filter(Boolean);
-    const dueDate =
-      typeof formValue.dueDate === 'string' && formValue.dueDate.trim()
-        ? new Date(formValue.dueDate)
-        : undefined;
+    
+    let dueDate: Date | undefined;
+    if (typeof formValue.dueDate === 'string') {
+      const trimmed = formValue.dueDate.trim();
+      if (trimmed) {
+        const parsed = new Date(trimmed);
+        if (!Number.isNaN(parsed.getTime())) {
+          dueDate = parsed;
+        }
+      }
+    }
+    
     const assigneeName = formValue.assigneeName.trim();
     const description = formValue.description.trim();
 
@@ -389,6 +398,7 @@ export class DashboardComponent {
 
   deleteTask(id: string) {
     this.tasks.update(items => items.filter(task => task.id !== id));
+    this.previousStatuses.delete(id);
     if (this.editingTaskId() === id) {
       this.resetForm();
     }
@@ -430,6 +440,12 @@ export class DashboardComponent {
 
   private findTask(id: string) {
     return this.tasks().find(task => task.id === id);
+  }
+
+  private startOfDay(date: Date): Date {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }
 
   private toDateValue(value: Task['dueDate']) {
