@@ -182,22 +182,14 @@ const DEFAULT_PROJECT_ID = 'demo-project';
                     {{ task.title }}
                   </h3>
                   <span
-                    class="ofx-chip"
-                    [ngClass]="{
-                      'bg-emerald-500/15 text-emerald-200 border-emerald-500/20': task.status === 'done',
-                      'bg-amber-500/15 text-amber-100 border-amber-500/25': task.status === 'in-progress',
-                      'bg-cyan-500/15 text-cyan-100 border-cyan-500/20': task.status === 'todo'
-                    }"
+                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
+                    [ngClass]="getStatusBadgeClass(task.status)"
                   >
                     {{ task.status | titlecase }}
                   </span>
                   <span
-                    class="ofx-chip"
-                    [ngClass]="{
-                      'bg-fuchsia-500/15 text-fuchsia-100 border-fuchsia-500/25': task.priority === 'high',
-                      'bg-amber-500/15 text-amber-100 border-amber-500/25': task.priority === 'medium',
-                      'bg-slate-500/20 text-slate-100 border-slate-400/30': task.priority === 'low'
-                    }"
+                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
+                    [ngClass]="getPriorityBadgeClass(task.priority)"
                   >
                     {{ task.priority | titlecase }} priority
                   </span>
