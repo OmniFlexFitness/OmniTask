@@ -8,28 +8,38 @@ import { AuthService } from '../auth/auth.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <nav class="bg-indigo-600">
+    <nav class="sticky top-0 z-20 bg-omni-ink/80 backdrop-blur-xl border-b border-white/10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <span class="text-white font-bold text-xl">OmniFlex</span>
-            </div>
-            <div class="hidden md:block">
-              <div class="ml-10 flex items-baseline space-x-4">
-                <a routerLink="/" class="text-white hover:bg-indigo-500 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
-                <a routerLink="/projects" class="text-indigo-100 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Projects</a>
-                <a routerLink="/tasks" class="text-indigo-100 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">My Tasks</a>
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <div class="absolute -inset-1 bg-gradient-to-r from-omni-fuchsia to-omni-glow rounded-xl blur opacity-60"></div>
+              <div class="relative flex h-11 w-11 items-center justify-center rounded-xl bg-omni-ink border border-white/10 shadow-neon text-lg font-black tracking-tight">
+                OF
               </div>
+            </div>
+            <div class="leading-tight">
+              <p class="text-[10px] uppercase tracking-[0.35em] text-sky-200">OmniFlex System</p>
+              <p class="text-lg font-semibold text-white">OmniTask Control</p>
             </div>
           </div>
-          <div class="hidden md:block">
-            <div class="ml-4 flex items-center md:ml-6">
-              <div class="flex items-center space-x-3">
-                 <span class="text-sm text-indigo-100">{{ auth.currentUserSig()?.email }}</span>
-                 <button (click)="auth.logout()" class="text-indigo-200 hover:text-white text-sm">Logout</button>
-              </div>
+
+          <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+            <a routerLink="/" class="text-slate-200 hover:text-white transition-colors">Dashboard</a>
+            <a routerLink="/projects" class="text-slate-400 hover:text-white transition-colors">Projects</a>
+            <a routerLink="/tasks" class="text-slate-400 hover:text-white transition-colors">My Tasks</a>
+          </div>
+
+          <div class="hidden md:flex items-center gap-4">
+            <div class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-sky-100">
+              {{ auth.currentUserSig()?.email }}
             </div>
+            <button
+              (click)="auth.logout()"
+              class="btn-gradient px-4 py-2 text-sm"
+            >
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </div>

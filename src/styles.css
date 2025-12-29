@@ -1,3 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  background-color: #05070f;
+}
+
+@layer base {
+  body {
+    font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    @apply bg-omni-night text-slate-100 antialiased;
+    background-image: radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.08), transparent 25%),
+      radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.08), transparent 25%),
+      radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.08), transparent 30%),
+      linear-gradient(145deg, rgba(12, 18, 32, 0.95), rgba(5, 7, 15, 0.98));
+  }
+
+  ::selection {
+    @apply bg-omni-fuchsia/70 text-white;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-omni-ink/70 border border-white/10 rounded-2xl shadow-neon backdrop-blur-xl;
+  }
+
+  .accent-pill {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs uppercase tracking-[0.2em] text-sky-200;
+  }
+
+  .gradient-divider {
+    @apply h-1 w-16 bg-gradient-to-r from-omni-fuchsia via-omni-rose to-omni-glow rounded-full;
+  }
+
+  .section-title {
+    @apply text-xl font-semibold tracking-tight text-white;
+  }
+
+  .omni-badge {
+    @apply px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-[0.15em] bg-white/10 border border-white/10 text-slate-100;
+  }
+
+  .btn-gradient {
+    @apply relative overflow-hidden rounded-lg px-4 py-2 font-semibold text-white bg-white/5 border border-white/10 transition-all duration-300;
+  }
+
+  .btn-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 0;
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.2), rgba(34, 211, 238, 0.2));
+    transition: width 250ms ease-out;
+  }
+
+  .btn-gradient:hover::before {
+    width: 100%;
+  }
+
+  .btn-gradient span,
+  .btn-gradient svg {
+    position: relative;
+    z-index: 1;
+  }
+}

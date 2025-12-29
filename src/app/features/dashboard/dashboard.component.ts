@@ -12,212 +12,235 @@ const DEFAULT_PROJECT_ID = 'demo-project';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div class="px-4 py-6 sm:px-0 space-y-8">
-        <header class="flex flex-col gap-2">
-          <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p class="text-gray-600">Welcome back, {{ auth.currentUserSig()?.displayName }}</p>
-        </header>
+    <div class="py-6 space-y-8">
+      <header class="glass-panel p-6 sm:p-8 space-y-6">
+        <div class="flex items-center gap-3">
+          <span class="accent-pill">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-omni-glow opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-omni-glow"></span>
+            </span>
+            Live Workspace
+          </span>
+          <span class="omni-badge">OmniFlex</span>
+        </div>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div class="space-y-2">
+            <h1 class="text-4xl font-bold text-white tracking-tight">OmniTask Mission Control</h1>
+            <p class="text-slate-300 text-lg">Welcome back, {{ auth.currentUserSig()?.displayName }}. Align priorities and keep work flowing.</p>
+          </div>
+          <div class="flex gap-3 text-sm">
+            <div class="glass-panel px-4 py-3">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Open</p>
+              <p class="text-2xl font-semibold text-white">{{ openTaskCount() }}</p>
+            </div>
+            <div class="glass-panel px-4 py-3">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Due Soon</p>
+              <p class="text-2xl font-semibold text-white">{{ dueSoonCount() }}</p>
+            </div>
+            <div class="glass-panel px-4 py-3">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Completed</p>
+              <p class="text-2xl font-semibold text-white">{{ completedTaskCount() }}</p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Open Tasks</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ openTaskCount() }}</dd>
-            </div>
-          </div>
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Due Soon</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ dueSoonCount() }}</dd>
-            </div>
-          </div>
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Completed</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ completedTaskCount() }}</dd>
-            </div>
-          </div>
-        </section>
+      <section class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="glass-panel p-5 space-y-2">
+          <dt class="text-sm font-medium text-slate-300">Open Tasks</dt>
+          <dd class="text-3xl font-semibold text-white">{{ openTaskCount() }}</dd>
+          <p class="text-xs text-slate-500">Across active initiatives</p>
+        </div>
+        <div class="glass-panel p-5 space-y-2">
+          <dt class="text-sm font-medium text-slate-300">Due Soon</dt>
+          <dd class="text-3xl font-semibold text-white">{{ dueSoonCount() }}</dd>
+          <p class="text-xs text-slate-500">Within the next 72 hours</p>
+        </div>
+        <div class="glass-panel p-5 space-y-2">
+          <dt class="text-sm font-medium text-slate-300">Completed</dt>
+          <dd class="text-3xl font-semibold text-white">{{ completedTaskCount() }}</dd>
+          <p class="text-xs text-slate-500">Closed out tasks</p>
+        </div>
+      </section>
 
-        <section class="bg-white shadow rounded-lg divide-y divide-gray-200">
-          <div class="px-4 py-5 sm:px-6 flex items-center justify-between">
-            <div>
-              <h2 class="text-lg font-medium text-gray-900">Create a Task</h2>
-              <p class="text-sm text-gray-500">Capture the essentials to keep work moving.</p>
-            </div>
+      <section class="glass-panel divide-y divide-white/5">
+        <div class="px-4 py-5 sm:px-6 flex items-center justify-between">
+          <div class="space-y-1">
+            <h2 class="section-title">Create a Task</h2>
+            <p class="text-sm text-slate-400">Capture the essentials to keep work moving.</p>
+          </div>
+          <button
+            type="button"
+            class="text-sm text-omni-glow hover:text-omni-fuchsia font-semibold"
+            *ngIf="editingTaskId()"
+            (click)="resetForm()"
+          >
+            Cancel edit
+          </button>
+        </div>
+        <form
+          class="px-4 py-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+          [formGroup]="taskForm"
+          (ngSubmit)="saveTask()"
+        >
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-sm font-medium text-slate-200">Title</label>
+            <input
+              type="text"
+              formControlName="title"
+              placeholder="Add a concise task title"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white placeholder:text-slate-500 focus:border-omni-glow focus:ring-omni-glow"
+              required
+            />
+          </div>
+          <div class="col-span-1 md:col-span-2">
+            <label class="block text-sm font-medium text-slate-200">Description</label>
+            <textarea
+              rows="3"
+              formControlName="description"
+              placeholder="Add context, acceptance criteria, or links"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white placeholder:text-slate-500 focus:border-omni-glow focus:ring-omni-glow"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-200">Priority</label>
+            <select
+              formControlName="priority"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white focus:border-omni-glow focus:ring-omni-glow"
+            >
+              <option *ngFor="let option of priorities" [value]="option">{{ option | titlecase }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-200">Status</label>
+            <select
+              formControlName="status"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white focus:border-omni-glow focus:ring-omni-glow"
+            >
+              <option *ngFor="let state of statuses" [value]="state">{{ state | titlecase }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-200">Due date</label>
+            <input
+              type="date"
+              formControlName="dueDate"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white focus:border-omni-glow focus:ring-omni-glow"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-200">Assignee</label>
+            <input
+              type="text"
+              formControlName="assigneeName"
+              placeholder="Person responsible"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white placeholder:text-slate-500 focus:border-omni-glow focus:ring-omni-glow"
+            />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-slate-200">Tags</label>
+            <input
+              type="text"
+              formControlName="tags"
+              placeholder="Comma-separated labels (e.g. frontend, client, backlog)"
+              class="mt-1 block w-full rounded-lg border-white/10 bg-omni-night/70 text-white placeholder:text-slate-500 focus:border-omni-glow focus:ring-omni-glow"
+            />
+          </div>
+
+          <div class="md:col-span-2 flex justify-end gap-3 pt-2">
             <button
               type="button"
-              class="text-sm text-indigo-600 hover:text-indigo-500"
-              *ngIf="editingTaskId()"
+              class="px-4 py-2 rounded-lg text-sm font-medium text-slate-200 border border-white/10 hover:bg-white/5"
               (click)="resetForm()"
             >
-              Cancel edit
+              Reset
+            </button>
+            <button
+              type="submit"
+              [disabled]="taskForm.invalid"
+              class="btn-gradient disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{{ editingTaskId() ? 'Update Task' : 'Add Task' }}</span>
             </button>
           </div>
-          <form
-            class="px-4 py-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-            [formGroup]="taskForm"
-            (ngSubmit)="saveTask()"
-          >
-            <div class="col-span-1 md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700">Title</label>
-              <input
-                type="text"
-                formControlName="title"
-                placeholder="Add a concise task title"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                required
-              />
-            </div>
-            <div class="col-span-1 md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700">Description</label>
-              <textarea
-                rows="3"
-                formControlName="description"
-                placeholder="Add context, acceptance criteria, or links"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              ></textarea>
-            </div>
+        </form>
+      </section>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Priority</label>
-              <select
-                formControlName="priority"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option *ngFor="let option of priorities" [value]="option">{{ option | titlecase }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Status</label>
-              <select
-                formControlName="status"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option *ngFor="let state of statuses" [value]="state">{{ state | titlecase }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Due date</label>
-              <input
-                type="date"
-                formControlName="dueDate"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Assignee</label>
-              <input
-                type="text"
-                formControlName="assigneeName"
-                placeholder="Person responsible"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="block text-sm font-medium text-gray-700">Tags</label>
-              <input
-                type="text"
-                formControlName="tags"
-                placeholder="Comma-separated labels (e.g. frontend, client, backlog)"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div class="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
-                (click)="resetForm()"
-              >
-                Reset
-              </button>
-              <button
-                type="submit"
-                [disabled]="taskForm.invalid"
-                class="px-4 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {{ editingTaskId() ? 'Update Task' : 'Add Task' }}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <section class="bg-white shadow rounded-lg">
-          <div class="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
-            <div>
-              <h2 class="text-lg font-medium text-gray-900">Task list</h2>
-              <p class="text-sm text-gray-500">Mark tasks as done, edit details, or remove them.</p>
-            </div>
-            <span class="text-sm text-gray-500">{{ tasks().length }} tasks</span>
+      <section class="glass-panel">
+        <div class="px-4 py-5 sm:px-6 border-b border-white/5 flex items-center justify-between">
+          <div>
+            <h2 class="section-title">Task list</h2>
+            <p class="text-sm text-slate-400">Mark tasks as done, edit details, or remove them.</p>
           </div>
-          <div class="divide-y divide-gray-200" *ngIf="tasks().length; else emptyState">
-            <article class="p-4 sm:p-6" *ngFor="let task of tasks(); trackBy: trackTaskById">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      [checked]="task.status === 'done'"
-                      (change)="toggleCompletion(task.id)"
-                      class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                    />
-                    <h3 class="text-lg font-semibold text-gray-900" [class.line-through]="task.status === 'done'">
-                      {{ task.title }}
-                    </h3>
-                    <span
-                      class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                      [ngClass]="{
-                        'bg-green-100 text-green-800': task.status === 'done',
-                        'bg-yellow-100 text-yellow-800': task.status === 'in-progress',
-                        'bg-blue-100 text-blue-800': task.status === 'todo'
-                      }"
-                    >
-                      {{ task.status | titlecase }}
-                    </span>
-                    <span
-                      class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                      [ngClass]="{
-                        'bg-red-100 text-red-800': task.priority === 'high',
-                        'bg-orange-100 text-orange-800': task.priority === 'medium',
-                        'bg-gray-100 text-gray-800': task.priority === 'low'
-                      }"
-                    >
-                      {{ task.priority | titlecase }} priority
-                    </span>
-                  </div>
-                  <p class="text-sm text-gray-700" *ngIf="task.description">{{ task.description }}</p>
-                  <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                    <span *ngIf="task.assigneeName" class="inline-flex items-center gap-1">
-                      <span class="h-2 w-2 bg-indigo-500 rounded-full"></span>
-                      {{ task.assigneeName }}
-                    </span>
-                    <span *ngIf="task.dueDate" class="inline-flex items-center gap-1">
-                      <span class="h-2 w-2 bg-gray-400 rounded-full"></span>
-                      Due {{ formatDate(task.dueDate) }}
-                    </span>
-                    <ng-container *ngIf="task.tags?.length">
-                      <span *ngFor="let tag of task.tags" class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
-                        {{ tag }}
-                      </span>
-                    </ng-container>
-                  </div>
+          <span class="text-sm text-slate-400">{{ tasks().length }} tasks</span>
+        </div>
+        <div class="divide-y divide-white/5" *ngIf="tasks().length; else emptyState">
+          <article class="p-4 sm:p-6" *ngFor="let task of tasks(); trackBy: trackTaskById">
+            <div class="flex items-start justify-between gap-4">
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    type="checkbox"
+                    [checked]="task.status === 'done'"
+                    (change)="toggleCompletion(task.id)"
+                    class="h-4 w-4 text-omni-glow border-white/20 rounded focus:ring-omni-glow bg-omni-night"
+                  />
+                  <h3 class="text-lg font-semibold text-white" [class.line-through]="task.status === 'done'">
+                    {{ task.title }}
+                  </h3>
+                  <span
+                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border"
+                    [ngClass]="{
+                      'bg-emerald-500/15 text-emerald-200 border-emerald-400/30': task.status === 'done',
+                      'bg-amber-500/15 text-amber-200 border-amber-400/30': task.status === 'in-progress',
+                      'bg-sky-500/15 text-sky-200 border-sky-400/30': task.status === 'todo'
+                    }"
+                  >
+                    {{ task.status | titlecase }}
+                  </span>
+                  <span
+                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border"
+                    [ngClass]="{
+                      'bg-omni-rose/20 text-omni-rose border-omni-rose/40': task.priority === 'high',
+                      'bg-orange-500/15 text-orange-200 border-orange-400/30': task.priority === 'medium',
+                      'bg-slate-500/10 text-slate-200 border-slate-400/20': task.priority === 'low'
+                    }"
+                  >
+                    {{ task.priority | titlecase }} priority
+                  </span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <button class="text-sm text-indigo-600 hover:text-indigo-500" (click)="startEdit(task)">Edit</button>
-                  <button class="text-sm text-red-600 hover:text-red-500" (click)="deleteTask(task.id)">Delete</button>
+                <p class="text-sm text-slate-300" *ngIf="task.description">{{ task.description }}</p>
+                <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                  <span *ngIf="task.assigneeName" class="inline-flex items-center gap-1">
+                    <span class="h-2 w-2 bg-omni-glow rounded-full"></span>
+                    {{ task.assigneeName }}
+                  </span>
+                  <span *ngIf="task.dueDate" class="inline-flex items-center gap-1">
+                    <span class="h-2 w-2 bg-slate-500 rounded-full"></span>
+                    Due {{ formatDate(task.dueDate) }}
+                  </span>
+                  <ng-container *ngIf="task.tags?.length">
+                    <span *ngFor="let tag of task.tags" class="px-2 py-0.5 bg-white/5 text-slate-200 border border-white/10 rounded-full text-xs">
+                      {{ tag }}
+                    </span>
+                  </ng-container>
                 </div>
               </div>
-            </article>
-          </div>
-          <ng-template #emptyState>
-            <div class="p-8 text-center text-gray-500">No tasks yet. Add one to get started.</div>
-          </ng-template>
-        </section>
-      </div>
+              <div class="flex items-center gap-2 text-sm">
+                <button class="text-omni-glow hover:text-omni-fuchsia font-semibold" (click)="startEdit(task)">Edit</button>
+                <button class="text-omni-rose hover:text-omni-fuchsia font-semibold" (click)="deleteTask(task.id)">Delete</button>
+              </div>
+            </div>
+          </article>
+        </div>
+        <ng-template #emptyState>
+          <div class="p-8 text-center text-slate-400">No tasks yet. Add one to get started.</div>
+        </ng-template>
+      </section>
     </div>
   `
 })
