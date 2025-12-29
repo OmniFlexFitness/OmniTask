@@ -1,3 +1,52 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #030712;
+  }
+
+  body {
+    @apply text-slate-100 min-h-screen;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.18) 0, transparent 30%),
+      radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.12) 0, transparent 25%),
+      radial-gradient(circle at 60% 70%, rgba(236, 72, 153, 0.14) 0, transparent 35%),
+      linear-gradient(135deg, #040815 0%, #050b1f 40%, #0b1027 100%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(236, 72, 153, 0.3);
+    color: #f8fafc;
+  }
+}
+
+.ofx-panel {
+  @apply bg-slate-900/70 border border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/10 rounded-2xl;
+}
+
+.ofx-section-title {
+  @apply text-sm font-semibold uppercase tracking-[0.25em] text-cyan-300/80;
+}
+
+.ofx-gradient-button {
+  @apply relative overflow-hidden isolate flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-all duration-300;
+}
+
+.ofx-gradient-button::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-cyan-400 opacity-80 transition-all duration-300;
+  z-index: -1;
+}
+
+.ofx-gradient-button:hover::before {
+  filter: brightness(1.1);
+}
+
+.ofx-input {
+  @apply w-full rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/50 transition;
+}

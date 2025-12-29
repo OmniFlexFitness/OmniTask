@@ -1,6 +1,15 @@
-<div class="min-h-screen bg-gray-100">
-  <app-navbar *ngIf="auth.currentUserSig()"></app-navbar>
-  <main>
-    <router-outlet></router-outlet>
-  </main>
+<div class="min-h-screen relative overflow-hidden bg-slate-950 text-slate-100">
+  <div class="pointer-events-none absolute inset-0 opacity-70">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.25)_0,transparent_35%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,rgba(34,211,238,0.18)_0,transparent_30%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_70%,rgba(236,72,153,0.18)_0,transparent_35%)]"></div>
+    <div class="absolute inset-0 bg-[linear-gradient(120deg,rgba(59,130,246,0.08),rgba(236,72,153,0.08))]"></div>
+  </div>
+
+  <div class="relative z-10 flex flex-col min-h-screen">
+    <app-navbar *ngIf="auth.currentUserSig()"></app-navbar>
+    <main class="flex-1 pb-12">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
 </div>
