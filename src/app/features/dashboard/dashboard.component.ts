@@ -375,7 +375,7 @@ export class DashboardComponent {
     });
   }
 
-  formatDate(date: Date | string | number | Timestamp) {
+  formatDate(date: Date | string | number | Timestamp | null | undefined) {
     const parsedDate = this.convertToDate(date);
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       return 'Unknown date';
@@ -387,7 +387,7 @@ export class DashboardComponent {
     });
   }
 
-  private toInputDate(date: Date | string | number | Timestamp) {
+  private toInputDate(date: Date | string | number | Timestamp | null | undefined) {
     const parsedDate = this.convertToDate(date);
     if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       return '';
