@@ -39,17 +39,27 @@ jobs:
       - name: Get version
         id: version
         run: |
-          # Get the latest tag or start from v1.0.0
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          # Get the latest tag or start from v0.0.00
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.00")
           # Extract version numbers
           MAJOR=$(echo $LATEST_TAG | cut -d. -f1 | tr -d 'v')
           MINOR=$(echo $LATEST_TAG | cut -d. -f2)
           PATCH=$(echo $LATEST_TAG | cut -d. -f3)
-          # Increment patch version
+          # Increment patch version by 1 (display format will be .01, .02, etc.)
           NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          # Format patch with leading zero if needed (01, 02, etc.)
+          FORMATTED_PATCH=$(printf "%02d" $NEW_PATCH)
+          NEW_VERSION="v${MAJOR}.${MINOR}.${FORMATTED_PATCH}"
+          DISPLAY_VERSION="${MAJOR}.${MINOR}.${FORMATTED_PATCH}"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
+          echo "display_version=$DISPLAY_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION (Display: $DISPLAY_VERSION)"
+
+      - name: Generate version file
+        run: |
+          mkdir -p public
+          echo '{"version":"${{ steps.version.outputs.display_version }}"}' > public/version.json
+          cat public/version.json
 
       - name: Build Docker image
         run: |
