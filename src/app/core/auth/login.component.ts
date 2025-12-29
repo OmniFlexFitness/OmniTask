@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black font-sans ofx-grid-surface">
+    <div class="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black font-sans">
       <!-- Background Image with Cyberpunk Overlay -->
       <div class="absolute inset-0 z-0 select-none">
         <img src="assets/img/marble-brand-bg.jpeg" alt="Background" class="w-full h-full object-cover">
@@ -55,7 +55,7 @@ import { AuthService } from './auth.service';
             <!-- Neon Glow Effect behind card -->
             <div class="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
 
-            <div class="relative bg-black/60 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl ofx-grid-surface">
+            <div class="relative bg-black/60 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
               <div class="text-center mb-8">
                 <h2 class="text-2xl font-bold text-white mb-2 tracking-wide">Identity Verification</h2>
                 <div class="h-1 w-16 bg-gradient-to-r from-purple-500 to-cyan-500 mx-auto rounded-full"></div>

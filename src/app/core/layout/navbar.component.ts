@@ -8,7 +8,7 @@ import { AuthService } from '../auth/auth.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <nav class="sticky top-0 z-50 backdrop-blur-xl bg-[#040915]/90 border-b border-cyan-500/40 shadow-lg shadow-purple-500/25 relative overflow-hidden ofx-plexus ofx-grid-surface">
+    <nav class="sticky top-0 z-50 backdrop-blur-xl bg-[#040915]/90 border-b border-cyan-500/40 shadow-lg shadow-purple-500/25 relative overflow-hidden">
       <div class="pointer-events-none absolute inset-0 opacity-40 mix-blend-screen bg-[radial-gradient(circle_at_10%_20%,rgba(59,130,246,0.25),transparent_30%),radial-gradient(circle_at_90%_0%,rgba(236,72,153,0.25),transparent_32%)]"></div>
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div class="flex items-center justify-between h-16">
