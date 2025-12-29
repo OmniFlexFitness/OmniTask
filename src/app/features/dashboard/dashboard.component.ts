@@ -393,6 +393,10 @@ export class DashboardComponent {
     if (date instanceof Timestamp) {
       return date.toDate();
     }
+    // Handle date-only strings to avoid timezone issues where 'YYYY-MM-DD' is parsed as UTC.
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return new Date(`${date}T00:00:00`);
+    }
     return new Date(date);
   }
 
