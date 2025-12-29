@@ -275,6 +275,9 @@ export class DashboardComponent {
         return false;
       }
       const due = this.convertToDate(task.dueDate);
+      if (!due) {
+        return false;
+      }
       const now = new Date();
       const threeDaysFromNow = new Date();
       threeDaysFromNow.setDate(now.getDate() + 3);
@@ -374,7 +377,7 @@ export class DashboardComponent {
 
   formatDate(date: Date | string | number | Timestamp) {
     const parsedDate = this.convertToDate(date);
-    if (Number.isNaN(parsedDate.getTime())) {
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       return 'Unknown date';
     }
 
@@ -386,13 +389,16 @@ export class DashboardComponent {
 
   private toInputDate(date: Date | string | number | Timestamp) {
     const parsedDate = this.convertToDate(date);
-    if (Number.isNaN(parsedDate.getTime())) {
+    if (!parsedDate || Number.isNaN(parsedDate.getTime())) {
       return '';
     }
     return parsedDate.toISOString().slice(0, 10);
   }
 
-  private convertToDate(date: Date | string | number | Timestamp): Date {
+  private convertToDate(date: Date | string | number | Timestamp | null | undefined): Date | null {
+    if (date === null || date === undefined) {
+      return null;
+    }
     if (date instanceof Timestamp) {
       return date.toDate();
     }
