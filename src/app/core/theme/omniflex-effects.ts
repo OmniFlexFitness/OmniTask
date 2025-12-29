@@ -9,21 +9,13 @@ export function initOmniFlexEffects(): Cleanup {
 
   const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-  let ring: HTMLDivElement | null = null;
-  let rafId: number | null = null;
   let observer: IntersectionObserver | null = null;
   let scanlineEl: HTMLDivElement | null = null;
   let scanCssEl: HTMLStyleElement | null = null;
 
-  let targetX = window.innerWidth / 2;
-  let targetY = window.innerHeight / 2;
-  let currentX = targetX;
-  let currentY = targetY;
-
   const cleanups: Cleanup[] = [];
 
   const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
   const parseRGB = (str?: string | null): RGB | null => {
     if (!str) return null;
@@ -72,51 +64,7 @@ export function initOmniFlexEffects(): Cleanup {
     return `0 0 10px rgba(${r}, ${g}, ${b}, ${a1}), 0 0 20px rgba(${r}, ${g}, ${b}, ${a2}), 0 0 36px rgba(${r}, ${g}, ${b}, ${a3})`;
   };
 
-  const adjustRing = () => {
-    if (!ring) return;
-    const mq = window.matchMedia('(max-width: 768px)');
-    const apply = () => {
-      if (!ring) return;
-      ring.style.width = mq.matches ? '180px' : '260px';
-      ring.style.height = mq.matches ? '180px' : '260px';
-      ring.style.filter = mq.matches ? 'blur(10px)' : 'blur(14px)';
-      ring.style.opacity = mq.matches ? '0.38' : '0.5';
-    };
-    apply();
-    const listener = () => apply();
-    if (mq.addEventListener) mq.addEventListener('change', listener);
-    else mq.addListener(listener);
-    cleanups.push(() => {
-      if (mq.removeEventListener) mq.removeEventListener('change', listener);
-      else mq.removeListener(listener);
-    });
-  };
 
-  const createRing = () => {
-    if (ring) return;
-    ring = document.createElement('div');
-    ring.className = 'omni-accent-ring';
-    ring.style.left = `${currentX}px`;
-    ring.style.top = `${currentY}px`;
-    ring.setAttribute('aria-hidden', 'true');
-    document.documentElement.appendChild(ring);
-    adjustRing();
-  };
-
-  const animateRing = () => {
-    currentX = lerp(currentX, targetX, 0.12);
-    currentY = lerp(currentY, targetY, 0.12);
-    if (ring) {
-      ring.style.left = `${currentX}px`;
-      ring.style.top = `${currentY}px`;
-    }
-    rafId = window.requestAnimationFrame(animateRing);
-  };
-
-  const onMove = (e: MouseEvent) => {
-    targetX = e.clientX;
-    targetY = e.clientY + window.scrollY;
-  };
 
   const enhanceHeadings = () => {
     const headings = document.querySelectorAll<HTMLElement>('.site-body h1, .site-body h2, .site-body h3, .site-body h4, .site-body h5, .site-body h6');
@@ -284,22 +232,13 @@ export function initOmniFlexEffects(): Cleanup {
 
   const onVisibility = () => {
     if (document.hidden) {
-      if (rafId) window.cancelAnimationFrame(rafId);
-      rafId = null;
       if (scanlineEl) scanlineEl.classList.remove('omni-animated');
     } else if (!prefersReduced) {
-      if (!rafId) rafId = window.requestAnimationFrame(animateRing);
       if (scanlineEl) scanlineEl.classList.add('omni-animated');
     }
   };
 
   const mount = () => {
-    createRing();
-    if (!prefersReduced) {
-      rafId = window.requestAnimationFrame(animateRing);
-      window.addEventListener('mousemove', onMove, { passive: true });
-      cleanups.push(() => window.removeEventListener('mousemove', onMove));
-    }
     enhanceHeadings();
     enhanceLinks();
     revealSections();
@@ -311,11 +250,9 @@ export function initOmniFlexEffects(): Cleanup {
   mount();
 
   return () => {
-    if (rafId) window.cancelAnimationFrame(rafId);
     cleanups.forEach((fn) => fn());
     if (observer) observer.disconnect();
     removeScanlines();
-    if (ring?.parentNode) ring.parentNode.removeChild(ring);
     if (scanCssEl?.parentNode) scanCssEl.parentNode.removeChild(scanCssEl);
   };
 }

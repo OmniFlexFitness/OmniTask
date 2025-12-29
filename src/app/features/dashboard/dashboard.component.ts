@@ -15,7 +15,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
     <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10">
       <header class="space-y-3 relative">
         <p class="ofx-section-title">Mission Control</p>
-        <div class="absolute -bottom-2 left-0 h-[2px] w-32 bg-gradient-to-r from-cyan-400 via-purple-500 to-transparent opacity-70"></div>
+        <div class="absolute -bottom-2 left-0 h-[2px] w-32 bg-[#0073ff] opacity-80 shadow-[0_0_8px_rgba(0,115,255,0.7)]"></div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 class="text-4xl font-black text-white tracking-tight">Dashboard</h1>
