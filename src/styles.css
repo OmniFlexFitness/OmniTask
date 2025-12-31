@@ -7,19 +7,34 @@
     color-scheme: dark;
     --default-font: "JetBrains Mono Nerd Font", "JetBrains Mono", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
     --font-monospace: "Anonymouse Pro for Powerline", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    background-color: #070a18;
+    background-color: #0a0f1e;
     font-family: var(--default-font);
+  }
+
+  html {
+    min-height: 100%;
   }
 
   body {
     @apply text-slate-100 min-h-screen;
     font-family: var(--default-font);
     color: rgb(240, 246, 255);
+    background-color: #0a0f1e;
     background-image: url('assets/img/bg-4.jpg');
-    background-color: #070a18;
-    background-repeat: repeat-y;
-    background-size: 100% auto;
-    background-attachment: scroll;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
+  }
+
+  .blur-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background: rgba(10, 15, 30, 0.3);
+    pointer-events: none;
   }
 
   ::selection {
@@ -39,9 +54,16 @@
     0 0 32px rgba(165, 100, 255, 0.14);
 }
 
+.ofx-gradient-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
 .ofx-gradient-button::after {
   content: '';
   @apply absolute inset-[2px] rounded-md bg-slate-950/80 opacity-0 transition-all duration-300;
+  pointer-events: none;
 }
 
 .ofx-gradient-button:hover::before {

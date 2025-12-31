@@ -1,6 +1,5 @@
-import { AfterViewInit, Component, OnDestroy, inject } from '@angular/core';
 import { Component, inject, signal, OnInit, DestroyRef } from '@angular/core';
-import { RouterOutlet } from '@angular/router'; 
+import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavbarComponent } from './core/layout/navbar.component';
@@ -16,16 +15,6 @@ import { DEFAULT_VERSION } from './core/constants';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App implements AfterViewInit, OnDestroy {
-  auth = inject(AuthService);
-  private disposeEffects?: () => void;
-
-  ngAfterViewInit() {
-    this.disposeEffects = initOmniFlexEffects();
-  }
-
-  ngOnDestroy() {
-    this.disposeEffects?.();
 export class App implements OnInit {
   auth = inject(AuthService);
   versionService = inject(VersionService);

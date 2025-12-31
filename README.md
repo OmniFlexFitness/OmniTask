@@ -63,6 +63,9 @@ This project is configured with automated deploy previews for pull requests. Whe
 3. Post a comment on the PR with a link to the preview URL
 
 The preview deployment allows you to test changes in a live environment before merging. Preview channels automatically expire after 7 days.
+## Deployment & Architecture
+
+For a detailed explanation of how this application is hosted and deployed using GitHub, Google Cloud, Firebase, and Cloudflare, please refer to the [Deployment & Architecture Guide](DEPLOYMENT.md).
 
 ## Additional Resources
 
