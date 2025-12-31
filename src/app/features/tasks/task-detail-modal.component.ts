@@ -1,16 +1,16 @@
 import { Component, input, output, computed, signal, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
-import { Task, Project } from '../../core/models/domain.model';
+import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of } from 'rxjs';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   template: `
     <div 
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
@@ -102,6 +102,31 @@ import { switchMap, of } from 'rxjs';
               />
             </div>
 
+            <!-- Status -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Status</label>
+              <select
+                formControlName="status"
+                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                (change)="autoSave()"
+              >
+                <option value="todo">📋 To Do</option>
+                <option value="in-progress">🔄 In Progress</option>
+                <option value="done">✅ Done</option>
+              </select>
+            </div>
+
+            <!-- Start Date -->
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Start Date</label>
+              <input
+                type="date"
+                formControlName="startDate"
+                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                (blur)="autoSave()"
+              />
+            </div>
+
             <!-- Due Date -->
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Due Date</label>
@@ -121,13 +146,13 @@ import { switchMap, of } from 'rxjs';
                 class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                 (change)="autoSave()"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low">🟢 Low</option>
+                <option value="medium">🟡 Medium</option>
+                <option value="high">🔴 High</option>
               </select>
             </div>
 
-            <!-- Project/Section -->
+            <!-- Section -->
             <div class="flex flex-col gap-1">
                <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Section</label>
                <select
@@ -148,14 +173,76 @@ import { switchMap, of } from 'rxjs';
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Description</label>
             <textarea
               formControlName="description"
-              rows="6"
+              rows="4"
               placeholder="Add more details to this task..."
               class="w-full bg-slate-950/30 border border-white/10 rounded-xl p-4 text-slate-300 placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-y leading-relaxed"
               (blur)="autoSave()"
             ></textarea>
           </div>
+
+          <!-- Subtasks -->
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Subtasks</label>
+              <span class="text-xs text-slate-500">{{ completedSubtasksCount() }}/{{ subtasks().length }}</span>
+            </div>
+            
+            <!-- Subtask List -->
+            <div class="space-y-2 mb-3">
+              @for (subtask of subtasks(); track subtask.id) {
+                <div class="flex items-center gap-3 group">
+                  <button
+                    class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                    [class.border-cyan-500]="subtask.completed"
+                    [class.bg-cyan-500]="subtask.completed"
+                    [class.border-slate-500]="!subtask.completed"
+                    (click)="toggleSubtask(subtask.id)"
+                  >
+                    @if (subtask.completed) {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </button>
+                  <span 
+                    class="flex-1 text-sm"
+                    [class.text-slate-500]="subtask.completed"
+                    [class.line-through]="subtask.completed"
+                    [class.text-slate-300]="!subtask.completed"
+                  >{{ subtask.title }}</span>
+                  <button
+                    class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                    (click)="deleteSubtask(subtask.id)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+
+            <!-- Add Subtask Input -->
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                [(ngModel)]="newSubtaskTitle"
+                [ngModelOptions]="{standalone: true}"
+                placeholder="Add a subtask..."
+                class="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                (keydown.enter)="addSubtask()"
+              />
+              <button
+                class="px-3 py-2 bg-cyan-600/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-600/30 transition-colors"
+                [disabled]="!newSubtaskTitle.trim()"
+                (click)="addSubtask()"
+              >
+                Add
+              </button>
+            </div>
+          </div>
           
-          <!-- Tags (simple text input for now) -->
+          <!-- Tags -->
           <div>
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Tags</label>
              <input
@@ -223,11 +310,21 @@ export class TaskDetailModalComponent {
     title: ['', Validators.required],
     description: [''],
     assigneeName: [''],
+    status: ['todo'],
+    startDate: [''],
     dueDate: [''],
     priority: ['medium'],
     sectionId: [null as string | null],
     tags: ['']
   });
+
+  // Subtasks state
+  subtasks = signal<Subtask[]>([]);
+  newSubtaskTitle = '';
+
+  completedSubtasksCount = computed(() => 
+    this.subtasks().filter(s => s.completed).length
+  );
 
   constructor() {
     // Sync form with task input
@@ -238,11 +335,16 @@ export class TaskDetailModalComponent {
           title: task.title,
           description: task.description,
           assigneeName: task.assigneeName || '',
+          status: task.status,
+          startDate: (task as any).startDate ? this.toInputDate((task as any).startDate) : '',
           dueDate: task.dueDate ? this.toInputDate(task.dueDate) : '',
           priority: task.priority,
           sectionId: task.sectionId || null,
           tags: task.tags?.join(', ') || ''
         }, { emitEvent: false });
+
+        // Load subtasks
+        this.subtasks.set(task.subtasks || []);
       }
     });
   }
@@ -257,6 +359,7 @@ export class TaskDetailModalComponent {
     if (!task || this.form.invalid || !this.form.dirty) return;
 
     const val = this.form.value;
+    const startDate = val.startDate ? new Date(val.startDate) : undefined;
     const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
     const tags = val.tags ? val.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
 
@@ -264,19 +367,18 @@ export class TaskDetailModalComponent {
       title: val.title!,
       description: val.description || '',
       assigneeName: val.assigneeName || undefined,
+      status: val.status as Task['status'],
       dueDate,
       priority: val.priority as Task['priority'],
-      sectionId: val.sectionId || undefined, // or delete field if null? Firestore merge ignores undefined usually or needs FieldValue.delete()
+      sectionId: val.sectionId || undefined,
       tags
     };
 
-    // Clean undefined for Firestore if needed, but AngularFire handles it well mostly.
-    // However, explicit FieldValue.delete() is safer for removal.
-    // For now, let's just pass values.
+    // Add startDate to updates (extending Task type for this)
+    (updates as any).startDate = startDate;
 
     try {
       await this.taskService.updateTask(task.id, updates);
-      // Emit updated task optimistically
       this.updated.emit({ ...task, ...updates } as Task);
     } catch (e) {
       console.error('Auto-save failed', e);
@@ -289,10 +391,10 @@ export class TaskDetailModalComponent {
 
     if (task.status === 'done') {
       await this.taskService.reopenTask(task.id);
-      this.updated.emit({ ...task, status: 'in-progress' }); // Optimistic
+      this.updated.emit({ ...task, status: 'in-progress' });
     } else {
       await this.taskService.completeTask(task.id);
-      this.updated.emit({ ...task, status: 'done' }); // Optimistic
+      this.updated.emit({ ...task, status: 'done' });
     }
   }
 
@@ -303,6 +405,46 @@ export class TaskDetailModalComponent {
     await this.taskService.deleteTask(task.id);
     this.deleted.emit(task.id);
     this.close.emit();
+  }
+
+  // Subtask methods
+  async addSubtask() {
+    const task = this.task();
+    if (!task || !this.newSubtaskTitle.trim()) return;
+
+    const newSubtask: Subtask = {
+      id: crypto.randomUUID(),
+      title: this.newSubtaskTitle.trim(),
+      completed: false
+    };
+
+    const updatedSubtasks = [...this.subtasks(), newSubtask];
+    this.subtasks.set(updatedSubtasks);
+    this.newSubtaskTitle = '';
+
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+  }
+
+  async toggleSubtask(subtaskId: string) {
+    const task = this.task();
+    if (!task) return;
+
+    const updatedSubtasks = this.subtasks().map(s =>
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+    );
+    this.subtasks.set(updatedSubtasks);
+
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+  }
+
+  async deleteSubtask(subtaskId: string) {
+    const task = this.task();
+    if (!task) return;
+
+    const updatedSubtasks = this.subtasks().filter(s => s.id !== subtaskId);
+    this.subtasks.set(updatedSubtasks);
+
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
   }
 
   onExampleClick(e: Event) {
@@ -321,3 +463,4 @@ export class TaskDetailModalComponent {
     }
   }
 }
+
