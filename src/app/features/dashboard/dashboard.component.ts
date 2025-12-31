@@ -68,7 +68,7 @@ const DEFAULT_PROJECT_ID = 'demo-project';
           </button>
         </div>
         <form
-          class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5"
+          class="px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-6"
           [formGroup]="taskForm"
           (ngSubmit)="saveTask()"
         >

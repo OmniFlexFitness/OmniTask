@@ -5,8 +5,10 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --default-font: "JetBrains Mono Nerd Font", "JetBrains Mono", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-    --font-monospace: "Anonymouse Pro for Powerline", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    --default-font: 'JetBrains Mono Nerd Font', 'JetBrains Mono', ui-sans-serif, system-ui,
+      -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-monospace: 'Anonymouse Pro for Powerline', 'JetBrains Mono', ui-monospace, SFMono-Regular,
+      Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
     background-color: #0a0f1e;
     font-family: var(--default-font);
   }
@@ -46,18 +48,23 @@
 .ofx-panel {
   @apply relative overflow-hidden bg-slate-950/70 border border-white/10 backdrop-blur-2xl shadow-2xl shadow-cyan-500/10 rounded-2xl;
   background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(139, 92, 246, 0.1));
-  box-shadow:
-    0 0 0 1px rgba(0, 210, 255, 0.12),
-    0 0 0 2px rgba(165, 100, 255, 0.08),
-    0 14px 48px rgba(0, 0, 0, 0.55),
-    0 0 26px rgba(0, 210, 255, 0.18),
+  box-shadow: 0 0 0 1px rgba(0, 210, 255, 0.12), 0 0 0 2px rgba(165, 100, 255, 0.08),
+    0 14px 48px rgba(0, 0, 0, 0.55), 0 0 26px rgba(0, 210, 255, 0.18),
     0 0 32px rgba(165, 100, 255, 0.14);
 }
 
 .ofx-gradient-button {
+  @apply px-6 py-3 rounded-lg text-sm font-semibold;
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  background: linear-gradient(135deg, rgba(0, 115, 255, 0.25), rgba(165, 100, 255, 0.25));
+  border: 1px solid rgba(0, 210, 255, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(0, 210, 255, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 16px rgba(0, 115, 255, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ofx-gradient-button::after {
@@ -80,20 +87,30 @@
 }
 
 .ofx-input {
-  @apply w-full rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/50 transition;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.02),
-    0 0 0 1px rgba(0, 210, 255, 0.08),
-    0 10px 30px rgba(8, 12, 26, 0.75),
-    0 0 16px rgba(0, 210, 255, 0.08);
+  @apply w-full px-4 py-3 rounded-lg border border-white/10 bg-slate-900/60 text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/30 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/60 transition-all duration-200;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 0 0 1px rgba(0, 210, 255, 0.08),
+    0 10px 30px rgba(8, 12, 26, 0.75), 0 0 16px rgba(0, 210, 255, 0.08);
 }
 
+.ofx-input:focus {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 2px rgba(0, 210, 255, 0.25),
+    0 10px 30px rgba(8, 12, 26, 0.75), 0 0 24px rgba(0, 210, 255, 0.2),
+    0 0 40px rgba(165, 100, 255, 0.1);
+}
+
+.ofx-section-title {
+  @apply text-xs uppercase tracking-[0.25em] font-bold;
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.9), rgba(165, 100, 255, 0.9));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
 
 .ofx-chip {
   @apply px-2 py-0.5 inline-flex items-center gap-2 text-xs font-semibold rounded-full border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_30px_rgba(56,189,248,0.15)];
   background-image: linear-gradient(120deg, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.12));
 }
-
 
 .ofx-ghost-button {
   @apply px-4 py-2 rounded-lg text-sm font-semibold border border-cyan-500/40 text-cyan-100/90 bg-white/5 hover:bg-white/10 shadow-[0_10px_30px_rgba(56,189,248,0.15)] transition;
@@ -185,16 +202,40 @@
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 0 10px rgba(138, 92, 255, 0.25);
 }
 
-.theme-dark .site-body h1 { color: var(--magenta); font-size: 2.15rem; }
-.theme-dark .site-body h2 { color: var(--blue); font-size: 1.8rem; }
-.theme-dark .site-body h3 { color: var(--green); font-size: 1.42rem; }
-.theme-dark .site-body h4 { color: var(--cyan); font-size: 1.2rem; }
-.theme-dark .site-body h5 { color: var(--yellow); font-size: 1.05rem; }
-.theme-dark .site-body h6 { color: var(--orange); font-size: 0.96rem; text-transform: uppercase; letter-spacing: 0.8px; }
+.theme-dark .site-body h1 {
+  color: var(--magenta);
+  font-size: 2.15rem;
+}
+.theme-dark .site-body h2 {
+  color: var(--blue);
+  font-size: 1.8rem;
+}
+.theme-dark .site-body h3 {
+  color: var(--green);
+  font-size: 1.42rem;
+}
+.theme-dark .site-body h4 {
+  color: var(--cyan);
+  font-size: 1.2rem;
+}
+.theme-dark .site-body h5 {
+  color: var(--yellow);
+  font-size: 1.05rem;
+}
+.theme-dark .site-body h6 {
+  color: var(--orange);
+  font-size: 0.96rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
 
 @keyframes omni-gradient-move {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
 }
 
 .theme-dark .site-body h1::after,
@@ -206,9 +247,7 @@
 .theme-dark .site-body h1,
 .theme-dark .site-body h2,
 .theme-dark .site-body h3 {
-  text-shadow:
-    0 0 14px rgba(0, 210, 255, 0.35),
-    0 0 18px rgba(165, 100, 255, 0.25),
+  text-shadow: 0 0 14px rgba(0, 210, 255, 0.35), 0 0 18px rgba(165, 100, 255, 0.25),
     0 1px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -287,7 +326,7 @@
 }
 
 .theme-dark .site-body hr::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   top: -1px;
@@ -305,8 +344,7 @@
   margin: 1em 0;
   padding: 0.95rem 1.15rem;
   color: var(--fg_dark);
-  background:
-    radial-gradient(400px 200px at 0% 0%, rgba(0, 210, 255, 0.12), transparent 60%),
+  background: radial-gradient(400px 200px at 0% 0%, rgba(0, 210, 255, 0.12), transparent 60%),
     radial-gradient(400px 200px at 100% 100%, rgba(165, 100, 255, 0.12), transparent 60%),
     rgba(255, 255, 255, 0.04);
   border-left: 4px solid var(--purple);
@@ -373,8 +411,7 @@
   z-index: 1;
   opacity: 0.22;
   mix-blend-mode: screen;
-  background:
-    repeating-linear-gradient(
+  background: repeating-linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0px,
       rgba(0, 0, 0, 0) 2px,
@@ -388,17 +425,26 @@
 }
 
 @keyframes omni-scan-fade {
-  0% { opacity: 0.16; }
-  50% { opacity: 0.26; }
-  100% { opacity: 0.16; }
+  0% {
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 0.26;
+  }
+  100% {
+    opacity: 0.16;
+  }
 }
 
 @keyframes omni-scan-shift {
-  0% { background-position: 0 0, 0 0, 0 0; }
-  100% { background-position: 0 2px, 0 0, 0 0; }
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 2px, 0 0, 0 0;
+  }
 }
 
 .neon-scanlines .omni-neon-scanlines.omni-animated {
-  animation: omni-scan-fade 5s ease-in-out infinite,
-             omni-scan-shift 0.9s steps(2, end) infinite;
+  animation: omni-scan-fade 5s ease-in-out infinite, omni-scan-shift 0.9s steps(2, end) infinite;
 }
