@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+name: Deploy to Cloud Run & Firebase
 
 on:
   push:
@@ -80,6 +80,22 @@ jobs:
             --allow-unauthenticated \
             --port 8080
 
+      # Firebase Deployment Steps
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Angular app
+        run: yarn build
+
+      - name: Deploy to Firebase
+        run: npx firebase-tools deploy --only hosting,firestore --project ${{ env.PROJECT_ID }}
+
       - name: Create Release Tag
         run: |
           git config user.name "github-actions[bot]"
@@ -87,8 +103,9 @@ jobs:
           git tag ${{ steps.version.outputs.version }}
           git push origin ${{ steps.version.outputs.version }}
 
-      - name: Output deployment URL
+      - name: Output deployment URLs
         run: |
           URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
-          echo "🚀 Deployed to: $URL"
+          echo "🚀 Cloud Run: $URL"
+          echo "🔥 Firebase Hosting: https://omnitask-475422.web.app"
           echo "📦 Version: ${{ steps.version.outputs.version }}"
