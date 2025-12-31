@@ -15,6 +15,7 @@ import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
+import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -26,7 +27,8 @@ import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
     TaskListViewComponent,
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
-    TaskDetailModalComponent
+    TaskDetailModalComponent,
+    TaskCreateModalComponent
   ],
   template: `
     <div class="h-screen flex overflow-hidden bg-slate-950">
@@ -211,6 +213,16 @@ import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
           (deleted)="onTaskDeleted($event)"
         ></app-task-detail-modal>
       }
+
+      @if (showCreateModal()) {
+        <app-task-create-modal
+          [projectId]="selectedProjectId()!"
+          [initialSectionId]="createModalSectionId()"
+          [initialDueDate]="createModalDueDate()"
+          (close)="closeCreateModal()"
+          (created)="onTaskCreated($event)"
+        ></app-task-create-modal>
+      }
     </div>
   `
 })
@@ -227,6 +239,11 @@ export class DashboardComponent {
   // Modals state
   editProjectModal = signal<Project | null>(null);
   openTask = signal<Task | null>(null);
+  
+  // Create modal state
+  showCreateModal = signal(false);
+  createModalSectionId = signal<string | null>(null);
+  createModalDueDate = signal<Date | null>(null);
 
   // Derived state for Current Project
   currentProject = toSignal(
@@ -252,52 +269,23 @@ export class DashboardComponent {
      this.editProjectModal.set(null);
   }
 
-  async openCreateTaskModal() {
-    const projectId = this.selectedProjectId();
-    if (!projectId) return;
-    
-    // Create an empty task for immediate editing
-    // We'll filter this out of list if strictly needed, or just let it exist as draft if Firestore rules allow.
-    // Ideally we'd use a local 'new' mode in modal, but our modal is bound to existing tasks mostly.
-    // Let's create a placeholder task in Firestore.
-    // A better UX might be local-only until save, but our modal is complex.
-    // Let's create it.
-    
-    this.createEmptyTask(projectId);
+  openCreateTaskModal(sectionId?: string, dueDate?: Date) {
+    if (!this.selectedProjectId()) return;
+    this.createModalSectionId.set(sectionId || null);
+    this.createModalDueDate.set(dueDate || null);
+    this.showCreateModal.set(true);
   }
 
-  async createEmptyTask(projectId: string, sectionId?: string, date?: Date) {
-      try {
-          const ref = await this.taskService.createTask({
-              projectId,
-              sectionId,
-              title: '',
-              description: '',
-              status: 'todo',
-              priority: 'medium',
-              order: (this.tasks()?.length || 0),
-              dueDate: date as any,
-              tags: []
-          });
-          
-          const newTask: Task = { 
-              id: ref.id, 
-              projectId, 
-              sectionId,
-              title: '', 
-              description: '', 
-              status: 'todo', 
-              priority: 'medium', 
-              order: (this.tasks()?.length || 0),
-              createdAt: new Date() as any,
-              updatedAt: new Date() as any,
-              dueDate: date as any 
-          };
-          
-          this.openTask.set(newTask);
-      } catch (e) {
-          console.error('Failed to create task', e);
-      }
+  closeCreateModal() {
+    this.showCreateModal.set(false);
+    this.createModalSectionId.set(null);
+    this.createModalDueDate.set(null);
+  }
+
+  onTaskCreated(task: Task) {
+    // Firestore subscription handles the list update
+    // Optionally open the task detail for further edits
+    // this.openTask.set(task);
   }
 
   openTaskDetail(task: Task) {
@@ -319,15 +307,11 @@ export class DashboardComponent {
   }
 
   quickAddInBoard(sectionId: string) {
-      if(this.selectedProjectId()) {
-          this.createEmptyTask(this.selectedProjectId()!, sectionId);
-      }
+    this.openCreateTaskModal(sectionId);
   }
   
   addTaskForDate(date: Date) {
-      if(this.selectedProjectId()) {
-          this.createEmptyTask(this.selectedProjectId()!, undefined, date);
-      }
+    this.openCreateTaskModal(undefined, date);
   }
   
   async addSection() {
