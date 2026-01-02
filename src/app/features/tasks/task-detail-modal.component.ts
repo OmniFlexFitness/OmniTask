@@ -70,6 +70,23 @@ import { switchMap, of } from 'rxjs';
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+
+            <!-- Cancel -->
+            <button
+              class="px-3 py-2 bg-slate-700/50 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-700/70 transition-colors"
+              (click)="close.emit()"
+            >
+              Cancel
+            </button>
+
+            <!-- Save -->
+            <button
+              class="px-3 py-2 bg-cyan-600/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-600/30 transition-colors"
+              [disabled]="form.invalid"
+              (click)="saveChanges()"
+            >
+              Save
+            </button>
           </div>
         </header>
 
@@ -83,7 +100,6 @@ import { switchMap, of } from 'rxjs';
               placeholder="Task title"
               class="w-full bg-transparent border-none text-2xl font-bold text-white placeholder-slate-600 focus:ring-0 resize-none overflow-hidden"
               (input)="autoResize($event.target)"
-              (blur)="autoSave()"
               (keydown.enter)="$event.preventDefault()"
             ></textarea>
           </div>
@@ -98,7 +114,6 @@ import { switchMap, of } from 'rxjs';
                 formControlName="assigneeName"
                 placeholder="Unassigned"
                 class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
               />
             </div>
 
@@ -108,7 +123,6 @@ import { switchMap, of } from 'rxjs';
               <select
                 formControlName="status"
                 class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (change)="autoSave()"
               >
                 <option value="todo">📋 To Do</option>
                 <option value="in-progress">🔄 In Progress</option>
@@ -123,7 +137,6 @@ import { switchMap, of } from 'rxjs';
                 type="date"
                 formControlName="startDate"
                 class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
               />
             </div>
 
@@ -134,7 +147,6 @@ import { switchMap, of } from 'rxjs';
                 type="date"
                 formControlName="dueDate"
                 class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
               />
             </div>
 
@@ -144,7 +156,6 @@ import { switchMap, of } from 'rxjs';
               <select
                 formControlName="priority"
                 class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (change)="autoSave()"
               >
                 <option value="low">🟢 Low</option>
                 <option value="medium">🟡 Medium</option>
@@ -158,7 +169,6 @@ import { switchMap, of } from 'rxjs';
                <select
                  formControlName="sectionId"
                  class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                 (change)="autoSave()"
                >
                  <option [value]="null">No Section</option>
                  @for (section of projectSections(); track section.id) {
@@ -176,7 +186,6 @@ import { switchMap, of } from 'rxjs';
               rows="4"
               placeholder="Add more details to this task..."
               class="w-full bg-slate-950/30 border border-white/10 rounded-xl p-4 text-slate-300 placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-y leading-relaxed"
-              (blur)="autoSave()"
             ></textarea>
           </div>
 
@@ -250,7 +259,6 @@ import { switchMap, of } from 'rxjs';
                 formControlName="tags"
                 placeholder="Comma separated tags..."
                 class="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
               />
           </div>
         </div>
@@ -354,34 +362,30 @@ export class TaskDetailModalComponent {
     element.style.height = element.scrollHeight + 'px';
   }
 
-  async autoSave() {
+  async saveChanges() {
     const task = this.task();
-    if (!task || this.form.invalid || !this.form.dirty) return;
+    if (!task || this.form.invalid) return;
 
-    const val = this.form.value;
-    const startDate = val.startDate ? new Date(val.startDate) : undefined;
-    const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-    const tags = val.tags ? val.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
-
+    const formValue = this.form.value;
     const updates: Partial<Task> = {
-      title: val.title!,
-      description: val.description || '',
-      assigneeName: val.assigneeName || undefined,
-      status: val.status as Task['status'],
-      dueDate,
-      priority: val.priority as Task['priority'],
-      sectionId: val.sectionId || undefined,
-      tags
+      title: formValue.title!,
+      description: formValue.description || '',
+      assigneeName: formValue.assigneeName || undefined,
+      status: formValue.status as Task['status'],
+      dueDate: formValue.dueDate ? new Date(formValue.dueDate) : undefined,
+      priority: formValue.priority as Task['priority'],
+      sectionId: formValue.sectionId || undefined,
+      tags: formValue.tags ? formValue.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      subtasks: this.subtasks()
     };
-
-    // Add startDate to updates (extending Task type for this)
-    (updates as any).startDate = startDate;
+    (updates as any).startDate = formValue.startDate ? new Date(formValue.startDate) : undefined;
 
     try {
       await this.taskService.updateTask(task.id, updates);
       this.updated.emit({ ...task, ...updates } as Task);
+      this.close.emit();
     } catch (e) {
-      console.error('Auto-save failed', e);
+      console.error('Save failed', e);
     }
   }
 
