@@ -106,32 +106,68 @@ import { toSignal } from '@angular/core/rxjs-interop';
   `,
   styles: [`
     .ofx-sidebar {
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(10, 15, 30, 0.98));
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
+      background: #050810;
+      border-right: 1px solid rgba(0, 210, 255, 0.15);
+      backdrop-filter: blur(16px);
+      position: relative;
+    }
+
+    .ofx-sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 1px;
+      height: 100%;
+      background: rgba(0, 210, 255, 0.3);
+      box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
     }
 
     .ofx-icon-button {
-      @apply p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200;
+      @apply p-2 rounded-lg text-cyan-400 hover:text-white hover:bg-cyan-500/10 transition-all duration-200;
+      position: relative;
     }
 
     .ofx-icon-button:hover {
-      box-shadow: 0 0 12px rgba(0, 210, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
     }
 
     .ofx-project-item {
       border-left: 3px solid transparent;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .ofx-project-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--cyber-purple);
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
 
     .ofx-project-item:hover {
-      background: linear-gradient(90deg, rgba(56, 189, 248, 0.08), transparent);
-      border-left-color: rgba(0, 210, 255, 0.3);
+      background: rgba(224, 64, 251, 0.08);
+      border-left-color: transparent;
+    }
+
+    .ofx-project-item:hover::before {
+      opacity: 0.5;
     }
 
     .ofx-project-item.active {
-      background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), transparent);
-      border-left-color: #00d2ff;
-      box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.1);
+      background: rgba(224, 64, 251, 0.12);
+      border-left-color: transparent;
+      box-shadow: inset 0 0 30px rgba(224, 64, 251, 0.1);
+    }
+
+    .ofx-project-item.active::before {
+      opacity: 1;
+      box-shadow: 0 0 10px rgba(224, 64, 251, 0.5);
     }
 
     .ofx-project-item.active span:first-child {
@@ -139,8 +175,14 @@ import { toSignal } from '@angular/core/rxjs-interop';
     }
 
     @keyframes pulse-glow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
+      0%, 100% { 
+        opacity: 1;
+        filter: brightness(1);
+      }
+      50% { 
+        opacity: 0.8;
+        filter: brightness(1.3);
+      }
     }
   `]
 })

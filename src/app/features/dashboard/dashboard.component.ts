@@ -31,7 +31,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
     TaskCreateModalComponent
   ],
   template: `
-    <div class="h-screen flex overflow-hidden bg-slate-950">
+    <div class="h-screen flex overflow-hidden bg-[#050810]">
       <!-- Sidebar -->
       <div class="w-64 flex-shrink-0 z-20">
         <app-project-sidebar
@@ -41,15 +41,22 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
       </div>
 
       <!-- Main Content -->
-      <div class="flex-1 flex flex-col min-w-0 bg-slate-900/50 relative">
-        <!-- Background accents -->
+      <div class="flex-1 flex flex-col min-w-0 bg-slate-950/50 relative">
+        <!-- Animated Background with Grid -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl"></div>
-          <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl"></div>
+          <!-- Grid Pattern -->
+          <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>
+          
+          <!-- Animated Glow Orbs -->
+          <div class="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/8 rounded-full blur-[120px] animate-pulse"></div>
+          <div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/8 rounded-full blur-[120px] animate-pulse" style="animation-delay: 1.5s;"></div>
+          <div class="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-[100px] animate-pulse" style="animation-delay: 3s;"></div>
         </div>
         
-        <!-- Header -->
-        <header class="flex-shrink-0 border-b border-white/5 bg-slate-900/80 backdrop-blur-md z-10">
+        <!-- Header with Neon Accent -->
+        <header class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-10 relative">
+          <!-- Top glow line -->
+          <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
           <div class="px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
                @if (currentProject(); as project) {
@@ -82,46 +89,46 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 
             <!-- View Toggles & Actions -->
             <div class="flex items-center gap-4">
-              <!-- View Switcher -->
-              <div class="flex bg-slate-800 p-1 rounded-lg border border-white/5">
+              <!-- Cyberpunk View Switcher - Purple Glow, No Gradient Fills -->
+              <div class="flex bg-[#0a0f1e] p-1 rounded-lg border border-fuchsia-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]">
                 <button 
-                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
-                  [class.bg-slate-700]="viewMode() === 'list'"
-                  [class.text-white]="viewMode() === 'list'"
-                  [class.shadow-sm]="viewMode() === 'list'"
-                  [class.text-slate-400]="viewMode() !== 'list'"
-                  [class.hover:text-white]="viewMode() !== 'list'"
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'list'"
+                  [class.text-fuchsia-300]="viewMode() === 'list'"
+                  [class.text-slate-500]="viewMode() !== 'list'"
+                  [class.hover:text-slate-300]="viewMode() !== 'list'"
+                  [style.box-shadow]="viewMode() === 'list' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('list')"
                 >
                   List
                 </button>
                 <button 
-                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
-                  [class.bg-slate-700]="viewMode() === 'board'"
-                  [class.text-white]="viewMode() === 'board'"
-                  [class.shadow-sm]="viewMode() === 'board'"
-                  [class.text-slate-400]="viewMode() !== 'board'"
-                  [class.hover:text-white]="viewMode() !== 'board'"
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'board'"
+                  [class.text-fuchsia-300]="viewMode() === 'board'"
+                  [class.text-slate-500]="viewMode() !== 'board'"
+                  [class.hover:text-slate-300]="viewMode() !== 'board'"
+                  [style.box-shadow]="viewMode() === 'board' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('board')"
                 >
                   Board
                 </button>
                 <button 
-                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
-                  [class.bg-slate-700]="viewMode() === 'calendar'"
-                  [class.text-white]="viewMode() === 'calendar'"
-                  [class.shadow-sm]="viewMode() === 'calendar'"
-                  [class.text-slate-400]="viewMode() !== 'calendar'"
-                  [class.hover:text-white]="viewMode() !== 'calendar'"
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'calendar'"
+                  [class.text-fuchsia-300]="viewMode() === 'calendar'"
+                  [class.text-slate-500]="viewMode() !== 'calendar'"
+                  [class.hover:text-slate-300]="viewMode() !== 'calendar'"
+                  [style.box-shadow]="viewMode() === 'calendar' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('calendar')"
                 >
                    Calendar
                 </button>
               </div>
 
-              <!-- Add Task Button -->
+              <!-- Cyberpunk Add Task Button -->
               <button 
-                class="ofx-gradient-button flex items-center gap-2"
+                class="ofx-neon-button flex items-center gap-2 !py-2"
                 [disabled]="!currentProject()"
                 (click)="openCreateTaskModal()"
               >

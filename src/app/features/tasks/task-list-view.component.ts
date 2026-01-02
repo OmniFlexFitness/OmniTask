@@ -10,25 +10,25 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
   standalone: true,
   imports: [CommonModule, FormsModule, DragDropModule],
   template: `
-    <div class="flex flex-col h-full bg-slate-900/30 rounded-xl overflow-hidden border border-white/5">
-      <!-- Header -->
-      <div class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-slate-800/50 border-b border-white/10 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+    <div class="flex flex-col h-full bg-[#0a0f1e]/60 rounded-xl overflow-hidden border border-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.05)]">
+      <!-- Cyberpunk Header -->
+      <div class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]">
         <div class="w-6"></div> <!-- Drag handle placeholder -->
-        <div class="cursor-pointer hover:text-white transition-colors" (click)="toggleSort('title')">
-          Task Name
-          <span *ngIf="sortField() === 'title'" class="ml-1">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+        <div class="cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1" (click)="toggleSort('title')">
+          <span class="text-neon-blue">Task Name</span>
+          <span *ngIf="sortField() === 'title'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
         </div>
-        <div class="cursor-pointer hover:text-white transition-colors" (click)="toggleSort('dueDate')">
+        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('dueDate')">
           Due Date
-          <span *ngIf="sortField() === 'dueDate'" class="ml-1">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'dueDate'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
         </div>
-        <div class="cursor-pointer hover:text-white transition-colors" (click)="toggleSort('priority')">
+        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('priority')">
           Priority
-          <span *ngIf="sortField() === 'priority'" class="ml-1">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'priority'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
         </div>
-        <div class="cursor-pointer hover:text-white transition-colors" (click)="toggleSort('status')">
+        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('status')">
           Status
-          <span *ngIf="sortField() === 'status'" class="ml-1">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'status'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
         </div>
         <div class="w-8"></div> <!-- Actions placeholder -->
       </div>
@@ -38,12 +38,17 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
         cdkDropList 
         [cdkDropListData]="sortedTasks()"
         (cdkDropListDropped)="onDrop($event)"
-        class="overflow-y-auto flex-1 divide-y divide-white/5"
+        class="overflow-y-auto flex-1 divide-y divide-cyan-500/5"
       >
         @if (sortedTasks().length === 0) {
           <div class="flex flex-col items-center justify-center p-12 text-slate-500">
-            <p class="mb-2">No tasks found</p>
-            <p class="text-xs">Create a task to get started</p>
+            <div class="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-cyan-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <p class="mb-2 text-cyan-400/70">No tasks found</p>
+            <p class="text-xs text-slate-600">Create a task to get started</p>
           </div>
         }
 
@@ -52,16 +57,16 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
             cdkDrag
             [cdkDragData]="task"
             [class.opacity-50]="task.status === 'done'"
-            class="group grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 items-center hover:bg-white/5 transition-colors cursor-pointer bg-slate-900"
+            class="group grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 items-center hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
             (click)="taskClick.emit(task)"
           >
             <!-- Custom Drag Preview -->
-            <div *cdkDragPreview class="bg-slate-800 p-4 rounded-lg shadow-xl border border-white/10 flex items-center gap-3">
+            <div *cdkDragPreview class="bg-[#0a0f1e] p-4 rounded-lg shadow-[0_0_20px_rgba(0,210,255,0.2)] border border-cyan-500/30 flex items-center gap-3">
               <span class="text-white font-medium">{{ task.title }}</span>
             </div>
 
             <!-- Drag Handle -->
-            <div cdkDragHandle class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-slate-300 cursor-grab active:cursor-grabbing">
+            <div cdkDragHandle class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
               </svg>

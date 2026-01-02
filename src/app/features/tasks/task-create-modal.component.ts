@@ -21,7 +21,7 @@ import { switchMap, of } from 'rxjs';
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
-        <header class="px-6 py-4 border-b border-white/5 bg-gradient-to-r from-cyan-600/20 to-purple-600/20">
+        <header class="px-6 py-4 border-b border-fuchsia-500/20 bg-[#0a0f1e]/90">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
