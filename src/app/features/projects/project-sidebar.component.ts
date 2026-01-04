@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services/project.service';
 import { Project } from '../../core/models/domain.model';
@@ -200,6 +200,16 @@ export class ProjectSidebarComponent {
 
   // UI state
   showCreateForm = signal(false);
+
+  constructor() {
+    effect(() => {
+      const projectList = this.projects();
+      // If there's no selected project ID but there are projects, select the first one.
+      if (!this.selectedProjectId() && projectList && projectList.length > 0) {
+        this.selectProject(projectList[0]);
+      }
+    });
+  }
 
   selectProject(project: Project) {
     this.projectService.selectedProjectId.set(project.id);

@@ -132,18 +132,10 @@ import { switchMap, of } from 'rxjs';
             </button>
             <button
               type="submit"
-              class="ofx-gradient-button"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
               [disabled]="form.invalid || saving()"
             >
-              @if (saving()) {
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating...
-              } @else {
-                Create Task
-              }
+              Create Task
             </button>
           </div>
         </form>
@@ -157,6 +149,33 @@ import { switchMap, of } from 'rxjs';
     }
     .animate-scale-in {
       animation: scaleIn 0.2s ease-out;
+    }
+
+    .ofx-gradient-button {
+        background-image: linear-gradient(to right, #00c6ff 0%, #0072ff 51%, #00c6ff 100%);
+        background-size: 200% auto;
+        border: none;
+        border-radius: 0.5rem;
+        color: white;
+        cursor: pointer;
+        padding: 0.75rem 1.5rem;
+        text-align: center;
+        text-transform: uppercase;
+        transition: 0.5s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .ofx-gradient-button:hover {
+        background-position: right center;
+    }
+
+    .ofx-gradient-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
   `]
 })
