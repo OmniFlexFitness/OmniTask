@@ -217,12 +217,12 @@ export class TaskCreateModalComponent {
 
   form = this.fb.group({
     title: ['', Validators.required],
-    description: '',
-    priority: 'low',
-    dueDate: '',
-    sectionId: '',
-    assigneeName: '',
-    tags: ''
+    description: [''],
+    priority: ['low'],
+    dueDate: [''],
+    sectionId: [''],
+    assigneeName: [''],
+    tags: ['']
   });
 
   constructor() {
