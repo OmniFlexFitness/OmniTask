@@ -138,10 +138,9 @@ import { switchMap, of } from 'rxjs';
               Cancel
             </button>
             <button
-              type="button"
+              type="submit"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
               [disabled]="form.invalid || saving()"
-              (click)="onSubmit()"
             >
               Create Task
             </button>
