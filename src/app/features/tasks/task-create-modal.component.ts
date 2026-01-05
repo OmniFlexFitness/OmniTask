@@ -158,33 +158,6 @@ import { switchMap, of } from 'rxjs';
     .animate-scale-in {
       animation: scaleIn 0.2s ease-out;
     }
-
-    .ofx-gradient-button {
-        background-image: linear-gradient(to right, #00c6ff 0%, #0072ff 51%, #00c6ff 100%);
-        background-size: 200% auto;
-        border: none;
-        border-radius: 0.5rem;
-        color: white;
-        cursor: pointer;
-        padding: 0.75rem 1.5rem;
-        text-align: center;
-        text-transform: uppercase;
-        transition: 0.5s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .ofx-gradient-button:hover {
-        background-position: right center;
-    }
-
-    .ofx-gradient-button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
   `]
 })
 export class TaskCreateModalComponent {
