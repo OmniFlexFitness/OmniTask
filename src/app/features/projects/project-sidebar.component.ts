@@ -59,7 +59,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
       <!-- Project List -->
       <nav class="flex-1 overflow-y-auto py-2">
-        @if (projects().length === 0) {
+        @if (projects()?.length === 0) {
           <div class="px-4 py-8 text-center text-slate-400 text-sm">
             <div class="ofx-empty-icon mx-auto mb-3 w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
