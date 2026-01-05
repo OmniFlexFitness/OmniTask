@@ -1,6 +1,7 @@
-import { Component, inject, signal, Output, EventEmitter, input } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services/project.service';
+import { SeedDataService } from '../../core/services/seed-data.service';
 import { Project } from '../../core/models/domain.model';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -99,8 +100,22 @@ import { toSignal } from '@angular/core/rxjs-interop';
       </nav>
 
       <!-- Footer -->
-      <div class="px-4 py-3 border-t border-white/10 text-xs text-slate-500">
-        {{ projects()?.length || 0 }} project(s)
+      <div class="px-4 py-3 border-t border-white/10 text-xs text-slate-500 space-y-2">
+        <div class="flex items-center justify-between">
+          <span>{{ projects().length }} project(s)</span>
+          <button
+            class="text-cyan-400 hover:text-cyan-300 text-xs underline-offset-2 hover:underline transition-colors"
+            (click)="loadSampleData()"
+            [disabled]="seeding()"
+            title="Load sample OmniFlex projects and tasks"
+          >
+            @if (seeding()) {
+              Loading...
+            } @else {
+              + Sample Data
+            }
+          </button>
+        </div>
       </div>
     </aside>
   `,
@@ -188,6 +203,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class ProjectSidebarComponent {
   private projectService = inject(ProjectService);
+  private seedService = inject(SeedDataService);
 
   // Input for currently selected project
   selectedProjectId = input<string | null>(null);
@@ -200,6 +216,17 @@ export class ProjectSidebarComponent {
 
   // UI state
   showCreateForm = signal(false);
+  seeding = signal(false);
+
+  constructor() {
+    effect(() => {
+      const projectList = this.projects();
+      // If there's no selected project ID but there are projects, select the first one.
+      if (!this.selectedProjectId() && projectList && projectList.length > 0) {
+        this.selectProject(projectList[0]);
+      }
+    });
+  }
 
   selectProject(project: Project) {
     this.projectService.selectedProjectId.set(project.id);
@@ -218,6 +245,18 @@ export class ProjectSidebarComponent {
       }
     } catch (error) {
       console.error('Failed to create project:', error);
+    }
+  }
+
+  async loadSampleData() {
+    this.seeding.set(true);
+    try {
+      await this.seedService.seedSampleData();
+      console.log('Sample data loaded!');
+    } catch (error) {
+      console.error('Failed to load sample data:', error);
+    } finally {
+      this.seeding.set(false);
     }
   }
 }
