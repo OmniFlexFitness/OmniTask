@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, addDoc, getDocs, query, where, writeBatch, doc } from '@angular/fire/firestore';
+import { Firestore, collection, getDocs, query, where, writeBatch, doc } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth.service';
 import { Task, Project, Section } from '../models/domain.model';
 
