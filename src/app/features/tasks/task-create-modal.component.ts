@@ -121,6 +121,13 @@ import { switchMap, of } from 'rxjs';
             />
           </div>
 
+          <!-- Error Message -->
+          @if (errorMessage()) {
+            <div class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+              {{ errorMessage() }}
+            </div>
+          }
+
           <!-- Actions -->
           <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
             <button
@@ -131,9 +138,10 @@ import { switchMap, of } from 'rxjs';
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
               [disabled]="form.invalid || saving()"
+              (click)="onSubmit()"
             >
               Create Task
             </button>
@@ -195,6 +203,7 @@ export class TaskCreateModalComponent {
 
   // State
   saving = signal(false);
+  errorMessage = signal<string | null>(null);
 
   // Get project sections for dropdown
   project = toSignal(
@@ -208,12 +217,12 @@ export class TaskCreateModalComponent {
 
   form = this.fb.group({
     title: ['', Validators.required],
-    description: [''],
-    priority: ['medium'],
-    dueDate: [''],
-    sectionId: [''],
-    assigneeName: [''],
-    tags: ['']
+    description: '',
+    priority: 'low',
+    dueDate: '',
+    sectionId: '',
+    assigneeName: '',
+    tags: ''
   });
 
   constructor() {
@@ -239,6 +248,8 @@ export class TaskCreateModalComponent {
     if (this.form.invalid) return;
 
     this.saving.set(true);
+
+    this.errorMessage.set(null);
 
     try {
       const val = this.form.value;
@@ -272,6 +283,8 @@ export class TaskCreateModalComponent {
       this.close.emit();
     } catch (err) {
       console.error('Failed to create task:', err);
+      const message = err instanceof Error ? err.message : 'Failed to create task. Please try again.';
+      this.errorMessage.set(message);
     } finally {
       this.saving.set(false);
     }

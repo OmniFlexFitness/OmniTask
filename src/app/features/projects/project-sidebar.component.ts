@@ -1,6 +1,7 @@
 import { Component, inject, signal, Output, EventEmitter, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services/project.service';
+import { SeedDataService } from '../../core/services/seed-data.service';
 import { Project } from '../../core/models/domain.model';
 import { toSignal } from '@angular/core/rxjs-interop';
 
@@ -58,7 +59,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
       <!-- Project List -->
       <nav class="flex-1 overflow-y-auto py-2">
-        @if (projects()?.length === 0) {
+        @if (projects().length === 0) {
           <div class="px-4 py-8 text-center text-slate-400 text-sm">
             <div class="ofx-empty-icon mx-auto mb-3 w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -99,8 +100,22 @@ import { toSignal } from '@angular/core/rxjs-interop';
       </nav>
 
       <!-- Footer -->
-      <div class="px-4 py-3 border-t border-white/10 text-xs text-slate-500">
-        {{ projects()?.length || 0 }} project(s)
+      <div class="px-4 py-3 border-t border-white/10 text-xs text-slate-500 space-y-2">
+        <div class="flex items-center justify-between">
+          <span>{{ projects().length }} project(s)</span>
+          <button
+            class="text-cyan-400 hover:text-cyan-300 text-xs underline-offset-2 hover:underline transition-colors"
+            (click)="loadSampleData()"
+            [disabled]="seeding()"
+            title="Load sample OmniFlex projects and tasks"
+          >
+            @if (seeding()) {
+              Loading...
+            } @else {
+              + Sample Data
+            }
+          </button>
+        </div>
       </div>
     </aside>
   `,
@@ -188,6 +203,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class ProjectSidebarComponent {
   private projectService = inject(ProjectService);
+  private seedService = inject(SeedDataService);
 
   // Input for currently selected project
   selectedProjectId = input<string | null>(null);
@@ -200,6 +216,7 @@ export class ProjectSidebarComponent {
 
   // UI state
   showCreateForm = signal(false);
+  seeding = signal(false);
 
   constructor() {
     effect(() => {
@@ -228,6 +245,18 @@ export class ProjectSidebarComponent {
       }
     } catch (error) {
       console.error('Failed to create project:', error);
+    }
+  }
+
+  async loadSampleData() {
+    this.seeding.set(true);
+    try {
+      await this.seedService.seedSampleData();
+      console.log('Sample data loaded!');
+    } catch (error) {
+      console.error('Failed to load sample data:', error);
+    } finally {
+      this.seeding.set(false);
     }
   }
 }

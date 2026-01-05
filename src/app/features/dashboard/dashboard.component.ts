@@ -7,6 +7,7 @@ import { switchMap, of } from 'rxjs';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { SeedDataService } from '../../core/services/seed-data.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
@@ -237,11 +238,32 @@ export class DashboardComponent {
   auth = inject(AuthService);
   projectService = inject(ProjectService);
   taskService = inject(TaskService);
+  seedService = inject(SeedDataService);
   router = inject(Router);
 
   // State
   selectedProjectId = this.projectService.selectedProjectId;
   viewMode = signal<TaskViewMode>('list');
+  seeding = signal(false);
+
+  constructor() {
+    // Seed sample data if user has no projects
+    this.seedSampleDataIfNeeded();
+  }
+
+  private async seedSampleDataIfNeeded() {
+    this.seeding.set(true);
+    try {
+      const seeded = await this.seedService.seedIfEmpty();
+      if (seeded) {
+        console.log('Sample data created for new user!');
+      }
+    } catch (err) {
+      console.error('Failed to seed data:', err);
+    } finally {
+      this.seeding.set(false);
+    }
+  }
   
   // Modals state
   editProjectModal = signal<Project | null>(null);

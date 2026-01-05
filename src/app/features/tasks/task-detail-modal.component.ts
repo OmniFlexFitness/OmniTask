@@ -308,14 +308,14 @@ export class TaskDetailModalComponent {
   
   form = this.fb.group({
     title: ['', Validators.required],
-    description: [''],
-    assigneeName: [''],
-    status: ['todo'],
-    startDate: [''],
-    dueDate: [''],
-    priority: ['medium'],
-    sectionId: [null as string | null],
-    tags: ['']
+    description: '',
+    assigneeName: '',
+    status: 'todo',
+    startDate: '',
+    dueDate: '',
+    priority: 'medium',
+    sectionId: null as string | null,
+    tags: ''
   });
 
   // Subtasks state
