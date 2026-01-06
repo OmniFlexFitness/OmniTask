@@ -15,15 +15,26 @@ import { toSignal } from '@angular/core/rxjs-interop';
       <div class="px-4 py-5 border-b border-white/10">
         <div class="flex items-center justify-between">
           <h2 class="ofx-section-title text-sm">Projects</h2>
-          <button
-            class="ofx-icon-button"
-            (click)="showCreateForm.set(true)"
-            title="Create Project"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+          <div>
+            <button
+              class="ofx-icon-button"
+              (click)="showCreateForm.set(true)"
+              title="Create Project"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <button
+              class="ofx-icon-button"
+              (click)="connectGoogleTasks()"
+              title="Connect to Google Tasks"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -89,6 +100,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
               <span class="flex-1 truncate text-sm font-medium text-slate-200">
                 {{ project.name }}
               </span>
+              @if (project.googleTaskListId) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              }
               @if (project.status === 'archived') {
                 <span class="ofx-chip text-xs bg-gray-700/50 text-gray-400">
                   Archived
@@ -258,5 +274,9 @@ export class ProjectSidebarComponent {
     } finally {
       this.seeding.set(false);
     }
+  }
+
+  connectGoogleTasks() {
+    console.log('Connecting to Google Tasks...');
   }
 }

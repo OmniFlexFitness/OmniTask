@@ -91,6 +91,11 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
               <span class="truncate font-medium text-sm text-slate-200" [class.line-through]="task.status === 'done'" [class.text-slate-500]="task.status === 'done'">
                 {{ task.title }}
               </span>
+              @if (task.isGoogleTask) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              }
             </div>
 
             <!-- Due Date -->

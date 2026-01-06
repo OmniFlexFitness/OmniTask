@@ -33,6 +33,7 @@ export interface Project {
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;
   status: 'active' | 'archived';
+  googleTaskListId?: string;
 }
 
 export interface Task {
@@ -54,6 +55,7 @@ export interface Task {
   updatedAt: FirestoreDate;
   createdById?: string; // Who created the task
   googleTaskId?: string;
+  isGoogleTask?: boolean;
 }
 
 /**

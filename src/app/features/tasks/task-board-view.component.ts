@@ -68,6 +68,11 @@ import { ProjectService } from '../../core/services/project.service';
 
                   <h4 class="text-sm font-medium text-slate-100 mb-2 pr-4 leading-normal">
                     {{ task.title }}
+                    @if (task.isGoogleTask) {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-4 w-4 ml-2 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    }
                   </h4>
 
                   <div class="flex items-center justify-between mt-3">

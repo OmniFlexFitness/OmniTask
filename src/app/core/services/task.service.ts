@@ -1,8 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
-import { Observable, map } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { GoogleTasksService } from './google-tasks.service';
+import { ProjectService } from './project.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +12,8 @@ import { AuthService } from '../auth/auth.service';
 export class TaskService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private googleTasksService = inject(GoogleTasksService);
+  private projectService = inject(ProjectService);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -69,6 +73,21 @@ export class TaskService {
   }
 
   /**
+   * Get a single task by ID
+   */
+  async getTask(id: string): Promise<Task | null> {
+    try {
+      const docRef = doc(this.firestore, `tasks/${id}`);
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() } as Task;
+    } catch (err) {
+      console.error('Failed to fetch task:', err);
+      return null;
+    }
+  }
+
+  /**
    * Create a new task
    */
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentReference> {
@@ -84,6 +103,17 @@ export class TaskService {
         updatedAt: new Date()
       };
       const result = await addDoc(this.tasksCollection, data);
+
+      const project = await this.projectService.getProject(task.projectId);
+      if (project?.googleTaskListId) {
+        try {
+          const googleTask = await firstValueFrom(this.googleTasksService.createTask(project.googleTaskListId, task.title));
+          await this.updateTask(result.id, { googleTaskId: googleTask.id });
+        } catch (err) {
+          console.error('Failed to create Google Task, but task was created in OmniTask:', err);
+        }
+      }
+
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create task';
@@ -102,10 +132,23 @@ export class TaskService {
     this.error.set(null);
 
     try {
-      await updateDoc(doc(this.firestore, `tasks/${id}`), {
+      const taskRef = doc(this.firestore, `tasks/${id}`);
+      await updateDoc(taskRef, {
         ...data,
         updatedAt: new Date()
       });
+
+      const taskDoc = await this.getTask(id);
+      if (taskDoc?.googleTaskId) {
+        const project = await this.projectService.getProject(taskDoc.projectId);
+        if (project?.googleTaskListId) {
+          try {
+            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, data));
+          } catch (err) {
+            console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
+          }
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';
       this.error.set(message);
@@ -123,6 +166,17 @@ export class TaskService {
     this.error.set(null);
 
     try {
+      const taskDoc = await this.getTask(id);
+      if (taskDoc?.googleTaskId) {
+        const project = await this.projectService.getProject(taskDoc.projectId);
+        if (project?.googleTaskListId) {
+          try {
+            await firstValueFrom(this.googleTasksService.deleteTask(project.googleTaskListId, taskDoc.googleTaskId));
+          } catch (err) {
+            console.error('Failed to delete Google Task, but task was deleted in OmniTask:', err);
+          }
+        }
+      }
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';
