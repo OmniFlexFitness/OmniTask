@@ -1,439 +1,357 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Timestamp } from '@angular/fire/firestore';
-import { AuthService } from '../../core/auth/auth.service';
-import { Task } from '../../core/models/domain.model';
+import { Router } from '@angular/router';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { switchMap, of } from 'rxjs';
 
-const DEFAULT_PROJECT_ID = 'demo-project';
+import { TaskService } from '../../core/services/task.service';
+import { ProjectService } from '../../core/services/project.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { SeedDataService } from '../../core/services/seed-data.service';
+import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
+
+import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
+import { ProjectFormModalComponent } from '../projects/project-form-modal.component';
+import { TaskListViewComponent } from '../tasks/task-list-view.component';
+import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
+import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
+import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
+import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    ProjectSidebarComponent,
+    ProjectFormModalComponent,
+    TaskListViewComponent,
+    TaskBoardViewComponent,
+    TaskCalendarViewComponent,
+    TaskDetailModalComponent,
+    TaskCreateModalComponent
+  ],
   template: `
-    <div class="max-w-7xl mx-auto py-10 px-4 lg:px-8 space-y-10">
-      <header class="space-y-3 relative">
-        <p class="ofx-section-title">Mission Control</p>
-        <div class="absolute -bottom-2 left-0 h-[2px] w-32 bg-[#0073ff] opacity-80 shadow-[0_0_8px_rgba(0,115,255,0.7)]"></div>
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 class="text-4xl font-black text-white tracking-tight">Dashboard</h1>
-            <p class="text-slate-300">
-              Welcome back, {{ auth.currentUserSig()?.displayName }}. Stay aligned with the OmniFlex flow.
-            </p>
-          </div>
-          <div class="ofx-panel px-4 py-3 flex items-center gap-3">
-            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_0_8px_rgba(16,185,129,0.15)]"></span>
-            <div>
-              <p class="text-[10px] uppercase tracking-[0.35em] text-cyan-200/70">Status</p>
-              <p class="text-sm font-semibold text-white">Synced to OmniFlex Cloud</p>
+    <div class="h-screen flex overflow-hidden bg-[#050810]">
+      <!-- Sidebar -->
+      <div class="w-64 flex-shrink-0 z-20">
+        <app-project-sidebar
+          [selectedProjectId]="selectedProjectId()"
+          (projectSelected)="onProjectSelect($event)"
+        ></app-project-sidebar>
+      </div>
+
+      <!-- Main Content -->
+      <div class="flex-1 flex flex-col min-w-0 bg-slate-950/50 relative">
+        <!-- Animated Background with Grid -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <!-- Grid Pattern -->
+          <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>
+          
+          <!-- Animated Glow Orbs -->
+          <div class="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/8 rounded-full blur-[120px] animate-pulse"></div>
+          <div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/8 rounded-full blur-[120px] animate-pulse" style="animation-delay: 1.5s;"></div>
+          <div class="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-[100px] animate-pulse" style="animation-delay: 3s;"></div>
+        </div>
+        
+        <!-- Header with Neon Accent -->
+        <header class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-10 relative">
+          <!-- Top glow line -->
+          <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
+          <div class="px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+               @if (currentProject(); as project) {
+                 <div>
+                   <h1 class="text-xl font-bold text-white flex items-center gap-3">
+                     <span 
+                       class="w-3 h-3 rounded-sm shadow-[0_0_10px_currentColor]"
+                       [style.background-color]="project.color || '#6366f1'"
+                       [style.color]="project.color || '#6366f1'"
+                     ></span>
+                     {{ project.name }}
+                   </h1>
+                   <p class="text-xs text-slate-400 mt-1 truncate max-w-md">{{ project.description }}</p>
+                 </div>
+                 
+                 <!-- Project Actions -->
+                 <button 
+                   class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                   (click)="editProjectModal.set(project)"
+                   title="Edit Project"
+                 >
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                   </svg>
+                 </button>
+               } @else {
+                 <h1 class="text-xl font-bold text-slate-400">Select a project</h1>
+               }
+            </div>
+
+            <!-- View Toggles & Actions -->
+            <div class="flex items-center gap-4">
+              <!-- Cyberpunk View Switcher - Purple Glow, No Gradient Fills -->
+              <div class="flex bg-[#0a0f1e] p-1 rounded-lg border border-fuchsia-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]">
+                <button 
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'list'"
+                  [class.text-fuchsia-300]="viewMode() === 'list'"
+                  [class.text-slate-500]="viewMode() !== 'list'"
+                  [class.hover:text-slate-300]="viewMode() !== 'list'"
+                  [style.box-shadow]="viewMode() === 'list' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
+                  (click)="viewMode.set('list')"
+                >
+                  List
+                </button>
+                <button 
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'board'"
+                  [class.text-fuchsia-300]="viewMode() === 'board'"
+                  [class.text-slate-500]="viewMode() !== 'board'"
+                  [class.hover:text-slate-300]="viewMode() !== 'board'"
+                  [style.box-shadow]="viewMode() === 'board' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
+                  (click)="viewMode.set('board')"
+                >
+                  Board
+                </button>
+                <button 
+                  class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                  [class.bg-fuchsia-500/20]="viewMode() === 'calendar'"
+                  [class.text-fuchsia-300]="viewMode() === 'calendar'"
+                  [class.text-slate-500]="viewMode() !== 'calendar'"
+                  [class.hover:text-slate-300]="viewMode() !== 'calendar'"
+                  [style.box-shadow]="viewMode() === 'calendar' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
+                  (click)="viewMode.set('calendar')"
+                >
+                   Calendar
+                </button>
+              </div>
+
+              <!-- Cyberpunk Add Task Button -->
+              <button 
+                class="ofx-neon-button flex items-center gap-2 !py-2"
+                [disabled]="!currentProject()"
+                (click)="openCreateTaskModal()"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Task
+              </button>
+              
+              <!-- User Profile -->
+               <div class="relative group">
+                 <button class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold">
+                   {{ auth.currentUserSig()?.displayName?.charAt(0) }}
+                 </button>
+                 <div class="absolute right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-50">
+                   <div class="px-4 py-2 border-b border-white/5 mb-2">
+                     <p class="text-sm font-medium text-white">{{ auth.currentUserSig()?.displayName }}</p>
+                     <p class="text-xs text-slate-500 truncate">{{ auth.currentUserSig()?.email }}</p>
+                   </div>
+                   <button 
+                     class="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                     (click)="auth.logout()"
+                   >
+                     Sign Out
+                   </button>
+                 </div>
+               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-indigo-900/60 to-slate-900/80 border border-cyan-500/20 shadow-[0_0_25px_rgba(56,189,248,0.2)]">
-          <p class="text-sm text-cyan-200/80">Open Tasks</p>
-          <p class="mt-2 text-4xl font-bold text-white">{{ openTaskCount() }}</p>
-          <p class="text-xs uppercase tracking-[0.25em] text-cyan-200/70 mt-3">Active</p>
-        </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-fuchsia-900/50 to-slate-900/80 border border-fuchsia-500/25 shadow-[0_0_25px_rgba(236,72,153,0.18)]">
-          <p class="text-sm text-fuchsia-200/80">Due Soon</p>
-          <p class="mt-2 text-4xl font-bold text-white">{{ dueSoonCount() }}</p>
-          <p class="text-xs uppercase tracking-[0.25em] text-fuchsia-200/70 mt-3">Next 72 hours</p>
-        </div>
-        <div class="ofx-panel p-6 bg-gradient-to-br from-slate-900/80 via-emerald-900/40 to-slate-900/80 border border-emerald-500/25 shadow-[0_0_25px_rgba(52,245,197,0.15)]">
-          <p class="text-sm text-emerald-200/80">Completed</p>
-          <p class="mt-2 text-4xl font-bold text-white">{{ completedTaskCount() }}</p>
-          <p class="text-xs uppercase tracking-[0.25em] text-emerald-200/70 mt-3">Cleared</p>
-        </div>
-      </section>
-
-      <section class="ofx-panel divide-y divide-white/5">
-        <div class="px-6 py-5 flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <p class="ofx-section-title">Task Forge</p>
-            <h2 class="text-xl font-semibold text-white">Create a Task</h2>
-            <p class="text-sm text-slate-400">Capture the essentials to keep work moving.</p>
-          </div>
-          <button
-            type="button"
-            class="text-sm text-cyan-200/80 hover:text-white transition"
-            *ngIf="editingTaskId()"
-            (click)="resetForm()"
-          >
-            Cancel edit
-          </button>
-        </div>
-        <form
-          class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-5"
-          [formGroup]="taskForm"
-          (ngSubmit)="saveTask()"
-        >
-          <div class="col-span-1 md:col-span-2">
-            <label class="block text-sm font-semibold text-slate-200">Title</label>
-            <input
-              type="text"
-              formControlName="title"
-              placeholder="Add a concise task title"
-              class="mt-2 ofx-input"
-              required
-            />
-          </div>
-          <div class="col-span-1 md:col-span-2">
-            <label class="block text-sm font-semibold text-slate-200">Description</label>
-            <textarea
-              rows="3"
-              formControlName="description"
-              placeholder="Add context, acceptance criteria, or links"
-              class="mt-2 ofx-input"
-            ></textarea>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-slate-200">Priority</label>
-            <select
-              formControlName="priority"
-              class="mt-2 ofx-input"
-            >
-              <option *ngFor="let option of priorities" [value]="option">{{ option | titlecase }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-slate-200">Status</label>
-            <select
-              formControlName="status"
-              class="mt-2 ofx-input"
-            >
-              <option *ngFor="let state of statuses" [value]="state">{{ state | titlecase }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-slate-200">Due date</label>
-            <input
-              type="date"
-              formControlName="dueDate"
-              class="mt-2 ofx-input"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-slate-200">Assignee</label>
-            <input
-              type="text"
-              formControlName="assigneeName"
-              placeholder="Person responsible"
-              class="mt-2 ofx-input"
-            />
-          </div>
-
-          <div class="md:col-span-2">
-            <label class="block text-sm font-semibold text-slate-200">Tags</label>
-            <input
-              type="text"
-              formControlName="tags"
-              placeholder="Comma-separated labels (e.g. frontend, client, backlog)"
-              class="mt-2 ofx-input"
-            />
-          </div>
-
-          <div class="md:col-span-2 flex justify-end gap-3 pt-2 flex-wrap">
-            <button
-              type="button"
-              class="ofx-ghost-button"
-              (click)="resetForm()"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              [disabled]="taskForm.invalid"
-              class="ofx-gradient-button disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <span class="relative z-10">{{ editingTaskId() ? 'Update Task' : 'Add Task' }}</span>
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="ofx-panel">
-        <div class="px-6 py-5 border-b border-white/5 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <p class="ofx-section-title">Active Streams</p>
-            <h2 class="text-xl font-semibold text-white">Task list</h2>
-            <p class="text-sm text-slate-400">Mark tasks as done, edit details, or remove them.</p>
-          </div>
-          <span class="text-sm text-slate-300">{{ tasks().length }} tasks</span>
-        </div>
-        <div class="divide-y divide-white/5" *ngIf="tasks().length; else emptyState">
-          <article class="p-5 sm:p-6 hover:bg-white/5 hover:shadow-[0_0_25px_rgba(56,189,248,0.25)] transition border-b border-white/5 last:border-0" *ngFor="let task of tasks(); trackBy: trackTaskById">
-            <div class="flex items-start justify-between gap-4 flex-wrap">
-              <div class="space-y-2">
-                <div class="flex items-center gap-3 flex-wrap">
-                  <input
-                    type="checkbox"
-                    [checked]="task.status === 'done'"
-                    (change)="toggleCompletion(task.id)"
-                    class="h-4 w-4 text-cyan-400 border-white/20 rounded focus:ring-cyan-500/50 bg-slate-900"
-                  />
-                  <h3 class="text-lg font-semibold text-white" [class.line-through]="task.status === 'done'">
-                    {{ task.title }}
-                  </h3>
-                  <span
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
-                    [ngClass]="getStatusBadgeClass(task.status)"
-                  >
-                    {{ task.status | titlecase }}
-                  </span>
-                  <span
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full border border-white/10"
-                    [ngClass]="getPriorityBadgeClass(task.priority)"
-                  >
-                    {{ task.priority | titlecase }} priority
-                  </span>
-                </div>
-                <p class="text-sm text-slate-200/90" *ngIf="task.description">{{ task.description }}</p>
-                <div class="flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                  <span *ngIf="task.assigneeName" class="inline-flex items-center gap-2">
-                    <span class="h-2 w-2 bg-cyan-400 rounded-full"></span>
-                    {{ task.assigneeName }}
-                  </span>
-                  <span *ngIf="task.dueDate" class="inline-flex items-center gap-2">
-                    <span class="h-2 w-2 bg-slate-400 rounded-full"></span>
-                    Due {{ formatDate(task.dueDate) }}
-                  </span>
-                  <ng-container *ngIf="task.tags?.length">
-                    <span *ngFor="let tag of task.tags" class="ofx-chip bg-white/5 text-slate-100">
-                      {{ tag }}
-                    </span>
-                  </ng-container>
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
-                <button class="text-sm text-cyan-200/80 hover:text-white transition" (click)="startEdit(task)">Edit</button>
-                <button class="text-sm text-rose-300 hover:text-rose-200 transition" (click)="deleteTask(task.id)">Delete</button>
-              </div>
+        <!-- View Content -->
+        <main class="flex-1 overflow-hidden p-6 z-10">
+          @if (!currentProject()) {
+            <div class="h-full flex flex-col items-center justify-center text-slate-500">
+               <div class="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                 </svg>
+               </div>
+               <h2 class="text-xl font-bold text-white mb-2">No Project Selected</h2>
+               <p class="max-w-md text-center">Select a project from the sidebar or create a new one to start managing your tasks.</p>
             </div>
-          </article>
-        </div>
-        <ng-template #emptyState>
-          <div class="p-10 text-center text-slate-400">No tasks yet. Add one to get started.</div>
-        </ng-template>
-      </section>
+          } @else {
+            @switch (viewMode()) {
+              @case ('list') {
+                <app-task-list-view
+                  [tasks]="tasks()"
+                  [googleTaskListId]="currentProject()?.googleTaskListId"
+                  (taskClick)="openTaskDetail($event)"
+                  (delete)="deleteTask($event)"
+                ></app-task-list-view>
+              }
+              @case ('board') {
+                <app-task-board-view
+                  [tasks]="tasks()"
+                  [project]="currentProject()!"
+                  (taskClick)="openTaskDetail($event)"
+                  (quickAdd)="quickAddInBoard($event)"
+                  (addSection)="addSection()"
+                ></app-task-board-view>
+              }
+              @case ('calendar') {
+                <app-task-calendar-view
+                   [tasks]="tasks()"
+                   (taskClick)="openTaskDetail($event)"
+                   (addTaskForDate)="addTaskForDate($event)"
+                ></app-task-calendar-view>
+              }
+            }
+          }
+        </main>
+      </div>
+
+      <!-- Modals -->
+      @if (editProjectModal()) {
+        <app-project-form-modal
+          [editProject]="editProjectModal()"
+          (close)="editProjectModal.set(null)"
+          (saved)="onProjectSaved($event)"
+        ></app-project-form-modal>
+      }
+
+      @if (openTask()) {
+        <app-task-detail-modal
+          [task]="openTask()"
+          [projectId]="selectedProjectId()"
+          (close)="openTask.set(null)"
+          (updated)="onTaskUpdated($event)"
+          (deleted)="onTaskDeleted($event)"
+        ></app-task-detail-modal>
+      }
+
+      @if (showCreateModal()) {
+        <app-task-create-modal
+          [projectId]="selectedProjectId()!"
+          [initialSectionId]="createModalSectionId()"
+          [initialDueDate]="createModalDueDate()"
+          (close)="closeCreateModal()"
+          (created)="onTaskCreated($event)"
+        ></app-task-create-modal>
+      }
     </div>
   `
 })
 export class DashboardComponent {
   auth = inject(AuthService);
-  private fb = inject(FormBuilder);
+  projectService = inject(ProjectService);
+  taskService = inject(TaskService);
+  seedService = inject(SeedDataService);
+  router = inject(Router);
 
-  priorities: Task['priority'][] = ['low', 'medium', 'high'];
-  statuses: Task['status'][] = ['todo', 'in-progress', 'done'];
+  // State
+  selectedProjectId = this.projectService.selectedProjectId;
+  viewMode = signal<TaskViewMode>('list');
+  seeding = signal(false);
 
-  taskForm = this.fb.nonNullable.group({
-    title: ['', Validators.required],
-    description: [''],
-    priority: ['medium' as Task['priority'], Validators.required],
-    status: ['todo' as Task['status'], Validators.required],
-    dueDate: [''],
-    assigneeName: [''],
-    tags: ['']
-  });
+  constructor() {
+    // Seed sample data if user has no projects
+    this.seedSampleDataIfNeeded();
+  }
 
-  tasks = signal<Task[]>([
-    {
-      id: 'kickoff',
-      projectId: DEFAULT_PROJECT_ID,
-      title: 'Outline project milestones',
-      description: 'Break work into milestones and identify owners for each phase.',
-      assigneeName: 'You',
-      status: 'in-progress',
-      priority: 'high',
-      dueDate: new Date(),
-      tags: ['planning', 'team'],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: 'backlog-review',
-      projectId: DEFAULT_PROJECT_ID,
-      title: 'Review backlog tasks',
-      description: 'Sort through incoming requests and clarify acceptance criteria.',
-      status: 'todo',
-      priority: 'medium',
-      tags: ['backlog'],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ]);
-
-  editingTaskId = signal<string | null>(null);
-
-  openTaskCount = computed(() => this.tasks().filter(task => task.status !== 'done').length);
-  completedTaskCount = computed(() => this.tasks().filter(task => task.status === 'done').length);
-  dueSoonCount = computed(() =>
-    this.tasks().filter(task => {
-      if (!task.dueDate || task.status === 'done') {
-        return false;
+  private async seedSampleDataIfNeeded() {
+    this.seeding.set(true);
+    try {
+      const seeded = await this.seedService.seedIfEmpty();
+      if (seeded) {
+        console.log('Sample data created for new user!');
       }
-      const due = this.convertToDate(task.dueDate);
-      const now = new Date();
-      const threeDaysFromNow = new Date();
-      threeDaysFromNow.setDate(now.getDate() + 3);
-      return due >= now && due <= threeDaysFromNow;
-    }).length
+    } catch (err) {
+      console.error('Failed to seed data:', err);
+    } finally {
+      this.seeding.set(false);
+    }
+  }
+  
+  // Modals state
+  editProjectModal = signal<Project | null>(null);
+  openTask = signal<Task | null>(null);
+  
+  // Create modal state
+  showCreateModal = signal(false);
+  createModalSectionId = signal<string | null>(null);
+  createModalDueDate = signal<Date | null>(null);
+
+  // Derived state for Current Project
+  currentProject = toSignal(
+    toObservable(this.selectedProjectId).pipe(
+      switchMap(id => id ? this.projectService.getProject$(id) : of(null))
+    ),
+    { initialValue: null }
   );
 
-  saveTask() {
-    if (this.taskForm.invalid) {
-      return;
-    }
+  // Derived state for Tasks of Current Project
+  tasks = toSignal(
+    toObservable(this.selectedProjectId).pipe(
+      switchMap(id => id ? this.taskService.getTasksByProject(id) : of([]))
+    ),
+    { initialValue: [] }
+  );
 
-    const formValue = this.taskForm.getRawValue();
-    const tags = formValue.tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(Boolean);
-    const dueDate = formValue.dueDate ? new Date(formValue.dueDate) : undefined;
-
-    const newTask: Task = {
-      id: this.editingTaskId() ?? crypto.randomUUID(),
-      projectId: DEFAULT_PROJECT_ID,
-      title: formValue.title,
-      description: formValue.description,
-      assigneeName: formValue.assigneeName || undefined,
-      status: formValue.status,
-      priority: formValue.priority,
-      dueDate,
-      tags,
-      createdAt: this.editingTaskId()
-        ? this.findTask(this.editingTaskId()!)?.createdAt ?? new Date()
-        : new Date(),
-      updatedAt: new Date()
-    };
-
-    if (this.editingTaskId()) {
-      this.tasks.update(items =>
-        items.map(task => (task.id === this.editingTaskId() ? { ...task, ...newTask } : task))
-      );
-    } else {
-      this.tasks.update(items => [newTask, ...items]);
-    }
-
-    this.resetForm();
+  onProjectSelect(project: Project) {
+    this.selectedProjectId.set(project.id);
   }
 
-  toggleCompletion(id: string) {
-    this.tasks.update(items =>
-      items.map(task =>
-        task.id === id
-          ? {
-              ...task,
-              status: task.status === 'done' ? 'in-progress' : 'done',
-              updatedAt: new Date()
-            }
-          : task
-      )
-    );
+  onProjectSaved(project: Project) {
+     this.editProjectModal.set(null);
   }
 
-  trackTaskById(_: number, task: Task) {
-    return task.id;
+  openCreateTaskModal(sectionId?: string, dueDate?: Date) {
+    if (!this.selectedProjectId()) return;
+    this.createModalSectionId.set(sectionId || null);
+    this.createModalDueDate.set(dueDate || null);
+    this.showCreateModal.set(true);
   }
 
-  startEdit(task: Task) {
-    this.editingTaskId.set(task.id);
-    this.taskForm.patchValue({
-      title: task.title,
-      description: task.description,
-      priority: task.priority,
-      status: task.status,
-      dueDate: task.dueDate ? this.toInputDate(task.dueDate) : '',
-      assigneeName: task.assigneeName ?? '',
-      tags: task.tags?.join(', ') ?? ''
-    });
+  closeCreateModal() {
+    this.showCreateModal.set(false);
+    this.createModalSectionId.set(null);
+    this.createModalDueDate.set(null);
   }
 
-  deleteTask(id: string) {
-    this.tasks.update(items => items.filter(task => task.id !== id));
-    if (this.editingTaskId() === id) {
-      this.resetForm();
-    }
+  onTaskCreated(task: Task) {
+    // Firestore subscription handles the list update
+    // Optionally open the task detail for further edits
+    // this.openTask.set(task);
   }
 
-  resetForm() {
-    this.editingTaskId.set(null);
-    this.taskForm.reset({
-      title: '',
-      description: '',
-      priority: 'medium',
-      status: 'todo',
-      dueDate: '',
-      assigneeName: '',
-      tags: ''
-    });
+  openTaskDetail(task: Task) {
+    this.openTask.set(task);
   }
 
-  formatDate(date: Date | string | number | Timestamp) {
-    const parsedDate = this.convertToDate(date);
-    if (Number.isNaN(parsedDate.getTime())) {
-      return 'Unknown date';
-    }
-
-    return parsedDate.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric'
-    });
+  onTaskUpdated(task: Task) {
+    // Optimistic update if needed, but Firestore subscription handles it.
   }
 
-  private toInputDate(date: Date | string | number | Timestamp) {
-    const parsedDate = this.convertToDate(date);
-    if (Number.isNaN(parsedDate.getTime())) {
-      return '';
-    }
-    return parsedDate.toISOString().slice(0, 10);
+  onTaskDeleted(taskId: string) {
+    this.openTask.set(null);
   }
 
-  private convertToDate(date: Date | string | number | Timestamp): Date {
-    if (date instanceof Timestamp) {
-      return date.toDate();
-    }
-    // Handle date-only strings to avoid timezone issues where 'YYYY-MM-DD' is parsed as UTC.
-    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return new Date(`${date}T00:00:00`);
-    }
-    return new Date(date);
+  async deleteTask(taskId: string) {
+      if(confirm('Are you sure you want to delete this task?')) {
+          const project = this.currentProject();
+          await this.taskService.deleteTask(taskId, project?.googleTaskListId);
+      }
   }
 
-  private findTask(id: string) {
-    return this.tasks().find(task => task.id === id);
+  quickAddInBoard(sectionId: string) {
+    this.openCreateTaskModal(sectionId);
   }
-
-  getStatusBadgeClass(status: string): string {
-    switch (status) {
-      case 'todo':
-        return 'bg-gray-800 text-gray-200 border-gray-700';
-      case 'in-progress':
-        return 'bg-blue-800 text-blue-200 border-blue-700';
-      case 'done':
-        return 'bg-emerald-800 text-emerald-200 border-emerald-700';
-      default:
-        return '';
-    }
+  
+  addTaskForDate(date: Date) {
+    this.openCreateTaskModal(undefined, date);
   }
-
-  getPriorityBadgeClass(priority: string): string {
-    switch (priority) {
-      case 'low':
-        return 'bg-gray-700 text-gray-100 border-gray-600';
-      case 'medium':
-        return 'bg-yellow-800 text-yellow-200 border-yellow-700';
-      case 'high':
-        return 'bg-rose-800 text-rose-200 border-rose-700';
-      default:
-        return '';
-    }
+  
+  async addSection() {
+     const pid = this.selectedProjectId();
+     if(pid) {
+         const name = prompt('Section Name:');
+         if(name && name.trim()) {
+             await this.projectService.addSection(pid, name.trim());
+         }
+     }
   }
 }

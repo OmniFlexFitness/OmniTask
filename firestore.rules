@@ -1,22 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated and part of OmniFlex workspace
+    // Helper function to check if user is authenticated
     function isAuthenticated() {
-      return request.auth != null; // TODO: Add domain check specifically if needed
+      return request.auth != null;
     }
 
+    // Helper to check if user is owner or member of the resource
+    function isMember(resourceData) {
+      return isAuthenticated() && (
+        request.auth.uid == resourceData.ownerId || 
+        request.auth.uid in resourceData.memberIds
+      );
+    }
+    
     match /users/{userId} {
       allow read, write: if request.auth.uid == userId;
     }
     
     match /projects/{projectId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Refine later for Admin/Owner
+      allow create: if isAuthenticated();
+      allow read: if isMember(resource.data);
+      allow update: if isMember(resource.data);
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.ownerId;
     }
     
     match /tasks/{taskId} {
-      allow read, write: if isAuthenticated();
+      allow create: if isAuthenticated(); // Should ideally check project membership in trigger or here if project data available
+      allow read: if isAuthenticated(); // TODO: Add tighter check by joining with project
+      allow update, delete: if isAuthenticated();
     }
   }
 }
