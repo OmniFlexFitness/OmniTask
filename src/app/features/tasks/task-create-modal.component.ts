@@ -430,40 +430,6 @@ export class TaskCreateModalComponent {
     return error;
   }
 
-  validateCustomFields(): boolean {
-    const project = this.project();
-    if (!project?.customFields) return true;
-
-    const values = this.customFieldValues();
-    
-    for (const field of project.customFields) {
-      const value = values[field.id];
-      
-      // For now, we don't enforce required fields, but we validate types
-      if (value) {
-        // Validate number fields
-        if (field.type === 'number') {
-          const numValue = parseFloat(value);
-          if (isNaN(numValue)) {
-            alert(`"${field.name}" must be a valid number.`);
-            return false;
-          }
-        }
-        
-        // Validate date fields
-        if (field.type === 'date') {
-          const dateValue = new Date(value);
-          if (isNaN(dateValue.getTime())) {
-            alert(`"${field.name}" must be a valid date.`);
-            return false;
-          }
-        }
-      }
-    }
-    
-    return true;
-  }
-
   toggleTag(tagName: string) {
     this.selectedTags.update((tags) => {
       const newTags = new Set(tags);
