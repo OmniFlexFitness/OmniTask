@@ -8,6 +8,41 @@ export interface GoogleTaskList {
   title: string;
 }
 
+/**
+ * Google Tasks API task structure
+ * https://developers.google.com/workspace/tasks/reference/rest/v1/tasks#Task
+ */
+export interface GoogleTask {
+  id?: string;
+  title: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string; // RFC3339 timestamp
+  completed?: string; // RFC3339 timestamp
+  updated?: string;
+  deleted?: boolean;
+  hidden?: boolean;
+  position?: string;
+  parent?: string;
+  links?: Array<{
+    type: string;
+    description: string;
+    link: string;
+  }>;
+  etag?: string;
+}
+
+/**
+ * Partial Google Task for update operations
+ */
+export interface GoogleTaskUpdate {
+  title?: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string;
+  completed?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,7 +52,75 @@ export class GoogleTasksService {
 
   // TODO: Implement authentication with Google
 
-  getTaskLists(): Observable<any> {
+  /**
+   * Convert local Task model to Google Task API format
+   */
+  private toGoogleTask(task: Partial<Task>): GoogleTaskUpdate {
+    const googleTask: GoogleTaskUpdate = {};
+    
+    if (task.title !== undefined) {
+      googleTask.title = task.title;
+    }
+    
+    if (task.description !== undefined) {
+      googleTask.notes = task.description;
+    }
+    
+    if (task.status !== undefined) {
+      googleTask.status = task.status === 'done' ? 'completed' : 'needsAction';
+    }
+    
+    if (task.dueDate !== undefined) {
+      // Convert Firestore Timestamp or Date to RFC3339 format
+      const date = task.dueDate instanceof Date ? task.dueDate : (task.dueDate as any).toDate();
+      googleTask.due = date.toISOString();
+    }
+    
+    if (task.completedAt !== undefined) {
+      const date = task.completedAt instanceof Date ? task.completedAt : (task.completedAt as any).toDate();
+      googleTask.completed = date.toISOString();
+    }
+    
+    return googleTask;
+  }
+
+  /**
+   * Convert Google Task API format to local Task model
+   */
+  private fromGoogleTask(googleTask: GoogleTask, projectId: string): Partial<Task> {
+    const task: Partial<Task> = {
+      googleTaskId: googleTask.id,
+      isGoogleTask: true,
+      projectId
+    };
+    
+    if (googleTask.title !== undefined) {
+      task.title = googleTask.title;
+    }
+    
+    if (googleTask.notes !== undefined) {
+      task.description = googleTask.notes;
+    }
+    
+    if (googleTask.status !== undefined) {
+      task.status = googleTask.status === 'completed' ? 'done' : 'todo';
+    }
+    
+    if (googleTask.due !== undefined) {
+      task.dueDate = new Date(googleTask.due);
+    }
+    
+    if (googleTask.completed !== undefined) {
+      task.completedAt = new Date(googleTask.completed);
+    }
+    
+    if (googleTask.updated !== undefined) {
+      task.updatedAt = new Date(googleTask.updated);
+    }
+    
+    return task;
+  }
+
   getTaskLists(): Observable<any> {
     return this.http.get(`${this.API_BASE_URL}/users/@me/lists`);
   }
@@ -34,12 +137,13 @@ export class GoogleTasksService {
     return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
-  createTask(taskListId: string, title: string): Observable<Task> {
-    return this.http.post<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
+  createTask(taskListId: string, title: string): Observable<GoogleTask> {
+    return this.http.post<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
   }
 
   updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<Task> {
-    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
+    const googleTaskUpdate = this.toGoogleTask(task);
+    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, googleTaskUpdate);
   }
 
   deleteTask(taskListId: string, taskId: string): Observable<any> {
