@@ -12,7 +12,7 @@ import {
   collectionData,
   DocumentReference,
 } from '@angular/fire/firestore';
-import { Project, Section, DEFAULT_SECTIONS } from '../models/domain.model';
+import { Project, Section, DEFAULT_SECTIONS, CustomFieldDefinition, Tag } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
 
@@ -259,12 +259,12 @@ export class ProjectService {
    */
   async addCustomField(
     projectId: string,
-    field: Omit<import('../models/domain.model').CustomFieldDefinition, 'id' | 'projectId'>
-  ): Promise<import('../models/domain.model').CustomFieldDefinition> {
+    field: Omit<CustomFieldDefinition, 'id' | 'projectId'>
+  ): Promise<CustomFieldDefinition> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    const newField: import('../models/domain.model').CustomFieldDefinition = {
+    const newField: CustomFieldDefinition = {
       ...field,
       id: crypto.randomUUID(),
       projectId,
@@ -282,7 +282,7 @@ export class ProjectService {
   async updateCustomField(
     projectId: string,
     fieldId: string,
-    data: Partial<import('../models/domain.model').CustomFieldDefinition>
+    data: Partial<CustomFieldDefinition>
   ): Promise<void> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
@@ -311,8 +311,8 @@ export class ProjectService {
    */
   async addTag(
     projectId: string,
-    tag: Omit<import('../models/domain.model').Tag, 'id'>
-  ): Promise<import('../models/domain.model').Tag> {
+    tag: Omit<Tag, 'id'>
+  ): Promise<Tag> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
@@ -320,7 +320,7 @@ export class ProjectService {
     const existing = project.tags?.find((t) => t.name.toLowerCase() === tag.name.toLowerCase());
     if (existing) return existing;
 
-    const newTag: import('../models/domain.model').Tag = {
+    const newTag: Tag = {
       ...tag,
       id: crypto.randomUUID(),
     };
