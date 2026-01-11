@@ -20,7 +20,7 @@ export class GoogleTasksSyncService {
    * Transform OmniTask Task data to Google Tasks API format
    * Maps local model fields to Google Tasks API fields
    */
-  transformToGoogleTask(task: Partial<Task>): GoogleTask {
+  private transformToGoogleTask(task: Partial<Task>): GoogleTask {
     const googleTask: GoogleTask = {};
 
     // Map title
@@ -94,10 +94,11 @@ export class GoogleTasksSyncService {
   async createTaskInGoogle(
     taskDocRef: DocumentReference,
     googleTaskListId: string,
-    taskTitle: string
+    taskData: Partial<Task>
   ): Promise<string> {
+    const googleTaskData = this.transformToGoogleTask(taskData);
     const googleTask = await firstValueFrom(
-      this.googleTasksService.createTask(googleTaskListId, { title: taskTitle })
+      this.googleTasksService.createTask(googleTaskListId, googleTaskData)
     );
     // Verify the Google Task was created with an ID
     if (!googleTask.id) {
