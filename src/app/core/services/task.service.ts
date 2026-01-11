@@ -4,9 +4,6 @@ import { Task } from '../models/domain.model';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
-import { GoogleTasksService, GoogleTask } from './google-tasks.service';
-import { GoogleTasksSyncService } from './google-tasks-sync.service';
-import { ProjectService } from './project.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,56 +11,12 @@ import { ProjectService } from './project.service';
 export class TaskService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
-  private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
-  private projectService = inject(ProjectService);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
   loading = signal(false);
   error = signal<string | null>(null);
-
-  /**
-   * Transform Google Tasks API format to OmniTask Task data
-   * Maps Google Tasks API fields to local model fields
-   */
-  private transformFromGoogleTask(googleTask: GoogleTask): Partial<Task> {
-    const task: Partial<Task> = {};
-
-    // Map title
-    if (googleTask.title !== undefined) {
-      task.title = googleTask.title;
-    }
-
-    // Map notes to description
-    if (googleTask.notes !== undefined) {
-      task.description = googleTask.notes;
-    }
-
-    // Map status: Google Tasks uses 'needsAction' | 'completed'
-    // OmniTask uses 'todo' | 'in-progress' | 'done'
-    if (googleTask.status !== undefined) {
-      task.status = googleTask.status === 'completed' ? 'done' : 'todo';
-    }
-
-    // Map due to dueDate
-    if (googleTask.due !== undefined) {
-      task.dueDate = new Date(googleTask.due);
-    }
-
-    // Map completed to completedAt
-    if (googleTask.completed !== undefined) {
-      task.completedAt = new Date(googleTask.completed);
-    }
-
-    // Mark as Google Task
-    if (googleTask.id !== undefined) {
-      task.googleTaskId = googleTask.id;
-      task.isGoogleTask = true;
-    }
-
-    return task;
-  }
 
   /**
    * Get all tasks for a project, sorted by order
@@ -164,15 +117,6 @@ export class TaskService {
           );
           // Mark as Google Task - the sync service already updates googleTaskId and googleTaskListId
           await updateDoc(taskDocRef, { isGoogleTask: true });
-          const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(task);
-          const googleTask = await firstValueFrom(
-            this.googleTasksService.createTask(googleTaskListId, googleTaskData)
-          );
-          await updateDoc(doc(this.tasksCollection, result.id), { 
-            googleTaskId: googleTask.id, 
-            googleTaskListId: googleTaskListId,
-            isGoogleTask: true 
-          });
         } catch (err) {
           console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
           try {
@@ -220,15 +164,6 @@ export class TaskService {
           );
         } catch (err) {
           console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
-      if (taskDoc?.googleTaskId) {
-        const project = await this.projectService.getProject(taskDoc.projectId);
-        if (project?.googleTaskListId) {
-          try {
-            const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(data);
-            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
-          } catch (err) {
-            console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
-          }
         }
       }
     } catch (err) {

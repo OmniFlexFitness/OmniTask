@@ -8,13 +8,6 @@ export interface GoogleTaskList {
 }
 
 /**
- * Google Tasks API response for listing tasks
- */
-export interface GoogleTasksResponse {
-  items: GoogleTask[];
-}
-
-/**
  * Google Tasks API task representation
  * Based on https://developers.google.com/tasks/reference/rest/v1/tasks
  */
