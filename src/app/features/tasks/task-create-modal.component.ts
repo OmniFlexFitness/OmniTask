@@ -376,22 +376,28 @@ export class TaskCreateModalComponent {
     switch (field.type) {
       case 'number':
         // Check if value is a valid number
-        if (value && value.trim() !== '') {
-          const num = parseFloat(value);
-          if (isNaN(num)) {
-            error = 'Must be a valid number';
-          } else {
-            validatedValue = num;
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const num = parseFloat(stringValue);
+            if (isNaN(num)) {
+              error = 'Must be a valid number';
+            } else {
+              validatedValue = num;
+            }
           }
         }
         break;
       
       case 'date':
         // Check if value is a valid date
-        if (value && value.trim() !== '') {
-          const date = new Date(value);
-          if (isNaN(date.getTime())) {
-            error = 'Must be a valid date';
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const date = new Date(stringValue);
+            if (isNaN(date.getTime())) {
+              error = 'Must be a valid date';
+            }
           }
         }
         break;
