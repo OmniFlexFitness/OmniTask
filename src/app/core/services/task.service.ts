@@ -230,7 +230,7 @@ export class TaskService {
     this.error.set(null);
 
     try {
-      // Fetch task data before updating to avoid race conditions
+      // Fetch task before update to avoid race condition
       const taskDoc = await this.getTask(id);
       
       const taskRef = doc(this.firestore, `tasks/${id}`);
@@ -239,7 +239,6 @@ export class TaskService {
         updatedAt: new Date()
       });
 
-      const taskDoc = await this.getTask(id);
       if (taskDoc?.googleTaskId) {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
