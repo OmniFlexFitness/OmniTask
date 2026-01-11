@@ -1,39 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc, Timestamp } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { GoogleTasksService, GoogleTaskUpdate } from './google-tasks.service';
-
-/**
- * Transform OmniTask task data to Google Task format
- */
-function toGoogleTaskUpdate(task: Partial<Task>): GoogleTaskUpdate {
-  const googleTask: GoogleTaskUpdate = {};
-  
-  if (task.title !== undefined) {
-    googleTask.title = task.title;
-  }
-  
-  if (task.description !== undefined) {
-    googleTask.notes = task.description;
-  }
-  
-  if (task.status !== undefined) {
-    googleTask.status = task.status === 'done' ? 'completed' : 'needsAction';
-  }
-  
-  if (task.dueDate !== undefined && task.dueDate) {
-    const date = task.dueDate instanceof Date 
-      ? task.dueDate 
-      : (task.dueDate as any)?.toDate?.() || null;
-    if (date) {
-      googleTask.due = date.toISOString();
-    }
-  }
-  
-  return googleTask;
-}
+import { GoogleTasksService, GoogleTask } from './google-tasks.service';
+import { ProjectService } from './project.service';
 
 @Injectable({
   providedIn: 'root'
@@ -47,6 +18,40 @@ export class TaskService {
   // Loading state for UI feedback
   loading = signal(false);
   error = signal<string | null>(null);
+
+  /**
+   * Helper method to map domain Task fields to Google Task fields
+   */
+  private mapToGoogleTask(data: Partial<Task>): Partial<GoogleTask> {
+    const googleTaskData: Partial<GoogleTask> = {};
+    
+    if (data.title !== undefined) googleTaskData.title = data.title;
+    if (data.description !== undefined) googleTaskData.notes = data.description;
+    if (data.status !== undefined) {
+      googleTaskData.status = data.status === 'done' ? 'completed' : 'needsAction';
+    }
+    if (data.dueDate !== undefined) {
+      // Convert Firestore Timestamp or Date to RFC 3339 timestamp
+      let date: Date;
+      if (data.dueDate instanceof Date) {
+        date = data.dueDate;
+      } else if (data.dueDate instanceof Timestamp) {
+        date = data.dueDate.toDate();
+      } else {
+        // Fallback: attempt to create a Date from the value
+        // This handles string dates or timestamp numbers
+        date = new Date(data.dueDate);
+        // Validate the date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date value provided for dueDate:', data.dueDate);
+          return googleTaskData; // Skip setting due date if invalid
+        }
+      }
+      googleTaskData.due = date.toISOString();
+    }
+    
+    return googleTaskData;
+  }
 
   /**
    * Get all tasks for a project, sorted by order
@@ -175,13 +180,16 @@ export class TaskService {
         updatedAt: new Date()
       });
 
-      // Only sync to Google Tasks if authenticated and task is linked
-      if (taskDoc?.googleTaskId && googleTaskListId && this.googleTasksService.isAuthenticated()) {
-        try {
-          const googleTaskUpdate = toGoogleTaskUpdate(data);
-          await firstValueFrom(this.googleTasksService.updateTask(googleTaskListId, taskDoc.googleTaskId, googleTaskUpdate));
-        } catch (err) {
-          console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
+      const taskDoc = await this.getTask(id);
+      if (taskDoc?.googleTaskId) {
+        const project = await this.projectService.getProject(taskDoc.projectId);
+        if (project?.googleTaskListId) {
+          try {
+            const googleTaskData = this.mapToGoogleTask(data);
+            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
+          } catch (err) {
+            console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
+          }
         }
       }
     } catch (err) {
