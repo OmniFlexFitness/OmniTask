@@ -55,7 +55,6 @@ export interface Task {
   updatedAt: FirestoreDate;
   createdById?: string; // Who created the task
   googleTaskId?: string;
-  isGoogleTask?: boolean;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
@@ -45,6 +45,9 @@ export interface GoogleTask {
 export class GoogleTasksService {
   private http = inject(HttpClient);
   private readonly API_BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
+
+  // Authentication state - tracks whether user has connected Google Tasks
+  isAuthenticated = signal(false);
 
   // TODO: Implement authentication with Google
 
