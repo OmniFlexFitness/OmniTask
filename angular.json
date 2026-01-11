@@ -36,7 +36,6 @@
             "styles": [
               "src/styles.css"
             ],
-            "inlineStyleLanguage": "css",
             "optimization": {
               "fonts": false
             }
