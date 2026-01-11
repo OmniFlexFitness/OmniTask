@@ -4,6 +4,7 @@ import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { ProjectService } from './project.service';
 
 @Injectable({
@@ -12,7 +13,9 @@ import { ProjectService } from './project.service';
 export class TaskService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private projectService = inject(ProjectService);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -199,8 +202,14 @@ export class TaskService {
       if (googleTaskListId) {
         try {
           const googleTaskData = this.transformToGoogleTask(task);
-          const googleTask = await firstValueFrom(this.googleTasksService.createTask(project.googleTaskListId, googleTaskData));
-          await updateDoc(doc(this.tasksCollection, result.id), { googleTaskId: googleTask.id, isGoogleTask: true });
+          const googleTask = await firstValueFrom(
+            this.googleTasksService.createTask(googleTaskListId, googleTaskData)
+          );
+          await updateDoc(doc(this.tasksCollection, result.id), { 
+            googleTaskId: googleTask.id, 
+            googleTaskListId: googleTaskListId,
+            isGoogleTask: true 
+          });
         } catch (err) {
           console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
           try {
