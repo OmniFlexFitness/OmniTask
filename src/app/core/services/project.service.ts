@@ -3,6 +3,7 @@ import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, getDoc, query
 import { Project, Section, DEFAULT_SECTIONS } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,7 @@ import { Observable, switchMap, of, map } from 'rxjs';
 export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
   
   private projectsCollection = collection(this.firestore, 'projects');
 
@@ -90,6 +92,10 @@ export class ProjectService {
       };
 
       const result = await addDoc(this.projectsCollection, project);
+
+      // Also create a corresponding task list in Google Tasks
+      await this.googleTasksSyncService.createTaskListForProject(result.id, name);
+
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create project';
@@ -127,8 +133,18 @@ export class ProjectService {
     this.error.set(null);
 
     try {
+      const project = await this.getProject(id);
+      if (!project) throw new Error('Project not found');
+
+      // First delete the corresponding Google Tasks list (if any)
+      if (project.googleTaskListId) {
+        await this.googleTasksSyncService.deleteTaskListForProject(project.googleTaskListId);
+      }
+
+      // Then delete the project from Firestore
       const docRef = doc(this.firestore, `projects/${id}`);
       await deleteDoc(docRef);
+      
       // Note: Tasks should be deleted separately or via Cloud Function
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete project';
