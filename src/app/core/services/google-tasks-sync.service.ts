@@ -20,7 +20,7 @@ export class GoogleTasksSyncService {
    * Transform OmniTask Task data to Google Tasks API format
    * Maps local model fields to Google Tasks API fields
    */
-  private transformToGoogleTask(task: Partial<Task>): GoogleTask {
+  transformToGoogleTask(task: Partial<Task>): GoogleTask {
     const googleTask: GoogleTask = {};
 
     // Map title
