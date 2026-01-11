@@ -206,7 +206,7 @@ import {
           <p class="text-slate-400 mb-6">
             Are you sure you want to remove
             <strong class="text-white">{{ fieldToDelete()?.name }}</strong
-            >? Existing data will be preserved but hidden. This action cannot be undone.
+            >? The field definition will be removed, but existing data will be preserved and can be accessed if you recreate the field.
           </p>
 
           <div class="flex justify-end gap-3">
