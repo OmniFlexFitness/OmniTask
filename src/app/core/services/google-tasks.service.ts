@@ -1,11 +1,27 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Task } from '../models/domain.model';
 
 export interface GoogleTaskList {
   id: string;
   title: string;
+}
+
+export interface GoogleTask {
+  id: string;
+  title: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string;
+  completed?: string;
+  updated?: string;
+}
+
+export interface GoogleTaskUpdate {
+  title?: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string;
 }
 
 @Injectable({
@@ -15,7 +31,8 @@ export class GoogleTasksService {
   private http = inject(HttpClient);
   private readonly API_BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
 
-  constructor() { }
+  // Authentication state - tracks whether user has connected Google Tasks
+  isAuthenticated = signal(false);
 
   // TODO: Implement authentication with Google
 
@@ -31,16 +48,16 @@ export class GoogleTasksService {
     return this.http.delete(`${this.API_BASE_URL}/users/@me/lists/${taskListId}`);
   }
 
-  getTasks(taskListId: string): Observable<any> {
-    return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
+  getTasks(taskListId: string): Observable<GoogleTask[]> {
+    return this.http.get<GoogleTask[]>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
-  createTask(taskListId: string, title: string): Observable<Task> {
-    return this.http.post<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
+  createTask(taskListId: string, title: string): Observable<GoogleTask> {
+    return this.http.post<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
   }
 
-  updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<Task> {
-    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
+  updateTask(taskListId: string, taskId: string, task: GoogleTaskUpdate): Observable<GoogleTask> {
+    return this.http.put<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
   }
 
   deleteTask(taskListId: string, taskId: string): Observable<any> {
