@@ -356,6 +356,7 @@ export class TaskDetailModalComponent {
 
   async autoSave() {
     const task = this.task();
+    const project = this.project();
     if (!task || this.form.invalid || !this.form.dirty) return;
 
     const val = this.form.value;
@@ -378,7 +379,7 @@ export class TaskDetailModalComponent {
     (updates as any).startDate = startDate;
 
     try {
-      await this.taskService.updateTask(task.id, updates);
+      await this.taskService.updateTask(task.id, updates, project?.googleTaskListId);
       this.updated.emit({ ...task, ...updates } as Task);
     } catch (e) {
       console.error('Auto-save failed', e);
@@ -387,22 +388,24 @@ export class TaskDetailModalComponent {
 
   async toggleComplete() {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     if (task.status === 'done') {
-      await this.taskService.reopenTask(task.id);
+      await this.taskService.reopenTask(task.id, project?.googleTaskListId);
       this.updated.emit({ ...task, status: 'in-progress' });
     } else {
-      await this.taskService.completeTask(task.id);
+      await this.taskService.completeTask(task.id, project?.googleTaskListId);
       this.updated.emit({ ...task, status: 'done' });
     }
   }
 
   async deleteTask() {
     const task = this.task();
+    const project = this.project();
     if (!task || !confirm('Are you sure you want to delete this task?')) return;
 
-    await this.taskService.deleteTask(task.id);
+    await this.taskService.deleteTask(task.id, project?.googleTaskListId);
     this.deleted.emit(task.id);
     this.close.emit();
   }
@@ -410,6 +413,7 @@ export class TaskDetailModalComponent {
   // Subtask methods
   async addSubtask() {
     const task = this.task();
+    const project = this.project();
     if (!task || !this.newSubtaskTitle.trim()) return;
 
     const newSubtask: Subtask = {
@@ -422,11 +426,12 @@ export class TaskDetailModalComponent {
     this.subtasks.set(updatedSubtasks);
     this.newSubtaskTitle = '';
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   async toggleSubtask(subtaskId: string) {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().map(s =>
@@ -434,17 +439,18 @@ export class TaskDetailModalComponent {
     );
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   async deleteSubtask(subtaskId: string) {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().filter(s => s.id !== subtaskId);
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   onExampleClick(e: Event) {

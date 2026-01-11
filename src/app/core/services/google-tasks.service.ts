@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Task } from '../models/domain.model';
@@ -50,6 +50,9 @@ export interface GoogleTaskUpdate {
 export class GoogleTasksService {
   private http = inject(HttpClient);
   private readonly API_BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
+
+  // Authentication state - tracks whether user has connected Google Tasks
+  isAuthenticated = signal(false);
 
   // TODO: Implement authentication with Google
 
@@ -154,8 +157,8 @@ export class GoogleTasksService {
     return this.http.delete(`${this.API_BASE_URL}/users/@me/lists/${taskListId}`);
   }
 
-  getTasks(taskListId: string): Observable<any> {
-    return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
+  getTasks(taskListId: string): Observable<GoogleTasksResponse> {
+    return this.http.get<GoogleTasksResponse>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
   createTask(taskListId: string, title: string): Observable<GoogleTask> {
