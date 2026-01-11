@@ -395,38 +395,39 @@ export class TaskCreateModalComponent {
     this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
   }
 
-  validateCustomFields(): boolean {
-    const project = this.project();
-    if (!project?.customFields) return true;
+  validateCustomFieldValue(field: any, value: any): string {
+    // Return error message if validation fails, empty string otherwise
+    let error = '';
 
-    const values = this.customFieldValues();
-    
-    for (const field of project.customFields) {
-      const value = values[field.id];
+    switch (field.type) {
+      case 'number':
+        // Check if value is a valid number
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const num = parseFloat(stringValue);
+            if (isNaN(num)) {
+              error = 'Must be a valid number';
+            }
+          }
+        }
+        break;
       
-      // For now, we don't enforce required fields, but we validate types
-      if (value) {
-        // Validate number fields
-        if (field.type === 'number') {
-          const numValue = parseFloat(value);
-          if (isNaN(numValue)) {
-            alert(`"${field.name}" must be a valid number.`);
-            return false;
+      case 'date':
+        // Check if value is a valid date
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const date = new Date(stringValue);
+            if (isNaN(date.getTime())) {
+              error = 'Must be a valid date';
+            }
           }
         }
-        
-        // Validate date fields
-        if (field.type === 'date') {
-          const dateValue = new Date(value);
-          if (isNaN(dateValue.getTime())) {
-            alert(`"${field.name}" must be a valid date.`);
-            return false;
-          }
-        }
-      }
+        break;
     }
-    
-    return true;
+
+    return error;
   }
 
   toggleTag(tagName: string) {
