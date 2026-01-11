@@ -922,10 +922,15 @@ select option {
   color: #e2e8f0;
 }
 
-select option:hover,
-select option:focus,
-select option:checked {
-  background: linear-gradient(90deg, rgba(0, 210, 255, 0.3), rgba(165, 100, 255, 0.2));
+/* Avoid option pseudo-classes (limited cross-browser support); style the select instead */
+select:focus,
+select:focus-visible,
+select:hover {
+  outline: none;
+  border-color: var(--cyber-blue);
+  box-shadow: 0 0 0 1px rgba(0, 210, 255, 0.6),
+              0 0 18px rgba(0, 210, 255, 0.35);
+  background: linear-gradient(90deg, rgba(0, 210, 255, 0.12), rgba(165, 100, 255, 0.08));
   color: #fff;
 }
 
