@@ -197,7 +197,7 @@ export class TaskService {
         try {
           const googleTaskData = this.transformToGoogleTask(task);
           const googleTask = await firstValueFrom(this.googleTasksService.createTask(project.googleTaskListId, googleTaskData));
-          await updateDoc(doc(this.tasksCollection, result.id), { googleTaskId: googleTask.id });
+          await updateDoc(doc(this.tasksCollection, result.id), { googleTaskId: googleTask.id, isGoogleTask: true });
         } catch (err) {
           console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
           try {

@@ -30,7 +30,6 @@ export class GoogleTasksService {
   // TODO: Implement authentication with Google
 
   getTaskLists(): Observable<any> {
-  getTaskLists(): Observable<any> {
     return this.http.get(`${this.API_BASE_URL}/users/@me/lists`);
   }
 
