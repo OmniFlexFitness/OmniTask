@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
-import { Observable, firstValueFrom, map } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService } from './google-tasks.service';
 import { ProjectService } from './project.service';
@@ -108,9 +108,15 @@ export class TaskService {
       if (project?.googleTaskListId) {
         try {
           const googleTask = await firstValueFrom(this.googleTasksService.createTask(project.googleTaskListId, task.title));
-          await this.updateTask(result.id, { googleTaskId: googleTask.id });
+          await updateDoc(doc(this.tasksCollection, result.id), { googleTaskId: googleTask.id });
         } catch (err) {
-          console.error('Failed to create Google Task, but task was created in OmniTask:', err);
+          console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
+          try {
+            await deleteDoc(result);
+          } catch (rollbackErr) {
+            console.error('Failed to rollback Firestore task after Google Task creation error:', rollbackErr);
+          }
+          throw err;
         }
       }
 
@@ -171,12 +177,19 @@ export class TaskService {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
           try {
-            await firstValueFrom(this.googleTasksService.deleteTask(project.googleTaskListId, taskDoc.googleTaskId));
+            await firstValueFrom(
+              this.googleTasksService.deleteTask(project.googleTaskListId, taskDoc.googleTaskId)
+            );
+            // Only delete from Firestore after successful Google Tasks deletion
+            await deleteDoc(doc(this.firestore, `tasks/${id}`));
+            return;
           } catch (err) {
-            console.error('Failed to delete Google Task, but task was deleted in OmniTask:', err);
+            console.error('Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:', err);
+            throw err;
           }
         }
       }
+      // If there is no linked Google Task or no Google Task list, just delete from Firestore
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';

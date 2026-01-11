@@ -15,10 +15,9 @@ export class GoogleTasksService {
   private http = inject(HttpClient);
   private readonly API_BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
 
-  constructor() { }
-
   // TODO: Implement authentication with Google
 
+  getTaskLists(): Observable<any> {
   getTaskLists(): Observable<any> {
     return this.http.get(`${this.API_BASE_URL}/users/@me/lists`);
   }
