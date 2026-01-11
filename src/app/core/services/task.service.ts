@@ -33,11 +33,21 @@ export class TaskService {
     }
     if (data.dueDate !== undefined) {
       // Convert Firestore Timestamp or Date to RFC 3339 timestamp
-      const date = data.dueDate instanceof Date 
-        ? data.dueDate 
-        : data.dueDate instanceof Timestamp 
-          ? data.dueDate.toDate() 
-          : new Date(data.dueDate);
+      let date: Date;
+      if (data.dueDate instanceof Date) {
+        date = data.dueDate;
+      } else if (data.dueDate instanceof Timestamp) {
+        date = data.dueDate.toDate();
+      } else {
+        // Fallback: attempt to create a Date from the value
+        // This handles string dates or timestamp numbers
+        date = new Date(data.dueDate);
+        // Validate the date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date value provided for dueDate:', data.dueDate);
+          return googleTaskData; // Skip setting due date if invalid
+        }
+      }
       googleTaskData.due = date.toISOString();
     }
     

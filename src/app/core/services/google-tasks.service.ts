@@ -7,6 +7,18 @@ export interface GoogleTaskList {
   title: string;
 }
 
+export interface GoogleTaskListsResponse {
+  kind: string;
+  etag: string;
+  items: GoogleTaskList[];
+}
+
+export interface GoogleTasksResponse {
+  kind: string;
+  etag: string;
+  items: GoogleTask[];
+}
+
 export interface GoogleTask {
   id: string;
   title: string;
@@ -36,8 +48,8 @@ export class GoogleTasksService {
 
   // TODO: Implement authentication with Google
 
-  getTaskLists(): Observable<any> {
-    return this.http.get(`${this.API_BASE_URL}/users/@me/lists`);
+  getTaskLists(): Observable<GoogleTaskListsResponse> {
+    return this.http.get<GoogleTaskListsResponse>(`${this.API_BASE_URL}/users/@me/lists`);
   }
 
   createTaskList(title: string): Observable<GoogleTaskList> {
@@ -48,8 +60,8 @@ export class GoogleTasksService {
     return this.http.delete(`${this.API_BASE_URL}/users/@me/lists/${taskListId}`);
   }
 
-  getTasks(taskListId: string): Observable<any> {
-    return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
+  getTasks(taskListId: string): Observable<GoogleTasksResponse> {
+    return this.http.get<GoogleTasksResponse>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
   createTask(taskListId: string, title: string): Observable<GoogleTask> {
