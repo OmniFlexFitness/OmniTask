@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc, Timestamp } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
@@ -19,6 +19,30 @@ export class TaskService {
   // Loading state for UI feedback
   loading = signal(false);
   error = signal<string | null>(null);
+
+  /**
+   * Helper method to map domain Task fields to Google Task fields
+   */
+  private mapToGoogleTask(data: Partial<Task>): Partial<GoogleTask> {
+    const googleTaskData: Partial<GoogleTask> = {};
+    
+    if (data.title !== undefined) googleTaskData.title = data.title;
+    if (data.description !== undefined) googleTaskData.notes = data.description;
+    if (data.status !== undefined) {
+      googleTaskData.status = data.status === 'done' ? 'completed' : 'needsAction';
+    }
+    if (data.dueDate !== undefined) {
+      // Convert Firestore Timestamp or Date to RFC 3339 timestamp
+      const date = data.dueDate instanceof Date 
+        ? data.dueDate 
+        : data.dueDate instanceof Timestamp 
+          ? data.dueDate.toDate() 
+          : new Date(data.dueDate);
+      googleTaskData.due = date.toISOString();
+    }
+    
+    return googleTaskData;
+  }
 
   /**
    * Get all tasks for a project, sorted by order
@@ -149,19 +173,7 @@ export class TaskService {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
           try {
-            // Map domain Task fields to Google Task fields
-            const googleTaskData: Partial<GoogleTask> = {};
-            if (data.title !== undefined) googleTaskData.title = data.title;
-            if (data.description !== undefined) googleTaskData.notes = data.description;
-            if (data.status !== undefined) {
-              googleTaskData.status = data.status === 'done' ? 'completed' : 'needsAction';
-            }
-            if (data.dueDate !== undefined) {
-              // Convert to RFC 3339 timestamp if dueDate is provided
-              const date = data.dueDate instanceof Date ? data.dueDate : (data.dueDate as any).toDate();
-              googleTaskData.due = date.toISOString();
-            }
-            
+            const googleTaskData = this.mapToGoogleTask(data);
             await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
           } catch (err) {
             console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
