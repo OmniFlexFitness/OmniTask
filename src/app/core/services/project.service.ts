@@ -144,6 +144,7 @@ export class ProjectService {
       // Then delete the project from Firestore
       const docRef = doc(this.firestore, `projects/${id}`);
       await deleteDoc(docRef);
+      
       // Note: Tasks should be deleted separately or via Cloud Function
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete project';

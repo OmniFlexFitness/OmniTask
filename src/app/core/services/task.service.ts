@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc, Timestamp } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
 
@@ -17,6 +17,40 @@ export class TaskService {
   // Loading state for UI feedback
   loading = signal(false);
   error = signal<string | null>(null);
+
+  /**
+   * Helper method to map domain Task fields to Google Task fields
+   */
+  private mapToGoogleTask(data: Partial<Task>): Partial<GoogleTask> {
+    const googleTaskData: Partial<GoogleTask> = {};
+    
+    if (data.title !== undefined) googleTaskData.title = data.title;
+    if (data.description !== undefined) googleTaskData.notes = data.description;
+    if (data.status !== undefined) {
+      googleTaskData.status = data.status === 'done' ? 'completed' : 'needsAction';
+    }
+    if (data.dueDate !== undefined) {
+      // Convert Firestore Timestamp or Date to RFC 3339 timestamp
+      let date: Date;
+      if (data.dueDate instanceof Date) {
+        date = data.dueDate;
+      } else if (data.dueDate instanceof Timestamp) {
+        date = data.dueDate.toDate();
+      } else {
+        // Fallback: attempt to create a Date from the value
+        // This handles string dates or timestamp numbers
+        date = new Date(data.dueDate);
+        // Validate the date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date value provided for dueDate:', data.dueDate);
+          return googleTaskData; // Skip setting due date if invalid
+        }
+      }
+      googleTaskData.due = date.toISOString();
+    }
+    
+    return googleTaskData;
+  }
 
   /**
    * Get all tasks for a project, sorted by order
@@ -138,11 +172,14 @@ export class TaskService {
   /**
    * Update an existing task
    */
-  async updateTask(id: string, data: Partial<Task>): Promise<void> {
+  async updateTask(id: string, data: Partial<Task>, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
+      // Fetch task data before updating to avoid race conditions
+      const taskDoc = await this.getTask(id);
+      
       const taskRef = doc(this.firestore, `tasks/${id}`);
       await updateDoc(taskRef, {
         ...data,
@@ -169,7 +206,7 @@ export class TaskService {
   /**
    * Delete a task
    */
-  async deleteTask(id: string): Promise<void> {
+  async deleteTask(id: string, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
@@ -189,7 +226,8 @@ export class TaskService {
           throw err;
         }
       }
-      // If there is no linked Google Task or no Google Task list, just delete from Firestore
+      
+      // Only delete from Firestore after successful Google Tasks deletion (or if not linked)
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';
@@ -203,21 +241,21 @@ export class TaskService {
   /**
    * Mark task as complete
    */
-  async completeTask(id: string): Promise<void> {
+  async completeTask(id: string, googleTaskListId?: string): Promise<void> {
     return this.updateTask(id, {
       status: 'done',
       completedAt: new Date()
-    });
+    }, googleTaskListId);
   }
 
   /**
    * Reopen a completed task
    */
-  async reopenTask(id: string): Promise<void> {
+  async reopenTask(id: string, googleTaskListId?: string): Promise<void> {
     return this.updateTask(id, {
       status: 'in-progress',
       completedAt: undefined
-    });
+    }, googleTaskListId);
   }
 
   /**
@@ -255,6 +293,8 @@ export class TaskService {
 
   /**
    * Bulk update tasks (e.g., bulk complete, bulk delete)
+   * Note: This method does not sync changes to Google Tasks for linked tasks.
+   * For operations that need Google Tasks sync, use individual update methods.
    */
   async bulkUpdateTasks(taskIds: string[], data: Partial<Task>): Promise<void> {
     this.loading.set(true);
@@ -280,6 +320,8 @@ export class TaskService {
 
   /**
    * Bulk delete tasks
+   * Note: This method does not handle Google Tasks synchronization.
+   * For tasks linked to Google Tasks, use the individual deleteTask method.
    */
   async bulkDeleteTasks(taskIds: string[]): Promise<void> {
     this.loading.set(true);
