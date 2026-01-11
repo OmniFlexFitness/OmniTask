@@ -390,13 +390,51 @@ import { switchMap, of } from 'rxjs';
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
               >Tags</label
             >
-            <input
-              type="text"
-              formControlName="tags"
-              placeholder="Comma separated tags..."
-              class="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              (blur)="autoSave()"
-            />
+            
+            <!-- Existing Project Tags -->
+            @if (project()?.tags?.length) {
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              @for (tag of project()?.tags; track tag.id) {
+              <button
+                type="button"
+                (click)="toggleTag(tag.name)"
+                [class.ring-2]="selectedTags().has(tag.name)"
+                [class.ring-white]="selectedTags().has(tag.name)"
+                [style.background-color]="tag.color + '20'"
+                [style.color]="tag.color"
+                [style.border-color]="tag.color + '40'"
+                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+              >
+                {{ tag.name }}
+              </button>
+              }
+            </div>
+            }
+
+            <!-- Add New Tag -->
+            <div class="flex gap-2">
+              <input
+                type="text"
+                #tagInput
+                (keydown.enter)="
+                  $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
+                "
+                placeholder="Add new tag..."
+                class="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
+              <button
+                type="button"
+                (click)="addTag(tagInput.value); tagInput.value = ''"
+                class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+
+            <!-- Selected Tags Display -->
+            @if (selectedTags().size > 0) {
+            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+            }
           </div>
         </div>
       </div>
@@ -474,12 +512,12 @@ export class TaskDetailModalComponent {
     dueDate: [''],
     priority: ['medium'],
     sectionId: [null as string | null],
-    tags: [''],
   });
 
   // Subtasks state
   subtasks = signal<Subtask[]>([]);
   customFieldValues = signal<Record<string, any>>({});
+  selectedTags = signal<Set<string>>(new Set());
   newSubtaskTitle = '';
 
   completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
@@ -499,14 +537,16 @@ export class TaskDetailModalComponent {
             dueDate: task.dueDate ? this.toInputDate(task.dueDate) : '',
             priority: task.priority,
             sectionId: task.sectionId || null,
-            tags: task.tags?.join(', ') || '',
           },
           { emitEvent: false }
         );
 
-        // Load subtasks
+        // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
         this.customFieldValues.set(task.customFieldValues || {});
+        
+        // Initialize selected tags
+        this.selectedTags.set(new Set(task.tags || []));
       }
     });
   }
@@ -522,6 +562,50 @@ export class TaskDetailModalComponent {
     this.autoSave();
   }
 
+  toggleTag(tagName: string) {
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      if (newTags.has(tagName)) {
+        newTags.delete(tagName);
+      } else {
+        newTags.add(tagName);
+      }
+      return newTags;
+    });
+    this.autoSave();
+  }
+
+  async addTag(tagName: string) {
+    const name = tagName.trim();
+    if (!name) return;
+
+    // Add to project definitions first if it doesn't exist
+    const project = this.project();
+    if (project) {
+      // Simple hash for color generation
+      const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+      const colorIndex =
+        name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+
+      await this.projectService.addTag(project.id, {
+        name: name,
+        color: colors[colorIndex],
+      });
+    }
+
+    // Select it
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      newTags.add(name);
+      return newTags;
+    });
+    this.autoSave();
+  }
+
+  getSelectedTagsList(): string {
+    return Array.from(this.selectedTags()).join(', ');
+  }
+
   async autoSave() {
     const task = this.task();
     if (!task || this.form.invalid || !this.form.dirty) return;
@@ -529,12 +613,7 @@ export class TaskDetailModalComponent {
     const val = this.form.value;
     const startDate = val.startDate ? new Date(val.startDate) : undefined;
     const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-    const tags = val.tags
-      ? val.tags
-          .split(',')
-          .map((t: string) => t.trim())
-          .filter(Boolean)
-      : [];
+    const tags = Array.from(this.selectedTags());
 
     const updates: Partial<Task> = {
       title: val.title!,
