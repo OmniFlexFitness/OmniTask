@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService } from './google-tasks.service';
 import { ProjectService } from './project.service';
@@ -138,13 +138,15 @@ export class TaskService {
     this.error.set(null);
 
     try {
+      // Fetch task before update to avoid race condition
+      const taskDoc = await this.getTask(id);
+      
       const taskRef = doc(this.firestore, `tasks/${id}`);
       await updateDoc(taskRef, {
         ...data,
         updatedAt: new Date()
       });
 
-      const taskDoc = await this.getTask(id);
       if (taskDoc?.googleTaskId) {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
