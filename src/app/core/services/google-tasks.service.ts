@@ -1,11 +1,23 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Task } from '../models/domain.model';
 
 export interface GoogleTaskList {
   id: string;
   title: string;
+}
+
+/**
+ * Google Tasks API task representation
+ * Based on https://developers.google.com/tasks/reference/rest/v1/tasks
+ */
+export interface GoogleTask {
+  id?: string;
+  title?: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string; // RFC 3339 timestamp
+  completed?: string; // RFC 3339 timestamp
 }
 
 @Injectable({
@@ -34,12 +46,12 @@ export class GoogleTasksService {
     return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
-  createTask(taskListId: string, title: string): Observable<Task> {
-    return this.http.post<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
+  createTask(taskListId: string, task: GoogleTask): Observable<GoogleTask> {
+    return this.http.post<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, task);
   }
 
-  updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<Task> {
-    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
+  updateTask(taskListId: string, taskId: string, task: GoogleTask): Observable<GoogleTask> {
+    return this.http.put<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
   }
 
   deleteTask(taskListId: string, taskId: string): Observable<any> {
