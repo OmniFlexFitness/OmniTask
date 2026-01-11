@@ -336,7 +336,6 @@ export class TaskCreateModalComponent {
     dueDate: [''],
     sectionId: [''],
     assigneeName: [''],
-    tags: [''],
   });
 
   constructor() {
