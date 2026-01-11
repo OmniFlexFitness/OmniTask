@@ -143,23 +143,27 @@ import { switchMap, of } from 'rxjs';
               <input
                 type="text"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('number') {
               <input
                 type="number"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('date') {
               <input
                 type="date"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('dropdown') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -170,6 +174,7 @@ import { switchMap, of } from 'rxjs';
               } @case ('status') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -184,6 +189,10 @@ import { switchMap, of } from 'rxjs';
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } }
+              
+              @if (customFieldErrors()[field.id]) {
+              <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
+              }
             </div>
             }
           </div>
@@ -277,7 +286,7 @@ import { switchMap, of } from 'rxjs';
             <button
               type="submit"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              [disabled]="form.invalid || saving()"
+              [disabled]="form.invalid || saving() || hasCustomFieldErrors()"
             >
               Create Task
             </button>
@@ -332,6 +341,7 @@ export class TaskCreateModalComponent {
 
   sections = signal<Section[]>([]);
   customFieldValues = signal<Record<string, any>>({});
+  customFieldErrors = signal<Record<string, string>>({});
   selectedTags = signal<Set<string>>(new Set());
 
   form = this.fb.group({
@@ -341,7 +351,6 @@ export class TaskCreateModalComponent {
     dueDate: [''],
     sectionId: [''],
     assigneeName: [''],
-    tags: [''],
   });
 
   constructor() {
@@ -365,6 +374,24 @@ export class TaskCreateModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
+    const field = this.project()?.customFields?.find((f) => f.id === fieldId);
+    if (!field) return;
+
+    // Validate the value based on field type
+    const error = this.validateCustomFieldValue(field, value);
+    
+    // Update validation errors
+    this.customFieldErrors.update((errors) => {
+      const newErrors = { ...errors };
+      if (error) {
+        newErrors[fieldId] = error;
+      } else {
+        delete newErrors[fieldId];
+      }
+      return newErrors;
+    });
+
+    // Store the value regardless (but validation will prevent submission)
     this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
   }
 
@@ -450,11 +477,16 @@ export class TaskCreateModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
+  hasCustomFieldErrors(): boolean {
+    return Object.keys(this.customFieldErrors()).length > 0;
+  }
+
   async onSubmit() {
     if (this.form.invalid) return;
 
-    // Validate custom fields
-    if (!this.validateCustomFields()) {
+    // Check for custom field validation errors
+    if (this.hasCustomFieldErrors()) {
+      this.errorMessage.set('Please fix the validation errors in custom fields.');
       return;
     }
 
