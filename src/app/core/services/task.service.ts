@@ -24,8 +24,12 @@ function toGoogleTaskUpdate(task: Partial<Task>): GoogleTaskUpdate {
   }
   
   if (task.dueDate !== undefined && task.dueDate) {
-    const date = task.dueDate instanceof Date ? task.dueDate : task.dueDate.toDate();
-    googleTask.due = date.toISOString();
+    const date = task.dueDate instanceof Date 
+      ? task.dueDate 
+      : (task.dueDate as any)?.toDate?.() || null;
+    if (date) {
+      googleTask.due = date.toISOString();
+    }
   }
   
   return googleTask;
@@ -277,6 +281,8 @@ export class TaskService {
 
   /**
    * Bulk update tasks (e.g., bulk complete, bulk delete)
+   * Note: This method does not sync changes to Google Tasks for linked tasks.
+   * For operations that need Google Tasks sync, use individual update methods.
    */
   async bulkUpdateTasks(taskIds: string[], data: Partial<Task>): Promise<void> {
     this.loading.set(true);
@@ -302,6 +308,8 @@ export class TaskService {
 
   /**
    * Bulk delete tasks
+   * Note: This method does not handle Google Tasks synchronization.
+   * For tasks linked to Google Tasks, use the individual deleteTask method.
    */
   async bulkDeleteTasks(taskIds: string[]): Promise<void> {
     this.loading.set(true);
