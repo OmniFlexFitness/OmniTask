@@ -53,12 +53,16 @@ export class GoogleTasksSyncService {
     const googleTask = await firstValueFrom(
       this.googleTasksService.createTask(googleTaskListId, taskTitle)
     );
+    // Verify the Google Task was created with an ID
+    if (!googleTask.id) {
+      throw new Error('Google Task created without ID');
+    }
     // Update the Firestore task with both the Google Task ID and the list ID for future operations
     await updateDoc(taskDocRef, { 
       googleTaskId: googleTask.id,
       googleTaskListId: googleTaskListId
     });
-    return googleTask.id!;
+    return googleTask.id;
   }
 
   /**
