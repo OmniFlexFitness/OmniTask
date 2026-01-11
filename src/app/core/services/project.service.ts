@@ -2,8 +2,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, getDoc, query, where, collectionData, DocumentReference } from '@angular/fire/firestore';
 import { Project, Section, DEFAULT_SECTIONS } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
-import { Observable, switchMap, of, map, firstValueFrom } from 'rxjs';
-import { GoogleTasksService } from './google-tasks.service';
+import { Observable, switchMap, of, map } from 'rxjs';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,7 @@ import { GoogleTasksService } from './google-tasks.service';
 export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
-  private googleTasksService = inject(GoogleTasksService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
   
   private projectsCollection = collection(this.firestore, 'projects');
 
@@ -93,18 +93,8 @@ export class ProjectService {
 
       const result = await addDoc(this.projectsCollection, project);
 
-      // Only sync to Google Tasks if authenticated
-      if (this.googleTasksService.isAuthenticated()) {
-        try {
-          const taskList = await firstValueFrom(this.googleTasksService.createTaskList(name));
-          const projectDocRef = doc(this.firestore, `projects/${result.id}`);
-          await updateDoc(projectDocRef, { googleTaskListId: taskList.id });
-        } catch (err) {
-          console.error('Failed to create Google Task list, but project was created in OmniTask:', err);
-          // Non-fatal error, the project is still created locally.
-          // We could add a mechanism to retry syncing later.
-        }
-      }
+      // Also create a corresponding task list in Google Tasks
+      await this.googleTasksSyncService.createTaskListForProject(result.id, name);
 
       return result;
     } catch (err) {
@@ -146,13 +136,9 @@ export class ProjectService {
       const project = await this.getProject(id);
       if (!project) throw new Error('Project not found');
 
-      // Delete from Google Tasks first if authenticated and linked
-      if (project.googleTaskListId && this.googleTasksService.isAuthenticated()) {
-        try {
-          await firstValueFrom(this.googleTasksService.deleteTaskList(project.googleTaskListId));
-        } catch (err) {
-          console.error('Failed to delete Google Task list, but project was deleted in OmniTask:', err);
-        }
+      // First delete the corresponding Google Tasks list (if any)
+      if (project.googleTaskListId) {
+        await this.googleTasksSyncService.deleteTaskListForProject(project.googleTaskListId);
       }
 
       // Then delete the project from Firestore

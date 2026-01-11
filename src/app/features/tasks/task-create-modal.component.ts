@@ -241,8 +241,7 @@ export class TaskCreateModalComponent {
         tags
       };
 
-      const project = this.project();
-      const ref = await this.taskService.createTask(taskData, project?.googleTaskListId);
+      const ref = await this.taskService.createTask(taskData, this.project()?.googleTaskListId);
 
       // Emit the created task
       const newTask: Task = {

@@ -3,8 +3,7 @@ import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where,
 import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { GoogleTasksService, GoogleTask } from './google-tasks.service';
-import { ProjectService } from './project.service';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +11,7 @@ import { ProjectService } from './project.service';
 export class TaskService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
-  private googleTasksService = inject(GoogleTasksService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -122,8 +121,13 @@ export class TaskService {
 
   /**
    * Create a new task
+   * @param task - Task data to create
+   * @param googleTaskListId - Optional Google Task List ID if the project is synced with Google Tasks
    */
-  async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, googleTaskListId?: string): Promise<DocumentReference> {
+  async createTask(
+    task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
+    googleTaskListId?: string
+  ): Promise<DocumentReference> {
     this.loading.set(true);
     this.error.set(null);
     
@@ -137,11 +141,13 @@ export class TaskService {
       };
       const result = await addDoc(this.tasksCollection, data);
 
-      // Only sync to Google Tasks if authenticated and googleTaskListId is provided
-      if (googleTaskListId && this.googleTasksService.isAuthenticated()) {
+      if (googleTaskListId) {
         try {
-          const googleTask = await firstValueFrom(this.googleTasksService.createTask(googleTaskListId, task.title));
-          await updateDoc(doc(this.tasksCollection, result.id), { googleTaskId: googleTask.id });
+          await this.googleTasksSyncService.createTaskInGoogle(
+            result,
+            googleTaskListId,
+            task.title
+          );
         } catch (err) {
           console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
           try {
@@ -181,16 +187,12 @@ export class TaskService {
       });
 
       const taskDoc = await this.getTask(id);
-      if (taskDoc?.googleTaskId) {
-        const project = await this.projectService.getProject(taskDoc.projectId);
-        if (project?.googleTaskListId) {
-          try {
-            const googleTaskData = this.mapToGoogleTask(data);
-            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
-          } catch (err) {
-            console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
-          }
-        }
+      if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
+        await this.googleTasksSyncService.updateTaskInGoogle(
+          taskDoc.googleTaskListId,
+          taskDoc.googleTaskId,
+          data
+        );
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';
@@ -210,13 +212,15 @@ export class TaskService {
 
     try {
       const taskDoc = await this.getTask(id);
-      
-      // Delete from Google Tasks first if authenticated and linked
-      if (taskDoc?.googleTaskId && googleTaskListId && this.googleTasksService.isAuthenticated()) {
+      if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
         try {
-          await firstValueFrom(
-            this.googleTasksService.deleteTask(googleTaskListId, taskDoc.googleTaskId)
+          await this.googleTasksSyncService.deleteTaskInGoogle(
+            taskDoc.googleTaskListId,
+            taskDoc.googleTaskId
           );
+          // Only delete from Firestore after successful Google Tasks deletion
+          await deleteDoc(doc(this.firestore, `tasks/${id}`));
+          return;
         } catch (err) {
           console.error('Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:', err);
           throw err;
