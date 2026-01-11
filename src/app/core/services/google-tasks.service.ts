@@ -73,20 +73,28 @@ export class GoogleTasksService {
     
     if (task.dueDate !== undefined) {
       // Convert Firestore Timestamp or Date to RFC3339 format
-      const date = task.dueDate instanceof Date 
-        ? task.dueDate 
-        : task.dueDate instanceof Timestamp 
-          ? task.dueDate.toDate() 
-          : task.dueDate;
+      let date: Date;
+      if (task.dueDate instanceof Date) {
+        date = task.dueDate;
+      } else if (task.dueDate instanceof Timestamp) {
+        date = task.dueDate.toDate();
+      } else {
+        // Fallback: assume it's already a Date-like object or can be converted
+        date = new Date(task.dueDate as any);
+      }
       googleTask.due = date.toISOString();
     }
     
     if (task.completedAt !== undefined) {
-      const date = task.completedAt instanceof Date 
-        ? task.completedAt 
-        : task.completedAt instanceof Timestamp 
-          ? task.completedAt.toDate() 
-          : task.completedAt;
+      let date: Date;
+      if (task.completedAt instanceof Date) {
+        date = task.completedAt;
+      } else if (task.completedAt instanceof Timestamp) {
+        date = task.completedAt.toDate();
+      } else {
+        // Fallback: assume it's already a Date-like object or can be converted
+        date = new Date(task.completedAt as any);
+      }
       googleTask.completed = date.toISOString();
     }
     
