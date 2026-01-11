@@ -222,7 +222,7 @@ export class CustomFieldManagerComponent {
     if (!this.newFieldName()) return;
 
     try {
-      const fieldData: any = {
+      const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
         name: this.newFieldName(),
         type: this.newFieldType(),
       };
