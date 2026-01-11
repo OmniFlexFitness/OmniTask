@@ -6,6 +6,7 @@ import {
   Project,
   CustomFieldType,
   CustomFieldOption,
+  CustomFieldDefinition,
 } from '../../../../core/models/domain.model';
 
 @Component({
@@ -257,7 +258,7 @@ export class CustomFieldManagerComponent {
     }
 
     try {
-      const fieldData: Omit<import('../../../../core/models/domain.model').CustomFieldDefinition, 'id' | 'projectId'> = {
+      const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
         name: trimmedName,
         type: this.newFieldType(),
       };
