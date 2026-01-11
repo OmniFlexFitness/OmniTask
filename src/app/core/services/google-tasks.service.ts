@@ -27,6 +27,14 @@ export interface GoogleTask {
   completed?: string; // RFC 3339 timestamp
 }
 
+/**
+ * Google Tasks API response for listing tasks
+ */
+export interface GoogleTasksResponse {
+  items: GoogleTask[];
+  nextPageToken?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })

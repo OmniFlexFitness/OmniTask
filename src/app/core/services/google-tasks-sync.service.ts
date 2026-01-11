@@ -22,30 +22,43 @@ export class GoogleTasksSyncService {
   private transformToGoogleTask(task: Partial<Task>): GoogleTask {
     const googleTask: GoogleTask = {};
 
+   * Maps local model fields to Google Tasks API fields
+   */
+  transformToGoogleTask(task: Partial<Task>): GoogleTask {
+    const googleTask: GoogleTask = {};
+
+    // Map title
     if (task.title !== undefined) {
       googleTask.title = task.title;
     }
 
+    // Map description to notes
     if (task.description !== undefined) {
       googleTask.notes = task.description;
     }
 
+    // Map status: OmniTask uses 'todo' | 'in-progress' | 'done'
+    // Google Tasks uses 'needsAction' | 'completed'
     if (task.status !== undefined) {
       googleTask.status = task.status === 'done' ? 'completed' : 'needsAction';
     }
 
+    // Map dueDate to due (RFC 3339 format)
     if (task.dueDate !== undefined) {
       if (task.dueDate instanceof Date) {
         googleTask.due = task.dueDate.toISOString();
       } else if (task.dueDate && typeof task.dueDate === 'object' && 'toDate' in task.dueDate) {
+        // Handle Firestore Timestamp
         googleTask.due = (task.dueDate as any).toDate().toISOString();
       }
     }
 
+    // Map completedAt to completed (RFC 3339 format)
     if (task.completedAt !== undefined) {
       if (task.completedAt instanceof Date) {
         googleTask.completed = task.completedAt.toISOString();
       } else if (task.completedAt && typeof task.completedAt === 'object' && 'toDate' in task.completedAt) {
+        // Handle Firestore Timestamp
         googleTask.completed = (task.completedAt as any).toDate().toISOString();
       }
     }
@@ -90,6 +103,7 @@ export class GoogleTasksSyncService {
     const googleTaskData = this.transformToGoogleTask(taskData);
     const googleTask = await firstValueFrom(
       this.googleTasksService.createTask(googleTaskListId, googleTaskData)
+      this.googleTasksService.createTask(googleTaskListId, { title: taskTitle })
     );
     // Verify the Google Task was created with an ID
     if (!googleTask.id) {
