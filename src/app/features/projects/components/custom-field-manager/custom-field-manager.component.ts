@@ -155,7 +155,7 @@ import {
             </button>
             <button
               (click)="createField()"
-              [disabled]="!newFieldName()"
+              [disabled]="!newFieldName.trim()"
               class="px-3 py-1.5 text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 rounded hover:bg-cyan-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Field
@@ -181,7 +181,7 @@ export class CustomFieldManagerComponent {
 
   isAdding = signal(false);
   newFieldType = signal<CustomFieldType>('text');
-  newFieldName = signal('');
+  newFieldName = '';
   newFieldOptions = signal<CustomFieldOption[]>([]);
 
   fieldTypes: { value: CustomFieldType; label: string; icon: string }[] = [
@@ -198,7 +198,7 @@ export class CustomFieldManagerComponent {
   }
 
   startAdding() {
-    this.newFieldName.set('');
+    this.newFieldName = '';
     this.newFieldType.set('text');
     this.newFieldOptions.set([]);
     this.isAdding.set(true);
@@ -219,11 +219,11 @@ export class CustomFieldManagerComponent {
   }
 
   async createField() {
-    if (!this.newFieldName()) return;
+    if (!this.newFieldName.trim()) return;
 
     try {
       const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
-        name: this.newFieldName(),
+        name: this.newFieldName.trim(),
         type: this.newFieldType(),
       };
 
