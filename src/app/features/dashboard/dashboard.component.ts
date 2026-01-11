@@ -178,6 +178,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
               @case ('list') {
                 <app-task-list-view
                   [tasks]="tasks()"
+                  [googleTaskListId]="currentProject()?.googleTaskListId"
                   (taskClick)="openTaskDetail($event)"
                   (delete)="deleteTask($event)"
                 ></app-task-list-view>
@@ -331,7 +332,8 @@ export class DashboardComponent {
 
   async deleteTask(taskId: string) {
       if(confirm('Are you sure you want to delete this task?')) {
-          await this.taskService.deleteTask(taskId);
+          const project = this.currentProject();
+          await this.taskService.deleteTask(taskId, project?.googleTaskListId);
       }
   }
 

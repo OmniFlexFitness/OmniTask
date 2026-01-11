@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
+import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc, Timestamp } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
@@ -12,8 +12,7 @@ import { ProjectService } from './project.service';
 export class TaskService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
-  private googleTasksService = inject(GoogleTasksService);
-  private projectService = inject(ProjectService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -177,8 +176,13 @@ export class TaskService {
 
   /**
    * Create a new task
+   * @param task - Task data to create
+   * @param googleTaskListId - Optional Google Task List ID if the project is synced with Google Tasks
    */
-  async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>): Promise<DocumentReference> {
+  async createTask(
+    task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
+    googleTaskListId?: string
+  ): Promise<DocumentReference> {
     this.loading.set(true);
     this.error.set(null);
     
@@ -192,8 +196,7 @@ export class TaskService {
       };
       const result = await addDoc(this.tasksCollection, data);
 
-      const project = await this.projectService.getProject(task.projectId);
-      if (project?.googleTaskListId) {
+      if (googleTaskListId) {
         try {
           const googleTaskData = this.transformToGoogleTask(task);
           const googleTask = await firstValueFrom(this.googleTasksService.createTask(project.googleTaskListId, googleTaskData));
@@ -222,11 +225,14 @@ export class TaskService {
   /**
    * Update an existing task
    */
-  async updateTask(id: string, data: Partial<Task>): Promise<void> {
+  async updateTask(id: string, data: Partial<Task>, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
+      // Fetch task data before updating to avoid race conditions
+      const taskDoc = await this.getTask(id);
+      
       const taskRef = doc(this.firestore, `tasks/${id}`);
       await updateDoc(taskRef, {
         ...data,
@@ -257,29 +263,28 @@ export class TaskService {
   /**
    * Delete a task
    */
-  async deleteTask(id: string): Promise<void> {
+  async deleteTask(id: string, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
       const taskDoc = await this.getTask(id);
-      if (taskDoc?.googleTaskId) {
-        const project = await this.projectService.getProject(taskDoc.projectId);
-        if (project?.googleTaskListId) {
-          try {
-            await firstValueFrom(
-              this.googleTasksService.deleteTask(project.googleTaskListId, taskDoc.googleTaskId)
-            );
-            // Only delete from Firestore after successful Google Tasks deletion
-            await deleteDoc(doc(this.firestore, `tasks/${id}`));
-            return;
-          } catch (err) {
-            console.error('Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:', err);
-            throw err;
-          }
+      if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
+        try {
+          await this.googleTasksSyncService.deleteTaskInGoogle(
+            taskDoc.googleTaskListId,
+            taskDoc.googleTaskId
+          );
+          // Only delete from Firestore after successful Google Tasks deletion
+          await deleteDoc(doc(this.firestore, `tasks/${id}`));
+          return;
+        } catch (err) {
+          console.error('Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:', err);
+          throw err;
         }
       }
-      // If there is no linked Google Task or no Google Task list, just delete from Firestore
+      
+      // Only delete from Firestore after successful Google Tasks deletion (or if not linked)
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';
@@ -293,21 +298,21 @@ export class TaskService {
   /**
    * Mark task as complete
    */
-  async completeTask(id: string): Promise<void> {
+  async completeTask(id: string, googleTaskListId?: string): Promise<void> {
     return this.updateTask(id, {
       status: 'done',
       completedAt: new Date()
-    });
+    }, googleTaskListId);
   }
 
   /**
    * Reopen a completed task
    */
-  async reopenTask(id: string): Promise<void> {
+  async reopenTask(id: string, googleTaskListId?: string): Promise<void> {
     return this.updateTask(id, {
       status: 'in-progress',
       completedAt: undefined
-    });
+    }, googleTaskListId);
   }
 
   /**
@@ -345,6 +350,8 @@ export class TaskService {
 
   /**
    * Bulk update tasks (e.g., bulk complete, bulk delete)
+   * Note: This method does not sync changes to Google Tasks for linked tasks.
+   * For operations that need Google Tasks sync, use individual update methods.
    */
   async bulkUpdateTasks(taskIds: string[], data: Partial<Task>): Promise<void> {
     this.loading.set(true);
@@ -370,6 +377,8 @@ export class TaskService {
 
   /**
    * Bulk delete tasks
+   * Note: This method does not handle Google Tasks synchronization.
+   * For tasks linked to Google Tasks, use the individual deleteTask method.
    */
   async bulkDeleteTasks(taskIds: string[]): Promise<void> {
     this.loading.set(true);
