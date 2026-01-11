@@ -1,9 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc } from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { GoogleTasksService } from './google-tasks.service';
+import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { ProjectService } from './project.service';
 
 @Injectable({
@@ -149,7 +149,20 @@ export class TaskService {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
           try {
-            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, data));
+            // Map domain Task fields to Google Task fields
+            const googleTaskData: Partial<GoogleTask> = {};
+            if (data.title !== undefined) googleTaskData.title = data.title;
+            if (data.description !== undefined) googleTaskData.notes = data.description;
+            if (data.status !== undefined) {
+              googleTaskData.status = data.status === 'done' ? 'completed' : 'needsAction';
+            }
+            if (data.dueDate !== undefined) {
+              // Convert to RFC 3339 timestamp if dueDate is provided
+              const date = data.dueDate instanceof Date ? data.dueDate : (data.dueDate as any).toDate();
+              googleTaskData.due = date.toISOString();
+            }
+            
+            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
           } catch (err) {
             console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
           }

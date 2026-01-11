@@ -1,11 +1,30 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Task } from '../models/domain.model';
 
 export interface GoogleTaskList {
   id: string;
   title: string;
+}
+
+export interface GoogleTask {
+  id: string;
+  title: string;
+  notes?: string;
+  status?: 'needsAction' | 'completed';
+  due?: string; // RFC 3339 timestamp
+  completed?: string; // RFC 3339 timestamp
+  parent?: string;
+  position?: string;
+  updated?: string; // RFC 3339 timestamp
+  selfLink?: string;
+  etag?: string;
+  kind?: string;
+  links?: Array<{
+    type: string;
+    description: string;
+    link: string;
+  }>;
 }
 
 @Injectable({
@@ -17,7 +36,6 @@ export class GoogleTasksService {
 
   // TODO: Implement authentication with Google
 
-  getTaskLists(): Observable<any> {
   getTaskLists(): Observable<any> {
     return this.http.get(`${this.API_BASE_URL}/users/@me/lists`);
   }
@@ -34,12 +52,12 @@ export class GoogleTasksService {
     return this.http.get(`${this.API_BASE_URL}/lists/${taskListId}/tasks`);
   }
 
-  createTask(taskListId: string, title: string): Observable<Task> {
-    return this.http.post<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
+  createTask(taskListId: string, title: string): Observable<GoogleTask> {
+    return this.http.post<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
   }
 
-  updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<Task> {
-    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
+  updateTask(taskListId: string, taskId: string, task: Partial<GoogleTask>): Observable<GoogleTask> {
+    return this.http.put<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, task);
   }
 
   deleteTask(taskListId: string, taskId: string): Observable<any> {
