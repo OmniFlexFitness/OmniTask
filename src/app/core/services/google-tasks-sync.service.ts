@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, doc, updateDoc, DocumentReference } from '@angular/fire/firestore';
 import { firstValueFrom } from 'rxjs';
-import { GoogleTasksService } from './google-tasks.service';
+import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { Task } from '../models/domain.model';
 
 /**
@@ -15,6 +15,43 @@ import { Task } from '../models/domain.model';
 export class GoogleTasksSyncService {
   private firestore = inject(Firestore);
   private googleTasksService = inject(GoogleTasksService);
+
+  /**
+   * Transform OmniTask Task data to Google Tasks API format
+   */
+  private transformToGoogleTask(task: Partial<Task>): GoogleTask {
+    const googleTask: GoogleTask = {};
+
+    if (task.title !== undefined) {
+      googleTask.title = task.title;
+    }
+
+    if (task.description !== undefined) {
+      googleTask.notes = task.description;
+    }
+
+    if (task.status !== undefined) {
+      googleTask.status = task.status === 'done' ? 'completed' : 'needsAction';
+    }
+
+    if (task.dueDate !== undefined) {
+      if (task.dueDate instanceof Date) {
+        googleTask.due = task.dueDate.toISOString();
+      } else if (task.dueDate && typeof task.dueDate === 'object' && 'toDate' in task.dueDate) {
+        googleTask.due = (task.dueDate as any).toDate().toISOString();
+      }
+    }
+
+    if (task.completedAt !== undefined) {
+      if (task.completedAt instanceof Date) {
+        googleTask.completed = task.completedAt.toISOString();
+      } else if (task.completedAt && typeof task.completedAt === 'object' && 'toDate' in task.completedAt) {
+        googleTask.completed = (task.completedAt as any).toDate().toISOString();
+      }
+    }
+
+    return googleTask;
+  }
 
   /**
    * Create a Google Task List for a project
@@ -48,10 +85,11 @@ export class GoogleTasksSyncService {
   async createTaskInGoogle(
     taskDocRef: DocumentReference,
     googleTaskListId: string,
-    taskTitle: string
+    taskData: Partial<Task>
   ): Promise<string> {
+    const googleTaskData = this.transformToGoogleTask(taskData);
     const googleTask = await firstValueFrom(
-      this.googleTasksService.createTask(googleTaskListId, taskTitle)
+      this.googleTasksService.createTask(googleTaskListId, googleTaskData)
     );
     // Verify the Google Task was created with an ID
     if (!googleTask.id) {
@@ -74,8 +112,9 @@ export class GoogleTasksSyncService {
     taskData: Partial<Task>
   ): Promise<void> {
     try {
+      const googleTaskData = this.transformToGoogleTask(taskData);
       await firstValueFrom(
-        this.googleTasksService.updateTask(googleTaskListId, googleTaskId, taskData)
+        this.googleTasksService.updateTask(googleTaskListId, googleTaskId, googleTaskData)
       );
     } catch (err) {
       console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
