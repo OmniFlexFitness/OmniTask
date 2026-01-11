@@ -150,12 +150,14 @@ import { switchMap, of } from 'rxjs';
               <input
                 type="number"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('date') {
               <input
                 type="date"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('dropdown') {
@@ -179,6 +181,10 @@ import { switchMap, of } from 'rxjs';
                 }
               </select>
               } }
+              
+              @if (customFieldErrors()[field.id]) {
+              <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
+              }
             </div>
             }
           </div>
@@ -327,6 +333,7 @@ export class TaskCreateModalComponent {
 
   sections = signal<Section[]>([]);
   customFieldValues = signal<Record<string, any>>({});
+  customFieldErrors = signal<Record<string, string>>({});
   selectedTags = signal<Set<string>>(new Set());
 
   form = this.fb.group({
@@ -359,7 +366,50 @@ export class TaskCreateModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
-    this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
+    const field = this.project()?.customFields?.find(f => f.id === fieldId);
+    if (!field) return;
+
+    // Validate based on field type
+    let error = '';
+    let validatedValue = value;
+
+    switch (field.type) {
+      case 'number':
+        // Check if value is a valid number
+        if (value && value.trim() !== '') {
+          const num = parseFloat(value);
+          if (isNaN(num)) {
+            error = 'Must be a valid number';
+          } else {
+            validatedValue = num;
+          }
+        }
+        break;
+      
+      case 'date':
+        // Check if value is a valid date
+        if (value && value.trim() !== '') {
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            error = 'Must be a valid date';
+          }
+        }
+        break;
+    }
+
+    // Update errors
+    this.customFieldErrors.update((errors) => {
+      const newErrors = { ...errors };
+      if (error) {
+        newErrors[fieldId] = error;
+      } else {
+        delete newErrors[fieldId];
+      }
+      return newErrors;
+    });
+
+    // Update value
+    this.customFieldValues.update((v) => ({ ...v, [fieldId]: validatedValue }));
   }
 
   toggleTag(tagName: string) {
@@ -406,6 +456,12 @@ export class TaskCreateModalComponent {
 
   async onSubmit() {
     if (this.form.invalid) return;
+
+    // Validate custom fields before submission
+    if (Object.keys(this.customFieldErrors()).length > 0) {
+      this.errorMessage.set('Please fix validation errors in custom fields before saving.');
+      return;
+    }
 
     this.saving.set(true);
 
