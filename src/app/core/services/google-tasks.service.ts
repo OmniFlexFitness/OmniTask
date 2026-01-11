@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Task } from '../models/domain.model';
+import { Timestamp } from '@angular/fire/firestore';
 
 export interface GoogleTaskList {
   id: string;
@@ -72,12 +73,20 @@ export class GoogleTasksService {
     
     if (task.dueDate !== undefined) {
       // Convert Firestore Timestamp or Date to RFC3339 format
-      const date = task.dueDate instanceof Date ? task.dueDate : (task.dueDate as any).toDate();
+      const date = task.dueDate instanceof Date 
+        ? task.dueDate 
+        : task.dueDate instanceof Timestamp 
+          ? task.dueDate.toDate() 
+          : task.dueDate;
       googleTask.due = date.toISOString();
     }
     
     if (task.completedAt !== undefined) {
-      const date = task.completedAt instanceof Date ? task.completedAt : (task.completedAt as any).toDate();
+      const date = task.completedAt instanceof Date 
+        ? task.completedAt 
+        : task.completedAt instanceof Timestamp 
+          ? task.completedAt.toDate() 
+          : task.completedAt;
       googleTask.completed = date.toISOString();
     }
     
