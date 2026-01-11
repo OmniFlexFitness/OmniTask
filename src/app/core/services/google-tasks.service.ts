@@ -68,6 +68,8 @@ export class GoogleTasksService {
     }
     
     if (task.status !== undefined) {
+      // Google Tasks API only supports 'needsAction' and 'completed'
+      // Map 'in-progress' to 'needsAction' since it's not complete yet
       googleTask.status = task.status === 'done' ? 'completed' : 'needsAction';
     }
     
@@ -120,6 +122,8 @@ export class GoogleTasksService {
     }
     
     if (googleTask.status !== undefined) {
+      // Google Tasks API only has 'needsAction' and 'completed'
+      // We map to 'todo' and 'done' - 'in-progress' status is lost in round-trip
       task.status = googleTask.status === 'completed' ? 'done' : 'todo';
     }
     
@@ -158,9 +162,9 @@ export class GoogleTasksService {
     return this.http.post<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks`, { title });
   }
 
-  updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<Task> {
+  updateTask(taskListId: string, taskId: string, task: Partial<Task>): Observable<GoogleTask> {
     const googleTaskUpdate = this.toGoogleTask(task);
-    return this.http.put<Task>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, googleTaskUpdate);
+    return this.http.put<GoogleTask>(`${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`, googleTaskUpdate);
   }
 
   deleteTask(taskListId: string, taskId: string): Observable<any> {
