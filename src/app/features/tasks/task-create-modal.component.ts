@@ -142,8 +142,8 @@ import { switchMap, of } from 'rxjs';
               @switch (field.type) { @case ('text') {
               <input
                 type="text"
-                [attr.id]="field.id"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('number') {
@@ -163,6 +163,7 @@ import { switchMap, of } from 'rxjs';
               } @case ('dropdown') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -173,6 +174,7 @@ import { switchMap, of } from 'rxjs';
               } @case ('status') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -180,6 +182,12 @@ import { switchMap, of } from 'rxjs';
                 <option [value]="opt.id">{{ opt.label }}</option>
                 }
               </select>
+              } @case ('user') {
+              <input
+                type="text"
+                (input)="updateCustomField(field.id, $any($event.target).value)"
+                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
               } }
               
               @if (customFieldErrors()[field.id]) {
@@ -278,7 +286,7 @@ import { switchMap, of } from 'rxjs';
             <button
               type="submit"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              [disabled]="form.invalid || saving()"
+              [disabled]="form.invalid || saving() || hasCustomFieldErrors()"
             >
               Create Task
             </button>
@@ -366,12 +374,30 @@ export class TaskCreateModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
-    const field = this.project()?.customFields?.find(f => f.id === fieldId);
+    const field = this.project()?.customFields?.find((f) => f.id === fieldId);
     if (!field) return;
 
-    // Validate based on field type
+    // Validate the value based on field type
+    const error = this.validateCustomFieldValue(field, value);
+    
+    // Update validation errors
+    this.customFieldErrors.update((errors) => {
+      const newErrors = { ...errors };
+      if (error) {
+        newErrors[fieldId] = error;
+      } else {
+        delete newErrors[fieldId];
+      }
+      return newErrors;
+    });
+
+    // Store the value regardless (but validation will prevent submission)
+    this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
+  }
+
+  validateCustomFieldValue(field: any, value: any): string {
+    // Return error message if validation fails, empty string otherwise
     let error = '';
-    let validatedValue = value;
 
     switch (field.type) {
       case 'number':
@@ -382,8 +408,6 @@ export class TaskCreateModalComponent {
             const num = parseFloat(stringValue);
             if (isNaN(num)) {
               error = 'Must be a valid number';
-            } else {
-              validatedValue = num;
             }
           }
         }
@@ -403,19 +427,41 @@ export class TaskCreateModalComponent {
         break;
     }
 
-    // Update errors
-    this.customFieldErrors.update((errors) => {
-      const newErrors = { ...errors };
-      if (error) {
-        newErrors[fieldId] = error;
-      } else {
-        delete newErrors[fieldId];
-      }
-      return newErrors;
-    });
+    return error;
+  }
 
-    // Update value
-    this.customFieldValues.update((v) => ({ ...v, [fieldId]: validatedValue }));
+  validateCustomFields(): boolean {
+    const project = this.project();
+    if (!project?.customFields) return true;
+
+    const values = this.customFieldValues();
+    
+    for (const field of project.customFields) {
+      const value = values[field.id];
+      
+      // For now, we don't enforce required fields, but we validate types
+      if (value) {
+        // Validate number fields
+        if (field.type === 'number') {
+          const numValue = parseFloat(value);
+          if (isNaN(numValue)) {
+            alert(`"${field.name}" must be a valid number.`);
+            return false;
+          }
+        }
+        
+        // Validate date fields
+        if (field.type === 'date') {
+          const dateValue = new Date(value);
+          if (isNaN(dateValue.getTime())) {
+            alert(`"${field.name}" must be a valid date.`);
+            return false;
+          }
+        }
+      }
+    }
+    
+    return true;
   }
 
   toggleTag(tagName: string) {
@@ -437,15 +483,21 @@ export class TaskCreateModalComponent {
     // Add to project definitions first if it doesn't exist
     const project = this.project();
     if (project) {
-      // Simple hash for color generation
-      const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-      const colorIndex =
-        name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+      try {
+        // Simple hash for color generation
+        const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+        const colorIndex =
+          name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
 
-      await this.projectService.addTag(project.id, {
-        name: name,
-        color: colors[colorIndex],
-      });
+        await this.projectService.addTag(project.id, {
+          name: name,
+          color: colors[colorIndex],
+        });
+      } catch (err) {
+        console.error('Failed to add tag', err);
+        // Don't select the tag if adding to project failed
+        return;
+      }
     }
 
     // Select it
@@ -460,12 +512,16 @@ export class TaskCreateModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
+  hasCustomFieldErrors(): boolean {
+    return Object.keys(this.customFieldErrors()).length > 0;
+  }
+
   async onSubmit() {
     if (this.form.invalid) return;
 
-    // Validate custom fields before submission
-    if (Object.keys(this.customFieldErrors()).length > 0) {
-      this.errorMessage.set('Please fix validation errors in custom fields before saving.');
+    // Check for custom field validation errors
+    if (this.hasCustomFieldErrors()) {
+      this.errorMessage.set('Please fix the validation errors in custom fields.');
       return;
     }
 
