@@ -12,6 +12,7 @@ import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
 import { ProjectFormModalComponent } from '../projects/project-form-modal.component';
+import { CustomFieldManagerComponent } from '../projects/components/custom-field-manager/custom-field-manager.component';
 import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
@@ -29,7 +30,8 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
     TaskDetailModalComponent,
-    TaskCreateModalComponent
+    TaskCreateModalComponent,
+    CustomFieldManagerComponent,
   ],
   template: `
     <div class="h-screen flex overflow-hidden bg-[#050810]">
@@ -72,6 +74,16 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
                    </h1>
                    <p class="text-xs text-slate-400 mt-1 truncate max-w-md">{{ project.description }}</p>
                  </div>
+                 
+                  <button 
+                   class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                   (click)="showFieldManager.set(true)"
+                   title="Manage Custom Fields"
+                 >
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                   </svg>
+                 </button>
                  
                  <!-- Project Actions -->
                  <button 
@@ -231,8 +243,19 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
           (created)="onTaskCreated($event)"
         ></app-task-create-modal>
       }
+      
+      @if (showFieldManager() && currentProject()) {
+        <div 
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" 
+          (click)="showFieldManager.set(false)"
+        >
+           <div class="w-full max-w-lg" (click)="$event.stopPropagation()">
+              <app-custom-field-manager [project]="currentProject()!"></app-custom-field-manager>
+           </div>
+        </div>
+      }
     </div>
-  `
+  `,
 })
 export class DashboardComponent {
   auth = inject(AuthService);
@@ -264,11 +287,12 @@ export class DashboardComponent {
       this.seeding.set(false);
     }
   }
-  
+
   // Modals state
   editProjectModal = signal<Project | null>(null);
+  showFieldManager = signal(false);
   openTask = signal<Task | null>(null);
-  
+
   // Create modal state
   showCreateModal = signal(false);
   createModalSectionId = signal<string | null>(null);
@@ -277,7 +301,7 @@ export class DashboardComponent {
   // Derived state for Current Project
   currentProject = toSignal(
     toObservable(this.selectedProjectId).pipe(
-      switchMap(id => id ? this.projectService.getProject$(id) : of(null))
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null)))
     ),
     { initialValue: null }
   );
@@ -285,7 +309,7 @@ export class DashboardComponent {
   // Derived state for Tasks of Current Project
   tasks = toSignal(
     toObservable(this.selectedProjectId).pipe(
-      switchMap(id => id ? this.taskService.getTasksByProject(id) : of([]))
+      switchMap((id) => (id ? this.taskService.getTasksByProject(id) : of([])))
     ),
     { initialValue: [] }
   );
@@ -295,7 +319,7 @@ export class DashboardComponent {
   }
 
   onProjectSaved(project: Project) {
-     this.editProjectModal.set(null);
+    this.editProjectModal.set(null);
   }
 
   openCreateTaskModal(sectionId?: string, dueDate?: Date) {
@@ -330,26 +354,26 @@ export class DashboardComponent {
   }
 
   async deleteTask(taskId: string) {
-      if(confirm('Are you sure you want to delete this task?')) {
-          await this.taskService.deleteTask(taskId);
-      }
+    if (confirm('Are you sure you want to delete this task?')) {
+      await this.taskService.deleteTask(taskId);
+    }
   }
 
   quickAddInBoard(sectionId: string) {
     this.openCreateTaskModal(sectionId);
   }
-  
+
   addTaskForDate(date: Date) {
     this.openCreateTaskModal(undefined, date);
   }
-  
+
   async addSection() {
-     const pid = this.selectedProjectId();
-     if(pid) {
-         const name = prompt('Section Name:');
-         if(name && name.trim()) {
-             await this.projectService.addSection(pid, name.trim());
-         }
-     }
+    const pid = this.selectedProjectId();
+    if (pid) {
+      const name = prompt('Section Name:');
+      if (name && name.trim()) {
+        await this.projectService.addSection(pid, name.trim());
+      }
+    }
   }
 }
