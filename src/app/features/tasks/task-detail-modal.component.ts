@@ -278,6 +278,13 @@ import { switchMap, of } from 'rxjs';
                 <option [value]="opt.id">{{ opt.label }}</option>
                 }
               </select>
+              } @case ('user') {
+              <input
+                type="text"
+                [value]="customFieldValues()[field.id] || ''"
+                (input)="updateCustomField(field.id, $any($event.target).value)"
+                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
               } }
             </div>
             }
@@ -557,6 +564,30 @@ export class TaskDetailModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
+    // Find the field definition to validate
+    const project = this.project();
+    const field = project?.customFields?.find(f => f.id === fieldId);
+    
+    if (field) {
+      // Validate number fields
+      if (field.type === 'number' && value) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+          alert(`"${field.name}" must be a valid number.`);
+          return;
+        }
+      }
+      
+      // Validate date fields
+      if (field.type === 'date' && value) {
+        const dateValue = new Date(value);
+        if (isNaN(dateValue.getTime())) {
+          alert(`"${field.name}" must be a valid date.`);
+          return;
+        }
+      }
+    }
+    
     const current = this.customFieldValues();
     this.customFieldValues.set({ ...current, [fieldId]: value });
     this.autoSave();
