@@ -792,6 +792,8 @@ For AI integrations, create a service in `src/app/core/services/`:
 
 ```typescript
 // ai.service.ts
+import { Injectable, inject } from '@angular/core';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 @Injectable({ providedIn: 'root' })
 export class AIService {
   private functions = inject(Functions);
