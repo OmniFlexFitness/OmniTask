@@ -190,6 +190,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
               @case ('list') {
                 <app-task-list-view
                   [tasks]="tasks()"
+                  [googleTaskListId]="currentProject()?.googleTaskListId"
                   (taskClick)="openTaskDetail($event)"
                   (delete)="deleteTask($event)"
                 ></app-task-list-view>
