@@ -675,7 +675,7 @@ docs: update README with deployment instructions
 
 - ✅ Use imperative mood: "add feature" not "added feature"
 - ✅ Keep subject line under 72 characters
-- ✅ Capitalize the description
+- ✅ Start the subject line with a lowercase letter
 - ✅ No period at end of subject line
 - ✅ Reference issue numbers in footer: `Closes #123`
 
