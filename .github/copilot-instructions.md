@@ -451,7 +451,7 @@ OmniTask follows the **OmniFlex** brand identity with a premium, futuristic desi
 | Attribute  | Description                                      |
 | ---------- | ------------------------------------------------ |
 | **Theme**  | Dark mode by default with high-contrast elements |
-| **Style**  | Cyberpunk / Neon Noir / Vapourwave inspired      |
+| **Style**  | Cyberpunk / Neon Noir / Vaporwave inspired      |
 | **Feel**   | Premium, state-of-the-art, futuristic            |
 | **Motion** | Smooth, subtle animations that feel alive        |
 
