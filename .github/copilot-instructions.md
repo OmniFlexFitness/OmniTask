@@ -270,7 +270,7 @@ Use consistent modal patterns with overlay backdrop:
 })
 export class MyModalComponent {
   @Output() close = new EventEmitter<void>();
-  @Output() save = new EventEmitter<MyData>();
+  @Output() save = new EventEmitter<any>();
 }
 ```
 
