@@ -99,6 +99,7 @@ import {
   query,
   where,
   collectionData,
+  orderBy,
 } from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
