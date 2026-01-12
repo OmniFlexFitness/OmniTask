@@ -217,6 +217,7 @@ interface Section {
 Use `takeUntilDestroyed()` for automatic subscription cleanup:
 
 ```typescript
+import { inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export class MyComponent {
