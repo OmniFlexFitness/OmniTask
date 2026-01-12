@@ -694,16 +694,85 @@ When integrating external APIs (OpenAI, Gemini, etc.), follow these patterns:
 
 > **⚠️ NEVER commit API keys or secrets to the repository.**
 
-| Environment             | Storage Location                                          |
-| ----------------------- | --------------------------------------------------------- |
-| **Production (CI/CD)**  | GitHub Secrets (e.g., `OPENAI_API_KEY`, `GEMINI_API_KEY`) |
-| **Local Development**   | `.env` file (must be in `.gitignore`)                     |
-| **Firebase Client SDK** | Public config in `app.config.ts` (safe for client-side)   |
-| **Firebase Admin SDK**  | Service account via Workload Identity Federation          |
+| Environment             | Storage Location                      | Recommended      |
+| ----------------------- | ------------------------------------- | ---------------- |
+| **Production**          | Google Cloud Secret Manager           | ✅ **Preferred** |
+| **CI/CD Fallback**      | GitHub Secrets                        | ✅ OK            |
+| **Local Development**   | `.env` file (in `.gitignore`)         | ✅ OK            |
+| **Firebase Client SDK** | Public config in `app.config.ts`      | ✅ Safe          |
+| **Firebase Admin SDK**  | Service account via Workload Identity | ✅ Preferred     |
 
-### GitHub Actions Usage
+---
 
-Access secrets in workflows like this:
+### Google Cloud Secret Manager (Recommended)
+
+GCP Secret Manager provides centralized, secure secret storage with audit logging and fine-grained access control.
+
+#### Creating Secrets via gcloud CLI
+
+```bash
+# Enable Secret Manager API
+gcloud services enable secretmanager.googleapis.com --project=omnitask-475422
+
+# Create a secret
+echo -n "your-api-key-here" | gcloud secrets create OPENAI_API_KEY \
+  --project=omnitask-475422 \
+  --data-file=-
+
+# Create additional secrets
+echo -n "your-gemini-key" | gcloud secrets create GEMINI_API_KEY \
+  --project=omnitask-475422 \
+  --data-file=-
+```
+
+#### Granting Access to GitHub Actions
+
+```bash
+# Grant the GitHub Actions service account access to secrets
+gcloud secrets add-iam-policy-binding OPENAI_API_KEY \
+  --project=omnitask-475422 \
+  --member="serviceAccount:github-actions@omnitask-475422.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --project=omnitask-475422 \
+  --member="serviceAccount:github-actions@omnitask-475422.iam.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+#### Accessing Secrets in GitHub Actions
+
+```yaml
+- name: Authenticate to Google Cloud
+  uses: google-github-actions/auth@v2
+  with:
+    workload_identity_provider: 'projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+    service_account: 'github-actions@omnitask-475422.iam.gserviceaccount.com'
+
+- name: Set up Cloud SDK
+  uses: google-github-actions/setup-gcloud@v2
+
+- name: Access GCP Secrets
+  run: |
+    OPENAI_KEY=$(gcloud secrets versions access latest --secret="OPENAI_API_KEY")
+    echo "::add-mask::$OPENAI_KEY"
+    echo "OPENAI_API_KEY=$OPENAI_KEY" >> $GITHUB_ENV
+```
+
+#### Updating a Secret
+
+```bash
+# Update with new version
+echo -n "new-api-key-value" | gcloud secrets versions add OPENAI_API_KEY \
+  --project=omnitask-475422 \
+  --data-file=-
+```
+
+---
+
+### GitHub Secrets (Fallback)
+
+For simpler setups or when GCP Secret Manager is not available:
 
 ```yaml
 - name: Call AI API
@@ -713,6 +782,8 @@ Access secrets in workflows like this:
   run: |
     # Use environment variables in your build/deploy scripts
 ```
+
+---
 
 ### Creating an AI Service
 
@@ -735,17 +806,20 @@ export class AIService {
 
 ### Firebase Functions for Secure API Calls
 
-Server-side API keys should be stored in Firebase Functions environment config:
+Server-side API keys should be stored in GCP Secret Manager and accessed via Firebase Functions:
 
 ```typescript
 // functions/src/index.ts
 import { onCall } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 
+// Reference secrets from GCP Secret Manager
 const openaiKey = defineSecret('OPENAI_API_KEY');
+const geminiKey = defineSecret('GEMINI_API_KEY');
 
 export const generateAIContent = onCall({ secrets: [openaiKey] }, async (request) => {
   // Access via process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY;
   // Make secure API call here
 });
 ```
