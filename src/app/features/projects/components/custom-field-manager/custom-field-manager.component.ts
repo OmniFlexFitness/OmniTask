@@ -99,8 +99,7 @@ import {
             >
             <input
               type="text"
-              [ngModel]="newFieldName()"
-              (ngModelChange)="newFieldName.set($event)"
+              [(ngModel)]="newFieldName"
               placeholder="e.g., Priority Score, Client Name..."
               class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors placeholder:text-slate-600"
               [class.border-red-500]="isDuplicateFieldName()"
@@ -152,6 +151,11 @@ import {
                   <i class="fas fa-plus"></i>
                 </button>
               </div>
+              @if (newFieldOptions().length === 0) {
+              <p class="mt-1 text-xs text-amber-400">
+                <i class="fas fa-exclamation-triangle mr-1"></i>At least one option is required for {{ newFieldType() }} fields.
+              </p>
+              }
             </div>
           </div>
           }
@@ -165,7 +169,7 @@ import {
             </button>
             <button
               (click)="createField()"
-              [disabled]="!newFieldName.trim()"
+              [disabled]="!canCreateField()"
               class="px-3 py-1.5 text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 rounded hover:bg-cyan-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Field
@@ -261,13 +265,13 @@ export class CustomFieldManagerComponent {
   ];
 
   isDuplicateFieldName = computed(() => {
-    const name = this.newFieldName().trim().toLowerCase();
+    const name = this.newFieldName.trim().toLowerCase();
     if (!name) return false;
     return this.project().customFields?.some(f => f.name.toLowerCase() === name) || false;
   });
 
   canCreateField = computed(() => {
-    if (!this.newFieldName().trim() || this.isDuplicateFieldName()) {
+    if (!this.newFieldName.trim() || this.isDuplicateFieldName()) {
       return false;
     }
     // For dropdown and status fields, require at least one option
@@ -303,7 +307,7 @@ export class CustomFieldManagerComponent {
   }
 
   async createField() {
-    if (!this.newFieldName.trim()) return;
+    if (!this.canCreateField()) return;
 
     try {
       const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
@@ -317,7 +321,7 @@ export class CustomFieldManagerComponent {
 
       await this.projectService.addCustomField(this.project().id, fieldData);
       this.isAdding.set(false);
-      this.newFieldName.set('');
+      this.newFieldName = '';
       this.newFieldOptions.set([]);
     } catch (err) {
       console.error('Failed to create field', err);
