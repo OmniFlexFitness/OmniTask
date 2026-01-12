@@ -3,14 +3,27 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
-import { Task, Project, Subtask } from '../../core/models/domain.model';
+import { Task, Project, Subtask, Tag } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of } from 'rxjs';
+import { switchMap, of, map } from 'rxjs';
+import {
+  AutocompleteInputComponent,
+  AutocompleteOption,
+} from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import { TagInputComponent } from '../../shared/components/tag-input/tag-input.component';
+import { ContactsService } from '../../core/services/contacts.service';
+import { SuggestionsService } from '../../core/services/suggestions.service';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    AutocompleteInputComponent,
+    TagInputComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
@@ -141,13 +154,13 @@ import { switchMap, of } from 'rxjs';
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Assignee</label
               >
-              <input
-                type="text"
-                formControlName="assigneeName"
+              <app-autocomplete-input
+                [options]="contactOptions()"
+                [value]="form.controls.assigneeName.value"
+                (valueChange)="updateAssignee($event)"
                 placeholder="Unassigned"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
-              />
+                [allowCustom]="true"
+              ></app-autocomplete-input>
             </div>
 
             <!-- Status -->
@@ -390,13 +403,13 @@ import { switchMap, of } from 'rxjs';
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
               >Tags</label
             >
-            <input
-              type="text"
-              formControlName="tags"
-              placeholder="Comma separated tags..."
-              class="w-full bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              (blur)="autoSave()"
-            />
+            <app-tag-input
+              [availableTags]="allTags()"
+              [selectedTags]="selectedTagObjects()"
+              (tagsChange)="onTagsChange($event)"
+              (tagCreated)="onTagCreated($event)"
+              placeholder="Add tags..."
+            ></app-tag-input>
           </div>
         </div>
       </div>
@@ -441,6 +454,8 @@ export class TaskDetailModalComponent {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
+  private contactsService = inject(ContactsService);
+  private suggestionsService = inject(SuggestionsService);
 
   // Input
   task = input<Task | null>(null);
@@ -465,6 +480,29 @@ export class TaskDetailModalComponent {
     return this.project()?.sections || [];
   });
 
+  // Available tags
+  allTags = toSignal(this.suggestionsService.getAllTags(), { initialValue: [] });
+  selectedTagObjects = signal<Tag[]>([]);
+
+  // Contacts
+  contactOptions = toSignal(
+    this.contactsService.getContacts().pipe(
+      map((contacts) =>
+        contacts.map(
+          (c) =>
+            ({
+              id: c.email,
+              label: c.displayName,
+              sublabel: c.email,
+              avatar: c.photoURL,
+              color: undefined,
+            } as AutocompleteOption)
+        )
+      )
+    ),
+    { initialValue: [] }
+  );
+
   form = this.fb.group({
     title: ['', Validators.required],
     description: [''],
@@ -488,6 +526,8 @@ export class TaskDetailModalComponent {
     // Sync form with task input
     effect(() => {
       const task = this.task();
+      const available_tags = this.allTags();
+
       if (task) {
         this.form.patchValue(
           {
@@ -507,6 +547,17 @@ export class TaskDetailModalComponent {
         // Load subtasks
         this.subtasks.set(task.subtasks || []);
         this.customFieldValues.set(task.customFieldValues || {});
+
+        // Resolve tags from strings to objects using allTags or creating temporary objects
+        if (task.tags && task.tags.length > 0) {
+          const resolvedTags = task.tags.map((tagName) => {
+            const found = available_tags.find((t) => t.name === tagName);
+            return found || ({ id: tagName, name: tagName, color: '#94a3b8' } as Tag); // Fallback
+          });
+          this.selectedTagObjects.set(resolvedTags);
+        } else {
+          this.selectedTagObjects.set([]);
+        }
       }
     });
   }
@@ -522,19 +573,50 @@ export class TaskDetailModalComponent {
     this.autoSave();
   }
 
+  updateAssignee(value: string) {
+    this.form.patchValue({ assigneeName: value });
+    this.autoSave();
+  }
+
+  onTagsChange(tags: Tag[]) {
+    this.selectedTagObjects.set(tags);
+    // Sync with form for autosave
+    const tagNames = tags.map((t) => t.name).join(', ');
+    this.form.patchValue({ tags: tagNames });
+    // Trigger autoSave manually because form change might not be enough or we want explicit control
+    this.autoSave();
+  }
+
+  async onTagCreated(name: string) {
+    const project = this.project();
+    if (!project) return;
+
+    // Random color
+    const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+    const colorIndex =
+      name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+
+    try {
+      const newTag = await this.projectService.addTag(project.id, {
+        name,
+        color: colors[colorIndex],
+      });
+
+      const currentTags = this.selectedTagObjects();
+      this.onTagsChange([...currentTags, newTag]);
+    } catch (e) {
+      console.error('Failed to create tag', e);
+    }
+  }
+
   async autoSave() {
     const task = this.task();
-    if (!task || this.form.invalid || !this.form.dirty) return;
+    if (!task || this.form.invalid) return; // Removed !this.form.dirty check to allow manual triggers
 
     const val = this.form.value;
     const startDate = val.startDate ? new Date(val.startDate) : undefined;
     const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-    const tags = val.tags
-      ? val.tags
-          .split(',')
-          .map((t: string) => t.trim())
-          .filter(Boolean)
-      : [];
+    const tags = this.selectedTagObjects().map((t) => t.name);
 
     const updates: Partial<Task> = {
       title: val.title!,

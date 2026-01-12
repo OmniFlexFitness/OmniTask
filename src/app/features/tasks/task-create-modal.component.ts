@@ -1,16 +1,23 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
-import { Task, Project, Section } from '../../core/models/domain.model';
+import { Task, Project, Section, Tag } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of } from 'rxjs';
+import { switchMap, of, map } from 'rxjs';
+import {
+  AutocompleteInputComponent,
+  AutocompleteOption,
+} from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import { TagInputComponent } from '../../shared/components/tag-input/tag-input.component';
+import { ContactsService } from '../../core/services/contacts.service';
+import { SuggestionsService } from '../../core/services/suggestions.service';
 
 @Component({
   selector: 'app-task-create-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AutocompleteInputComponent, TagInputComponent],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
@@ -184,71 +191,34 @@ import { switchMap, of } from 'rxjs';
           </div>
           }
 
-          <!-- Assignee -->
+          <!-- Assignee with Autocomplete -->
           <div>
             <label
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Assignee</label
             >
-            <input
-              type="text"
-              formControlName="assigneeName"
+            <app-autocomplete-input
+              [options]="contactOptions()"
+              [value]="form.controls.assigneeName.value"
+              (valueChange)="form.patchValue({ assigneeName: $event })"
               placeholder="Who is responsible?"
-              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-            />
+              [allowCustom]="true"
+            ></app-autocomplete-input>
           </div>
 
-          <!-- Tags -->
+          <!-- Tags with Autocomplete -->
           <div>
             <label
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Tags</label
             >
-
-            <!-- Existing Project Tags -->
-            @if (project()?.tags?.length) {
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              @for (tag of project()?.tags; track tag.id) {
-              <button
-                type="button"
-                (click)="toggleTag(tag.name)"
-                [class.ring-2]="selectedTags().has(tag.name)"
-                [class.ring-white]="selectedTags().has(tag.name)"
-                [style.background-color]="tag.color + '20'"
-                [style.color]="tag.color"
-                [style.border-color]="tag.color + '40'"
-                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
-              >
-                {{ tag.name }}
-              </button>
-              }
-            </div>
-            }
-
-            <!-- Add New Tag -->
-            <div class="flex gap-2">
-              <input
-                type="text"
-                #tagInput
-                (keydown.enter)="
-                  $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
-                "
-                placeholder="Add new tag..."
-                class="flex-1 bg-slate-950/50 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              <button
-                type="button"
-                (click)="addTag(tagInput.value); tagInput.value = ''"
-                class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Add
-              </button>
-            </div>
-
-            <!-- Selected Tags Display (Feedback for new tags not yet in project definitions) -->
-            @if (selectedTags().size > 0) {
-            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
-            }
+            <app-tag-input
+              [availableTags]="allTags()"
+              [selectedTags]="selectedTagObjects()"
+              (tagsChange)="onTagsChange($event)"
+              (tagCreated)="onTagCreated($event)"
+              placeholder="Add tags..."
+            ></app-tag-input>
           </div>
 
           <!-- Error Message -->
@@ -303,6 +273,8 @@ export class TaskCreateModalComponent {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
+  private contactsService = inject(ContactsService);
+  private suggestionsService = inject(SuggestionsService);
 
   // Inputs
   projectId = input.required<string>();
@@ -327,7 +299,31 @@ export class TaskCreateModalComponent {
 
   sections = signal<Section[]>([]);
   customFieldValues = signal<Record<string, any>>({});
-  selectedTags = signal<Set<string>>(new Set());
+
+  // Tag handling
+  selectedTagObjects = signal<Tag[]>([]); // Full tag objects for the UI
+
+  // Available tags for autocomplete
+  allTags = toSignal(this.suggestionsService.getAllTags(), { initialValue: [] });
+
+  // Contacts for autocomplete
+  contactOptions = toSignal(
+    this.contactsService.getContacts().pipe(
+      map((contacts) =>
+        contacts.map(
+          (c) =>
+            ({
+              id: c.email,
+              label: c.displayName,
+              sublabel: c.email,
+              avatar: c.photoURL,
+              color: undefined, // Could generate color from name if needed
+            } as AutocompleteOption)
+        )
+      )
+    ),
+    { initialValue: [] }
+  );
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -336,7 +332,7 @@ export class TaskCreateModalComponent {
     dueDate: [''],
     sectionId: [''],
     assigneeName: [''],
-    tags: [''],
+    tags: [''], // Hidden field for form validity if needed, but we use selectedTagObjects mainly
   });
 
   constructor() {
@@ -363,46 +359,29 @@ export class TaskCreateModalComponent {
     this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
   }
 
-  toggleTag(tagName: string) {
-    this.selectedTags.update((tags) => {
-      const newTags = new Set(tags);
-      if (newTags.has(tagName)) {
-        newTags.delete(tagName);
-      } else {
-        newTags.add(tagName);
-      }
-      return newTags;
-    });
+  onTagsChange(tags: Tag[]) {
+    this.selectedTagObjects.set(tags);
   }
 
-  async addTag(tagName: string) {
-    const name = tagName.trim();
-    if (!name) return;
-
-    // Add to project definitions first if it doesn't exist
+  async onTagCreated(name: string) {
     const project = this.project();
-    if (project) {
-      // Simple hash for color generation
-      const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-      const colorIndex =
-        name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    if (!project) return;
 
-      await this.projectService.addTag(project.id, {
-        name: name,
+    // Create random color
+    const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+    const colorIndex =
+      name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+
+    try {
+      const newTag = await this.projectService.addTag(project.id, {
+        name,
         color: colors[colorIndex],
       });
+
+      this.selectedTagObjects.update((tags) => [...tags, newTag]);
+    } catch (e) {
+      console.error('Failed to create tag', e);
     }
-
-    // Select it
-    this.selectedTags.update((tags) => {
-      const newTags = new Set(tags);
-      newTags.add(name);
-      return newTags;
-    });
-  }
-
-  getSelectedTagsList(): string {
-    return Array.from(this.selectedTags()).join(', ');
   }
 
   async onSubmit() {
@@ -415,7 +394,8 @@ export class TaskCreateModalComponent {
     try {
       const val = this.form.value;
       const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-      const tags = Array.from(this.selectedTags());
+      // Convert Tag objects to string names
+      const tags = this.selectedTagObjects().map((t) => t.name);
 
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         projectId: this.projectId(),

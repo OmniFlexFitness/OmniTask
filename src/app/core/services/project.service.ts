@@ -12,7 +12,7 @@ import {
   collectionData,
   DocumentReference,
 } from '@angular/fire/firestore';
-import { Project, Section, DEFAULT_SECTIONS } from '../models/domain.model';
+import { Project, Section, DEFAULT_SECTIONS, Tag } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
 
@@ -44,6 +44,25 @@ export class ProjectService {
         return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
       }),
       map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name)))
+    );
+  }
+
+  /**
+   * Get all unique tags from all user's projects
+   */
+  getAllTags(): Observable<Tag[]> {
+    return this.getMyProjects().pipe(
+      map((projects) => {
+        const tagMap = new Map<string, Tag>();
+        projects.forEach((p) => {
+          p.tags?.forEach((t) => {
+            if (!tagMap.has(t.name.toLowerCase())) {
+              tagMap.set(t.name.toLowerCase(), t);
+            }
+          });
+        });
+        return Array.from(tagMap.values());
+      })
     );
   }
 
