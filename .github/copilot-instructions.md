@@ -368,16 +368,21 @@ describe('TaskService', () => {
 ```typescript
 import { TestBed } from '@angular/core/testing';
 import { TaskService } from './task.service';
+import { vi } from 'vitest';
 
 describe('TaskService', () => {
   let service: TaskService;
-  let mockFirestore: jasmine.SpyObj<Firestore>;
+  let mockAddDoc: any;
 
   beforeEach(() => {
-    mockFirestore = jasmine.createSpyObj('Firestore', ['collection']);
+    // Mock the addDoc function from Firestore
+    mockAddDoc = vi.fn().mockResolvedValue({ id: 'test-id' });
 
     TestBed.configureTestingModule({
-      providers: [TaskService, { provide: Firestore, useValue: mockFirestore }],
+      providers: [
+        TaskService,
+        { provide: 'addDoc', useValue: mockAddDoc }
+      ],
     });
 
     service = TestBed.inject(TaskService);
@@ -391,7 +396,7 @@ describe('TaskService', () => {
     await service.createTask(mockTask);
 
     // Assert
-    expect(mockFirestore.addDoc).toHaveBeenCalledWith(
+    expect(mockAddDoc).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         title: 'Test Task',
@@ -675,7 +680,7 @@ docs: update README with deployment instructions
 
 - ✅ Use imperative mood: "add feature" not "added feature"
 - ✅ Keep subject line under 72 characters
-- ✅ Start the subject line with a lowercase letter
+- ✅ Start description with a lowercase letter (after the type and scope)
 - ✅ No period at end of subject line
 - ✅ Reference issue numbers in footer: `Closes #123`
 
@@ -815,7 +820,7 @@ Server-side API keys should be stored in GCP Secret Manager and accessed via Fir
 ```typescript
 // functions/src/index.ts
 import { onCall } from 'firebase-functions/v2/https';
-import { defineSecret } from 'firebase-functions/params';
+import { defineSecret } from 'firebase-functions/v2/params';
 
 // Reference secrets from GCP Secret Manager
 const openaiKey = defineSecret('OPENAI_API_KEY');
