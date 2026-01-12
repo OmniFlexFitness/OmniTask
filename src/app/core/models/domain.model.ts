@@ -2,6 +2,22 @@ import { Timestamp } from '@angular/fire/firestore';
 
 type FirestoreDate = Timestamp | Date;
 
+export type CustomFieldType = 'text' | 'number' | 'date' | 'dropdown' | 'status' | 'user';
+
+export interface CustomFieldOption {
+  id: string;
+  label: string;
+  color?: string;
+}
+
+export interface CustomFieldDefinition {
+  id: string;
+  name: string;
+  type: CustomFieldType;
+  options?: CustomFieldOption[]; // For dropdown/status
+  projectId: string;
+}
+
 /**
  * Section within a project for organizing tasks (Kanban columns)
  */
@@ -21,6 +37,12 @@ export interface Subtask {
   completed: boolean;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string; // Hex color code
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -30,6 +52,8 @@ export interface Project {
   ownerId: string;
   memberIds: string[];
   sections: Section[]; // Kanban columns
+  customFields?: CustomFieldDefinition[];
+  tags?: Tag[]; // Defined tags for this project
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;
   status: 'active' | 'archived';
@@ -51,6 +75,7 @@ export interface Task {
   completedAt?: FirestoreDate; // When task was marked done
   tags?: string[];
   subtasks?: Subtask[];
+  customFieldValues?: Record<string, any>;
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
   createdById?: string; // Who created the task
@@ -65,7 +90,7 @@ export interface Task {
 export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
   { name: 'To Do', order: 0, color: '#6366f1' },
   { name: 'In Progress', order: 1, color: '#0ea5e9' },
-  { name: 'Done', order: 2, color: '#10b981' }
+  { name: 'Done', order: 2, color: '#10b981' },
 ];
 
 /**

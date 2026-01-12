@@ -915,6 +915,42 @@
    CYBERPUNK FORM SELECT
    ============================================ */
 
+/* Global select styling for dark mode */
+select,
+select option {
+  background-color: #0a0f1e;
+  color: #e2e8f0;
+}
+
+/* Force dark background on option elements (browser support varies) */
+select option {
+  background-color: #0a0f1e;
+  color: #e2e8f0;
+  padding: 8px 12px;
+}
+
+/* Webkit browsers scrollbar */
+select::-webkit-scrollbar {
+  width: 8px;
+}
+
+select::-webkit-scrollbar-track {
+  background: #050810;
+}
+
+select::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--cyber-blue), var(--cyber-purple));
+  border-radius: 4px;
+}
+
+/* Global select focus styling - override browser defaults */
+select:focus,
+select:focus-visible {
+  outline: none;
+  border-color: rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.15), 0 0 12px rgba(0, 210, 255, 0.2);
+}
+
 .cyber-select {
   @apply appearance-none bg-slate-950/80 text-slate-100 px-4 py-3 pr-10 rounded-lg;
   border: 1px solid rgba(0, 210, 255, 0.2);
@@ -928,6 +964,68 @@
   outline: none;
   border-color: var(--cyber-blue);
   box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+}
+
+/* ============================================
+   CYBERPUNK NUMBER INPUT SPINNERS
+   ============================================ */
+
+/* Hide default spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Custom number input wrapper styling */
+input[type="number"] {
+  position: relative;
+}
+
+/* Focus styling for number inputs */
+input[type="number"]:focus {
+  outline: none !important;
+  border-color: rgba(0, 210, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.15), 0 0 12px rgba(0, 210, 255, 0.2) !important;
+}
+
+/* ============================================
+   CYBERPUNK DATE INPUT
+   ============================================ */
+
+input[type="date"]:focus {
+  outline: none !important;
+  border-color: rgba(0, 210, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.15), 0 0 12px rgba(0, 210, 255, 0.2) !important;
+}
+
+/* Calendar icon styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(5) hue-rotate(175deg);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ============================================
+   GLOBAL INPUT FOCUS STYLING
+   ============================================ */
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 210, 255, 0.15), 0 0 12px rgba(0, 210, 255, 0.2);
 }
 
 /* ============================================
