@@ -655,6 +655,7 @@ export class TaskDetailModalComponent {
       priority: val.priority as Task['priority'],
       sectionId: val.sectionId || undefined,
       tags,
+      customFieldValues: this.customFieldValues(),
     };
 
     // Add startDate to updates (extending Task type for this)
