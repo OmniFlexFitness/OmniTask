@@ -37,7 +37,7 @@ This document provides context and guidelines for GitHub Copilot to generate con
 
 ```
 src/app/
-├── app.ts                 # Root component
+├── app.component.ts       # Root component
 ├── app.config.ts          # Providers and Firebase config
 ├── app.routes.ts          # Route definitions
 ├── core/                  # Core application logic
