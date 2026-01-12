@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ProjectService } from '../../core/services/project.service';
-import { TaskService } from '../../core/services/task.service';
 import { Project } from '../../core/models/domain.model';
 import { ProjectFormModalComponent } from './project-form-modal.component';
 

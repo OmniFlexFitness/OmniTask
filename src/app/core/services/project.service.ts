@@ -12,7 +12,13 @@ import {
   collectionData,
   DocumentReference,
 } from '@angular/fire/firestore';
-import { Project, Section, DEFAULT_SECTIONS, CustomFieldDefinition, Tag } from '../models/domain.model';
+import { 
+  Project, 
+  Section, 
+  DEFAULT_SECTIONS, 
+  CustomFieldDefinition, 
+  Tag 
+} from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
 
@@ -316,12 +322,17 @@ export class ProjectService {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
+    // Validate tag name
+    const trimmedName = tag.name.trim();
+    if (!trimmedName) throw new Error('Tag name cannot be empty');
+
     // Check if tag with name already exists
-    const existing = project.tags?.find((t) => t.name.toLowerCase() === tag.name.toLowerCase());
+    const existing = project.tags?.find((t) => t.name.toLowerCase() === trimmedName.toLowerCase());
     if (existing) return existing;
 
     const newTag: Tag = {
       ...tag,
+      name: trimmedName,
       id: crypto.randomUUID(),
     };
 

@@ -1,12 +1,12 @@
-import { Component, input, inject, signal } from '@angular/core';
+import { Component, input, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../../core/services/project.service';
 import {
   Project,
   CustomFieldType,
-  CustomFieldDefinition,
   CustomFieldOption,
+  CustomFieldDefinition,
 } from '../../../../core/models/domain.model';
 
 @Component({
@@ -75,7 +75,7 @@ import {
                 (click)="newFieldType.set(type.value)"
                 [class.ring-2]="newFieldType() === type.value"
                 [class.ring-cyan-500]="newFieldType() === type.value"
-                [class.bg-cyan-500_10]="newFieldType() === type.value"
+                [class.bg-cyan-500/10]="newFieldType() === type.value"
                 class="flex flex-col items-center gap-2 p-2 rounded bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-slate-500 transition-all text-xs"
               >
                 <i
@@ -99,11 +99,20 @@ import {
             >
             <input
               type="text"
-              [(ngModel)]="newFieldName"
+              [ngModel]="newFieldName()"
+              (ngModelChange)="newFieldName.set($event)"
               placeholder="e.g., Priority Score, Client Name..."
               class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors placeholder:text-slate-600"
+              [class.border-red-500]="isDuplicateFieldName()"
+              [class.focus:border-red-500]="isDuplicateFieldName()"
+              [class.focus:ring-red-500]="isDuplicateFieldName()"
               (keyup.enter)="createField()"
             />
+            @if (isDuplicateFieldName()) {
+            <p class="mt-1 text-xs text-red-400">
+              A custom field with this name already exists in this project. Please choose a different name.
+            </p>
+            }
           </div>
 
           <!-- Options for Dropdowns -->
@@ -118,6 +127,7 @@ import {
                 <input
                   type="color"
                   [value]="opt.color"
+                  (change)="opt.color = $any($event.target).value"
                   class="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
                   title="Option Color"
                 />
@@ -250,6 +260,23 @@ export class CustomFieldManagerComponent {
     { value: 'user', label: 'User', icon: 'fas fa-user' },
   ];
 
+  isDuplicateFieldName = computed(() => {
+    const name = this.newFieldName().trim().toLowerCase();
+    if (!name) return false;
+    return this.project().customFields?.some(f => f.name.toLowerCase() === name) || false;
+  });
+
+  canCreateField = computed(() => {
+    if (!this.newFieldName().trim() || this.isDuplicateFieldName()) {
+      return false;
+    }
+    // For dropdown and status fields, require at least one option
+    if (this.newFieldType() === 'dropdown' || this.newFieldType() === 'status') {
+      return this.newFieldOptions().length > 0;
+    }
+    return true;
+  });
+
   getFieldIcon(type: CustomFieldType): string {
     return this.fieldTypes.find((t) => t.value === type)?.icon || 'fas fa-circle';
   }
@@ -290,8 +317,11 @@ export class CustomFieldManagerComponent {
 
       await this.projectService.addCustomField(this.project().id, fieldData);
       this.isAdding.set(false);
+      this.newFieldName.set('');
+      this.newFieldOptions.set([]);
     } catch (err) {
       console.error('Failed to create field', err);
+      alert('Failed to create custom field. Please try again.');
     }
   }
 

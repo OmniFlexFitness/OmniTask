@@ -142,7 +142,6 @@ import { switchMap, of } from 'rxjs';
               @switch (field.type) { @case ('text') {
               <input
                 type="text"
-                [attr.id]="field.id"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
                 [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -183,6 +182,12 @@ import { switchMap, of } from 'rxjs';
                 <option [value]="opt.id">{{ opt.label }}</option>
                 }
               </select>
+              } @case ('user') {
+              <input
+                type="text"
+                (input)="updateCustomField(field.id, $any($event.target).value)"
+                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
               } }
               
               @if (customFieldErrors()[field.id]) {
@@ -390,30 +395,39 @@ export class TaskCreateModalComponent {
     this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
   }
 
-  private validateCustomFieldValue(field: any, value: any): string | null {
-    // Skip validation for empty values (unless we add required field support later)
-    if (!value || value === '') {
-      return null;
-    }
+  validateCustomFieldValue(field: any, value: any): string {
+    // Return error message if validation fails, empty string otherwise
+    let error = '';
 
     switch (field.type) {
       case 'number':
         // Check if value is a valid number
-        if (isNaN(Number(value))) {
-          return 'Must be a valid number';
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const num = parseFloat(stringValue);
+            if (isNaN(num)) {
+              error = 'Must be a valid number';
+            }
+          }
         }
         break;
       
       case 'date':
         // Check if value is a valid date
-        const dateValue = new Date(value);
-        if (isNaN(dateValue.getTime())) {
-          return 'Must be a valid date';
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const date = new Date(stringValue);
+            if (isNaN(date.getTime())) {
+              error = 'Must be a valid date';
+            }
+          }
         }
         break;
     }
 
-    return null;
+    return error;
   }
 
   toggleTag(tagName: string) {
@@ -435,15 +449,21 @@ export class TaskCreateModalComponent {
     // Add to project definitions first if it doesn't exist
     const project = this.project();
     if (project) {
-      // Simple hash for color generation
-      const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-      const colorIndex =
-        name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+      try {
+        // Simple hash for color generation
+        const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+        const colorIndex =
+          name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
 
-      await this.projectService.addTag(project.id, {
-        name: name,
-        color: colors[colorIndex],
-      });
+        await this.projectService.addTag(project.id, {
+          name: name,
+          color: colors[colorIndex],
+        });
+      } catch (err) {
+        console.error('Failed to add tag', err);
+        // Don't select the tag if adding to project failed
+        return;
+      }
     }
 
     // Select it
