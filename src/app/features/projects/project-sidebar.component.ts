@@ -279,4 +279,8 @@ export class ProjectSidebarComponent {
       this.seeding.set(false);
     }
   }
+
+  connectGoogleTasks() {
+    console.log('Connecting to Google Tasks...');
+  }
 }

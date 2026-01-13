@@ -1,23 +1,16 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { Component, input, output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
-import { Task, Project, Section, Tag } from '../../core/models/domain.model';
+import { Task, Project, Section } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of, map } from 'rxjs';
-import {
-  AutocompleteInputComponent,
-  AutocompleteOption,
-} from '../../shared/components/autocomplete-input/autocomplete-input.component';
-import { TagInputComponent } from '../../shared/components/tag-input/tag-input.component';
-import { ContactsService } from '../../core/services/contacts.service';
-import { SuggestionsService } from '../../core/services/suggestions.service';
+import { switchMap, of } from 'rxjs';
 
 @Component({
   selector: 'app-task-create-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AutocompleteInputComponent, TagInputComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
@@ -149,25 +142,28 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
               @switch (field.type) { @case ('text') {
               <input
                 type="text"
-                [attr.id]="field.id"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('number') {
               <input
                 type="number"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('date') {
               <input
                 type="date"
                 (input)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
               } @case ('dropdown') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -178,6 +174,7 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
               } @case ('status') {
               <select
                 (change)="updateCustomField(field.id, $any($event.target).value)"
+                [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               >
                 <option value="">- Select -</option>
@@ -185,40 +182,87 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
                 <option [value]="opt.id">{{ opt.label }}</option>
                 }
               </select>
+              } @case ('user') {
+              <input
+                type="text"
+                (input)="updateCustomField(field.id, $any($event.target).value)"
+                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
               } }
+              
+              @if (customFieldErrors()[field.id]) {
+              <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
+              }
             </div>
             }
           </div>
           }
 
-          <!-- Assignee with Autocomplete -->
+          <!-- Assignee -->
           <div>
             <label
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Assignee</label
             >
-            <app-autocomplete-input
-              [options]="contactOptions()"
-              [value]="form.controls.assigneeName.value"
-              (valueChange)="form.patchValue({ assigneeName: $event })"
+            <input
+              type="text"
+              formControlName="assigneeName"
               placeholder="Who is responsible?"
-              [allowCustom]="true"
-            ></app-autocomplete-input>
+              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+            />
           </div>
 
-          <!-- Tags with Autocomplete -->
+          <!-- Tags -->
           <div>
             <label
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Tags</label
             >
-            <app-tag-input
-              [availableTags]="allTags()"
-              [selectedTags]="selectedTagObjects()"
-              (tagsChange)="onTagsChange($event)"
-              (tagCreated)="onTagCreated($event)"
-              placeholder="Add tags..."
-            ></app-tag-input>
+
+            <!-- Existing Project Tags -->
+            @if (project()?.tags?.length) {
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              @for (tag of project()?.tags; track tag.id) {
+              <button
+                type="button"
+                (click)="toggleTag(tag.name)"
+                [class.ring-2]="selectedTags().has(tag.name)"
+                [class.ring-white]="selectedTags().has(tag.name)"
+                [style.background-color]="tag.color + '20'"
+                [style.color]="tag.color"
+                [style.border-color]="tag.color + '40'"
+                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+              >
+                {{ tag.name }}
+              </button>
+              }
+            </div>
+            }
+
+            <!-- Add New Tag -->
+            <div class="flex gap-2">
+              <input
+                type="text"
+                #tagInput
+                (keydown.enter)="
+                  $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
+                "
+                placeholder="Add new tag..."
+                class="flex-1 bg-slate-950/50 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
+              <button
+                type="button"
+                (click)="addTag(tagInput.value); tagInput.value = ''"
+                class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+
+            <!-- Selected Tags Display (Feedback for new tags not yet in project definitions) -->
+            @if (selectedTags().size > 0) {
+            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+            }
           </div>
 
           <!-- Error Message -->
@@ -242,7 +286,7 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
             <button
               type="submit"
               class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              [disabled]="form.invalid || saving()"
+              [disabled]="form.invalid || saving() || hasCustomFieldErrors()"
             >
               Create Task
             </button>
@@ -273,8 +317,6 @@ export class TaskCreateModalComponent {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
-  private contactsService = inject(ContactsService);
-  private suggestionsService = inject(SuggestionsService);
 
   // Inputs
   projectId = input.required<string>();
@@ -299,31 +341,8 @@ export class TaskCreateModalComponent {
 
   sections = signal<Section[]>([]);
   customFieldValues = signal<Record<string, any>>({});
-
-  // Tag handling
-  selectedTagObjects = signal<Tag[]>([]); // Full tag objects for the UI
-
-  // Available tags for autocomplete
-  allTags = toSignal(this.suggestionsService.getAllTags(), { initialValue: [] });
-
-  // Contacts for autocomplete
-  contactOptions = toSignal(
-    this.contactsService.getContacts().pipe(
-      map((contacts) =>
-        contacts.map(
-          (c) =>
-            ({
-              id: c.email,
-              label: c.displayName,
-              sublabel: c.email,
-              avatar: c.photoURL,
-              color: undefined, // Could generate color from name if needed
-            } as AutocompleteOption)
-        )
-      )
-    ),
-    { initialValue: [] }
-  );
+  customFieldErrors = signal<Record<string, string>>({});
+  selectedTags = signal<Set<string>>(new Set());
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -332,7 +351,6 @@ export class TaskCreateModalComponent {
     dueDate: [''],
     sectionId: [''],
     assigneeName: [''],
-    tags: [''], // Hidden field for form validity if needed, but we use selectedTagObjects mainly
   });
 
   constructor() {
@@ -356,36 +374,122 @@ export class TaskCreateModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
+    const field = this.project()?.customFields?.find((f) => f.id === fieldId);
+    if (!field) return;
+
+    // Validate the value based on field type
+    const error = this.validateCustomFieldValue(field, value);
+    
+    // Update validation errors
+    this.customFieldErrors.update((errors) => {
+      const newErrors = { ...errors };
+      if (error) {
+        newErrors[fieldId] = error;
+      } else {
+        delete newErrors[fieldId];
+      }
+      return newErrors;
+    });
+
+    // Store the value regardless (but validation will prevent submission)
     this.customFieldValues.update((v) => ({ ...v, [fieldId]: value }));
   }
 
-  onTagsChange(tags: Tag[]) {
-    this.selectedTagObjects.set(tags);
+  validateCustomFieldValue(field: any, value: any): string {
+    // Return error message if validation fails, empty string otherwise
+    let error = '';
+
+    switch (field.type) {
+      case 'number':
+        // Check if value is a valid number
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const num = parseFloat(stringValue);
+            if (isNaN(num)) {
+              error = 'Must be a valid number';
+            }
+          }
+        }
+        break;
+      
+      case 'date':
+        // Check if value is a valid date
+        if (value !== null && value !== undefined && value !== '') {
+          const stringValue = String(value).trim();
+          if (stringValue !== '') {
+            const date = new Date(stringValue);
+            if (isNaN(date.getTime())) {
+              error = 'Must be a valid date';
+            }
+          }
+        }
+        break;
+    }
+
+    return error;
   }
 
-  async onTagCreated(name: string) {
+  toggleTag(tagName: string) {
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      if (newTags.has(tagName)) {
+        newTags.delete(tagName);
+      } else {
+        newTags.add(tagName);
+      }
+      return newTags;
+    });
+  }
+
+  async addTag(tagName: string) {
+    const name = tagName.trim();
+    if (!name) return;
+
+    // Add to project definitions first if it doesn't exist
     const project = this.project();
-    if (!project) return;
+    if (project) {
+      try {
+        // Simple hash for color generation
+        const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+        const colorIndex =
+          name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
 
-    // Create random color
-    const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-    const colorIndex =
-      name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-
-    try {
-      const newTag = await this.projectService.addTag(project.id, {
-        name,
-        color: colors[colorIndex],
-      });
-
-      this.selectedTagObjects.update((tags) => [...tags, newTag]);
-    } catch (e) {
-      console.error('Failed to create tag', e);
+        await this.projectService.addTag(project.id, {
+          name: name,
+          color: colors[colorIndex],
+        });
+      } catch (err) {
+        console.error('Failed to add tag', err);
+        // Don't select the tag if adding to project failed
+        return;
+      }
     }
+
+    // Select it
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      newTags.add(name);
+      return newTags;
+    });
+  }
+
+  getSelectedTagsList(): string {
+    return Array.from(this.selectedTags()).join(', ');
+  }
+
+  hasCustomFieldErrors(): boolean {
+    return Object.keys(this.customFieldErrors()).length > 0;
   }
 
   async onSubmit() {
     if (this.form.invalid) return;
+
+    // Check for custom field validation errors
+    if (this.hasCustomFieldErrors()) {
+      this.errorMessage.set('Please fix the validation errors in custom fields.');
+      return;
+    }
 
     this.saving.set(true);
 
@@ -394,8 +498,7 @@ export class TaskCreateModalComponent {
     try {
       const val = this.form.value;
       const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-      // Convert Tag objects to string names
-      const tags = this.selectedTagObjects().map((t) => t.name);
+      const tags = Array.from(this.selectedTags());
 
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         projectId: this.projectId(),
@@ -411,7 +514,7 @@ export class TaskCreateModalComponent {
         customFieldValues: this.customFieldValues(),
       };
 
-      const ref = await this.taskService.createTask(taskData);
+      const ref = await this.taskService.createTask(taskData, this.project()?.googleTaskListId);
 
       // Emit the created task
       const newTask: Task = {

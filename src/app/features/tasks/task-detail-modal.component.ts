@@ -3,27 +3,14 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
-import { Task, Project, Subtask, Tag } from '../../core/models/domain.model';
+import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of, map } from 'rxjs';
-import {
-  AutocompleteInputComponent,
-  AutocompleteOption,
-} from '../../shared/components/autocomplete-input/autocomplete-input.component';
-import { TagInputComponent } from '../../shared/components/tag-input/tag-input.component';
-import { ContactsService } from '../../core/services/contacts.service';
-import { SuggestionsService } from '../../core/services/suggestions.service';
+import { switchMap, of } from 'rxjs';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    FormsModule,
-    AutocompleteInputComponent,
-    TagInputComponent,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
@@ -154,13 +141,13 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Assignee</label
               >
-              <app-autocomplete-input
-                [options]="contactOptions()"
-                [value]="form.controls.assigneeName.value"
-                (valueChange)="updateAssignee($event)"
+              <input
+                type="text"
+                formControlName="assigneeName"
                 placeholder="Unassigned"
-                [allowCustom]="true"
-              ></app-autocomplete-input>
+                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                (blur)="autoSave()"
+              />
             </div>
 
             <!-- Status -->
@@ -291,6 +278,13 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
                 <option [value]="opt.id">{{ opt.label }}</option>
                 }
               </select>
+              } @case ('user') {
+              <input
+                type="text"
+                [value]="customFieldValues()[field.id] || ''"
+                (input)="updateCustomField(field.id, $any($event.target).value)"
+                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
               } }
             </div>
             }
@@ -403,13 +397,51 @@ import { SuggestionsService } from '../../core/services/suggestions.service';
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
               >Tags</label
             >
-            <app-tag-input
-              [availableTags]="allTags()"
-              [selectedTags]="selectedTagObjects()"
-              (tagsChange)="onTagsChange($event)"
-              (tagCreated)="onTagCreated($event)"
-              placeholder="Add tags..."
-            ></app-tag-input>
+            
+            <!-- Existing Project Tags -->
+            @if (project()?.tags?.length) {
+            <div class="flex flex-wrap gap-1.5 mb-2">
+              @for (tag of project()?.tags; track tag.id) {
+              <button
+                type="button"
+                (click)="toggleTag(tag.name)"
+                [class.ring-2]="selectedTags().has(tag.name)"
+                [class.ring-white]="selectedTags().has(tag.name)"
+                [style.background-color]="tag.color + '20'"
+                [style.color]="tag.color"
+                [style.border-color]="tag.color + '40'"
+                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+              >
+                {{ tag.name }}
+              </button>
+              }
+            </div>
+            }
+
+            <!-- Add New Tag -->
+            <div class="flex gap-2">
+              <input
+                type="text"
+                #tagInput
+                (keydown.enter)="
+                  $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
+                "
+                placeholder="Add new tag..."
+                class="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              />
+              <button
+                type="button"
+                (click)="addTag(tagInput.value); tagInput.value = ''"
+                class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+
+            <!-- Selected Tags Display -->
+            @if (selectedTags().size > 0) {
+            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+            }
           </div>
         </div>
       </div>
@@ -454,8 +486,6 @@ export class TaskDetailModalComponent {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
-  private contactsService = inject(ContactsService);
-  private suggestionsService = inject(SuggestionsService);
 
   // Input
   task = input<Task | null>(null);
@@ -480,29 +510,6 @@ export class TaskDetailModalComponent {
     return this.project()?.sections || [];
   });
 
-  // Available tags
-  allTags = toSignal(this.suggestionsService.getAllTags(), { initialValue: [] });
-  selectedTagObjects = signal<Tag[]>([]);
-
-  // Contacts
-  contactOptions = toSignal(
-    this.contactsService.getContacts().pipe(
-      map((contacts) =>
-        contacts.map(
-          (c) =>
-            ({
-              id: c.email,
-              label: c.displayName,
-              sublabel: c.email,
-              avatar: c.photoURL,
-              color: undefined,
-            } as AutocompleteOption)
-        )
-      )
-    ),
-    { initialValue: [] }
-  );
-
   form = this.fb.group({
     title: ['', Validators.required],
     description: [''],
@@ -512,12 +519,12 @@ export class TaskDetailModalComponent {
     dueDate: [''],
     priority: ['medium'],
     sectionId: [null as string | null],
-    tags: [''],
   });
 
   // Subtasks state
   subtasks = signal<Subtask[]>([]);
   customFieldValues = signal<Record<string, any>>({});
+  selectedTags = signal<Set<string>>(new Set());
   newSubtaskTitle = '';
 
   completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
@@ -526,8 +533,6 @@ export class TaskDetailModalComponent {
     // Sync form with task input
     effect(() => {
       const task = this.task();
-      const available_tags = this.allTags();
-
       if (task) {
         this.form.patchValue(
           {
@@ -539,25 +544,16 @@ export class TaskDetailModalComponent {
             dueDate: task.dueDate ? this.toInputDate(task.dueDate) : '',
             priority: task.priority,
             sectionId: task.sectionId || null,
-            tags: task.tags?.join(', ') || '',
           },
           { emitEvent: false }
         );
 
-        // Load subtasks
+        // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
         this.customFieldValues.set(task.customFieldValues || {});
-
-        // Resolve tags from strings to objects using allTags or creating temporary objects
-        if (task.tags && task.tags.length > 0) {
-          const resolvedTags = task.tags.map((tagName) => {
-            const found = available_tags.find((t) => t.name === tagName);
-            return found || ({ id: tagName, name: tagName, color: '#94a3b8' } as Tag); // Fallback
-          });
-          this.selectedTagObjects.set(resolvedTags);
-        } else {
-          this.selectedTagObjects.set([]);
-        }
+        
+        // Initialize selected tags
+        this.selectedTags.set(new Set(task.tags || []));
       }
     });
   }
@@ -568,55 +564,88 @@ export class TaskDetailModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
+    // Find the field definition to validate
+    const project = this.project();
+    const field = project?.customFields?.find(f => f.id === fieldId);
+    
+    if (field) {
+      // Validate number fields
+      if (field.type === 'number' && value) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+          alert(`"${field.name}" must be a valid number.`);
+          return;
+        }
+      }
+      
+      // Validate date fields
+      if (field.type === 'date' && value) {
+        const dateValue = new Date(value);
+        if (isNaN(dateValue.getTime())) {
+          alert(`"${field.name}" must be a valid date.`);
+          return;
+        }
+      }
+    }
+    
     const current = this.customFieldValues();
     this.customFieldValues.set({ ...current, [fieldId]: value });
     this.autoSave();
   }
 
-  updateAssignee(value: string) {
-    this.form.patchValue({ assigneeName: value });
+  toggleTag(tagName: string) {
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      if (newTags.has(tagName)) {
+        newTags.delete(tagName);
+      } else {
+        newTags.add(tagName);
+      }
+      return newTags;
+    });
     this.autoSave();
   }
 
-  onTagsChange(tags: Tag[]) {
-    this.selectedTagObjects.set(tags);
-    // Sync with form for autosave
-    const tagNames = tags.map((t) => t.name).join(', ');
-    this.form.patchValue({ tags: tagNames });
-    // Trigger autoSave manually because form change might not be enough or we want explicit control
-    this.autoSave();
-  }
+  async addTag(tagName: string) {
+    const name = tagName.trim();
+    if (!name) return;
 
-  async onTagCreated(name: string) {
+    // Add to project definitions first if it doesn't exist
     const project = this.project();
-    if (!project) return;
+    if (project) {
+      // Simple hash for color generation
+      const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
+      const colorIndex =
+        name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
 
-    // Random color
-    const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-    const colorIndex =
-      name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-
-    try {
-      const newTag = await this.projectService.addTag(project.id, {
-        name,
+      await this.projectService.addTag(project.id, {
+        name: name,
         color: colors[colorIndex],
       });
-
-      const currentTags = this.selectedTagObjects();
-      this.onTagsChange([...currentTags, newTag]);
-    } catch (e) {
-      console.error('Failed to create tag', e);
     }
+
+    // Select it
+    this.selectedTags.update((tags) => {
+      const newTags = new Set(tags);
+      newTags.add(name);
+      return newTags;
+    });
+    this.autoSave();
+  }
+
+  getSelectedTagsList(): string {
+    return Array.from(this.selectedTags()).join(', ');
   }
 
   async autoSave() {
     const task = this.task();
-    if (!task || this.form.invalid) return; // Removed !this.form.dirty check to allow manual triggers
+    const project = this.project();
+    if (!task || this.form.invalid || !this.form.dirty) return;
 
     const val = this.form.value;
     const startDate = val.startDate ? new Date(val.startDate) : undefined;
     const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
-    const tags = this.selectedTagObjects().map((t) => t.name);
+    const tags = Array.from(this.selectedTags());
 
     const updates: Partial<Task> = {
       title: val.title!,
@@ -627,13 +656,14 @@ export class TaskDetailModalComponent {
       priority: val.priority as Task['priority'],
       sectionId: val.sectionId || undefined,
       tags,
+      customFieldValues: this.customFieldValues(),
     };
 
     // Add startDate to updates (extending Task type for this)
     (updates as any).startDate = startDate;
 
     try {
-      await this.taskService.updateTask(task.id, updates);
+      await this.taskService.updateTask(task.id, updates, project?.googleTaskListId);
       this.updated.emit({ ...task, ...updates } as Task);
     } catch (e) {
       console.error('Auto-save failed', e);
@@ -642,22 +672,24 @@ export class TaskDetailModalComponent {
 
   async toggleComplete() {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     if (task.status === 'done') {
-      await this.taskService.reopenTask(task.id);
+      await this.taskService.reopenTask(task.id, project?.googleTaskListId);
       this.updated.emit({ ...task, status: 'in-progress' });
     } else {
-      await this.taskService.completeTask(task.id);
+      await this.taskService.completeTask(task.id, project?.googleTaskListId);
       this.updated.emit({ ...task, status: 'done' });
     }
   }
 
   async deleteTask() {
     const task = this.task();
+    const project = this.project();
     if (!task || !confirm('Are you sure you want to delete this task?')) return;
 
-    await this.taskService.deleteTask(task.id);
+    await this.taskService.deleteTask(task.id, project?.googleTaskListId);
     this.deleted.emit(task.id);
     this.close.emit();
   }
@@ -665,6 +697,7 @@ export class TaskDetailModalComponent {
   // Subtask methods
   async addSubtask() {
     const task = this.task();
+    const project = this.project();
     if (!task || !this.newSubtaskTitle.trim()) return;
 
     const newSubtask: Subtask = {
@@ -677,11 +710,12 @@ export class TaskDetailModalComponent {
     this.subtasks.set(updatedSubtasks);
     this.newSubtaskTitle = '';
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   async toggleSubtask(subtaskId: string) {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().map((s) =>
@@ -689,17 +723,18 @@ export class TaskDetailModalComponent {
     );
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   async deleteSubtask(subtaskId: string) {
     const task = this.task();
+    const project = this.project();
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().filter((s) => s.id !== subtaskId);
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks });
+    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
   }
 
   onExampleClick(e: Event) {

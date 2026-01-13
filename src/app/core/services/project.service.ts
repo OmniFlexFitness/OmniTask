@@ -12,9 +12,16 @@ import {
   collectionData,
   DocumentReference,
 } from '@angular/fire/firestore';
-import { Project, Section, DEFAULT_SECTIONS, Tag } from '../models/domain.model';
+import {
+  Project,
+  Section,
+  DEFAULT_SECTIONS,
+  CustomFieldDefinition,
+  Tag,
+} from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
 
 @Injectable({
   providedIn: 'root',
@@ -22,6 +29,7 @@ import { Observable, switchMap, of, map } from 'rxjs';
 export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
 
   private projectsCollection = collection(this.firestore, 'projects');
 
@@ -46,22 +54,17 @@ export class ProjectService {
       map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name)))
     );
   }
-
   /**
    * Get all unique tags from all user's projects
    */
   getAllTags(): Observable<Tag[]> {
     return this.getMyProjects().pipe(
       map((projects) => {
-        const tagMap = new Map<string, Tag>();
-        projects.forEach((p) => {
-          p.tags?.forEach((t) => {
-            if (!tagMap.has(t.name.toLowerCase())) {
-              tagMap.set(t.name.toLowerCase(), t);
-            }
-          });
-        });
-        return Array.from(tagMap.values());
+        const tags = projects.flatMap((p) => p.tags || []);
+        // Deduplicate by ID
+        const uniqueTags = new Map<string, Tag>();
+        tags.forEach((t) => uniqueTags.set(t.id, t));
+        return Array.from(uniqueTags.values()).sort((a, b) => a.name.localeCompare(b.name));
       })
     );
   }
@@ -126,6 +129,10 @@ export class ProjectService {
       };
 
       const result = await addDoc(this.projectsCollection, project);
+
+      // Also create a corresponding task list in Google Tasks
+      await this.googleTasksSyncService.createTaskListForProject(result.id, name);
+
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create project';
@@ -163,8 +170,18 @@ export class ProjectService {
     this.error.set(null);
 
     try {
+      const project = await this.getProject(id);
+      if (!project) throw new Error('Project not found');
+
+      // First delete the corresponding Google Tasks list (if any)
+      if (project.googleTaskListId) {
+        await this.googleTasksSyncService.deleteTaskListForProject(project.googleTaskListId);
+      }
+
+      // Then delete the project from Firestore
       const docRef = doc(this.firestore, `projects/${id}`);
       await deleteDoc(docRef);
+
       // Note: Tasks should be deleted separately or via Cloud Function
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete project';
@@ -278,12 +295,12 @@ export class ProjectService {
    */
   async addCustomField(
     projectId: string,
-    field: Omit<import('../models/domain.model').CustomFieldDefinition, 'id' | 'projectId'>
-  ): Promise<import('../models/domain.model').CustomFieldDefinition> {
+    field: Omit<CustomFieldDefinition, 'id' | 'projectId'>
+  ): Promise<CustomFieldDefinition> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    const newField: import('../models/domain.model').CustomFieldDefinition = {
+    const newField: CustomFieldDefinition = {
       ...field,
       id: crypto.randomUUID(),
       projectId,
@@ -301,7 +318,7 @@ export class ProjectService {
   async updateCustomField(
     projectId: string,
     fieldId: string,
-    data: Partial<import('../models/domain.model').CustomFieldDefinition>
+    data: Partial<CustomFieldDefinition>
   ): Promise<void> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
@@ -328,19 +345,21 @@ export class ProjectService {
   /**
    * Add a tag to a project
    */
-  async addTag(
-    projectId: string,
-    tag: Omit<import('../models/domain.model').Tag, 'id'>
-  ): Promise<import('../models/domain.model').Tag> {
+  async addTag(projectId: string, tag: Omit<Tag, 'id'>): Promise<Tag> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
+    // Validate tag name
+    const trimmedName = tag.name.trim();
+    if (!trimmedName) throw new Error('Tag name cannot be empty');
+
     // Check if tag with name already exists
-    const existing = project.tags?.find((t) => t.name.toLowerCase() === tag.name.toLowerCase());
+    const existing = project.tags?.find((t) => t.name.toLowerCase() === trimmedName.toLowerCase());
     if (existing) return existing;
 
-    const newTag: import('../models/domain.model').Tag = {
+    const newTag: Tag = {
       ...tag,
+      name: trimmedName,
       id: crypto.randomUUID(),
     };
 

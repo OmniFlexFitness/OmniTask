@@ -1,12 +1,12 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { Component, input, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../../core/services/project.service';
 import {
   Project,
   CustomFieldType,
-  CustomFieldDefinition,
   CustomFieldOption,
+  CustomFieldDefinition,
 } from '../../../../core/models/domain.model';
 
 @Component({
@@ -39,7 +39,7 @@ import {
           </div>
 
           <button
-            (click)="removeField(field.id)"
+            (click)="confirmDeleteField(field)"
             class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-2"
             title="Remove Field"
           >
@@ -75,7 +75,7 @@ import {
                 (click)="newFieldType.set(type.value)"
                 [class.ring-2]="newFieldType() === type.value"
                 [class.ring-cyan-500]="newFieldType() === type.value"
-                [class.bg-cyan-500_10]="newFieldType() === type.value"
+                [class.bg-cyan-500/10]="newFieldType() === type.value"
                 class="flex flex-col items-center gap-2 p-2 rounded bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-slate-500 transition-all text-xs"
               >
                 <i
@@ -102,8 +102,16 @@ import {
               [(ngModel)]="newFieldName"
               placeholder="e.g., Priority Score, Client Name..."
               class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors placeholder:text-slate-600"
+              [class.border-red-500]="isDuplicateFieldName()"
+              [class.focus:border-red-500]="isDuplicateFieldName()"
+              [class.focus:ring-red-500]="isDuplicateFieldName()"
               (keyup.enter)="createField()"
             />
+            @if (isDuplicateFieldName()) {
+            <p class="mt-1 text-xs text-red-400">
+              A custom field with this name already exists in this project. Please choose a different name.
+            </p>
+            }
           </div>
 
           <!-- Options for Dropdowns -->
@@ -118,6 +126,7 @@ import {
                 <input
                   type="color"
                   [value]="opt.color"
+                  (change)="opt.color = $any($event.target).value"
                   class="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
                   title="Option Color"
                 />
@@ -142,6 +151,11 @@ import {
                   <i class="fas fa-plus"></i>
                 </button>
               </div>
+              @if (newFieldOptions().length === 0) {
+              <p class="mt-1 text-xs text-amber-400">
+                <i class="fas fa-exclamation-triangle mr-1"></i>At least one option is required for {{ newFieldType() }} fields.
+              </p>
+              }
             </div>
           </div>
           }
@@ -155,7 +169,7 @@ import {
             </button>
             <button
               (click)="createField()"
-              [disabled]="!newFieldName()"
+              [disabled]="!canCreateField()"
               class="px-3 py-1.5 text-sm font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/50 rounded hover:bg-cyan-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Field
@@ -172,6 +186,61 @@ import {
         Add Custom Field
       </button>
       }
+
+      <!-- Delete Confirmation Modal -->
+      @if (fieldToDelete()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+        (click)="fieldToDelete.set(null)"
+      >
+        <div
+          class="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="flex items-center gap-3 mb-4">
+            <div class="p-2 rounded-full bg-rose-500/20">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-rose-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-white">Remove Custom Field</h3>
+          </div>
+
+          <p class="text-slate-400 mb-6">
+            Are you sure you want to remove
+            <strong class="text-white">{{ fieldToDelete()?.name }}</strong
+            >? The field definition will be removed, but existing data will be preserved and can be accessed if you recreate the field.
+          </p>
+
+          <div class="flex justify-end gap-3">
+            <button
+              (click)="fieldToDelete.set(null)"
+              class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              (click)="deleteField()"
+              [disabled]="deleting()"
+              class="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {{ deleting() ? 'Removing...' : 'Remove Field' }}
+            </button>
+          </div>
+        </div>
+      </div>
+      }
     </div>
   `,
 })
@@ -181,8 +250,10 @@ export class CustomFieldManagerComponent {
 
   isAdding = signal(false);
   newFieldType = signal<CustomFieldType>('text');
-  newFieldName = signal('');
+  newFieldName = '';
   newFieldOptions = signal<CustomFieldOption[]>([]);
+  fieldToDelete = signal<CustomFieldDefinition | null>(null);
+  deleting = signal(false);
 
   fieldTypes: { value: CustomFieldType; label: string; icon: string }[] = [
     { value: 'text', label: 'Text', icon: 'fas fa-align-left' },
@@ -193,12 +264,29 @@ export class CustomFieldManagerComponent {
     { value: 'user', label: 'User', icon: 'fas fa-user' },
   ];
 
+  isDuplicateFieldName = computed(() => {
+    const name = this.newFieldName.trim().toLowerCase();
+    if (!name) return false;
+    return this.project().customFields?.some(f => f.name.toLowerCase() === name) || false;
+  });
+
+  canCreateField = computed(() => {
+    if (!this.newFieldName.trim() || this.isDuplicateFieldName()) {
+      return false;
+    }
+    // For dropdown and status fields, require at least one option
+    if (this.newFieldType() === 'dropdown' || this.newFieldType() === 'status') {
+      return this.newFieldOptions().length > 0;
+    }
+    return true;
+  });
+
   getFieldIcon(type: CustomFieldType): string {
     return this.fieldTypes.find((t) => t.value === type)?.icon || 'fas fa-circle';
   }
 
   startAdding() {
-    this.newFieldName.set('');
+    this.newFieldName = '';
     this.newFieldType.set('text');
     this.newFieldOptions.set([]);
     this.isAdding.set(true);
@@ -219,11 +307,11 @@ export class CustomFieldManagerComponent {
   }
 
   async createField() {
-    if (!this.newFieldName()) return;
+    if (!this.canCreateField()) return;
 
     try {
-      const fieldData: any = {
-        name: this.newFieldName(),
+      const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
+        name: this.newFieldName.trim(),
         type: this.newFieldType(),
       };
 
@@ -233,22 +321,30 @@ export class CustomFieldManagerComponent {
 
       await this.projectService.addCustomField(this.project().id, fieldData);
       this.isAdding.set(false);
+      this.newFieldName = '';
+      this.newFieldOptions.set([]);
     } catch (err) {
       console.error('Failed to create field', err);
+      alert('Failed to create custom field. Please try again.');
     }
   }
 
-  async removeField(fieldId: string) {
-    if (
-      !confirm(
-        'Are you sure you want to remove this field? Existing data will be preserved but hidden.'
-      )
-    )
-      return;
+  confirmDeleteField(field: CustomFieldDefinition) {
+    this.fieldToDelete.set(field);
+  }
+
+  async deleteField() {
+    const field = this.fieldToDelete();
+    if (!field) return;
+
+    this.deleting.set(true);
     try {
-      await this.projectService.removeCustomField(this.project().id, fieldId);
+      await this.projectService.removeCustomField(this.project().id, field.id);
+      this.fieldToDelete.set(null);
     } catch (err) {
       console.error('Failed to remove field', err);
+    } finally {
+      this.deleting.set(false);
     }
   }
 }

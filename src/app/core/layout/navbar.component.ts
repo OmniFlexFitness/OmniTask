@@ -1,12 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <!-- Top neon accent bar - solid color with glow -->
     <div class="h-[3px] w-full relative overflow-hidden">
@@ -66,35 +66,77 @@ import { AuthService } from '../auth/auth.service';
             <div class="hidden md:flex items-center gap-1">
               <a
                 routerLink="/"
-                class="relative px-4 py-2 text-sm font-semibold text-cyan-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaDashboard="routerLinkActive"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="relative px-4 py-2 text-sm font-semibold transition-all group"
+                [class.text-cyan-400]="rlaDashboard.isActive"
+                [class.text-slate-400]="!rlaDashboard.isActive && !rlaDashboard.isActive"
+                [class.hover:text-white]="!rlaDashboard.isActive"
               >
-                <span class="absolute inset-0 rounded-lg bg-cyan-500/10 opacity-50"></span>
+                <!-- Active Background -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(0,210,255,0.9)]"
+                  class="absolute inset-0 rounded-lg bg-cyan-500/10 transition-opacity duration-300"
+                  [class.opacity-50]="rlaDashboard.isActive"
+                  [class.opacity-0]="!rlaDashboard.isActive"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(0,210,255,0.9)] transition-all duration-300"
+                  [class.w-2/3]="rlaDashboard.isActive"
+                  [class.w-0]="!rlaDashboard.isActive"
                 ></span>
                 <span class="relative">Dashboard</span>
               </a>
+
               <a
                 routerLink="/projects"
-                class="relative px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaProjects="routerLinkActive"
+                class="relative px-4 py-2 text-sm font-medium transition-all group"
+                [class.text-white]="rlaProjects.isActive"
+                [class.text-slate-400]="!rlaProjects.isActive"
+                [class.hover:text-white]="!rlaProjects.isActive"
               >
+                <!-- Active/Hover Background -->
                 <span
-                  class="absolute inset-0 rounded-lg bg-fuchsia-500/0 group-hover:bg-fuchsia-500/10 transition-all"
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-fuchsia-500/10]="rlaProjects.isActive"
+                  [class.bg-fuchsia-500\/0]="!rlaProjects.isActive"
+                  [class.group-hover:bg-fuchsia-500\/10]="!rlaProjects.isActive"
                 ></span>
+                <!-- Underline -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-fuchsia-500 group-hover:w-2/3 transition-all rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)]"
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-fuchsia-500 rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)] transition-all duration-300"
+                  [class.w-2/3]="rlaProjects.isActive"
+                  [class.w-0]="!rlaProjects.isActive"
+                  [class.group-hover:w-2\/3]="!rlaProjects.isActive"
                 ></span>
                 <span class="relative">Projects</span>
               </a>
+
               <a
                 routerLink="/tasks"
-                class="relative px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaTasks="routerLinkActive"
+                class="relative px-4 py-2 text-sm font-medium transition-all group"
+                [class.text-white]="rlaTasks.isActive"
+                [class.text-slate-400]="!rlaTasks.isActive"
+                [class.hover:text-white]="!rlaTasks.isActive"
               >
+                <!-- Active/Hover Background -->
                 <span
-                  class="absolute inset-0 rounded-lg bg-fuchsia-500/0 group-hover:bg-fuchsia-500/10 transition-all"
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-fuchsia-500/10]="rlaTasks.isActive"
+                  [class.bg-fuchsia-500\/0]="!rlaTasks.isActive"
+                  [class.group-hover:bg-fuchsia-500\/10]="!rlaTasks.isActive"
                 ></span>
+                <!-- Underline -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-fuchsia-500 group-hover:w-2/3 transition-all rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)]"
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-fuchsia-500 rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)] transition-all duration-300"
+                  [class.w-2/3]="rlaTasks.isActive"
+                  [class.w-0]="!rlaTasks.isActive"
+                  [class.group-hover:w-2\/3]="!rlaTasks.isActive"
                 ></span>
                 <span class="relative">My Tasks</span>
               </a>
