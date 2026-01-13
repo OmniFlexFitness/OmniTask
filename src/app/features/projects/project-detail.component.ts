@@ -372,16 +372,13 @@ export class ProjectDetailComponent {
 
   constructor() {
     // Sync tab state with URL query params
-    effect(
-      () => {
-        const params = this.queryParams();
-        const tab = params?.get('tab');
-        if (tab && (tab === 'overview' || tab === 'tasks' || tab === 'settings')) {
-          this.activeTab.set(tab as ProjectTab);
-        }
-      },
-      { allowSignalWrites: true }
-    );
+    effect(() => {
+      const params = this.queryParams();
+      const tab = params?.get('tab');
+      if (tab && (tab === 'overview' || tab === 'tasks' || tab === 'settings')) {
+        this.activeTab.set(tab as ProjectTab);
+      }
+    });
 
     // Update global selected project ID when viewing this page
     effect(() => {

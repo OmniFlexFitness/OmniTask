@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, Injector, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -30,6 +30,7 @@ export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private injector = inject(Injector);
 
   private projectsCollection = collection(this.firestore, 'projects');
 
@@ -49,7 +50,9 @@ export class ProjectService {
         if (!user) return of([]);
         // Query projects where user is owner or member
         const q = query(this.projectsCollection, where('memberIds', 'array-contains', user.uid));
-        return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+        return runInInjectionContext(this.injector, () => {
+          return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+        });
       }),
       map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name)))
     );
@@ -89,10 +92,12 @@ export class ProjectService {
    */
   getProject$(id: string): Observable<Project | null> {
     const docRef = doc(this.firestore, `projects/${id}`);
-    return collectionData(
-      query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
-      { idField: 'id' }
-    ).pipe(map((docs) => (docs[0] as Project) || null));
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(
+        query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
+        { idField: 'id' }
+      ).pipe(map((docs) => (docs[0] as Project) || null));
+    });
   }
 
   /**
