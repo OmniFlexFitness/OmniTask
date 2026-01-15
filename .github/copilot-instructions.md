@@ -924,7 +924,7 @@ fix: address PR review feedback
 
 Implemented changes from review comments:
 - [Gemini #123] Added null check to task loading
-- [Codex #456] Refactored service to use signals
+- [Copilot #456] Refactored service to use signals
 - [Gemini #789] Fixed CSS hover state
 - [User #321] Updated error message text
 
