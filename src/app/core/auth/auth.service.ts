@@ -51,10 +51,11 @@ export class AuthService {
       this.router.navigate(['/']);
     } catch (error) {
       console.error('Login failed', error);
-      await this.dialogService.alert(
+      // Show error to user, but catch any dialog errors to prevent unhandled rejections
+      this.dialogService.alert(
         error instanceof Error ? error.message : 'Login failed',
         'Login Error'
-      );
+      ).catch(err => console.error('Failed to show error dialog:', err));
     }
   }
 

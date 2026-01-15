@@ -565,7 +565,7 @@ export class TaskDetailModalComponent {
     element.style.height = element.scrollHeight + 'px';
   }
 
-  async updateCustomField(fieldId: string, value: any) {
+  async updateCustomField(fieldId: string, value: string | number | boolean | Date | null) {
     // Find the field definition to validate
     const project = this.project();
     const field = project?.customFields?.find(f => f.id === fieldId);
@@ -573,7 +573,7 @@ export class TaskDetailModalComponent {
     if (field) {
       // Validate number fields
       if (field.type === 'number' && value) {
-        const numValue = parseFloat(value);
+        const numValue = parseFloat(value as string);
         if (isNaN(numValue)) {
           await this.dialogService.alert(`"${field.name}" must be a valid number.`, 'Invalid Input');
           return;
@@ -582,7 +582,7 @@ export class TaskDetailModalComponent {
       
       // Validate date fields
       if (field.type === 'date' && value) {
-        const dateValue = new Date(value);
+        const dateValue = new Date(value as string | Date);
         if (isNaN(dateValue.getTime())) {
           await this.dialogService.alert(`"${field.name}" must be a valid date.`, 'Invalid Input');
           return;
