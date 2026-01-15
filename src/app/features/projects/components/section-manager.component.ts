@@ -2,6 +2,7 @@ import { Component, input, output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
+import { DialogService } from '../../../core/services/dialog.service';
 import { Section } from '../../../core/models/domain.model';
 
 /**
@@ -217,6 +218,7 @@ const SECTION_COLORS = [
 })
 export class SectionManagerComponent {
   private projectService = inject(ProjectService);
+  private dialogService = inject(DialogService);
 
   projectId = input.required<string>();
   sections = input.required<Section[]>();
@@ -286,12 +288,13 @@ export class SectionManagerComponent {
 
   async confirmDelete(section: Section) {
     if (this.sections().length <= 1) {
-      alert('Cannot delete the last section. Projects must have at least one section.');
+      await this.dialogService.alert('Cannot delete the last section. Projects must have at least one section.', 'Cannot Delete Section');
       return;
     }
 
-    const confirmed = confirm(
-      `Delete section "${section.name}"?\n\nTasks in this section will become unassigned to any section.`
+    const confirmed = await this.dialogService.confirm(
+      `Delete section "${section.name}"?\n\nTasks in this section will become unassigned to any section.`,
+      'Delete Section'
     );
 
     if (confirmed) {

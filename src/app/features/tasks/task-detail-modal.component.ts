@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of } from 'rxjs';
@@ -486,6 +487,7 @@ export class TaskDetailModalComponent {
   private fb = inject(FormBuilder);
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
+  private dialogService = inject(DialogService);
 
   // Input
   task = input<Task | null>(null);
@@ -563,7 +565,7 @@ export class TaskDetailModalComponent {
     element.style.height = element.scrollHeight + 'px';
   }
 
-  updateCustomField(fieldId: string, value: any) {
+  async updateCustomField(fieldId: string, value: string | number | boolean | Date | null) {
     // Find the field definition to validate
     const project = this.project();
     const field = project?.customFields?.find(f => f.id === fieldId);
@@ -571,18 +573,18 @@ export class TaskDetailModalComponent {
     if (field) {
       // Validate number fields
       if (field.type === 'number' && value) {
-        const numValue = parseFloat(value);
+        const numValue = parseFloat(value as string);
         if (isNaN(numValue)) {
-          alert(`"${field.name}" must be a valid number.`);
+          await this.dialogService.alert(`"${field.name}" must be a valid number.`, 'Invalid Input');
           return;
         }
       }
       
       // Validate date fields
       if (field.type === 'date' && value) {
-        const dateValue = new Date(value);
+        const dateValue = new Date(value as string | Date);
         if (isNaN(dateValue.getTime())) {
-          alert(`"${field.name}" must be a valid date.`);
+          await this.dialogService.alert(`"${field.name}" must be a valid date.`, 'Invalid Input');
           return;
         }
       }
@@ -687,7 +689,7 @@ export class TaskDetailModalComponent {
   async deleteTask() {
     const task = this.task();
     const project = this.project();
-    if (!task || !confirm('Are you sure you want to delete this task?')) return;
+    if (!task || !(await this.dialogService.confirm('Are you sure you want to delete this task?'))) return;
 
     await this.taskService.deleteTask(task.id, project?.googleTaskListId);
     this.deleted.emit(task.id);

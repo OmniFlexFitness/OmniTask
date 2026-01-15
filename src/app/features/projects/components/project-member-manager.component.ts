@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
 import { ContactsService, Contact } from '../../../core/services/contacts.service';
+import { DialogService } from '../../../core/services/dialog.service';
 import { Project } from '../../../core/models/domain.model';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, switchMap, map, startWith } from 'rxjs';
@@ -197,6 +198,7 @@ export class ProjectMemberManagerComponent {
 
   projectService = inject(ProjectService);
   contactsService = inject(ContactsService);
+  dialogService = inject(DialogService);
 
   // Search Control
   searchControl = new FormControl('');
@@ -245,7 +247,7 @@ export class ProjectMemberManagerComponent {
   }
 
   async removeMember(userId: string) {
-    if (!confirm('Are you sure you want to remove this member from the project?')) return;
+    if (!(await this.dialogService.confirm('Are you sure you want to remove this member from the project?', 'Remove Member'))) return;
 
     try {
       await this.projectService.removeMember(this.project().id, userId);
