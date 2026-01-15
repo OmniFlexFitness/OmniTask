@@ -565,7 +565,7 @@ export class TaskDetailModalComponent {
     element.style.height = element.scrollHeight + 'px';
   }
 
-  updateCustomField(fieldId: string, value: any) {
+  async updateCustomField(fieldId: string, value: any) {
     // Find the field definition to validate
     const project = this.project();
     const field = project?.customFields?.find(f => f.id === fieldId);
