@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, Injector, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
@@ -12,12 +12,12 @@ import {
   collectionData,
   DocumentReference,
 } from '@angular/fire/firestore';
-import { 
-  Project, 
-  Section, 
-  DEFAULT_SECTIONS, 
-  CustomFieldDefinition, 
-  Tag 
+import {
+  Project,
+  Section,
+  DEFAULT_SECTIONS,
+  CustomFieldDefinition,
+  Tag,
 } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
@@ -29,6 +29,8 @@ import { GoogleTasksSyncService } from './google-tasks-sync.service';
 export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private injector = inject(Injector);
 
   private projectsCollection = collection(this.firestore, 'projects');
 
@@ -48,9 +50,25 @@ export class ProjectService {
         if (!user) return of([]);
         // Query projects where user is owner or member
         const q = query(this.projectsCollection, where('memberIds', 'array-contains', user.uid));
-        return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+        return runInInjectionContext(this.injector, () => {
+          return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+        });
       }),
       map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name)))
+    );
+  }
+  /**
+   * Get all unique tags from all user's projects
+   */
+  getAllTags(): Observable<Tag[]> {
+    return this.getMyProjects().pipe(
+      map((projects) => {
+        const tags = projects.flatMap((p) => p.tags || []);
+        // Deduplicate by ID
+        const uniqueTags = new Map<string, Tag>();
+        tags.forEach((t) => uniqueTags.set(t.id, t));
+        return Array.from(uniqueTags.values()).sort((a, b) => a.name.localeCompare(b.name));
+      })
     );
   }
 
@@ -74,10 +92,12 @@ export class ProjectService {
    */
   getProject$(id: string): Observable<Project | null> {
     const docRef = doc(this.firestore, `projects/${id}`);
-    return collectionData(
-      query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
-      { idField: 'id' }
-    ).pipe(map((docs) => (docs[0] as Project) || null));
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(
+        query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
+        { idField: 'id' }
+      ).pipe(map((docs) => (docs[0] as Project) || null));
+    });
   }
 
   /**
@@ -166,7 +186,7 @@ export class ProjectService {
       // Then delete the project from Firestore
       const docRef = doc(this.firestore, `projects/${id}`);
       await deleteDoc(docRef);
-      
+
       // Note: Tasks should be deleted separately or via Cloud Function
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete project';
@@ -253,8 +273,8 @@ export class ProjectService {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    if (!project.memberIds.includes(userId)) {
-      const updatedMemberIds = [...project.memberIds, userId];
+    if (!project.memberIds?.includes(userId)) {
+      const updatedMemberIds = [...(project.memberIds || []), userId];
       await this.updateProject(projectId, { memberIds: updatedMemberIds });
     }
   }
@@ -271,7 +291,7 @@ export class ProjectService {
       throw new Error('Cannot remove project owner');
     }
 
-    const updatedMemberIds = project.memberIds.filter((id) => id !== userId);
+    const updatedMemberIds = (project.memberIds || []).filter((id) => id !== userId);
     await this.updateProject(projectId, { memberIds: updatedMemberIds });
   }
 
@@ -330,10 +350,7 @@ export class ProjectService {
   /**
    * Add a tag to a project
    */
-  async addTag(
-    projectId: string,
-    tag: Omit<Tag, 'id'>
-  ): Promise<Tag> {
+  async addTag(projectId: string, tag: Omit<Tag, 'id'>): Promise<Tag> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 

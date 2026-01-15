@@ -2,6 +2,7 @@ import { Component, input, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../../core/services/project.service';
+import { DialogService } from '../../../../core/services/dialog.service';
 import {
   Project,
   CustomFieldType,
@@ -246,6 +247,7 @@ import {
 })
 export class CustomFieldManagerComponent {
   projectService = inject(ProjectService);
+  dialogService = inject(DialogService);
   project = input.required<Project>();
 
   isAdding = signal(false);
@@ -325,7 +327,7 @@ export class CustomFieldManagerComponent {
       this.newFieldOptions.set([]);
     } catch (err) {
       console.error('Failed to create field', err);
-      alert('Failed to create custom field. Please try again.');
+      await this.dialogService.alert('Failed to create custom field. Please try again.', 'Error');
     }
   }
 

@@ -25,7 +25,9 @@ export const routes: Routes = [
       {
         path: 'projects/:id',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+          import('./features/projects/project-detail.component').then(
+            (m) => m.ProjectDetailComponent
+          ),
       },
       {
         path: 'tasks',

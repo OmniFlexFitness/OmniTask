@@ -1,12 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <!-- Top neon accent bar - solid color with glow -->
     <div class="h-[3px] w-full relative overflow-hidden">
@@ -34,9 +34,9 @@ import { AuthService } from '../auth/auth.service';
 
       <!-- Content -->
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
+        <div class="flex items-center justify-between h-14">
           <!-- Left: Logo + Nav -->
-          <div class="flex items-center gap-10">
+          <div class="flex items-center gap-6">
             <div class="flex items-center gap-3 group cursor-pointer">
               <!-- Logo with enhanced neon ring - KEEPING GRADIENT HERE (logo element) -->
               <div class="relative">
@@ -47,15 +47,15 @@ import { AuthService } from '../auth/auth.service';
                 <img
                   src="assets/images/logo.png"
                   alt="OmniFlex"
-                  class="relative h-10 w-10 rounded-full object-contain ring-2 ring-cyan-500/40 shadow-[0_0_15px_rgba(0,210,255,0.4)]"
+                  class="relative h-8 w-8 rounded-full object-contain ring-2 ring-cyan-500/40 shadow-[0_0_15px_rgba(0,210,255,0.4)]"
                 />
               </div>
               <div class="flex flex-col">
-                <span class="text-[9px] uppercase tracking-[0.25em] text-cyan-400/80 font-semibold"
+                <span class="text-[8px] uppercase tracking-[0.25em] text-cyan-400/80 font-semibold"
                   >OmniFlex</span
                 >
                 <span
-                  class="text-xl font-bold text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                  class="text-lg font-bold text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
                   style="font-family: 'Orbitron', sans-serif;"
                   >OmniTask</span
                 >
@@ -66,35 +66,93 @@ import { AuthService } from '../auth/auth.service';
             <div class="hidden md:flex items-center gap-1">
               <a
                 routerLink="/"
-                class="relative px-4 py-2 text-sm font-semibold text-cyan-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaDashboard="routerLinkActive"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="relative px-3 py-1.5 text-sm font-semibold transition-all group"
+                [class.text-cyan-400]="rlaDashboard.isActive"
+                [class.text-slate-400]="!rlaDashboard.isActive"
+                [class.hover:text-fuchsia-400]="!rlaDashboard.isActive"
               >
-                <span class="absolute inset-0 rounded-lg bg-cyan-500/10 opacity-50"></span>
+                <!-- Active Background -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(0,210,255,0.9)]"
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-cyan-500/10]="rlaDashboard.isActive"
+                  [class.opacity-50]="rlaDashboard.isActive"
+                  [class.opacity-0]="!rlaDashboard.isActive"
+                  [class.group-hover:bg-fuchsia-500/10]="!rlaDashboard.isActive"
+                  [class.group-hover:opacity-100]="!rlaDashboard.isActive"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300"
+                  [class.bg-cyan-500]="rlaDashboard.isActive"
+                  [class.shadow-[0_0_10px_rgba(0,210,255,0.9)]]="rlaDashboard.isActive"
+                  [class.w-2/3]="rlaDashboard.isActive"
+                  [class.w-0]="!rlaDashboard.isActive"
+                  [class.group-hover:w-2/3]="!rlaDashboard.isActive"
+                  [class.group-hover:bg-fuchsia-500]="!rlaDashboard.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaDashboard.isActive"
                 ></span>
                 <span class="relative">Dashboard</span>
               </a>
+
               <a
                 routerLink="/projects"
-                class="relative px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaProjects="routerLinkActive"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                [class.text-cyan-400]="rlaProjects.isActive"
+                [class.text-slate-400]="!rlaProjects.isActive"
+                [class.hover:text-fuchsia-400]="!rlaProjects.isActive"
               >
+                <!-- Active/Hover Background -->
                 <span
-                  class="absolute inset-0 rounded-lg bg-fuchsia-500/0 group-hover:bg-fuchsia-500/10 transition-all"
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-cyan-500/10]="rlaProjects.isActive"
+                  [class.bg-fuchsia-500/0]="!rlaProjects.isActive"
+                  [class.group-hover:bg-fuchsia-500/10]="!rlaProjects.isActive"
                 ></span>
+                <!-- Underline -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-fuchsia-500 group-hover:w-2/3 transition-all rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)]"
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300"
+                  [class.bg-cyan-500]="rlaProjects.isActive"
+                  [class.shadow-[0_0_10px_rgba(0,210,255,0.9)]]="rlaProjects.isActive"
+                  [class.w-2/3]="rlaProjects.isActive"
+                  [class.w-0]="!rlaProjects.isActive"
+                  [class.group-hover:w-2/3]="!rlaProjects.isActive"
+                  [class.group-hover:bg-fuchsia-500]="!rlaProjects.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaProjects.isActive"
                 ></span>
                 <span class="relative">Projects</span>
               </a>
+
               <a
                 routerLink="/tasks"
-                class="relative px-4 py-2 text-sm font-medium text-slate-400 hover:text-white transition-all group"
+                routerLinkActive
+                #rlaTasks="routerLinkActive"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                [class.text-cyan-400]="rlaTasks.isActive"
+                [class.text-slate-400]="!rlaTasks.isActive"
+                [class.hover:text-fuchsia-400]="!rlaTasks.isActive"
               >
+                <!-- Active/Hover Background -->
                 <span
-                  class="absolute inset-0 rounded-lg bg-fuchsia-500/0 group-hover:bg-fuchsia-500/10 transition-all"
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-cyan-500/10]="rlaTasks.isActive"
+                  [class.bg-fuchsia-500/0]="!rlaTasks.isActive"
+                  [class.group-hover:bg-fuchsia-500/10]="!rlaTasks.isActive"
                 ></span>
+                <!-- Underline -->
                 <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-fuchsia-500 group-hover:w-2/3 transition-all rounded-full shadow-[0_0_8px_rgba(224,64,251,0.8)]"
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300"
+                  [class.bg-cyan-500]="rlaTasks.isActive"
+                  [class.shadow-[0_0_10px_rgba(0,210,255,0.9)]]="rlaTasks.isActive"
+                  [class.w-2/3]="rlaTasks.isActive"
+                  [class.w-0]="!rlaTasks.isActive"
+                  [class.group-hover:w-2/3]="!rlaTasks.isActive"
+                  [class.group-hover:bg-fuchsia-500]="!rlaTasks.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaTasks.isActive"
                 ></span>
                 <span class="relative">My Tasks</span>
               </a>
@@ -106,9 +164,9 @@ import { AuthService } from '../auth/auth.service';
             <!-- User email with status indicator -->
             <div class="flex items-center gap-2.5">
               <span
-                class="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"
+                class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"
               ></span>
-              <span class="text-sm text-slate-400 font-medium">{{
+              <span class="text-xs text-slate-400 font-medium">{{
                 auth.currentUserSig()?.email
               }}</span>
             </div>
@@ -116,11 +174,11 @@ import { AuthService } from '../auth/auth.service';
             <!-- Cyberpunk logout button - solid border with glow -->
             <button
               (click)="auth.logout()"
-              class="relative px-5 py-2 text-sm font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105"
+              class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105"
             >
               <!-- Solid border -->
               <span
-                class="absolute inset-0 rounded-lg border-2 border-fuchsia-500 opacity-80"
+                class="absolute inset-0 rounded-lg border border-fuchsia-500 opacity-80"
               ></span>
               <!-- Inner fill -->
               <span
