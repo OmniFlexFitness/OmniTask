@@ -1,0 +1,75 @@
+# Gemini Code Assist Configuration
+# https://cloud.google.com/gemini/docs/code-assist/customize-gemini
+
+# Code review settings
+code_review:
+  enabled: true
+  auto_review: true
+  
+  # Custom instructions reference
+  style_guide: ".gemini/styleguide.md"
+  
+  # Review focus areas
+  focus_on:
+    - code_quality
+    - performance
+    - security
+    - accessibility
+    - angular_best_practices
+    - typescript_patterns
+
+# Files and patterns to ignore during code assist
+ignore:
+  - "node_modules/**"
+  - "dist/**"
+  - ".angular/**"
+  - "*.lock"
+  - "yarn.lock"
+  - "package-lock.json"
+  - ".firebase/**"
+  - "coverage/**"
+  - "*.min.js"
+  - "*.min.css"
+
+# Pull request behavior
+pull_requests:
+  # Always push to PR branch, never create new PRs
+  update_existing: true
+  create_new_pr: false
+  
+  # Commit message settings
+  commit_style: "conventional"
+  include_co_author: true
+  
+  # Comment handling
+  respect_skip_marker: true
+  respect_include_marker: true
+  
+  # Trigger keywords
+  triggers:
+    implement_all: "@implement"
+    implement_specific: "@implement @comment-"
+    filter_gemini: "--only=gemini"
+    filter_codex: "--only=codex"
+    exclude_user: "--exclude=@"
+
+# Language-specific settings
+languages:
+  typescript:
+    prefer_strict_mode: true
+    use_single_quotes: true
+    max_line_length: 100
+    
+  html:
+    parser: "angular"
+    
+  css:
+    framework: "tailwindcss"
+
+# Angular-specific settings
+angular:
+  version: 21
+  use_standalone_components: true
+  prefer_signals: true
+  prefer_inject_function: true
+  change_detection: "OnPush"

@@ -379,10 +379,7 @@ describe('TaskService', () => {
     mockAddDoc = vi.fn().mockResolvedValue({ id: 'test-id' });
 
     TestBed.configureTestingModule({
-      providers: [
-        TaskService,
-        { provide: 'addDoc', useValue: mockAddDoc }
-      ],
+      providers: [TaskService, { provide: 'addDoc', useValue: mockAddDoc }],
     });
 
     service = TestBed.inject(TaskService);
@@ -457,7 +454,7 @@ OmniTask follows the **OmniFlex** brand identity with a premium, futuristic desi
 | Attribute  | Description                                      |
 | ---------- | ------------------------------------------------ |
 | **Theme**  | Dark mode by default with high-contrast elements |
-| **Style**  | Cyberpunk / Neon Noir / Vaporwave inspired      |
+| **Style**  | Cyberpunk / Neon Noir / Vaporwave inspired       |
 | **Feel**   | Premium, state-of-the-art, futuristic            |
 | **Motion** | Smooth, subtle animations that feel alive        |
 
@@ -835,40 +832,137 @@ export const generateAIContent = onCall({ secrets: [openaiKey] }, async (request
 
 ---
 
-## Pull Request Guidelines
+## AI-Assisted PR Review
 
-### Updating Existing PRs
+This repository uses both **GitHub Copilot** and **Google Gemini Code Assist** for automated code reviews and implementation assistance.
 
-> **🚨 IMPORTANT: When suggesting changes during PR reviews, always offer to update the existing PR branch directly.**
+### Related Configuration Files
 
-**DO NOT** create a new PR based on the current PR branch. This creates confusing nested PRs.
+| File                              | Purpose                      |
+| --------------------------------- | ---------------------------- |
+| `.github/copilot-instructions.md` | This file - Copilot context  |
+| `.gemini/GEMINI.md`               | Gemini global context        |
+| `.gemini/config.yaml`             | Gemini feature configuration |
+| `.gemini/styleguide.md`           | Code review style guide      |
 
-**DO** push commits directly to the PR's source branch to update the existing PR.
+---
 
-### Preferred Workflow
+### Trigger Keywords
 
-When Copilot suggests changes in a PR review:
+Use these keywords in PR comments to trigger AI actions:
 
-1. ✅ **Preferred**: "I'll push these changes to the `feature/my-branch` branch to update this PR."
-2. ❌ **Avoid**: "I'll create a new PR with these changes."
+| Trigger                          | Action                                            |
+| -------------------------------- | ------------------------------------------------- |
+| `@implement`                     | Implement ALL non-skipped review comments         |
+| `@implement @comment-{id}`       | Implement a specific comment by GitHub comment ID |
+| `@implement --only=gemini`       | Only implement Gemini's comments                  |
+| `@implement --only=codex`        | Only implement GitHub Copilot's comments          |
+| `@implement --exclude=@username` | Exclude a specific user's comments                |
 
-### Example Commit Message for PR Updates
+#### Example Usage
+
+```markdown
+@implement
+
+Please implement all the review feedback from this PR.
+```
+
+```markdown
+@implement --only=gemini
+
+Only apply Gemini's suggestions, skip Copilot's for now.
+```
+@implement --only=codex
+
+Only apply GitHub Copilot's suggestions, skip Gemini's for now.
+---
+
+### Comment Selection Markers
+
+Reviewers can control which comments get implemented:
+
+| Marker       | Meaning                         | Example                             |
+| ------------ | ------------------------------- | ----------------------------------- |
+| `[skip]`     | Do NOT implement this comment   | `[skip] This is just a suggestion`  |
+| `[include]`  | Explicitly include this comment | `[include] Add null check here`     |
+| `[critical]` | High priority - implement first | `[critical] Security vulnerability` |
+| `[optional]` | Nice-to-have, low priority      | `[optional] Consider renaming this` |
+
+#### Comment Examples
+
+```markdown
+[critical] This component is missing error handling. Add a try-catch block.
+```
+
+```markdown
+[skip] Just noting: we could also use a different approach here, but current is fine.
+```
+
+```markdown
+[optional] Consider extracting this into a reusable utility function.
+```
+
+---
+
+### Commit Workflow
+
+> **🚨 CRITICAL: Push directly to the PR branch. NEVER create a new PR.**
+
+When implementing review comments, follow this workflow:
+
+1. **Checkout** the PR's source branch
+2. **Implement** all non-skipped changes
+3. **Commit** with a detailed message (see format below)
+4. **Push** directly to the branch to update the existing PR
+
+### Commit Message Format
+
+When addressing review feedback, use this commit message format:
 
 ```
-fix: address review feedback
+fix: address PR review feedback
 
-- Updated component to use signals instead of BehaviorSubject
-- Fixed typo in error message
-- Added missing null check
+Implemented changes from review comments:
+- [Gemini #123] Added null check to task loading
+- [Copilot #456] Refactored service to use signals
+- [Gemini #789] Fixed CSS hover state
+- [User #321] Updated error message text
 
+Skipped comments:
+- [#999] Marked as [skip] by reviewer
+- [#888] Marked as [optional], deferred to future PR
+
+Co-authored-by: gemini-code-assist[bot] <...>
 Co-authored-by: github-copilot[bot] <...>
 ```
+
+---
 
 ### Branch Naming Conventions
 
 - Feature branches: `feature/description`
 - Bug fixes: `fix/description`
 - Hotfixes: `hotfix/description`
+- Documentation: `docs/description`
+
+---
+
+### DO and DON'T
+
+#### ✅ DO
+
+- Push changes directly to the PR's source branch
+- Include all addressed comment IDs in the commit message
+- Respect `[skip]` and `[optional]` markers
+- Group related changes into a single commit
+- Reference the original comment authors
+
+#### ❌ DON'T
+
+- Create a new PR from the current PR branch (causes nested PRs)
+- Implement comments marked with `[skip]`
+- Make changes without documenting which comments were addressed
+- Push directly to `live` branch (always use a PR)
 
 ---
 
@@ -879,3 +973,4 @@ Co-authored-by: github-copilot[bot] <...>
 - Always prefer modern Angular patterns (standalone, signals, inject())
 - Keep components focused and reusable
 - Use descriptive variable and function names
+- See `.gemini/` folder for Gemini-specific configuration
