@@ -872,7 +872,9 @@ Please implement all the review feedback from this PR.
 
 Only apply Gemini's suggestions, skip Copilot's for now.
 ```
+@implement --only=codex
 
+Only apply GitHub Copilot's suggestions, skip Gemini's for now.
 ---
 
 ### Comment Selection Markers
