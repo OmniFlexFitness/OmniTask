@@ -856,7 +856,7 @@ Use these keywords in PR comments to trigger AI actions:
 | `@implement`                     | Implement ALL non-skipped review comments         |
 | `@implement @comment-{id}`       | Implement a specific comment by GitHub comment ID |
 | `@implement --only=gemini`       | Only implement Gemini's comments                  |
-| `@implement --only=codex`        | Only implement Codex/Copilot's comments           |
+| `@implement --only=codex`        | Only implement GitHub Copilot's comments          |
 | `@implement --exclude=@username` | Exclude a specific user's comments                |
 
 #### Example Usage
