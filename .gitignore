@@ -9,6 +9,7 @@
 # Node
 /node_modules
 npm-debug.log
+npm_output.log
 yarn-error.log
 package-lock.json
 
@@ -42,12 +43,3 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
-
-# Firebase
-.firebase/
-.firebaserc
-
-# Temporary files
-*.zip
-npm_output.log
-omnitask/
