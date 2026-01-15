@@ -9,9 +9,9 @@
 # Node
 /node_modules
 npm-debug.log
+npm_output.log
 yarn-error.log
 package-lock.json
-yarn.lock
 
 # IDEs and editors
 .idea/

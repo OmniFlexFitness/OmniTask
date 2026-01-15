@@ -7,6 +7,7 @@ import { switchMap, of } from 'rxjs';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
@@ -263,6 +264,7 @@ export class DashboardComponent {
   projectService = inject(ProjectService);
   taskService = inject(TaskService);
   seedService = inject(SeedDataService);
+  dialogService = inject(DialogService);
   router = inject(Router);
 
   // State
@@ -355,7 +357,7 @@ export class DashboardComponent {
   }
 
   async deleteTask(taskId: string) {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (await this.dialogService.confirm('Are you sure you want to delete this task?')) {
       await this.taskService.deleteTask(taskId);
     }
   }

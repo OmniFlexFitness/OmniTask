@@ -1,5 +1,20 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData, orderBy, writeBatch, DocumentReference, getDoc, Timestamp } from '@angular/fire/firestore';
+import { Injectable, inject, signal, Injector, runInInjectionContext } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  collectionData,
+  orderBy,
+  writeBatch,
+  DocumentReference,
+  getDoc,
+  Timestamp,
+} from '@angular/fire/firestore';
 import { Task } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
@@ -8,7 +23,7 @@ import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { ProjectService } from './project.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TaskService {
   private firestore = inject(Firestore);
@@ -16,6 +31,7 @@ export class TaskService {
   private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
   private projectService = inject(ProjectService);
+  private injector = inject(Injector);
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -73,7 +89,9 @@ export class TaskService {
       where('projectId', '==', projectId),
       orderBy('order', 'asc')
     );
-    return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
   }
 
   /**
@@ -86,7 +104,9 @@ export class TaskService {
       where('sectionId', '==', sectionId),
       orderBy('order', 'asc')
     );
-    return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
   }
 
   /**
@@ -99,7 +119,9 @@ export class TaskService {
       where('status', '==', status),
       orderBy('order', 'asc')
     );
-    return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
   }
 
   /**
@@ -132,6 +154,19 @@ export class TaskService {
   }
 
   /**
+   * Helper to automatically add a user to the project if they are assigned a task
+   */
+  private async autoAddMember(projectId: string | undefined, userId: string | undefined) {
+    if (!projectId || !userId) return;
+    try {
+      // We don't want to block task operations on this, so we suppress errors
+      await this.projectService.addMember(projectId, userId);
+    } catch (err) {
+      console.warn('Auto-add member failed', err);
+    }
+  }
+
+  /**
    * Create a new task
    * @param task - Task data to create
    * @param googleTaskListId - Optional Google Task List ID if the project is synced with Google Tasks
@@ -142,14 +177,14 @@ export class TaskService {
   ): Promise<DocumentReference> {
     this.loading.set(true);
     this.error.set(null);
-    
+
     try {
       const user = this.auth.currentUserSig();
       const data = {
         ...task,
         createdById: user?.uid,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
       const result = await addDoc(this.tasksCollection, data);
 
@@ -159,20 +194,28 @@ export class TaskService {
           const googleTask = await firstValueFrom(
             this.googleTasksService.createTask(googleTaskListId, googleTaskData)
           );
-          await updateDoc(doc(this.tasksCollection, result.id), { 
-            googleTaskId: googleTask.id, 
+          await updateDoc(doc(this.tasksCollection, result.id), {
+            googleTaskId: googleTask.id,
             googleTaskListId: googleTaskListId,
-            isGoogleTask: true 
+            isGoogleTask: true,
           });
         } catch (err) {
           console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
           try {
             await deleteDoc(result);
           } catch (rollbackErr) {
-            console.error('Failed to rollback Firestore task after Google Task creation error:', rollbackErr);
+            console.error(
+              'Failed to rollback Firestore task after Google Task creation error:',
+              rollbackErr
+            );
           }
           throw err;
         }
+      }
+
+      // Auto-add assignee to project members
+      if (task.assignedToId) {
+        void this.autoAddMember(task.projectId, task.assignedToId);
       }
 
       return result;
@@ -195,19 +238,30 @@ export class TaskService {
     try {
       // Fetch task before update to avoid race condition
       const taskDoc = await this.getTask(id);
-      
+
       const taskRef = doc(this.firestore, `tasks/${id}`);
       await updateDoc(taskRef, {
         ...data,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
+
+      // Auto-add assignee to project members
+      if (data.assignedToId && taskDoc) {
+        void this.autoAddMember(taskDoc.projectId, data.assignedToId);
+      }
 
       if (taskDoc?.googleTaskId) {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
           try {
             const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(data);
-            await firstValueFrom(this.googleTasksService.updateTask(project.googleTaskListId, taskDoc.googleTaskId, googleTaskData));
+            await firstValueFrom(
+              this.googleTasksService.updateTask(
+                project.googleTaskListId,
+                taskDoc.googleTaskId,
+                googleTaskData
+              )
+            );
           } catch (err) {
             console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
           }
@@ -241,11 +295,14 @@ export class TaskService {
           await deleteDoc(doc(this.firestore, `tasks/${id}`));
           return;
         } catch (err) {
-          console.error('Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:', err);
+          console.error(
+            'Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:',
+            err
+          );
           throw err;
         }
       }
-      
+
       // Only delete from Firestore after successful Google Tasks deletion (or if not linked)
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
@@ -261,20 +318,28 @@ export class TaskService {
    * Mark task as complete
    */
   async completeTask(id: string, googleTaskListId?: string): Promise<void> {
-    return this.updateTask(id, {
-      status: 'done',
-      completedAt: new Date()
-    }, googleTaskListId);
+    return this.updateTask(
+      id,
+      {
+        status: 'done',
+        completedAt: new Date(),
+      },
+      googleTaskListId
+    );
   }
 
   /**
    * Reopen a completed task
    */
   async reopenTask(id: string, googleTaskListId?: string): Promise<void> {
-    return this.updateTask(id, {
-      status: 'in-progress',
-      completedAt: undefined
-    }, googleTaskListId);
+    return this.updateTask(
+      id,
+      {
+        status: 'in-progress',
+        completedAt: undefined,
+      },
+      googleTaskListId
+    );
   }
 
   /**
@@ -287,19 +352,19 @@ export class TaskService {
 
     try {
       const batch = writeBatch(this.firestore);
-      
+
       for (const task of tasks) {
         const taskRef = doc(this.firestore, `tasks/${task.id}`);
         const updateData: { order: number; updatedAt: Date; sectionId?: string } = {
           order: task.order,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         };
         if (task.sectionId !== undefined) {
           updateData.sectionId = task.sectionId;
         }
         batch.update(taskRef, updateData);
       }
-      
+
       await batch.commit();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reorder tasks';
@@ -321,12 +386,12 @@ export class TaskService {
 
     try {
       const batch = writeBatch(this.firestore);
-      
+
       for (const id of taskIds) {
         const taskRef = doc(this.firestore, `tasks/${id}`);
         batch.update(taskRef, { ...data, updatedAt: new Date() });
       }
-      
+
       await batch.commit();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update tasks';
@@ -348,12 +413,12 @@ export class TaskService {
 
     try {
       const batch = writeBatch(this.firestore);
-      
+
       for (const id of taskIds) {
         const taskRef = doc(this.firestore, `tasks/${id}`);
         batch.delete(taskRef);
       }
-      
+
       await batch.commit();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete tasks';
