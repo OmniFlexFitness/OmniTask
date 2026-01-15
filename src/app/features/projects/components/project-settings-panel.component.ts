@@ -2,6 +2,7 @@ import { Component, input, output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
+import { DialogService } from '../../../core/services/dialog.service';
 import { Project } from '../../../core/models/domain.model';
 import { SectionManagerComponent } from './section-manager.component';
 import { TagManagerComponent } from './tag-manager.component';
@@ -246,6 +247,7 @@ const PROJECT_COLORS = [
 })
 export class ProjectSettingsPanelComponent {
   private projectService = inject(ProjectService);
+  private dialogService = inject(DialogService);
 
   project = input.required<Project>();
   projectChanged = output<void>();
@@ -327,7 +329,7 @@ export class ProjectSettingsPanelComponent {
     const project = this.project();
     const action = project.status === 'active' ? 'archive' : 'restore';
 
-    if (confirm(`Are you sure you want to ${action} this project?`)) {
+    if (await this.dialogService.confirm(`Are you sure you want to ${action} this project?`, `${action === 'archive' ? 'Archive' : 'Restore'} Project`)) {
       try {
         if (project.status === 'active') {
           await this.projectService.archiveProject(project.id);
@@ -342,10 +344,11 @@ export class ProjectSettingsPanelComponent {
   }
 
   async confirmDelete() {
-    const confirmed = confirm(
+    const confirmed = await this.dialogService.confirm(
       `Are you sure you want to DELETE "${
         this.project().name
-      }"?\n\nThis will permanently remove the project and ALL its tasks. This action cannot be undone.`
+      }"?\n\nThis will permanently remove the project and ALL its tasks. This action cannot be undone.`,
+      'Delete Project'
     );
 
     if (confirmed) {

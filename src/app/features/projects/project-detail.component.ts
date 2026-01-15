@@ -6,6 +6,7 @@ import { switchMap, of } from 'rxjs';
 
 import { ProjectService } from '../../core/services/project.service';
 import { TaskService } from '../../core/services/task.service';
+import { DialogService } from '../../core/services/dialog.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectStatsCardComponent } from './components/project-stats-card.component';
@@ -365,6 +366,7 @@ export class ProjectDetailComponent {
   private router = inject(Router);
   private projectService = inject(ProjectService);
   private taskService = inject(TaskService);
+  private dialogService = inject(DialogService);
 
   // Tab State
   activeTab = signal<ProjectTab>('overview');
@@ -457,7 +459,7 @@ export class ProjectDetailComponent {
   }
 
   async deleteTask(taskId: string) {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (await this.dialogService.confirm('Are you sure you want to delete this task?')) {
       await this.taskService.deleteTask(taskId);
     }
   }

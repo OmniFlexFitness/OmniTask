@@ -2,6 +2,7 @@ import { Component, input, output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
+import { DialogService } from '../../../core/services/dialog.service';
 import { Tag } from '../../../core/models/domain.model';
 
 /**
@@ -139,6 +140,7 @@ const TAG_COLORS = [
 })
 export class TagManagerComponent {
   private projectService = inject(ProjectService);
+  private dialogService = inject(DialogService);
 
   projectId = input.required<string>();
   tags = input.required<Tag[]>();
@@ -178,8 +180,9 @@ export class TagManagerComponent {
   }
 
   async confirmDelete(tag: Tag) {
-    const confirmed = confirm(
-      `Delete tag "${tag.name}"?\n\nTasks using this tag will no longer have it assigned.`
+    const confirmed = await this.dialogService.confirm(
+      `Delete tag "${tag.name}"?\n\nTasks using this tag will no longer have it assigned.`,
+      'Delete Tag'
     );
 
     if (confirmed) {

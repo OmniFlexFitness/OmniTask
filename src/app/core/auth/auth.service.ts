@@ -3,6 +3,7 @@ import { Auth, GoogleAuthProvider, signInWithPopup, user, User } from '@angular/
 import { Firestore, doc, setDoc, getDoc } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { UserProfile } from '../models/user.model';
+import { DialogService } from '../services/dialog.service';
 import { switchMap, map } from 'rxjs/operators';
 import { of, from, Observable } from 'rxjs';
 
@@ -13,6 +14,7 @@ export class AuthService {
   private auth = inject(Auth);
   private firestore = inject(Firestore);
   private router = inject(Router);
+  private dialogService = inject(DialogService);
 
   user$ = user(this.auth);
   currentUserSig = signal<UserProfile | null>(null);
@@ -49,7 +51,10 @@ export class AuthService {
       this.router.navigate(['/']);
     } catch (error) {
       console.error('Login failed', error);
-      alert(error instanceof Error ? error.message : 'Login failed');
+      await this.dialogService.alert(
+        error instanceof Error ? error.message : 'Login failed',
+        'Login Error'
+      );
     }
   }
 
