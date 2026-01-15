@@ -10,7 +10,7 @@ import { Task } from '../models/domain.model';
  * centralizing all Google Tasks sync logic in one place.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class GoogleTasksSyncService {
   private firestore = inject(Firestore);
@@ -20,7 +20,7 @@ export class GoogleTasksSyncService {
    * Transform OmniTask Task data to Google Tasks API format
    * Maps local model fields to Google Tasks API fields
    */
-  private transformToGoogleTask(task: Partial<Task>): GoogleTask {
+  public transformToGoogleTask(task: Partial<Task>): GoogleTask {
     const googleTask: GoogleTask = {};
 
     // Map title
@@ -53,7 +53,11 @@ export class GoogleTasksSyncService {
     if (task.completedAt !== undefined) {
       if (task.completedAt instanceof Date) {
         googleTask.completed = task.completedAt.toISOString();
-      } else if (task.completedAt && typeof task.completedAt === 'object' && 'toDate' in task.completedAt) {
+      } else if (
+        task.completedAt &&
+        typeof task.completedAt === 'object' &&
+        'toDate' in task.completedAt
+      ) {
         // Handle Firestore Timestamp
         googleTask.completed = (task.completedAt as any).toDate().toISOString();
       }
@@ -66,7 +70,10 @@ export class GoogleTasksSyncService {
    * Create a Google Task List for a project
    * @returns The Google Task List ID if successful, undefined otherwise
    */
-  async createTaskListForProject(projectId: string, projectName: string): Promise<string | undefined> {
+  async createTaskListForProject(
+    projectId: string,
+    projectName: string
+  ): Promise<string | undefined> {
     try {
       const taskList = await firstValueFrom(this.googleTasksService.createTaskList(projectName));
       const projectDocRef = doc(this.firestore, `projects/${projectId}`);
@@ -105,9 +112,9 @@ export class GoogleTasksSyncService {
       throw new Error('Google Task created without ID');
     }
     // Update the Firestore task with both the Google Task ID and the list ID for future operations
-    await updateDoc(taskDocRef, { 
+    await updateDoc(taskDocRef, {
       googleTaskId: googleTask.id,
-      googleTaskListId: googleTaskListId
+      googleTaskListId: googleTaskListId,
     });
     return googleTask.id;
   }
@@ -135,8 +142,6 @@ export class GoogleTasksSyncService {
    * Delete a Google Task when an OmniTask task is deleted
    */
   async deleteTaskInGoogle(googleTaskListId: string, googleTaskId: string): Promise<void> {
-    await firstValueFrom(
-      this.googleTasksService.deleteTask(googleTaskListId, googleTaskId)
-    );
+    await firstValueFrom(this.googleTasksService.deleteTask(googleTaskListId, googleTaskId));
   }
 }
