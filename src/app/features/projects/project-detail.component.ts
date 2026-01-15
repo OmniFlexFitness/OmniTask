@@ -39,11 +39,11 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
            <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/30"></div>
           
-          <div class="px-6 py-4">
+          <div class="px-6 py-2">
             <!-- Breadcrumbs / Back -->
             <button 
               (click)="goBack()" 
-              class="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-cyan-400 mb-3 transition-colors"
+              class="flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -52,21 +52,21 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
             </button>
             
             <div class="flex items-start justify-between">
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-3">
                 <!-- Icon/Color Box -->
                 <div 
-                  class="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
+                  class="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
                   [style.background]="'linear-gradient(135deg, ' + (project.color || '#6366f1') + '20, ' + (project.color || '#6366f1') + '05)'"
                   [style.border]="'1px solid ' + (project.color || '#6366f1') + '40'"
                   [style.box-shadow]="'0 0 20px ' + (project.color || '#6366f1') + '15'"
                 >
-                  <span class="text-2xl font-bold" [style.color]="project.color || '#6366f1'">
+                  <span class="text-xl font-bold" [style.color]="project.color || '#6366f1'">
                     {{ project.name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
                 
                 <div>
-                  <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+                  <h1 class="text-xl font-bold text-white flex items-center gap-2">
                     {{ project.name }}
                     @if (project.status === 'archived') {
                       <span class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20">
@@ -74,7 +74,7 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
                       </span>
                     }
                   </h1>
-                  <p class="text-sm text-slate-400 max-w-2xl line-clamp-1">
+                  <p class="text-xs text-slate-400 max-w-2xl line-clamp-1">
                     {{ project.description || 'No description provided.' }}
                   </p>
                 </div>
@@ -84,44 +84,74 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
             </div>
             
             <!-- Navigation Tabs -->
-            <div class="flex items-center gap-6 mt-6 border-b border-white/5">
+            <div class="flex items-center gap-1 mt-3 border-b border-white/5">
+              <!-- Overview Tab (Cyan) -->
               <button
-                class="pb-3 text-sm font-medium transition-all relative"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="activeTab() === 'overview'"
                 [class.text-slate-400]="activeTab() !== 'overview'"
-                [class.hover:text-slate-200]="activeTab() !== 'overview'"
+                [class.hover:text-cyan-200]="activeTab() !== 'overview'"
                 (click)="updateTab('overview')"
               >
-                Overview
-                @if (activeTab() === 'overview') {
-                  <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] rounded-full"></span>
-                }
+                <!-- Active Background -->
+                <span
+                  class="absolute inset-0 rounded-lg bg-cyan-500/10 transition-opacity duration-300"
+                  [class.opacity-100]="activeTab() === 'overview'"
+                  [class.opacity-0]="activeTab() !== 'overview'"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(0,210,255,0.9)] transition-all duration-300"
+                  [class.w-2/3]="activeTab() === 'overview'"
+                  [class.w-0]="activeTab() !== 'overview'"
+                ></span>
+                <span class="relative">Overview</span>
               </button>
               
+              <!-- Tasks Tab (Emerald) -->
               <button
-                class="pb-3 text-sm font-medium transition-all relative"
-                [class.text-cyan-400]="activeTab() === 'tasks'"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                [class.text-emerald-400]="activeTab() === 'tasks'"
                 [class.text-slate-400]="activeTab() !== 'tasks'"
-                [class.hover:text-slate-200]="activeTab() !== 'tasks'"
+                [class.hover:text-emerald-200]="activeTab() !== 'tasks'"
                 (click)="updateTab('tasks')"
               >
-                Tasks
-                @if (activeTab() === 'tasks') {
-                  <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] rounded-full"></span>
-                }
+                <!-- Active Background -->
+                <span
+                  class="absolute inset-0 rounded-lg bg-emerald-500/10 transition-opacity duration-300"
+                  [class.opacity-100]="activeTab() === 'tasks'"
+                  [class.opacity-0]="activeTab() !== 'tasks'"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.9)] transition-all duration-300"
+                  [class.w-2/3]="activeTab() === 'tasks'"
+                  [class.w-0]="activeTab() !== 'tasks'"
+                ></span>
+                <span class="relative">Tasks</span>
               </button>
               
+              <!-- Settings Tab (Fuchsia) -->
               <button
-                class="pb-3 text-sm font-medium transition-all relative"
-                [class.text-cyan-400]="activeTab() === 'settings'"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                [class.text-fuchsia-400]="activeTab() === 'settings'"
                 [class.text-slate-400]="activeTab() !== 'settings'"
-                [class.hover:text-slate-200]="activeTab() !== 'settings'"
+                [class.hover:text-fuchsia-200]="activeTab() !== 'settings'"
                 (click)="updateTab('settings')"
               >
-                Settings
-                @if (activeTab() === 'settings') {
-                  <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)] rounded-full"></span>
-                }
+                <!-- Active Background -->
+                <span
+                  class="absolute inset-0 rounded-lg bg-fuchsia-500/10 transition-opacity duration-300"
+                  [class.opacity-100]="activeTab() === 'settings'"
+                  [class.opacity-0]="activeTab() !== 'settings'"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-fuchsia-500 rounded-full shadow-[0_0_10px_rgba(232,121,249,0.9)] transition-all duration-300"
+                  [class.w-2/3]="activeTab() === 'settings'"
+                  [class.w-0]="activeTab() !== 'settings'"
+                ></span>
+                <span class="relative">Settings</span>
               </button>
             </div>
           </div>

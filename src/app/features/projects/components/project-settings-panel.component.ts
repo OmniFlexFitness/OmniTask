@@ -6,6 +6,7 @@ import { Project } from '../../../core/models/domain.model';
 import { SectionManagerComponent } from './section-manager.component';
 import { TagManagerComponent } from './tag-manager.component';
 import { CustomFieldManagerComponent } from './custom-field-manager/custom-field-manager.component';
+import { ProjectMemberManagerComponent } from './project-member-manager.component';
 
 /**
  * Project colors for selection
@@ -36,6 +37,7 @@ const PROJECT_COLORS = [
     SectionManagerComponent,
     TagManagerComponent,
     CustomFieldManagerComponent,
+    ProjectMemberManagerComponent,
   ],
   template: `
     <div class="space-y-8">
@@ -132,23 +134,11 @@ const PROJECT_COLORS = [
       <hr class="border-white/10" />
 
       <!-- Members Section (Placeholder) -->
+      <!-- Members Section -->
       <section class="ofx-settings-section">
         <h3 class="ofx-section-title">Team Members</h3>
-        <div class="mt-4 p-4 bg-slate-800/30 rounded-lg border border-white/5">
-          <div class="flex items-center gap-3 text-slate-400">
-            <div
-              class="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold"
-            >
-              {{ getOwnerInitial() }}
-            </div>
-            <div>
-              <p class="text-sm text-slate-200">Project Owner</p>
-              <p class="text-xs text-slate-500">Member management coming soon</p>
-            </div>
-          </div>
-          <p class="text-xs text-slate-500 mt-4">
-            {{ project().memberIds?.length || 1 }} member(s) in this project
-          </p>
+        <div class="mt-4">
+          <app-project-member-manager [project]="project()"></app-project-member-manager>
         </div>
       </section>
 

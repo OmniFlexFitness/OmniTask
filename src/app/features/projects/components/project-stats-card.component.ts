@@ -138,7 +138,7 @@ import { Task } from '../../../core/models/domain.model';
       .ofx-stats-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+        gap: 0.75rem;
       }
 
       @media (min-width: 768px) {
@@ -151,7 +151,7 @@ import { Task } from '../../../core/models/domain.model';
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 0.75rem;
-        padding: 1rem;
+        padding: 0.75rem;
         display: flex;
         align-items: center;
         gap: 0.75rem;
@@ -164,8 +164,8 @@ import { Task } from '../../../core/models/domain.model';
       }
 
       .ofx-stat-icon {
-        width: 2.5rem;
-        height: 2.5rem;
+        width: 2rem;
+        height: 2rem;
         border-radius: 0.5rem;
         display: flex;
         align-items: center;
@@ -179,16 +179,16 @@ import { Task } from '../../../core/models/domain.model';
       }
 
       .ofx-stat-value {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
         font-weight: 700;
         color: white;
         line-height: 1;
       }
 
       .ofx-stat-label {
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         color: rgb(148, 163, 184);
-        margin-top: 0.25rem;
+        margin-top: 0.125rem;
       }
     `,
   ],

@@ -273,8 +273,8 @@ export class ProjectService {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    if (!project.memberIds.includes(userId)) {
-      const updatedMemberIds = [...project.memberIds, userId];
+    if (!project.memberIds?.includes(userId)) {
+      const updatedMemberIds = [...(project.memberIds || []), userId];
       await this.updateProject(projectId, { memberIds: updatedMemberIds });
     }
   }
@@ -291,7 +291,7 @@ export class ProjectService {
       throw new Error('Cannot remove project owner');
     }
 
-    const updatedMemberIds = project.memberIds.filter((id) => id !== userId);
+    const updatedMemberIds = (project.memberIds || []).filter((id) => id !== userId);
     await this.updateProject(projectId, { memberIds: updatedMemberIds });
   }
 

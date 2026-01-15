@@ -154,6 +154,19 @@ export class TaskService {
   }
 
   /**
+   * Helper to automatically add a user to the project if they are assigned a task
+   */
+  private async autoAddMember(projectId: string | undefined, userId: string | undefined) {
+    if (!projectId || !userId) return;
+    try {
+      // We don't want to block task operations on this, so we suppress errors
+      await this.projectService.addMember(projectId, userId);
+    } catch (err) {
+      console.warn('Auto-add member failed', err);
+    }
+  }
+
+  /**
    * Create a new task
    * @param task - Task data to create
    * @param googleTaskListId - Optional Google Task List ID if the project is synced with Google Tasks
@@ -200,6 +213,11 @@ export class TaskService {
         }
       }
 
+      // Auto-add assignee to project members
+      if (task.assignedToId) {
+        void this.autoAddMember(task.projectId, task.assignedToId);
+      }
+
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create task';
@@ -226,6 +244,11 @@ export class TaskService {
         ...data,
         updatedAt: new Date(),
       });
+
+      // Auto-add assignee to project members
+      if (data.assignedToId && taskDoc) {
+        void this.autoAddMember(taskDoc.projectId, data.assignedToId);
+      }
 
       if (taskDoc?.googleTaskId) {
         const project = await this.projectService.getProject(taskDoc.projectId);
