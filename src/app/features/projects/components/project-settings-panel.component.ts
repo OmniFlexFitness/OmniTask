@@ -1134,7 +1134,7 @@ export class ProjectSettingsPanelComponent {
     }
   }
 
-  formatSyncDate(date: any): string {
+  formatSyncDate(date: Date | { toDate: () => Date } | null | undefined): string {
     if (!date) return 'Never';
     const d = date instanceof Date ? date : date.toDate?.() || new Date(date);
     return d.toLocaleString();
