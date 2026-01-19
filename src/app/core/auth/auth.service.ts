@@ -43,12 +43,6 @@ export class AuthService {
       .subscribe((profile) => {
         this.currentUserSig.set(profile);
       });
-
-    // Restore token from session storage on init
-    const storedToken = sessionStorage.getItem('googleTasksAccessToken');
-    if (storedToken) {
-      this.googleTasksAccessToken.set(storedToken);
-    }
   }
 
   async loginWithGoogle() {
@@ -74,7 +68,6 @@ export class AuthService {
       const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);
       if (oauthCredential?.accessToken) {
         this.googleTasksAccessToken.set(oauthCredential.accessToken);
-        sessionStorage.setItem('googleTasksAccessToken', oauthCredential.accessToken);
       }
 
       await this.updateUserData(user);
