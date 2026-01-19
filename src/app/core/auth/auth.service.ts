@@ -38,11 +38,14 @@ export class AuthService {
         switchMap((firebaseUser) => {
           if (!firebaseUser) return of(null);
           return this.getUserProfile(firebaseUser.uid);
-        })
+        }),
       )
       .subscribe((profile) => {
         this.currentUserSig.set(profile);
       });
+
+    // Security Note: Token is kept in-memory only (not sessionStorage) to prevent XSS attacks.
+    // User will need to re-authenticate for Google Tasks after page refresh.
   }
 
   async loginWithGoogle() {
@@ -65,6 +68,7 @@ export class AuthService {
       }
 
       // Extract OAuth access token for Google Tasks API calls
+      // Security: Token is kept in-memory only, not persisted to storage
       const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);
       if (oauthCredential?.accessToken) {
         this.googleTasksAccessToken.set(oauthCredential.accessToken);
@@ -84,9 +88,8 @@ export class AuthService {
   async logout() {
     await this.auth.signOut();
     this.currentUserSig.set(null);
-    // Clear Google Tasks access token
+    // Clear Google Tasks access token from memory
     this.googleTasksAccessToken.set(null);
-    sessionStorage.removeItem('googleTasksAccessToken');
     this.router.navigate(['/login']);
   }
 
@@ -111,7 +114,7 @@ export class AuthService {
   private getUserProfile(uid: string): Observable<UserProfile | null> {
     const userRef = doc(this.firestore, `users/${uid}`);
     return from(getDoc(userRef)).pipe(
-      map((snap) => (snap.exists() ? (snap.data() as UserProfile) : null))
+      map((snap) => (snap.exists() ? (snap.data() as UserProfile) : null)),
     );
   }
 }

@@ -40,8 +40,8 @@ export interface GoogleTasksResponse {
   providedIn: 'root',
 })
 export class GoogleTasksService {
-  private http = inject(HttpClient);
-  private authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
   private readonly API_BASE_URL = 'https://tasks.googleapis.com/tasks/v1';
 
   // Authentication state - computed from auth service token
@@ -83,7 +83,7 @@ export class GoogleTasksService {
     return this.http.post<GoogleTaskList>(
       `${this.API_BASE_URL}/users/@me/lists`,
       { title },
-      { headers: this.getAuthHeaders() }
+      { headers: this.getAuthHeaders() },
     );
   }
 
@@ -107,7 +107,7 @@ export class GoogleTasksService {
   getTasks(
     taskListId: string,
     showCompleted = true,
-    updatedMin?: string
+    updatedMin?: string,
   ): Observable<GoogleTasksResponse> {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Tasks not authenticated'));
@@ -147,7 +147,7 @@ export class GoogleTasksService {
     return this.http.patch<GoogleTask>(
       `${this.API_BASE_URL}/lists/${taskListId}/tasks/${taskId}`,
       taskWithId,
-      { headers: this.getAuthHeaders() }
+      { headers: this.getAuthHeaders() },
     );
   }
 

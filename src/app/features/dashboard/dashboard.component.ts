@@ -53,104 +53,149 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
         <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <!-- Grid Pattern -->
           <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>
-          
+
           <!-- Animated Glow Orbs -->
-          <div class="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/8 rounded-full blur-[120px] animate-pulse"></div>
-          <div class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/8 rounded-full blur-[120px] animate-pulse" style="animation-delay: 1.5s;"></div>
-          <div class="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-[100px] animate-pulse" style="animation-delay: 3s;"></div>
+          <div
+            class="absolute top-0 left-1/4 w-[600px] h-[600px] bg-cyan-500/8 rounded-full blur-[120px] animate-pulse"
+          ></div>
+          <div
+            class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/8 rounded-full blur-[120px] animate-pulse animate-delay-1500"
+          ></div>
+          <div
+            class="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-pink-500/5 rounded-full blur-[100px] animate-pulse animate-delay-3000"
+          ></div>
         </div>
-        
+
         <!-- Header with Neon Accent -->
-        <header class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-20 relative" style="overflow: visible;">
+        <header
+          class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-20 relative overflow-visible-header"
+        >
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
           <div class="px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
-               @if (currentProject(); as project) {
-                 <div>
-                   <h1 class="text-xl font-bold text-white flex items-center gap-3">
-                     <span 
-                       class="w-3 h-3 rounded-sm shadow-[0_0_10px_currentColor]"
-                       [style.background-color]="project.color || '#6366f1'"
-                       [style.color]="project.color || '#6366f1'"
-                     ></span>
-                     {{ project.name }}
-                   </h1>
-                   <p class="text-xs text-slate-400 mt-1 truncate max-w-md">{{ project.description }}</p>
-                 </div>
-                 
-                  <button 
-                   class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-                   (click)="showFieldManager.set(true)"
-                   title="Manage Custom Fields"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                   </svg>
-                 </button>
-                 
-                 <!-- Project Actions -->
-                 <button 
-                   class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-                   (click)="editProjectModal.set(project)"
-                   title="Edit Project"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                   </svg>
-                 </button>
-               } @else {
-                 <h1 class="text-xl font-bold text-slate-400">Select a project</h1>
-               }
+              @if (currentProject(); as project) {
+                <div>
+                  <h1 class="text-xl font-bold text-white flex items-center gap-3">
+                    <span
+                      class="w-3 h-3 rounded-sm shadow-[0_0_10px_currentColor]"
+                      [style.background-color]="project.color || '#6366f1'"
+                      [style.color]="project.color || '#6366f1'"
+                    ></span>
+                    {{ project.name }}
+                  </h1>
+                  <p class="text-xs text-slate-400 mt-1 truncate max-w-md">
+                    {{ project.description }}
+                  </p>
+                </div>
+
+                <button
+                  class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                  (click)="showFieldManager.set(true)"
+                  title="Manage Custom Fields"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Project Actions -->
+                <button
+                  class="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                  (click)="editProjectModal.set(project)"
+                  title="Edit Project"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </button>
+              } @else {
+                <h1 class="text-xl font-bold text-slate-400">Select a project</h1>
+              }
             </div>
 
             <!-- View Toggles & Actions -->
             <div class="flex items-center gap-4">
               <!-- Cyberpunk View Switcher - Purple Glow, No Gradient Fills -->
-              <div class="flex bg-[#0a0f1e] p-1 rounded-lg border border-fuchsia-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]">
-                <button 
+              <div
+                class="flex bg-[#0a0f1e] p-1 rounded-lg border border-fuchsia-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]"
+              >
+                <button
                   class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                   [class.bg-fuchsia-500/20]="viewMode() === 'list'"
                   [class.text-fuchsia-300]="viewMode() === 'list'"
+                  [class.ofx-view-switch-active]="viewMode() === 'list'"
                   [class.text-slate-500]="viewMode() !== 'list'"
                   [class.hover:text-slate-300]="viewMode() !== 'list'"
-                  [style.box-shadow]="viewMode() === 'list' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('list')"
                 >
                   List
                 </button>
-                <button 
+                <button
                   class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                   [class.bg-fuchsia-500/20]="viewMode() === 'board'"
                   [class.text-fuchsia-300]="viewMode() === 'board'"
+                  [class.ofx-view-switch-active]="viewMode() === 'board'"
                   [class.text-slate-500]="viewMode() !== 'board'"
                   [class.hover:text-slate-300]="viewMode() !== 'board'"
-                  [style.box-shadow]="viewMode() === 'board' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('board')"
                 >
                   Board
                 </button>
-                <button 
+                <button
                   class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                   [class.bg-fuchsia-500/20]="viewMode() === 'calendar'"
                   [class.text-fuchsia-300]="viewMode() === 'calendar'"
+                  [class.ofx-view-switch-active]="viewMode() === 'calendar'"
                   [class.text-slate-500]="viewMode() !== 'calendar'"
                   [class.hover:text-slate-300]="viewMode() !== 'calendar'"
-                  [style.box-shadow]="viewMode() === 'calendar' ? '0 0 20px rgba(224,64,251,0.4), inset 0 0 10px rgba(224,64,251,0.1)' : 'none'"
                   (click)="viewMode.set('calendar')"
                 >
-                   Calendar
+                  Calendar
                 </button>
               </div>
 
               <!-- Cyberpunk Add Task Button -->
-              <button 
+              <button
                 class="ofx-neon-button flex items-center gap-2 !py-2"
                 [disabled]="!currentProject()"
                 (click)="openCreateTaskModal()"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  />
                 </svg>
                 Add Task
               </button>
@@ -170,17 +215,25 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
                   (click)="syncGoogleTasks()"
                   title="Sync with Google Tasks"
                 >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    class="h-5 w-5" 
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
                     [class.animate-spin]="syncing()"
-                    fill="none" 
-                    viewBox="0 0 24 24" 
+                    fill="none"
+                    viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
-                  <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse" *ngIf="!syncing()"></span>
+                  <span
+                    class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse"
+                    *ngIf="!syncing()"
+                  ></span>
                 </button>
               }
 
@@ -192,31 +245,55 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
                   class="p-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 transition-colors"
                   title="Project Settings"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
                   </svg>
                 </a>
               }
-              
+
               <!-- User Profile -->
-               <div class="relative group">
-                 <button class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold">
-                   {{ auth.currentUserSig()?.displayName?.charAt(0) }}
-                 </button>
-                 <div class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all" style="z-index: 9999;">
-                   <div class="px-4 py-2 border-b border-white/5 mb-2">
-                     <p class="text-sm font-medium text-white">{{ auth.currentUserSig()?.displayName }}</p>
-                     <p class="text-xs text-slate-500 truncate">{{ auth.currentUserSig()?.email }}</p>
-                   </div>
-                   <button 
-                     class="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
-                     (click)="auth.logout()"
-                   >
-                     Sign Out
-                   </button>
-                 </div>
-               </div>
+              <div class="relative group">
+                <button
+                  class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold"
+                >
+                  {{ auth.currentUserSig()?.displayName?.charAt(0) }}
+                </button>
+                <div
+                  class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-dropdown"
+                >
+                  <div class="px-4 py-2 border-b border-white/5 mb-2">
+                    <p class="text-sm font-medium text-white">
+                      {{ auth.currentUserSig()?.displayName }}
+                    </p>
+                    <p class="text-xs text-slate-500 truncate">
+                      {{ auth.currentUserSig()?.email }}
+                    </p>
+                  </div>
+                  <button
+                    class="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                    (click)="auth.logout()"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </header>
@@ -225,13 +302,28 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
         <main class="flex-1 overflow-hidden p-6 z-10">
           @if (!currentProject()) {
             <div class="h-full flex flex-col items-center justify-center text-slate-500">
-               <div class="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                 </svg>
-               </div>
-               <h2 class="text-xl font-bold text-white mb-2">No Project Selected</h2>
-               <p class="max-w-md text-center">Select a project from the sidebar or create a new one to start managing your tasks.</p>
+              <div
+                class="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-12 w-12 opacity-50"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              </div>
+              <h2 class="text-xl font-bold text-white mb-2">No Project Selected</h2>
+              <p class="max-w-md text-center">
+                Select a project from the sidebar or create a new one to start managing your tasks.
+              </p>
             </div>
           } @else {
             @switch (viewMode()) {
@@ -254,9 +346,9 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
               }
               @case ('calendar') {
                 <app-task-calendar-view
-                   [tasks]="tasks()"
-                   (taskClick)="openTaskDetail($event)"
-                   (addTaskForDate)="addTaskForDate($event)"
+                  [tasks]="tasks()"
+                  (taskClick)="openTaskDetail($event)"
+                  (addTaskForDate)="addTaskForDate($event)"
                 ></app-task-calendar-view>
               }
             }
@@ -292,15 +384,15 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
           (created)="onTaskCreated($event)"
         ></app-task-create-modal>
       }
-      
+
       @if (showFieldManager() && currentProject()) {
-        <div 
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" 
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           (click)="showFieldManager.set(false)"
         >
-           <div class="w-full max-w-lg" (click)="$event.stopPropagation()">
-              <app-custom-field-manager [project]="currentProject()!"></app-custom-field-manager>
-           </div>
+          <div class="w-full max-w-lg" (click)="$event.stopPropagation()">
+            <app-custom-field-manager [project]="currentProject()!"></app-custom-field-manager>
+          </div>
         </div>
       }
     </div>
@@ -354,17 +446,17 @@ export class DashboardComponent {
   // Derived state for Current Project
   currentProject = toSignal(
     toObservable(this.selectedProjectId).pipe(
-      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null)))
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   // Derived state for Tasks of Current Project
   tasks = toSignal(
     toObservable(this.selectedProjectId).pipe(
-      switchMap((id) => (id ? this.taskService.getTasksByProject(id) : of([])))
+      switchMap((id) => (id ? this.taskService.getTasksByProject(id) : of([]))),
     ),
-    { initialValue: [] }
+    { initialValue: [] },
   );
 
   onProjectSelect(project: Project) {
@@ -435,7 +527,7 @@ export class DashboardComponent {
     if (!project?.googleTaskListId) {
       await this.dialogService.alert(
         'Please configure Google Tasks sync in project settings first.',
-        'Sync Not Configured'
+        'Sync Not Configured',
       );
       return;
     }
@@ -444,7 +536,7 @@ export class DashboardComponent {
     if (!this.googleTasksService.isAuthenticated()) {
       const shouldReauth = await this.dialogService.confirm(
         'Google Tasks is not connected. You need to sign out and sign in again to grant permission to access Google Tasks.\n\nWould you like to sign out now?',
-        'Google Tasks Not Connected'
+        'Google Tasks Not Connected',
       );
       if (shouldReauth) {
         await this.auth.logout();
@@ -469,7 +561,7 @@ export class DashboardComponent {
       const result = await this.googleTasksSyncService.pullFromGoogleTasks(
         project.id,
         project.googleTaskListId,
-        lastSyncDate
+        lastSyncDate,
       );
 
       console.log(`Sync complete: ${result.added} added, ${result.updated} updated`);
@@ -477,7 +569,7 @@ export class DashboardComponent {
       // Show success message
       await this.dialogService.alert(
         `Sync complete!\n\n${result.added} tasks added, ${result.updated} tasks updated.`,
-        'Sync Successful'
+        'Sync Successful',
       );
 
       // Mark as synced
@@ -485,15 +577,16 @@ export class DashboardComponent {
         syncStatus: 'synced',
         lastSyncAt: new Date(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sync failed:', error);
       await this.projectService.updateProject(project.id, { syncStatus: 'error' });
 
       // Provide specific error message
       let errorMessage = 'Sync failed. Please try again.';
-      if (error?.message?.includes('not authenticated')) {
+      const err = error as { message?: string; status?: number };
+      if (err?.message?.includes('not authenticated')) {
         errorMessage = 'Google Tasks authentication expired. Please sign out and sign in again.';
-      } else if (error?.status === 401 || error?.status === 403) {
+      } else if (err?.status === 401 || err?.status === 403) {
         errorMessage = 'Access denied. Please sign out and sign in again to refresh permissions.';
       }
       await this.dialogService.alert(errorMessage, 'Sync Error');
