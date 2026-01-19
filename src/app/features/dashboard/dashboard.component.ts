@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of } from 'rxjs';
 
@@ -9,6 +9,8 @@ import { ProjectService } from '../../core/services/project.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
+import { GoogleTasksSyncService } from '../../core/services/google-tasks-sync.service';
+import { GoogleTasksService } from '../../core/services/google-tasks.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
@@ -25,6 +27,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     ProjectSidebarComponent,
     ProjectFormModalComponent,
     TaskListViewComponent,
@@ -58,7 +61,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
         </div>
         
         <!-- Header with Neon Accent -->
-        <header class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-10 relative">
+        <header class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-20 relative" style="overflow: visible;">
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
           <div class="px-6 py-4 flex items-center justify-between">
@@ -151,13 +154,57 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
                 </svg>
                 Add Task
               </button>
+
+              <!-- Google Tasks Sync Button -->
+              @if (currentProject()?.syncEnabled && currentProject()?.googleTaskListId) {
+                <button
+                  class="relative p-2 rounded-lg border transition-all duration-200 group"
+                  [class.border-emerald-500/30]="!syncing()"
+                  [class.bg-emerald-500/10]="!syncing()"
+                  [class.text-emerald-400]="!syncing()"
+                  [class.hover:bg-emerald-500/20]="!syncing()"
+                  [class.border-amber-500/30]="syncing()"
+                  [class.bg-amber-500/10]="syncing()"
+                  [class.text-amber-400]="syncing()"
+                  [disabled]="syncing()"
+                  (click)="syncGoogleTasks()"
+                  title="Sync with Google Tasks"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    class="h-5 w-5" 
+                    [class.animate-spin]="syncing()"
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse" *ngIf="!syncing()"></span>
+                </button>
+              }
+
+              <!-- Project Settings Link -->
+              @if (currentProject()) {
+                <a
+                  [routerLink]="['/projects', currentProject()!.id]"
+                  [queryParams]="{ tab: 'settings' }"
+                  class="p-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 transition-colors"
+                  title="Project Settings"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </a>
+              }
               
               <!-- User Profile -->
                <div class="relative group">
                  <button class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold">
                    {{ auth.currentUserSig()?.displayName?.charAt(0) }}
                  </button>
-                 <div class="absolute right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-50">
+                 <div class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all" style="z-index: 9999;">
                    <div class="px-4 py-2 border-b border-white/5 mb-2">
                      <p class="text-sm font-medium text-white">{{ auth.currentUserSig()?.displayName }}</p>
                      <p class="text-xs text-slate-500 truncate">{{ auth.currentUserSig()?.email }}</p>
@@ -266,11 +313,14 @@ export class DashboardComponent {
   seedService = inject(SeedDataService);
   dialogService = inject(DialogService);
   router = inject(Router);
+  googleTasksSyncService = inject(GoogleTasksSyncService);
+  googleTasksService = inject(GoogleTasksService);
 
   // State
   selectedProjectId = this.projectService.selectedProjectId;
   viewMode = signal<TaskViewMode>('list');
   seeding = signal(false);
+  syncing = signal(false);
 
   constructor() {
     // Seed sample data if user has no projects
@@ -377,6 +427,78 @@ export class DashboardComponent {
       if (name && name.trim()) {
         await this.projectService.addSection(pid, name.trim());
       }
+    }
+  }
+
+  async syncGoogleTasks() {
+    const project = this.currentProject();
+    if (!project?.googleTaskListId) {
+      await this.dialogService.alert(
+        'Please configure Google Tasks sync in project settings first.',
+        'Sync Not Configured'
+      );
+      return;
+    }
+
+    // Check if Google Tasks is authenticated
+    if (!this.googleTasksService.isAuthenticated()) {
+      const shouldReauth = await this.dialogService.confirm(
+        'Google Tasks is not connected. You need to sign out and sign in again to grant permission to access Google Tasks.\n\nWould you like to sign out now?',
+        'Google Tasks Not Connected'
+      );
+      if (shouldReauth) {
+        await this.auth.logout();
+      }
+      return;
+    }
+
+    this.syncing.set(true);
+    try {
+      // Update sync status to pending
+      await this.projectService.updateProject(project.id, { syncStatus: 'pending' });
+
+      // Get the last sync timestamp
+      const lastSyncAt = project.lastSyncAt;
+      const lastSyncDate = lastSyncAt
+        ? lastSyncAt instanceof Date
+          ? lastSyncAt
+          : (lastSyncAt as any).toDate?.() || undefined
+        : undefined;
+
+      // Pull tasks from Google Tasks
+      const result = await this.googleTasksSyncService.pullFromGoogleTasks(
+        project.id,
+        project.googleTaskListId,
+        lastSyncDate
+      );
+
+      console.log(`Sync complete: ${result.added} added, ${result.updated} updated`);
+
+      // Show success message
+      await this.dialogService.alert(
+        `Sync complete!\n\n${result.added} tasks added, ${result.updated} tasks updated.`,
+        'Sync Successful'
+      );
+
+      // Mark as synced
+      await this.projectService.updateProject(project.id, {
+        syncStatus: 'synced',
+        lastSyncAt: new Date(),
+      });
+    } catch (error: any) {
+      console.error('Sync failed:', error);
+      await this.projectService.updateProject(project.id, { syncStatus: 'error' });
+
+      // Provide specific error message
+      let errorMessage = 'Sync failed. Please try again.';
+      if (error?.message?.includes('not authenticated')) {
+        errorMessage = 'Google Tasks authentication expired. Please sign out and sign in again.';
+      } else if (error?.status === 401 || error?.status === 403) {
+        errorMessage = 'Access denied. Please sign out and sign in again to refresh permissions.';
+      }
+      await this.dialogService.alert(errorMessage, 'Sync Error');
+    } finally {
+      this.syncing.set(false);
     }
   }
 }
