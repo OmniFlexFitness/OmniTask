@@ -57,7 +57,11 @@ export interface Project {
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;
   status: 'active' | 'archived';
+  // Google Tasks sync fields
   googleTaskListId?: string;
+  syncEnabled?: boolean; // Whether sync is active for this project
+  lastSyncAt?: FirestoreDate; // Last successful sync timestamp
+  syncStatus?: 'synced' | 'pending' | 'error'; // Current sync status
 }
 
 export interface Task {

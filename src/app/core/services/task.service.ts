@@ -336,7 +336,7 @@ export class TaskService {
       id,
       {
         status: 'in-progress',
-        completedAt: undefined,
+        completedAt: null as any, // Use null to clear field (Firestore rejects undefined)
       },
       googleTaskListId
     );
