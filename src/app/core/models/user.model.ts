@@ -7,4 +7,9 @@ export interface UserProfile {
   role: 'admin' | 'user';
   createdAt: Date;
   lastLoginAt: Date;
+  
+  // Google Tasks scheduled sync fields
+  hasGoogleTasksOfflineAccess?: boolean;
+  googleTasksOfflineAccessGrantedAt?: Date;
+  googleTasksRefreshToken?: string | null; // Encrypted refresh token for Cloud Functions
 }

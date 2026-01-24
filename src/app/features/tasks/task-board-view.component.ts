@@ -312,35 +312,31 @@ export class TaskBoardViewComponent {
   }
 
   private reorderTask(taskId: string, newIndex: number, sectionId: string, siblingTasks: Task[]) {
-    // This is a simplified reorder logic.
-    // Real-world robust implementation often uses lexicographical rank or float spacing.
-    // Here we'll just re-index the impacted list 0..N
-
-    const tasks = [...siblingTasks];
-    // If moving into this list (transfer), insert the task
-    // If reordering same list, move it.
-
-    // Actually, `CdkDragDrop` events give us indices.
-    // Since we're not using `moveItemInArray` on the master `tasks` signal directly in the component
-    // (because `tasks` is an input signal), we delegate to service.
-
-    // We construct the new desired state for this section
-    // And send to backend.
-
-    // TODO: Implement robust reorder in service.
-    // For MVP, we just update the `sectionId` and a simple `order` = index.
-
-    this.taskService.reorderTasks([
-      {
-        id: taskId,
-        order: newIndex, // This needs to be relative to the *target* section's other tasks
-        sectionId,
-      },
-    ]);
-
-    // Note: To make this robust, we should really be sending the *entire* list of IDs
-    // in their new order for this section to the backend to bulk-update their orders.
-    // But let's stick to simple update for now.
+    // Build the complete reordered list with proper indices for ALL tasks in the section
+    // This ensures no order collisions occur after drag-drop operations
+    
+    // Get the moved task (may not be in siblingTasks if transferring between columns)
+    const movedTask = siblingTasks.find(t => t.id === taskId);
+    
+    // Remove the moved task from its current position (if present)
+    const tasksWithoutMoved = siblingTasks.filter(t => t.id !== taskId);
+    
+    // Build the new ordered list by inserting at the target index
+    const reorderedList: { id: string }[] = [
+      ...tasksWithoutMoved.slice(0, newIndex),
+      { id: taskId }, // Insert moved task at new position
+      ...tasksWithoutMoved.slice(newIndex)
+    ];
+    
+    // Update ALL tasks in the section with sequential order values
+    // This prevents order collisions and ensures consistent ordering
+    const updates = reorderedList.map((task, index) => ({
+      id: task.id,
+      order: index,
+      sectionId,
+    }));
+    
+    this.taskService.reorderTasks(updates);
   }
 
   formatDate(date: any): string {
