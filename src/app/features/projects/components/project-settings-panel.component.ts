@@ -442,6 +442,59 @@ const PROJECT_COLORS = [
             </div>
 
             @if (project().googleTaskListId) {
+              <!-- Scheduled Sync Toggle -->
+              <div
+                class="p-4 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-indigo-500/20"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 text-indigo-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-semibold text-white">Scheduled Sync</h4>
+                      <p class="text-xs text-slate-400">Auto-sync every 5 minutes in background</p>
+                    </div>
+                  </div>
+                  @if (hasOfflineAccess()) {
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                    >
+                      <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                      Enabled
+                    </span>
+                  } @else {
+                    <button
+                      class="px-3 py-1.5 text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-lg hover:bg-indigo-500/30 transition-all"
+                      [disabled]="enablingScheduledSync()"
+                      (click)="enableScheduledSync()"
+                    >
+                      {{ enablingScheduledSync() ? 'Enabling...' : 'Enable' }}
+                    </button>
+                  }
+                </div>
+                @if (!hasOfflineAccess()) {
+                  <p class="text-xs text-slate-500 mt-3 pl-13">
+                    Requires additional Google permissions for background sync.
+                  </p>
+                }
+              </div>
+
               <!-- Sync Status Card -->
               <div
                 class="p-5 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-cyan-500/20"
@@ -848,6 +901,10 @@ export class ProjectSettingsPanelComponent {
   previewingListId = signal<string | null>(null); // Which list is being previewed
   previewingListName = signal<string | null>(null); // Name of list being previewed
 
+  // Scheduled sync state
+  hasOfflineAccess = computed(() => this.authService.hasOfflineAccess());
+  enablingScheduledSync = signal(false);
+
   // Computed: Get current linked list name
   currentLinkedListName = computed(() => {
     const listId = this.project().googleTaskListId;
@@ -1198,6 +1255,32 @@ export class ProjectSettingsPanelComponent {
       return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     } catch {
       return dateStr;
+    }
+  }
+
+  /**
+   * Enable scheduled sync by requesting offline access from Google.
+   * This allows Cloud Functions to sync tasks in the background.
+   */
+  async enableScheduledSync() {
+    this.enablingScheduledSync.set(true);
+    try {
+      const success = await this.authService.requestOfflineAccess();
+      if (success) {
+        this.lastSyncResult.set({
+          success: true,
+          message: 'Scheduled sync enabled! Tasks will sync automatically every 5 minutes.',
+        });
+        setTimeout(() => this.lastSyncResult.set(null), 5000);
+      }
+    } catch (error) {
+      console.error('Failed to enable scheduled sync:', error);
+      this.lastSyncResult.set({
+        success: false,
+        message: 'Failed to enable scheduled sync. Please try again.',
+      });
+    } finally {
+      this.enablingScheduledSync.set(false);
     }
   }
 }

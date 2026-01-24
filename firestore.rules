@@ -26,9 +26,27 @@ service cloud.firestore {
     }
     
     match /tasks/{taskId} {
-      allow create: if isAuthenticated(); // Should ideally check project membership in trigger or here if project data available
-      allow read: if isAuthenticated(); // TODO: Add tighter check by joining with project
-      allow update, delete: if isAuthenticated();
+      // Helper: Check if user is a member of the task's project (for existing tasks)
+      function isProjectMember() {
+        let project = get(/databases/$(database)/documents/projects/$(resource.data.projectId));
+        return project != null && (
+          request.auth.uid == project.data.ownerId || 
+          request.auth.uid in project.data.memberIds
+        );
+      }
+      
+      // Helper: Check if user can create a task in the specified project (for new tasks)
+      function canCreateInProject() {
+        let project = get(/databases/$(database)/documents/projects/$(request.resource.data.projectId));
+        return project != null && (
+          request.auth.uid == project.data.ownerId || 
+          request.auth.uid in project.data.memberIds
+        );
+      }
+
+      allow create: if isAuthenticated() && canCreateInProject();
+      allow read: if isAuthenticated() && isProjectMember();
+      allow update, delete: if isAuthenticated() && isProjectMember();
     }
   }
 }
