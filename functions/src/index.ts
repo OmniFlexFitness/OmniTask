@@ -15,6 +15,19 @@ const googleClientSecret = defineSecret('GOOGLE_CLIENT_SECRET');
 
 // Google Tasks API client
 const tasksApi = google.tasks('v1');
+// Google People API client (for directory contacts)
+const peopleApi = google.people('v1');
+
+/**
+ * Contact interface for workspace contacts
+ */
+interface WorkspaceContact {
+  id: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  source: 'google-directory' | 'google-contacts';
+}
 
 /**
  * Interface matching OmniTask domain model
@@ -318,5 +331,171 @@ export const manualGoogleTasksSync = onCall<{ projectId: string; accessToken: st
     const result = await syncProject(project, accessToken);
 
     return result;
+  }
+);
+
+/**
+ * Callable function to get workspace contacts from Google Directory
+ * This function uses the People API to fetch directory contacts
+ * which works for Google Workspace users to see other users in their organization
+ */
+export const getWorkspaceContacts = onCall<{ accessToken: string; pageSize?: number }>(
+  {
+    memory: '256MiB',
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const { accessToken, pageSize = 100 } = request.data;
+
+    if (!accessToken) {
+      throw new HttpsError('invalid-argument', 'Missing accessToken');
+    }
+
+    try {
+      // Set up authenticated client
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+
+      // Fetch directory people using People API
+      const response = await peopleApi.people.listDirectoryPeople({
+        readMask: 'names,emailAddresses,photos',
+        sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
+        pageSize: Math.min(pageSize, 1000),
+        auth: oauth2Client,
+      });
+
+      const people = response.data.people || [];
+      
+      const contacts: WorkspaceContact[] = [];
+      
+      for (const person of people) {
+        // Get primary or first email
+        const emailAddress = person.emailAddresses?.find(e => e.metadata?.primary) || person.emailAddresses?.[0];
+        const email = emailAddress?.value;
+
+        if (!email) continue; // Skip contacts without email
+
+        // Get primary or first name
+        const nameData = person.names?.find(n => n.metadata?.primary) || person.names?.[0];
+        const displayName = nameData?.displayName || email.split('@')[0];
+
+        // Get primary or first photo
+        const photoData = person.photos?.find(p => p.metadata?.primary) || person.photos?.[0];
+        const photoURL = photoData?.url || undefined;
+
+        contacts.push({
+          id: email,
+          email,
+          displayName,
+          photoURL,
+          source: 'google-directory',
+        });
+      }
+
+      // Sort by display name
+      contacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+      return {
+        contacts,
+        totalCount: contacts.length,
+      };
+    } catch (error) {
+      console.error('Failed to fetch workspace contacts:', error);
+      
+      // Check if it's a permission error
+      if (error instanceof Error && error.message.includes('403')) {
+        throw new HttpsError(
+          'permission-denied',
+          'Unable to access directory contacts. This may require Google Workspace admin permissions.'
+        );
+      }
+
+      throw new HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Failed to fetch workspace contacts'
+      );
+    }
+  }
+);
+
+/**
+ * Callable function to search workspace contacts
+ * Uses the People API searchDirectoryPeople endpoint
+ */
+export const searchWorkspaceContacts = onCall<{ accessToken: string; query: string; pageSize?: number }>(
+  {
+    memory: '256MiB',
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const { accessToken, query, pageSize = 20 } = request.data;
+
+    if (!accessToken) {
+      throw new HttpsError('invalid-argument', 'Missing accessToken');
+    }
+
+    if (!query || !query.trim()) {
+      return { contacts: [], totalCount: 0 };
+    }
+
+    try {
+      // Set up authenticated client
+      const oauth2Client = new google.auth.OAuth2();
+      oauth2Client.setCredentials({ access_token: accessToken });
+
+      // Search directory people using People API
+      const response = await peopleApi.people.searchDirectoryPeople({
+        query: query.trim(),
+        readMask: 'names,emailAddresses,photos',
+        sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
+        pageSize: Math.min(pageSize, 100),
+        auth: oauth2Client,
+      });
+
+      const people = response.data.people || [];
+      
+      const contacts: WorkspaceContact[] = [];
+      
+      for (const person of people) {
+        const emailAddress = person.emailAddresses?.find(e => e.metadata?.primary) || person.emailAddresses?.[0];
+        const email = emailAddress?.value;
+
+        if (!email) continue;
+
+        const nameData = person.names?.find(n => n.metadata?.primary) || person.names?.[0];
+        const displayName = nameData?.displayName || email.split('@')[0];
+
+        const photoData = person.photos?.find(p => p.metadata?.primary) || person.photos?.[0];
+        const photoURL = photoData?.url || undefined;
+
+        contacts.push({
+          id: email,
+          email,
+          displayName,
+          photoURL,
+          source: 'google-directory',
+        });
+      }
+
+      return {
+        contacts,
+        totalCount: contacts.length,
+      };
+    } catch (error) {
+      console.error('Failed to search workspace contacts:', error);
+      
+      throw new HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Failed to search workspace contacts'
+      );
+    }
   }
 );
