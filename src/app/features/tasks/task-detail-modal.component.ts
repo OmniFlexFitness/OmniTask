@@ -4,14 +4,16 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angu
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of } from 'rxjs';
+import { switchMap, of, map } from 'rxjs';
+import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/components/autocomplete-input/autocomplete-input.component';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, AutocompleteInputComponent],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
@@ -142,13 +144,14 @@ import { switchMap, of } from 'rxjs';
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Assignee</label
               >
-              <input
-                type="text"
-                formControlName="assigneeName"
-                placeholder="Unassigned"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
-              />
+              <app-autocomplete-input
+                [options]="assigneeOptions()"
+                [value]="form.value.assigneeName || ''"
+                [allowCustom]="true"
+                placeholder="Search contacts..."
+                (optionSelected)="onAssigneeSelected($event)"
+                (valueChange)="onAssigneeValueChange($event)"
+              ></app-autocomplete-input>
             </div>
 
             <!-- Status -->
@@ -488,6 +491,7 @@ export class TaskDetailModalComponent {
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
   private dialogService = inject(DialogService);
+  private contactsService = inject(ContactsService);
 
   // Input
   task = input<Task | null>(null);
@@ -511,6 +515,24 @@ export class TaskDetailModalComponent {
   projectSections = computed(() => {
     return this.project()?.sections || [];
   });
+
+  // Contacts for assignee autocomplete
+  assigneeOptions = toSignal(
+    this.contactsService.getContacts().pipe(
+      map((contacts) =>
+        contacts.map((c): AutocompleteOption => ({
+          id: c.id,
+          label: c.displayName,
+          sublabel: c.email,
+          avatar: c.photoURL,
+        }))
+      )
+    ),
+    { initialValue: [] }
+  );
+
+  // Track selected assignee ID
+  selectedAssigneeId = signal<string | null>(null);
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -549,6 +571,9 @@ export class TaskDetailModalComponent {
           },
           { emitEvent: false }
         );
+
+        // Set selected assignee ID from task
+        this.selectedAssigneeId.set(task.assignedToId || null);
 
         // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
@@ -639,6 +664,40 @@ export class TaskDetailModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
+  /**
+   * Handle assignee selection from autocomplete
+   */
+  onAssigneeSelected(selection: AutocompleteOption | string): void {
+    if (typeof selection === 'object') {
+      // Selected a contact from the list
+      this.selectedAssigneeId.set(selection.id);
+      this.form.patchValue({ assigneeName: selection.label });
+    } else {
+      // Custom value entered
+      this.selectedAssigneeId.set(null);
+      this.form.patchValue({ assigneeName: selection });
+    }
+    this.form.markAsDirty();
+    this.autoSave();
+  }
+
+  /**
+   * Handle assignee value change (for typing/clearing)
+   */
+  onAssigneeValueChange(value: string): void {
+    this.form.patchValue({ assigneeName: value });
+    // If value doesn't match any option, clear the selected ID
+    const matchingOption = this.assigneeOptions().find(
+      (opt) => opt.label === value || opt.id === value
+    );
+    if (matchingOption) {
+      this.selectedAssigneeId.set(matchingOption.id);
+    } else {
+      this.selectedAssigneeId.set(null);
+    }
+    this.form.markAsDirty();
+  }
+
   async autoSave() {
     const task = this.task();
     const project = this.project();
@@ -652,6 +711,7 @@ export class TaskDetailModalComponent {
     const updates: Partial<Task> = {
       title: val.title!,
       description: val.description || '',
+      assignedToId: this.selectedAssigneeId() || undefined,
       assigneeName: val.assigneeName || undefined,
       status: val.status as Task['status'],
       dueDate,

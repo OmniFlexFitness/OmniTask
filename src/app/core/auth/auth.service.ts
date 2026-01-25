@@ -17,6 +17,12 @@ import { of, from, Observable } from 'rxjs';
 // Google Tasks API scope for read/write access
 const GOOGLE_TASKS_SCOPE = 'https://www.googleapis.com/auth/tasks';
 
+// Google Contacts/People API scope for reading contacts (used for assignee suggestions)
+const GOOGLE_CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts.readonly';
+
+// Google Workspace Directory API scope for reading domain users
+const GOOGLE_DIRECTORY_SCOPE = 'https://www.googleapis.com/auth/directory.readonly';
+
 // Google OAuth configuration for refresh token flow
 // These are public client identifiers (safe to expose in frontend code)
 const GOOGLE_CLIENT_ID = '172130002005-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
@@ -68,6 +74,9 @@ export class AuthService {
     });
     // Add Google Tasks API scope for bidirectional sync
     provider.addScope(GOOGLE_TASKS_SCOPE);
+    // Add Google Contacts/Directory API scopes for assignee suggestions
+    provider.addScope(GOOGLE_CONTACTS_SCOPE);
+    provider.addScope(GOOGLE_DIRECTORY_SCOPE);
 
     try {
       const credential = await signInWithPopup(this.auth, provider);
@@ -123,6 +132,8 @@ export class AuthService {
         prompt: 'consent', // Force consent screen to get refresh token
       });
       provider.addScope(GOOGLE_TASKS_SCOPE);
+      provider.addScope(GOOGLE_CONTACTS_SCOPE);
+      provider.addScope(GOOGLE_DIRECTORY_SCOPE);
 
       const credential = await signInWithPopup(this.auth, provider);
       const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);
