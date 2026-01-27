@@ -8,7 +8,10 @@ import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map } from 'rxjs';
-import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import {
+  AutocompleteInputComponent,
+  AutocompleteOption,
+} from '../../shared/components/autocomplete-input/autocomplete-input.component';
 
 @Component({
   selector: 'app-task-detail-modal',
@@ -20,7 +23,7 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
       (click)="onExampleClick($event)"
     >
       <div
-        class="w-full h-full sm:h-auto sm:max-w-2xl bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right"
+        class="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right"
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
@@ -34,44 +37,44 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
                 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20':
                   task()?.status === 'done',
                 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10':
-                  task()?.status !== 'done'
+                  task()?.status !== 'done',
               }"
               (click)="toggleComplete()"
             >
               @if (task()?.status === 'done') {
-              <span class="flex items-center gap-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                Completed
-              </span>
+                <span class="flex items-center gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  Completed
+                </span>
               } @else {
-              <span class="flex items-center gap-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Mark Complete
-              </span>
+                <span class="flex items-center gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Mark Complete
+                </span>
               }
             </button>
           </div>
@@ -224,7 +227,7 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
               >
                 <option [value]="null">No Section</option>
                 @for (section of projectSections(); track section.id) {
-                <option [value]="section.id">{{ section.name }}</option>
+                  <option [value]="section.id">{{ section.name }}</option>
                 }
               </select>
             </div>
@@ -232,67 +235,74 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
 
           <!-- Custom Fields -->
           @if (project()?.customFields?.length) {
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-            @for (field of project()?.customFields; track field.id) {
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{
-                field.name
-              }}</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
+              @for (field of project()?.customFields; track field.id) {
+                <div class="flex flex-col gap-1">
+                  <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{
+                    field.name
+                  }}</label>
 
-              @switch (field.type) { @case ('text') {
-              <input
-                type="text"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('number') {
-              <input
-                type="number"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('date') {
-              <input
-                type="date"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('dropdown') {
-              <select
-                [value]="customFieldValues()[field.id] || ''"
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('status') {
-              <select
-                [value]="customFieldValues()[field.id] || ''"
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('user') {
-              <input
-                type="text"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } }
+                  @switch (field.type) {
+                    @case ('text') {
+                      <input
+                        type="text"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('number') {
+                      <input
+                        type="number"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('date') {
+                      <input
+                        type="date"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('dropdown') {
+                      <select
+                        [value]="customFieldValues()[field.id] || ''"
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('status') {
+                      <select
+                        [value]="customFieldValues()[field.id] || ''"
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('user') {
+                      <input
+                        type="text"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                  }
+                </div>
+              }
             </div>
-            }
-          </div>
           }
 
           <!-- Description -->
@@ -323,56 +333,56 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
             <!-- Subtask List -->
             <div class="space-y-2 mb-3">
               @for (subtask of subtasks(); track subtask.id) {
-              <div class="flex items-center gap-3 group">
-                <button
-                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                  [class.border-cyan-500]="subtask.completed"
-                  [class.bg-cyan-500]="subtask.completed"
-                  [class.border-slate-500]="!subtask.completed"
-                  (click)="toggleSubtask(subtask.id)"
-                >
-                  @if (subtask.completed) {
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-3 w-3 text-white"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                <div class="flex items-center gap-3 group">
+                  <button
+                    class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                    [class.border-cyan-500]="subtask.completed"
+                    [class.bg-cyan-500]="subtask.completed"
+                    [class.border-slate-500]="!subtask.completed"
+                    (click)="toggleSubtask(subtask.id)"
                   >
-                    <path
-                      fill-rule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  }
-                </button>
-                <span
-                  class="flex-1 text-sm"
-                  [class.text-slate-500]="subtask.completed"
-                  [class.line-through]="subtask.completed"
-                  [class.text-slate-300]="!subtask.completed"
-                  >{{ subtask.title }}</span
-                >
-                <button
-                  class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
-                  (click)="deleteSubtask(subtask.id)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    @if (subtask.completed) {
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3 text-white"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    }
+                  </button>
+                  <span
+                    class="flex-1 text-sm"
+                    [class.text-slate-500]="subtask.completed"
+                    [class.line-through]="subtask.completed"
+                    [class.text-slate-300]="!subtask.completed"
+                    >{{ subtask.title }}</span
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+                  <button
+                    class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                    (click)="deleteSubtask(subtask.id)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               }
             </div>
 
@@ -401,25 +411,25 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
               >Tags</label
             >
-            
+
             <!-- Existing Project Tags -->
             @if (project()?.tags?.length) {
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              @for (tag of project()?.tags; track tag.id) {
-              <button
-                type="button"
-                (click)="toggleTag(tag.name)"
-                [class.ring-2]="selectedTags().has(tag.name)"
-                [class.ring-white]="selectedTags().has(tag.name)"
-                [style.background-color]="tag.color + '20'"
-                [style.color]="tag.color"
-                [style.border-color]="tag.color + '40'"
-                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
-              >
-                {{ tag.name }}
-              </button>
-              }
-            </div>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                @for (tag of project()?.tags; track tag.id) {
+                  <button
+                    type="button"
+                    (click)="toggleTag(tag.name)"
+                    [class.ring-2]="selectedTags().has(tag.name)"
+                    [class.ring-white]="selectedTags().has(tag.name)"
+                    [style.background-color]="tag.color + '20'"
+                    [style.color]="tag.color"
+                    [style.border-color]="tag.color + '40'"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+                  >
+                    {{ tag.name }}
+                  </button>
+                }
+              </div>
             }
 
             <!-- Add New Tag -->
@@ -444,10 +454,42 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
 
             <!-- Selected Tags Display -->
             @if (selectedTags().size > 0) {
-            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+              <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
             }
           </div>
         </div>
+
+        <!-- Footer Actions -->
+        <footer
+          class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-slate-800/20"
+        >
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            (click)="close.emit()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-2"
+            (click)="autoSave(); close.emit()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Done
+          </button>
+        </footer>
       </div>
     </div>
   `,
@@ -507,9 +549,9 @@ export class TaskDetailModalComponent {
   // Derived project signal
   project = toSignal(
     toObservable(this.projectId).pipe(
-      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null)))
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   projectSections = computed(() => {
@@ -520,15 +562,17 @@ export class TaskDetailModalComponent {
   assigneeOptions = toSignal(
     this.contactsService.getContacts().pipe(
       map((contacts) =>
-        contacts.map((c): AutocompleteOption => ({
-          id: c.id,
-          label: c.displayName,
-          sublabel: c.email,
-          avatar: c.photoURL,
-        }))
-      )
+        contacts.map(
+          (c): AutocompleteOption => ({
+            id: c.id,
+            label: c.displayName,
+            sublabel: c.email,
+            avatar: c.photoURL,
+          }),
+        ),
+      ),
     ),
-    { initialValue: [] }
+    { initialValue: [] },
   );
 
   // Track selected assignee ID
@@ -569,7 +613,7 @@ export class TaskDetailModalComponent {
             priority: task.priority,
             sectionId: task.sectionId || null,
           },
-          { emitEvent: false }
+          { emitEvent: false },
         );
 
         // Set selected assignee ID from task
@@ -578,7 +622,7 @@ export class TaskDetailModalComponent {
         // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
         this.customFieldValues.set(task.customFieldValues || {});
-        
+
         // Initialize selected tags
         this.selectedTags.set(new Set(task.tags || []));
       }
@@ -593,18 +637,21 @@ export class TaskDetailModalComponent {
   async updateCustomField(fieldId: string, value: string | number | boolean | Date | null) {
     // Find the field definition to validate
     const project = this.project();
-    const field = project?.customFields?.find(f => f.id === fieldId);
-    
+    const field = project?.customFields?.find((f) => f.id === fieldId);
+
     if (field) {
       // Validate number fields
       if (field.type === 'number' && value) {
         const numValue = parseFloat(value as string);
         if (isNaN(numValue)) {
-          await this.dialogService.alert(`"${field.name}" must be a valid number.`, 'Invalid Input');
+          await this.dialogService.alert(
+            `"${field.name}" must be a valid number.`,
+            'Invalid Input',
+          );
           return;
         }
       }
-      
+
       // Validate date fields
       if (field.type === 'date' && value) {
         const dateValue = new Date(value as string | Date);
@@ -614,7 +661,7 @@ export class TaskDetailModalComponent {
         }
       }
     }
-    
+
     const current = this.customFieldValues();
     this.customFieldValues.set({ ...current, [fieldId]: value });
     this.autoSave();
@@ -688,7 +735,7 @@ export class TaskDetailModalComponent {
     this.form.patchValue({ assigneeName: value });
     // If value doesn't match any option, clear the selected ID
     const matchingOption = this.assigneeOptions().find(
-      (opt) => opt.label === value || opt.id === value
+      (opt) => opt.label === value || opt.id === value,
     );
     if (matchingOption) {
       this.selectedAssigneeId.set(matchingOption.id);
@@ -749,7 +796,8 @@ export class TaskDetailModalComponent {
   async deleteTask() {
     const task = this.task();
     const project = this.project();
-    if (!task || !(await this.dialogService.confirm('Are you sure you want to delete this task?'))) return;
+    if (!task || !(await this.dialogService.confirm('Are you sure you want to delete this task?')))
+      return;
 
     await this.taskService.deleteTask(task.id, project?.googleTaskListId);
     this.deleted.emit(task.id);
@@ -772,7 +820,11 @@ export class TaskDetailModalComponent {
     this.subtasks.set(updatedSubtasks);
     this.newSubtaskTitle = '';
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   async toggleSubtask(subtaskId: string) {
@@ -781,11 +833,15 @@ export class TaskDetailModalComponent {
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().map((s) =>
-      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s,
     );
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   async deleteSubtask(subtaskId: string) {
@@ -796,7 +852,11 @@ export class TaskDetailModalComponent {
     const updatedSubtasks = this.subtasks().filter((s) => s.id !== subtaskId);
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   onExampleClick(e: Event) {

@@ -20,13 +20,17 @@ const GOOGLE_TASKS_SCOPE = 'https://www.googleapis.com/auth/tasks';
 // Google Contacts/People API scope for reading contacts (used for assignee suggestions)
 const GOOGLE_CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts.readonly';
 
+// Google "Other Contacts" API scope for contacts inferred from email interactions
+const GOOGLE_OTHER_CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts.other.readonly';
+
 // Google Workspace Directory API scope for reading domain users
 const GOOGLE_DIRECTORY_SCOPE = 'https://www.googleapis.com/auth/directory.readonly';
 
 // Google OAuth configuration for refresh token flow
 // These are public client identifiers (safe to expose in frontend code)
 const GOOGLE_CLIENT_ID = '172130002005-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
-const GOOGLE_REDIRECT_URI = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '';
+const GOOGLE_REDIRECT_URI =
+  typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '';
 
 @Injectable({
   providedIn: 'root',
@@ -42,7 +46,7 @@ export class AuthService {
 
   // Google Tasks API access token for authenticated API calls
   googleTasksAccessToken = signal<string | null>(null);
-  
+
   // Flag indicating if user has granted offline access for scheduled sync
   hasOfflineAccess = signal<boolean>(false);
 
@@ -76,6 +80,7 @@ export class AuthService {
     provider.addScope(GOOGLE_TASKS_SCOPE);
     // Add Google Contacts/Directory API scopes for assignee suggestions
     provider.addScope(GOOGLE_CONTACTS_SCOPE);
+    provider.addScope(GOOGLE_OTHER_CONTACTS_SCOPE);
     provider.addScope(GOOGLE_DIRECTORY_SCOPE);
 
     try {
@@ -111,7 +116,7 @@ export class AuthService {
    * Request offline access for Google Tasks scheduled sync.
    * This grants a refresh token that can be used by Cloud Functions
    * to sync tasks in the background without user interaction.
-   * 
+   *
    * Note: This uses a separate OAuth flow that provides a refresh token.
    * The refresh token is stored securely in Firestore for use by Cloud Functions.
    */
@@ -137,24 +142,24 @@ export class AuthService {
 
       const credential = await signInWithPopup(this.auth, provider);
       const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);
-      
+
       if (oauthCredential?.accessToken) {
         this.googleTasksAccessToken.set(oauthCredential.accessToken);
-        
+
         // Note: Firebase's signInWithPopup doesn't provide refresh tokens directly.
         // For true offline access with refresh tokens, you would need to:
         // 1. Use Google Identity Services (GIS) library directly, or
         // 2. Implement a backend OAuth flow through Cloud Functions
-        // 
+        //
         // For now, we mark the user as having granted consent for offline access.
         // The Cloud Function will use its own service account or stored credentials.
-        
+
         await this.markOfflineAccessGranted(currentUser.uid);
         this.hasOfflineAccess.set(true);
-        
+
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Failed to request offline access:', error);
@@ -204,7 +209,7 @@ export class AuthService {
     const userRef = doc(this.firestore, `users/${user.uid}`);
     const snap = await getDoc(userRef);
     const existingData = snap.exists() ? (snap.data() as UserProfile) : null;
-    
+
     const data: UserProfile = {
       uid: user.uid,
       email: user.email!,

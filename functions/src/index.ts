@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { google, tasks_v1 } from 'googleapis';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
@@ -12,11 +13,18 @@ const db = getFirestore();
 // Define secrets for OAuth (set via Firebase CLI: firebase functions:secrets:set GOOGLE_CLIENT_ID)
 const googleClientId = defineSecret('GOOGLE_CLIENT_ID');
 const googleClientSecret = defineSecret('GOOGLE_CLIENT_SECRET');
+// Service account email for sending emails (with domain-wide delegation)
+const gmailServiceAccountKey = defineSecret('GMAIL_SERVICE_ACCOUNT_KEY');
+
+// Sender email address for task notifications
+const TASK_NOTIFICATION_SENDER = 'task@omniflexfitness.com';
 
 // Google Tasks API client
 const tasksApi = google.tasks('v1');
 // Google People API client (for directory contacts)
 const peopleApi = google.people('v1');
+// Gmail API client
+const gmailApi = google.gmail('v1');
 
 /**
  * Contact interface for workspace contacts
@@ -63,7 +71,7 @@ interface Project {
  * Convert Google Task status to OmniTask status
  */
 function googleStatusToOmniStatus(
-  googleStatus: string | undefined
+  googleStatus: string | undefined,
 ): 'todo' | 'in-progress' | 'done' {
   return googleStatus === 'completed' ? 'done' : 'todo';
 }
@@ -73,7 +81,7 @@ function googleStatusToOmniStatus(
  * Used for push sync (OmniTask -> Google Tasks) - exported for future use
  */
 export function omniStatusToGoogleStatus(
-  omniStatus: 'todo' | 'in-progress' | 'done'
+  omniStatus: 'todo' | 'in-progress' | 'done',
 ): 'needsAction' | 'completed' {
   return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
@@ -84,7 +92,7 @@ export function omniStatusToGoogleStatus(
 function transformGoogleTaskToOmniTask(
   googleTask: tasks_v1.Schema$Task,
   projectId: string,
-  googleTaskListId: string
+  googleTaskListId: string,
 ): Partial<OmniTask> {
   return {
     title: googleTask.title || 'Untitled',
@@ -109,7 +117,7 @@ function transformGoogleTaskToOmniTask(
  */
 async function syncProject(
   project: Project & { id: string },
-  accessToken: string
+  accessToken: string,
 ): Promise<{ success: boolean; added: number; updated: number; error?: string }> {
   if (!project.googleTaskListId) {
     return { success: false, added: 0, updated: 0, error: 'No Google Task list linked' };
@@ -155,7 +163,7 @@ async function syncProject(
       const taskData = transformGoogleTaskToOmniTask(
         googleTask,
         project.id,
-        project.googleTaskListId
+        project.googleTaskListId,
       );
 
       if (existingOmniTask) {
@@ -255,7 +263,7 @@ export const scheduledGoogleTasksSync = onSchedule(
         // Access secrets via .value() method
         const oauth2Client = new google.auth.OAuth2(
           googleClientId.value(),
-          googleClientSecret.value()
+          googleClientSecret.value(),
         );
 
         oauth2Client.setCredentials({
@@ -274,7 +282,7 @@ export const scheduledGoogleTasksSync = onSchedule(
         const result = await syncProject(project, accessToken);
         if (result.success) {
           console.log(
-            `Synced project ${project.id}: added ${result.added}, updated ${result.updated}`
+            `Synced project ${project.id}: added ${result.added}, updated ${result.updated}`,
           );
           synced++;
         } else {
@@ -288,7 +296,7 @@ export const scheduledGoogleTasksSync = onSchedule(
     }
 
     console.log(`Sync complete: ${synced} succeeded, ${failed} failed`);
-  }
+  },
 );
 
 /**
@@ -331,7 +339,7 @@ export const manualGoogleTasksSync = onCall<{ projectId: string; accessToken: st
     const result = await syncProject(project, accessToken);
 
     return result;
-  }
+  },
 );
 
 /**
@@ -369,22 +377,23 @@ export const getWorkspaceContacts = onCall<{ accessToken: string; pageSize?: num
       });
 
       const people = response.data.people || [];
-      
+
       const contacts: WorkspaceContact[] = [];
-      
+
       for (const person of people) {
         // Get primary or first email
-        const emailAddress = person.emailAddresses?.find(e => e.metadata?.primary) || person.emailAddresses?.[0];
+        const emailAddress =
+          person.emailAddresses?.find((e) => e.metadata?.primary) || person.emailAddresses?.[0];
         const email = emailAddress?.value;
 
         if (!email) continue; // Skip contacts without email
 
         // Get primary or first name
-        const nameData = person.names?.find(n => n.metadata?.primary) || person.names?.[0];
+        const nameData = person.names?.find((n) => n.metadata?.primary) || person.names?.[0];
         const displayName = nameData?.displayName || email.split('@')[0];
 
         // Get primary or first photo
-        const photoData = person.photos?.find(p => p.metadata?.primary) || person.photos?.[0];
+        const photoData = person.photos?.find((p) => p.metadata?.primary) || person.photos?.[0];
         const photoURL = photoData?.url || undefined;
 
         contacts.push({
@@ -405,28 +414,32 @@ export const getWorkspaceContacts = onCall<{ accessToken: string; pageSize?: num
       };
     } catch (error) {
       console.error('Failed to fetch workspace contacts:', error);
-      
+
       // Check if it's a permission error
       if (error instanceof Error && error.message.includes('403')) {
         throw new HttpsError(
           'permission-denied',
-          'Unable to access directory contacts. This may require Google Workspace admin permissions.'
+          'Unable to access directory contacts. This may require Google Workspace admin permissions.',
         );
       }
 
       throw new HttpsError(
         'internal',
-        error instanceof Error ? error.message : 'Failed to fetch workspace contacts'
+        error instanceof Error ? error.message : 'Failed to fetch workspace contacts',
       );
     }
-  }
+  },
 );
 
 /**
  * Callable function to search workspace contacts
  * Uses the People API searchDirectoryPeople endpoint
  */
-export const searchWorkspaceContacts = onCall<{ accessToken: string; query: string; pageSize?: number }>(
+export const searchWorkspaceContacts = onCall<{
+  accessToken: string;
+  query: string;
+  pageSize?: number;
+}>(
   {
     memory: '256MiB',
   },
@@ -461,19 +474,20 @@ export const searchWorkspaceContacts = onCall<{ accessToken: string; query: stri
       });
 
       const people = response.data.people || [];
-      
+
       const contacts: WorkspaceContact[] = [];
-      
+
       for (const person of people) {
-        const emailAddress = person.emailAddresses?.find(e => e.metadata?.primary) || person.emailAddresses?.[0];
+        const emailAddress =
+          person.emailAddresses?.find((e) => e.metadata?.primary) || person.emailAddresses?.[0];
         const email = emailAddress?.value;
 
         if (!email) continue;
 
-        const nameData = person.names?.find(n => n.metadata?.primary) || person.names?.[0];
+        const nameData = person.names?.find((n) => n.metadata?.primary) || person.names?.[0];
         const displayName = nameData?.displayName || email.split('@')[0];
 
-        const photoData = person.photos?.find(p => p.metadata?.primary) || person.photos?.[0];
+        const photoData = person.photos?.find((p) => p.metadata?.primary) || person.photos?.[0];
         const photoURL = photoData?.url || undefined;
 
         contacts.push({
@@ -491,11 +505,216 @@ export const searchWorkspaceContacts = onCall<{ accessToken: string; query: stri
       };
     } catch (error) {
       console.error('Failed to search workspace contacts:', error);
-      
+
       throw new HttpsError(
         'internal',
-        error instanceof Error ? error.message : 'Failed to search workspace contacts'
+        error instanceof Error ? error.message : 'Failed to search workspace contacts',
       );
     }
-  }
+  },
+);
+
+/**
+ * Firestore trigger: Send email notification when a task is assigned
+ * Triggers on task create/update and sends email if assignee changed
+ */
+export const sendTaskAssignmentEmail = onDocumentWritten(
+  {
+    document: 'tasks/{taskId}',
+    secrets: [gmailServiceAccountKey],
+    memory: '256MiB',
+  },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+
+    // Skip if task was deleted
+    if (!after) {
+      console.log('Task deleted, skipping email notification');
+      return;
+    }
+
+    // Check if assignee was added or changed
+    const wasNewlyAssigned = !before?.assignedToId && after.assignedToId;
+    const assigneeChanged = before?.assignedToId !== after.assignedToId && after.assignedToId;
+
+    if (!wasNewlyAssigned && !assigneeChanged) {
+      console.log('No assignee change, skipping email notification');
+      return;
+    }
+
+    // Get assignee email - prefer email lookup from users collection, fallback to assigneeName
+    let assigneeEmail = after.assigneeName;
+
+    if (after.assignedToId) {
+      try {
+        const userDoc = await db.collection('users').doc(after.assignedToId).get();
+        if (userDoc.exists) {
+          assigneeEmail = userDoc.data()?.email || assigneeEmail;
+        }
+      } catch (err) {
+        console.warn('Failed to lookup assignee user:', err);
+      }
+    }
+
+    if (!assigneeEmail || !assigneeEmail.includes('@')) {
+      console.log('No valid assignee email, skipping notification');
+      return;
+    }
+
+    // Get project name for context
+    let projectName = 'a project';
+    if (after.projectId) {
+      try {
+        const projectDoc = await db.collection('projects').doc(after.projectId).get();
+        if (projectDoc.exists) {
+          projectName = projectDoc.data()?.name || projectName;
+        }
+      } catch (err) {
+        console.warn('Failed to lookup project:', err);
+      }
+    }
+
+    // Format due date if present
+    let dueDateStr = '';
+    if (after.dueDate) {
+      const dueDate = after.dueDate.toDate ? after.dueDate.toDate() : new Date(after.dueDate);
+      dueDateStr = dueDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+
+    // Build email HTML
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e4e4e7; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #16213e; border-radius: 12px; padding: 24px; }
+    h1 { color: #8b5cf6; margin: 0 0 8px 0; font-size: 24px; }
+    .project { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+    .task-title { background: #1e293b; border-left: 4px solid #8b5cf6; padding: 16px; border-radius: 8px; margin: 16px 0; }
+    .task-title h2 { color: #f1f5f9; margin: 0; font-size: 20px; }
+    .description { color: #94a3b8; margin-top: 8px; }
+    .meta { display: flex; gap: 16px; margin: 16px 0; }
+    .meta-item { background: #1e293b; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+    .meta-label { color: #64748b; }
+    .meta-value { color: #e2e8f0; }
+    .cta { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px; font-weight: 500; }
+    .footer { color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #334155; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 New Task Assigned</h1>
+    <p class="project">In project: ${projectName}</p>
+    
+    <div class="task-title">
+      <h2>${after.title || 'Untitled Task'}</h2>
+      ${after.description ? `<p class="description">${after.description}</p>` : ''}
+    </div>
+    
+    <div class="meta">
+      <span class="meta-item">
+        <span class="meta-label">Priority:</span>
+        <span class="meta-value">${(after.priority || 'medium').toUpperCase()}</span>
+      </span>
+      ${
+        dueDateStr
+          ? `
+      <span class="meta-item">
+        <span class="meta-label">Due:</span>
+        <span class="meta-value">${dueDateStr}</span>
+      </span>
+      `
+          : ''
+      }
+    </div>
+    
+    <a href="https://omnitask.omniflexfitness.com/projects/${after.projectId}" class="cta">
+      View Task in OmniTask
+    </a>
+    
+    <div class="footer">
+      This email was sent by OmniTask because you were assigned a task.<br>
+      OmniFlex Fitness Task Management
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    // Build email message
+    const emailSubject = `📋 You've been assigned: ${after.title || 'New Task'}`;
+
+    // Create raw email (RFC 2822 format)
+    const rawEmail = [
+      `From: OmniTask <${TASK_NOTIFICATION_SENDER}>`,
+      `To: ${assigneeEmail}`,
+      `Subject: ${emailSubject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      emailHtml,
+    ].join('\r\n');
+
+    // Base64url encode the email
+    const encodedEmail = Buffer.from(rawEmail)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    try {
+      // Parse service account key from secret
+      const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+
+      // Create JWT client with domain-wide delegation
+      const jwtClient = new google.auth.JWT({
+        email: serviceAccountKey.client_email,
+        key: serviceAccountKey.private_key,
+        scopes: ['https://www.googleapis.com/auth/gmail.send'],
+        subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+      });
+
+      // Authorize and send email
+      await jwtClient.authorize();
+
+      await gmailApi.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedEmail,
+        },
+        auth: jwtClient,
+      });
+
+      console.log(`Email sent to ${assigneeEmail} for task: ${after.title}`);
+
+      // Log notification to Firestore for audit
+      await db.collection('notifications').add({
+        type: 'task_assignment',
+        taskId: event.params.taskId,
+        recipientEmail: assigneeEmail,
+        sentAt: FieldValue.serverTimestamp(),
+        success: true,
+      });
+    } catch (error) {
+      console.error('Failed to send email notification:', error);
+
+      // Log failed notification
+      await db.collection('notifications').add({
+        type: 'task_assignment',
+        taskId: event.params.taskId,
+        recipientEmail: assigneeEmail,
+        sentAt: FieldValue.serverTimestamp(),
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  },
 );
