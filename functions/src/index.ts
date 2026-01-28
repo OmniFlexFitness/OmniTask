@@ -32,14 +32,48 @@ const gmailApi = google.gmail('v1');
 let emailTemplateCache: string | null = null;
 
 /**
+ * Escape HTML entities to prevent XSS attacks
+ */
+function escapeHtml(text: string): string {
+  const htmlEscapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char]);
+}
+
+/**
  * Load email template from file (cached for performance)
  */
 function loadEmailTemplate(): string {
-  if (!emailTemplateCache) {
-    const templatePath = path.join(__dirname, 'email-templates', 'task-assignment.html');
-    emailTemplateCache = fs.readFileSync(templatePath, 'utf-8');
+  try {
+    if (!emailTemplateCache) {
+      const templatePath = path.join(__dirname, 'email-templates', 'task-assignment.html');
+      emailTemplateCache = fs.readFileSync(templatePath, 'utf-8');
+    }
+    return emailTemplateCache;
+  } catch (error) {
+    console.error('Failed to load email template:', error);
+    // Fallback to a minimal inline template
+    return `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h1>New Task Assigned</h1>
+  <p>Project: {{PROJECT_NAME}}</p>
+  <h2>{{TASK_TITLE}}</h2>
+  {{TASK_DESCRIPTION}}
+  <p>Priority: {{TASK_PRIORITY}}</p>
+  {{DUE_DATE_HTML}}
+  <p><a href="{{TASK_URL}}">View Task</a></p>
+</body>
+</html>
+    `.trim();
   }
-  return emailTemplateCache;
 }
 
 /**
@@ -55,49 +89,66 @@ function populateEmailTemplate(data: {
 }): string {
   let html = loadEmailTemplate();
 
-  html = html.replace('{{PROJECT_NAME}}', data.projectName);
-  html = html.replace('{{TASK_TITLE}}', data.taskTitle);
+  // Escape all user-provided content to prevent XSS
+  html = html.replace(/{{PROJECT_NAME}}/g, escapeHtml(data.projectName));
+  html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
   
   const descriptionHtml = data.taskDescription 
-    ? `<p class="description">${data.taskDescription}</p>` 
+    ? `<p class="description">${escapeHtml(data.taskDescription)}</p>` 
     : '';
-  html = html.replace('{{TASK_DESCRIPTION}}', descriptionHtml);
+  html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
   
-  html = html.replace('{{TASK_PRIORITY}}', data.taskPriority.toUpperCase());
+  html = html.replace(/{{TASK_PRIORITY}}/g, escapeHtml(data.taskPriority.toUpperCase()));
   
   const dueDateHtml = data.dueDateStr
     ? `
       <span class="meta-item">
         <span class="meta-label">Due:</span>
-        <span class="meta-value">${data.dueDateStr}</span>
+        <span class="meta-value">${escapeHtml(data.dueDateStr)}</span>
       </span>
       `
     : '';
-  html = html.replace('{{DUE_DATE_HTML}}', dueDateHtml);
+  html = html.replace(/{{DUE_DATE_HTML}}/g, dueDateHtml);
   
-  html = html.replace('{{TASK_URL}}', data.taskUrl);
+  // URL doesn't need escaping as it's constructed server-side, but validate it's safe
+  html = html.replace(/{{TASK_URL}}/g, data.taskUrl);
 
   return html;
 }
 
 // JWT client for Gmail API (initialized outside function handler for performance)
-let jwtClient: any = null;
+let jwtClient: InstanceType<typeof google.auth.JWT> | null = null;
 
 /**
  * Get or initialize JWT client for Gmail API
  */
-async function getGmailJwtClient(): Promise<any> {
-  if (!jwtClient) {
+async function getGmailJwtClient(): Promise<InstanceType<typeof google.auth.JWT>> {
+  try {
+    if (!jwtClient) {
+      const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+      jwtClient = new google.auth.JWT({
+        email: serviceAccountKey.client_email,
+        key: serviceAccountKey.private_key,
+        scopes: ['https://www.googleapis.com/auth/gmail.send'],
+        subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+      });
+      await jwtClient.authorize();
+    }
+    return jwtClient;
+  } catch (error) {
+    // If authorization fails, clear cache and try once more
+    jwtClient = null;
     const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
-    jwtClient = new google.auth.JWT({
+    const newClient = new google.auth.JWT({
       email: serviceAccountKey.client_email,
       key: serviceAccountKey.private_key,
       scopes: ['https://www.googleapis.com/auth/gmail.send'],
-      subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+      subject: TASK_NOTIFICATION_SENDER,
     });
-    await jwtClient.authorize();
+    await newClient.authorize();
+    jwtClient = newClient;
+    return jwtClient;
   }
-  return jwtClient;
 }
 
 /**
