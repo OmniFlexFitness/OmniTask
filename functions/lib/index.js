@@ -15,15 +15,26 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
+exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -31,6 +42,8 @@ const firestore_1 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
 const googleapis_1 = require("googleapis");
 const firestore_2 = require("firebase-admin/firestore");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = (0, firestore_2.getFirestore)();
@@ -39,14 +52,68 @@ const googleClientId = (0, params_1.defineSecret)('GOOGLE_CLIENT_ID');
 const googleClientSecret = (0, params_1.defineSecret)('GOOGLE_CLIENT_SECRET');
 // Service account email for sending emails (with domain-wide delegation)
 const gmailServiceAccountKey = (0, params_1.defineSecret)('GMAIL_SERVICE_ACCOUNT_KEY');
-// Sender email address for task notifications
-const TASK_NOTIFICATION_SENDER = 'task@omniflexfitness.com';
+// Sender email address for task notifications (configurable via environment variable)
+const TASK_NOTIFICATION_SENDER = process.env.TASK_NOTIFICATION_SENDER || 'task@omniflexfitness.com';
 // Google Tasks API client
 const tasksApi = googleapis_1.google.tasks('v1');
 // Google People API client (for directory contacts)
 const peopleApi = googleapis_1.google.people('v1');
 // Gmail API client
 const gmailApi = googleapis_1.google.gmail('v1');
+// Email template cache (loaded once for performance)
+let emailTemplateCache = null;
+/**
+ * Load email template from file (cached for performance)
+ */
+function loadEmailTemplate() {
+    if (!emailTemplateCache) {
+        const templatePath = path.join(__dirname, 'email-templates', 'task-assignment.html');
+        emailTemplateCache = fs.readFileSync(templatePath, 'utf-8');
+    }
+    return emailTemplateCache;
+}
+/**
+ * Populate email template with task data
+ */
+function populateEmailTemplate(data) {
+    let html = loadEmailTemplate();
+    html = html.replace('{{PROJECT_NAME}}', data.projectName);
+    html = html.replace('{{TASK_TITLE}}', data.taskTitle);
+    const descriptionHtml = data.taskDescription
+        ? `<p class="description">${data.taskDescription}</p>`
+        : '';
+    html = html.replace('{{TASK_DESCRIPTION}}', descriptionHtml);
+    html = html.replace('{{TASK_PRIORITY}}', data.taskPriority.toUpperCase());
+    const dueDateHtml = data.dueDateStr
+        ? `
+      <span class="meta-item">
+        <span class="meta-label">Due:</span>
+        <span class="meta-value">${data.dueDateStr}</span>
+      </span>
+      `
+        : '';
+    html = html.replace('{{DUE_DATE_HTML}}', dueDateHtml);
+    html = html.replace('{{TASK_URL}}', data.taskUrl);
+    return html;
+}
+// JWT client for Gmail API (initialized outside function handler for performance)
+let jwtClient = null;
+/**
+ * Get or initialize JWT client for Gmail API
+ */
+async function getGmailJwtClient() {
+    if (!jwtClient) {
+        const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+        jwtClient = new googleapis_1.google.auth.JWT({
+            email: serviceAccountKey.client_email,
+            key: serviceAccountKey.private_key,
+            scopes: ['https://www.googleapis.com/auth/gmail.send'],
+            subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+        });
+        await jwtClient.authorize();
+    }
+    return jwtClient;
+}
 /**
  * Convert Google Task status to OmniTask status
  */
@@ -60,7 +127,6 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -320,8 +386,8 @@ exports.getWorkspaceContacts = (0, https_1.onCall)({
     }
     catch (error) {
         console.error('Failed to fetch workspace contacts:', error);
-        // Check if it's a permission error
-        if (error instanceof Error && error.message.includes('403')) {
+        // Check if it's a permission error using error code
+        if (error?.code === 403 || error?.response?.status === 403) {
             throw new https_1.HttpsError('permission-denied', 'Unable to access directory contacts. This may require Google Workspace admin permissions.');
         }
         throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to fetch workspace contacts');
@@ -440,7 +506,7 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
         }
     }
     // Format due date if present
-    let dueDateStr = '';
+    let dueDateStr;
     if (after.dueDate) {
         const dueDate = after.dueDate.toDate ? after.dueDate.toDate() : new Date(after.dueDate);
         dueDateStr = dueDate.toLocaleDateString('en-US', {
@@ -450,65 +516,15 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
             day: 'numeric',
         });
     }
-    // Build email HTML
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e4e4e7; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; background: #16213e; border-radius: 12px; padding: 24px; }
-    h1 { color: #8b5cf6; margin: 0 0 8px 0; font-size: 24px; }
-    .project { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
-    .task-title { background: #1e293b; border-left: 4px solid #8b5cf6; padding: 16px; border-radius: 8px; margin: 16px 0; }
-    .task-title h2 { color: #f1f5f9; margin: 0; font-size: 20px; }
-    .description { color: #94a3b8; margin-top: 8px; }
-    .meta { display: flex; gap: 16px; margin: 16px 0; }
-    .meta-item { background: #1e293b; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
-    .meta-label { color: #64748b; }
-    .meta-value { color: #e2e8f0; }
-    .cta { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px; font-weight: 500; }
-    .footer { color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #334155; padding-top: 16px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>📋 New Task Assigned</h1>
-    <p class="project">In project: ${projectName}</p>
-    
-    <div class="task-title">
-      <h2>${after.title || 'Untitled Task'}</h2>
-      ${after.description ? `<p class="description">${after.description}</p>` : ''}
-    </div>
-    
-    <div class="meta">
-      <span class="meta-item">
-        <span class="meta-label">Priority:</span>
-        <span class="meta-value">${(after.priority || 'medium').toUpperCase()}</span>
-      </span>
-      ${dueDateStr
-        ? `
-      <span class="meta-item">
-        <span class="meta-label">Due:</span>
-        <span class="meta-value">${dueDateStr}</span>
-      </span>
-      `
-        : ''}
-    </div>
-    
-    <a href="https://omnitask.omniflexfitness.com/projects/${after.projectId}" class="cta">
-      View Task in OmniTask
-    </a>
-    
-    <div class="footer">
-      This email was sent by OmniTask because you were assigned a task.<br>
-      OmniFlex Fitness Task Management
-    </div>
-  </div>
-</body>
-</html>
-    `.trim();
+    // Build email HTML from template
+    const emailHtml = populateEmailTemplate({
+        projectName,
+        taskTitle: after.title || 'Untitled Task',
+        taskDescription: after.description,
+        taskPriority: after.priority || 'medium',
+        dueDateStr,
+        taskUrl: `https://omnitask.omniflexfitness.com/projects/${after.projectId}`,
+    });
     // Build email message
     const emailSubject = `📋 You've been assigned: ${after.title || 'New Task'}`;
     // Create raw email (RFC 2822 format)
@@ -528,23 +544,14 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
         .replace(/\//g, '_')
         .replace(/=+$/, '');
     try {
-        // Parse service account key from secret
-        const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
-        // Create JWT client with domain-wide delegation
-        const jwtClient = new googleapis_1.google.auth.JWT({
-            email: serviceAccountKey.client_email,
-            key: serviceAccountKey.private_key,
-            scopes: ['https://www.googleapis.com/auth/gmail.send'],
-            subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
-        });
-        // Authorize and send email
-        await jwtClient.authorize();
+        // Get initialized JWT client (reused across invocations for performance)
+        const client = await getGmailJwtClient();
         await gmailApi.users.messages.send({
             userId: 'me',
             requestBody: {
                 raw: encodedEmail,
             },
-            auth: jwtClient,
+            auth: client,
         });
         console.log(`Email sent to ${assigneeEmail} for task: ${after.title}`);
         // Log notification to Firestore for audit
