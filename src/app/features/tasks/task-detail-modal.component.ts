@@ -568,12 +568,34 @@ export class TaskDetailModalComponent {
             label: c.displayName,
             sublabel: c.email,
             avatar: c.photoURL,
+            // Generate consistent color from email for contacts without photos
+            color: c.photoURL ? undefined : this.generateAvatarColor(c.email),
           }),
         ),
       ),
     ),
     { initialValue: [] },
   );
+
+  /**
+   * Generate a consistent color for a contact based on their email
+   */
+  private generateAvatarColor(email: string): string {
+    const colors = [
+      '#8b5cf6',
+      '#3b82f6',
+      '#06b6d4',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#ec4899',
+      '#6366f1',
+      '#14b8a6',
+      '#f97316',
+    ];
+    const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
 
   // Track selected assignee ID
   selectedAssigneeId = signal<string | null>(null);

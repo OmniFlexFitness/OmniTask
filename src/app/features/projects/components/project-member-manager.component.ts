@@ -53,34 +53,54 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
           <!-- Search Results Dropdown -->
           @if (showResults() && searchResults().length > 0) {
-          <div
-            class="absolute top-full left-0 right-0 mt-2 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto"
-          >
-            @for (user of searchResults(); track user.id) {
-            <button
-              (click)="addMember(user)"
-              class="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-white/5 last:border-0"
-              [disabled]="isMember(user.id)"
-              [class.opacity-50]="isMember(user.id)"
-              [class.cursor-not-allowed]="isMember(user.id)"
+            <div
+              class="absolute top-full left-0 right-0 mt-2 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto"
             >
-              <img
-                [src]="user.photoURL || 'assets/images/avatar-placeholder.png'"
-                class="w-8 h-8 rounded-full bg-slate-800 object-cover"
-                alt=""
-              />
-              <div>
-                <div class="text-sm font-medium text-white">
-                  {{ user.displayName }}
-                  @if (isMember(user.id)) {
-                  <span class="ml-2 text-xs text-emerald-400 font-normal">(Already a member)</span>
+              @for (user of searchResults(); track user.id) {
+                <button
+                  (click)="addMember(user)"
+                  class="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-white/5 last:border-0"
+                  [disabled]="isMember(user.id)"
+                  [class.opacity-50]="isMember(user.id)"
+                  [class.cursor-not-allowed]="isMember(user.id)"
+                >
+                  @if (user.photoURL) {
+                    <img
+                      [src]="user.photoURL"
+                      class="w-8 h-8 rounded-full bg-slate-800 object-cover"
+                      alt=""
+                      #userImg
+                      (error)="userImg.style.display = 'none'; userFallback.style.display = 'flex'"
+                    />
+                    <div
+                      #userFallback
+                      class="w-8 h-8 rounded-full items-center justify-center text-xs font-bold text-white hidden"
+                      [style.background-color]="getAvatarColor(user.email)"
+                    >
+                      {{ getInitials(user.displayName) }}
+                    </div>
+                  } @else {
+                    <div
+                      class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      [style.background-color]="getAvatarColor(user.email)"
+                    >
+                      {{ getInitials(user.displayName) }}
+                    </div>
                   }
-                </div>
-                <div class="text-xs text-slate-400">{{ user.email }}</div>
-              </div>
-            </button>
-            }
-          </div>
+                  <div>
+                    <div class="text-sm font-medium text-white">
+                      {{ user.displayName }}
+                      @if (isMember(user.id)) {
+                        <span class="ml-2 text-xs text-emerald-400 font-normal"
+                          >(Already a member)</span
+                        >
+                      }
+                    </div>
+                    <div class="text-xs text-slate-400">{{ user.email }}</div>
+                  </div>
+                </button>
+              }
+            </div>
           }
         </div>
       </div>
@@ -94,45 +114,65 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
           </h3>
           <div class="space-y-2">
             @for (admin of admins(); track admin.id) {
-            <div
-              class="flex items-center justify-between p-3 bg-[#0f172a]/30 border border-emerald-500/20 rounded-lg group hover:border-emerald-500/40 transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <div class="relative">
-                  <img
-                    [src]="admin.photoURL || 'assets/images/avatar-placeholder.png'"
-                    class="w-10 h-10 rounded-full bg-slate-800 object-cover ring-2 ring-emerald-500/30"
-                    alt=""
-                  />
-                  <div
-                    class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-[#0f172a]"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-2.5 w-2.5 text-[#050810]"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clip-rule="evenodd"
+              <div
+                class="flex items-center justify-between p-3 bg-[#0f172a]/30 border border-emerald-500/20 rounded-lg group hover:border-emerald-500/40 transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="relative">
+                    @if (admin.photoURL) {
+                      <img
+                        [src]="admin.photoURL"
+                        class="w-10 h-10 rounded-full bg-slate-800 object-cover ring-2 ring-emerald-500/30"
+                        alt=""
+                        #adminImg
+                        (error)="
+                          adminImg.style.display = 'none'; adminFallback.style.display = 'flex'
+                        "
                       />
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <div class="text-sm font-medium text-white flex items-center gap-2">
-                    {{ admin.displayName }}
-                    <span
-                      class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
-                      >OWNER</span
+                      <div
+                        #adminFallback
+                        class="w-10 h-10 rounded-full items-center justify-center text-sm font-bold text-white ring-2 ring-emerald-500/30 hidden"
+                        [style.background-color]="getAvatarColor(admin.email)"
+                      >
+                        {{ getInitials(admin.displayName) }}
+                      </div>
+                    } @else {
+                      <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ring-2 ring-emerald-500/30"
+                        [style.background-color]="getAvatarColor(admin.email)"
+                      >
+                        {{ getInitials(admin.displayName) }}
+                      </div>
+                    }
+                    <div
+                      class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-[#0f172a]"
                     >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-2.5 w-2.5 text-[#050810]"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </div>
                   </div>
-                  <div class="text-xs text-slate-400">{{ admin.email }}</div>
+                  <div>
+                    <div class="text-sm font-medium text-white flex items-center gap-2">
+                      {{ admin.displayName }}
+                      <span
+                        class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                        >OWNER</span
+                      >
+                    </div>
+                    <div class="text-xs text-slate-400">{{ admin.email }}</div>
+                  </div>
                 </div>
               </div>
-            </div>
             }
           </div>
         </div>
@@ -143,50 +183,70 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
             Project Members
           </h3>
           @if (members().length === 0) {
-          <div class="text-center py-6 border border-dashed border-slate-800 rounded-lg">
-            <p class="text-sm text-slate-500">No additional members yet.</p>
-          </div>
-          } @else {
-          <div class="space-y-2">
-            @for (member of members(); track member.id) {
-            <div
-              class="flex items-center justify-between p-3 bg-[#0f172a]/30 border border-white/5 rounded-lg group hover:border-white/10 transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <img
-                  [src]="member.photoURL || 'assets/images/avatar-placeholder.png'"
-                  class="w-10 h-10 rounded-full bg-slate-800 object-cover"
-                  alt=""
-                />
-                <div>
-                  <div class="text-sm font-medium text-white">{{ member.displayName }}</div>
-                  <div class="text-xs text-slate-400">{{ member.email }}</div>
-                </div>
-              </div>
-
-              <button
-                (click)="removeMember(member.id)"
-                class="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
-                title="Remove member"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+            <div class="text-center py-6 border border-dashed border-slate-800 rounded-lg">
+              <p class="text-sm text-slate-500">No additional members yet.</p>
             </div>
-            }
-          </div>
+          } @else {
+            <div class="space-y-2">
+              @for (member of members(); track member.id) {
+                <div
+                  class="flex items-center justify-between p-3 bg-[#0f172a]/30 border border-white/5 rounded-lg group hover:border-white/10 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    @if (member.photoURL) {
+                      <img
+                        [src]="member.photoURL"
+                        class="w-10 h-10 rounded-full bg-slate-800 object-cover"
+                        alt=""
+                        #memberImg
+                        (error)="
+                          memberImg.style.display = 'none'; memberFallback.style.display = 'flex'
+                        "
+                      />
+                      <div
+                        #memberFallback
+                        class="w-10 h-10 rounded-full items-center justify-center text-sm font-bold text-white hidden"
+                        [style.background-color]="getAvatarColor(member.email)"
+                      >
+                        {{ getInitials(member.displayName) }}
+                      </div>
+                    } @else {
+                      <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                        [style.background-color]="getAvatarColor(member.email)"
+                      >
+                        {{ getInitials(member.displayName) }}
+                      </div>
+                    }
+                    <div>
+                      <div class="text-sm font-medium text-white">{{ member.displayName }}</div>
+                      <div class="text-xs text-slate-400">{{ member.email }}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    (click)="removeMember(member.id)"
+                    class="opacity-0 group-hover:opacity-100 p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all"
+                    title="Remove member"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
           }
         </div>
       </div>
@@ -212,9 +272,9 @@ export class ProjectMemberManagerComponent {
     this.searchControl.valueChanges.pipe(
       startWith(''),
       debounceTime(300),
-      switchMap((term) => this.contactsService.searchContacts(term || ''))
+      switchMap((term) => this.contactsService.searchContacts(term || '')),
     ),
-    { initialValue: [] }
+    { initialValue: [] },
   );
 
   // Computed Lists based on Project Data and All Contacts
@@ -247,12 +307,49 @@ export class ProjectMemberManagerComponent {
   }
 
   async removeMember(userId: string) {
-    if (!(await this.dialogService.confirm('Are you sure you want to remove this member from the project?', 'Remove Member'))) return;
+    if (
+      !(await this.dialogService.confirm(
+        'Are you sure you want to remove this member from the project?',
+        'Remove Member',
+      ))
+    )
+      return;
 
     try {
       await this.projectService.removeMember(this.project().id, userId);
     } catch (err) {
       console.error('Failed to remove member', err);
     }
+  }
+
+  /**
+   * Generate a consistent color for avatars based on email
+   */
+  getAvatarColor(email: string): string {
+    const colors = [
+      '#8b5cf6',
+      '#3b82f6',
+      '#06b6d4',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#ec4899',
+      '#6366f1',
+      '#14b8a6',
+      '#f97316',
+    ];
+    const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
+
+  /**
+   * Get initials from display name
+   */
+  getInitials(name: string): string {
+    return name
+      .split(' ')
+      .map((n) => n.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
   }
 }

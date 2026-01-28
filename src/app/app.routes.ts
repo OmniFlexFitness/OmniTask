@@ -19,20 +19,25 @@ export const routes: Routes = [
         path: 'projects',
         loadComponent: () =>
           import('./features/projects/projects-list.component').then(
-            (m) => m.ProjectsListComponent
+            (m) => m.ProjectsListComponent,
           ),
       },
       {
         path: 'projects/:id',
         loadComponent: () =>
           import('./features/projects/project-detail.component').then(
-            (m) => m.ProjectDetailComponent
+            (m) => m.ProjectDetailComponent,
           ),
       },
       {
         path: 'tasks',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
       },
     ],
   },
