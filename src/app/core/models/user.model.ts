@@ -3,11 +3,12 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
+  avatarColor?: string; // Custom color for placeholder avatars
   domain: string;
   role: 'admin' | 'user';
   createdAt: Date;
   lastLoginAt: Date;
-  
+
   // Google Tasks scheduled sync fields
   hasGoogleTasksOfflineAccess?: boolean;
   googleTasksOfflineAccessGrantedAt?: Date;

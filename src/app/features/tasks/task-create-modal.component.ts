@@ -7,7 +7,10 @@ import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { Task, Project, Section } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, startWith, debounceTime } from 'rxjs';
-import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import {
+  AutocompleteInputComponent,
+  AutocompleteOption,
+} from '../../shared/components/autocomplete-input/autocomplete-input.component';
 
 @Component({
   selector: 'app-task-create-modal',
@@ -63,7 +66,7 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
               autofocus
             />
             @if (form.controls.title.touched && form.controls.title.invalid) {
-            <p class="text-xs text-rose-400 mt-1">Task name is required</p>
+              <p class="text-xs text-rose-400 mt-1">Task name is required</p>
             }
           </div>
 
@@ -115,89 +118,96 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
 
           <!-- Section (for Board view) -->
           @if (sections().length > 0) {
-          <div>
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Section</label
-            >
-            <select
-              formControlName="sectionId"
-              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-            >
-              @for (section of sections(); track section.id) {
-              <option [value]="section.id">{{ section.name }}</option>
-              }
-            </select>
-          </div>
+            <div>
+              <label
+                class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
+                >Section</label
+              >
+              <select
+                formControlName="sectionId"
+                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+              >
+                @for (section of sections(); track section.id) {
+                  <option [value]="section.id">{{ section.name }}</option>
+                }
+              </select>
+            </div>
           }
 
           <!-- Custom Fields -->
           @if (project()?.customFields?.length) {
-          <div class="grid grid-cols-2 gap-3">
-            @for (field of project()?.customFields; track field.id) {
-            <div>
-              <label
-                class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-                >{{ field.name }}</label
-              >
+            <div class="grid grid-cols-2 gap-3">
+              @for (field of project()?.customFields; track field.id) {
+                <div>
+                  <label
+                    class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
+                    >{{ field.name }}</label
+                  >
 
-              @switch (field.type) { @case ('text') {
-              <input
-                type="text"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                [class.border-rose-500]="customFieldErrors()[field.id]"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('number') {
-              <input
-                type="number"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                [class.border-rose-500]="customFieldErrors()[field.id]"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('date') {
-              <input
-                type="date"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                [class.border-rose-500]="customFieldErrors()[field.id]"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('dropdown') {
-              <select
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                [class.border-rose-500]="customFieldErrors()[field.id]"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('status') {
-              <select
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                [class.border-rose-500]="customFieldErrors()[field.id]"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('user') {
-              <input
-                type="text"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } }
-              
-              @if (customFieldErrors()[field.id]) {
-              <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
+                  @switch (field.type) {
+                    @case ('text') {
+                      <input
+                        type="text"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        [class.border-rose-500]="customFieldErrors()[field.id]"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('number') {
+                      <input
+                        type="number"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        [class.border-rose-500]="customFieldErrors()[field.id]"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('date') {
+                      <input
+                        type="date"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        [class.border-rose-500]="customFieldErrors()[field.id]"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('dropdown') {
+                      <select
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        [class.border-rose-500]="customFieldErrors()[field.id]"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('status') {
+                      <select
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        [class.border-rose-500]="customFieldErrors()[field.id]"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('user') {
+                      <input
+                        type="text"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                  }
+
+                  @if (customFieldErrors()[field.id]) {
+                    <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
+                  }
+                </div>
               }
             </div>
-            }
-          </div>
           }
 
           <!-- Assignee -->
@@ -225,22 +235,22 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
 
             <!-- Existing Project Tags -->
             @if (project()?.tags?.length) {
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              @for (tag of project()?.tags; track tag.id) {
-              <button
-                type="button"
-                (click)="toggleTag(tag.name)"
-                [class.ring-2]="selectedTags().has(tag.name)"
-                [class.ring-white]="selectedTags().has(tag.name)"
-                [style.background-color]="tag.color + '20'"
-                [style.color]="tag.color"
-                [style.border-color]="tag.color + '40'"
-                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
-              >
-                {{ tag.name }}
-              </button>
-              }
-            </div>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                @for (tag of project()?.tags; track tag.id) {
+                  <button
+                    type="button"
+                    (click)="toggleTag(tag.name)"
+                    [class.ring-2]="selectedTags().has(tag.name)"
+                    [class.ring-white]="selectedTags().has(tag.name)"
+                    [style.background-color]="tag.color + '20'"
+                    [style.color]="tag.color"
+                    [style.border-color]="tag.color + '40'"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+                  >
+                    {{ tag.name }}
+                  </button>
+                }
+              </div>
             }
 
             <!-- Add New Tag -->
@@ -265,17 +275,17 @@ import { AutocompleteInputComponent, AutocompleteOption } from '../../shared/com
 
             <!-- Selected Tags Display (Feedback for new tags not yet in project definitions) -->
             @if (selectedTags().size > 0) {
-            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+              <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
             }
           </div>
 
           <!-- Error Message -->
           @if (errorMessage()) {
-          <div
-            class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"
-          >
-            {{ errorMessage() }}
-          </div>
+            <div
+              class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"
+            >
+              {{ errorMessage() }}
+            </div>
           }
 
           <!-- Actions -->
@@ -340,25 +350,51 @@ export class TaskCreateModalComponent {
   // Get project sections for dropdown
   project = toSignal(
     toObservable(this.projectId).pipe(
-      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null)))
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   // Contacts for assignee autocomplete - fetch all contacts and map to AutocompleteOption
   assigneeOptions = toSignal(
     this.contactsService.getContacts().pipe(
       map((contacts) =>
-        contacts.map((c): AutocompleteOption => ({
-          id: c.id,
-          label: c.displayName,
-          sublabel: c.email,
-          avatar: c.photoURL,
-        }))
-      )
+        contacts.map(
+          (c): AutocompleteOption => ({
+            id: c.id,
+            label: c.displayName,
+            sublabel: c.email,
+            avatar: c.photoURL,
+            // Generate consistent color from email for contacts without photos
+            color: c.photoURL ? undefined : this.generateAvatarColor(c.email),
+          }),
+        ),
+      ),
     ),
-    { initialValue: [] }
+    { initialValue: [] },
   );
+
+  /**
+   * Generate a consistent color for a contact based on their email
+   * Uses a simple hash to pick from a curated color palette
+   */
+  private generateAvatarColor(email: string): string {
+    const colors = [
+      '#8b5cf6', // Purple (brand)
+      '#3b82f6', // Blue
+      '#06b6d4', // Cyan
+      '#10b981', // Emerald
+      '#f59e0b', // Amber
+      '#ef4444', // Red
+      '#ec4899', // Pink
+      '#6366f1', // Indigo
+      '#14b8a6', // Teal
+      '#f97316', // Orange
+    ];
+    // Simple hash from email string
+    const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
 
   sections = signal<Section[]>([]);
   customFieldValues = signal<Record<string, any>>({});
@@ -400,7 +436,7 @@ export class TaskCreateModalComponent {
 
     // Validate the value based on field type
     const error = this.validateCustomFieldValue(field, value);
-    
+
     // Update validation errors
     this.customFieldErrors.update((errors) => {
       const newErrors = { ...errors };
@@ -433,7 +469,7 @@ export class TaskCreateModalComponent {
           }
         }
         break;
-      
+
       case 'date':
         // Check if value is a valid date
         if (value !== null && value !== undefined && value !== '') {
@@ -525,7 +561,7 @@ export class TaskCreateModalComponent {
     this.form.patchValue({ assigneeName: value });
     // If value doesn't match any option, clear the selected ID
     const matchingOption = this.assigneeOptions().find(
-      (opt) => opt.label === value || opt.id === value
+      (opt) => opt.label === value || opt.id === value,
     );
     if (matchingOption) {
       this.selectedAssigneeId.set(matchingOption.id);

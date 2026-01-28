@@ -15,29 +15,157 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
+exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
 const googleapis_1 = require("googleapis");
-const firestore_1 = require("firebase-admin/firestore");
+const firestore_2 = require("firebase-admin/firestore");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 // Initialize Firebase Admin
 admin.initializeApp();
-const db = (0, firestore_1.getFirestore)();
+const db = (0, firestore_2.getFirestore)();
 // Define secrets for OAuth (set via Firebase CLI: firebase functions:secrets:set GOOGLE_CLIENT_ID)
 const googleClientId = (0, params_1.defineSecret)('GOOGLE_CLIENT_ID');
 const googleClientSecret = (0, params_1.defineSecret)('GOOGLE_CLIENT_SECRET');
+// Service account email for sending emails (with domain-wide delegation)
+const gmailServiceAccountKey = (0, params_1.defineSecret)('GMAIL_SERVICE_ACCOUNT_KEY');
+// Sender email address for task notifications (configurable via environment variable)
+const TASK_NOTIFICATION_SENDER = process.env.TASK_NOTIFICATION_SENDER || 'task@omniflexfitness.com';
 // Google Tasks API client
 const tasksApi = googleapis_1.google.tasks('v1');
+// Google People API client (for directory contacts)
+const peopleApi = googleapis_1.google.people('v1');
+// Gmail API client
+const gmailApi = googleapis_1.google.gmail('v1');
+// Email template cache (loaded once for performance)
+let emailTemplateCache = null;
+/**
+ * Escape HTML entities to prevent XSS attacks
+ */
+function escapeHtml(text) {
+    const htmlEscapeMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;',
+        '/': '&#x2F;',
+    };
+    return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char]);
+}
+/**
+ * Load email template from file (cached for performance)
+ */
+function loadEmailTemplate() {
+    try {
+        if (!emailTemplateCache) {
+            const templatePath = path.join(__dirname, 'email-templates', 'task-assignment.html');
+            emailTemplateCache = fs.readFileSync(templatePath, 'utf-8');
+        }
+        return emailTemplateCache;
+    }
+    catch (error) {
+        console.error('Failed to load email template:', error);
+        // Fallback to a minimal inline template
+        return `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h1>New Task Assigned</h1>
+  <p>Project: {{PROJECT_NAME}}</p>
+  <h2>{{TASK_TITLE}}</h2>
+  {{TASK_DESCRIPTION}}
+  <p>Priority: {{TASK_PRIORITY}}</p>
+  {{DUE_DATE_HTML}}
+  <p><a href="{{TASK_URL}}">View Task</a></p>
+</body>
+</html>
+    `.trim();
+    }
+}
+/**
+ * Populate email template with task data
+ */
+function populateEmailTemplate(data) {
+    let html = loadEmailTemplate();
+    // Escape all user-provided content to prevent XSS
+    html = html.replace(/{{PROJECT_NAME}}/g, escapeHtml(data.projectName));
+    html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
+    const descriptionHtml = data.taskDescription
+        ? `<p class="description">${escapeHtml(data.taskDescription)}</p>`
+        : '';
+    html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
+    html = html.replace(/{{TASK_PRIORITY}}/g, escapeHtml(data.taskPriority.toUpperCase()));
+    const dueDateHtml = data.dueDateStr
+        ? `
+      <span class="meta-item">
+        <span class="meta-label">Due:</span>
+        <span class="meta-value">${escapeHtml(data.dueDateStr)}</span>
+      </span>
+      `
+        : '';
+    html = html.replace(/{{DUE_DATE_HTML}}/g, dueDateHtml);
+    // URL doesn't need escaping as it's constructed server-side, but validate it's safe
+    html = html.replace(/{{TASK_URL}}/g, data.taskUrl);
+    return html;
+}
+// JWT client for Gmail API (initialized outside function handler for performance)
+let jwtClient = null;
+/**
+ * Get or initialize JWT client for Gmail API
+ */
+async function getGmailJwtClient() {
+    try {
+        if (!jwtClient) {
+            const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+            jwtClient = new googleapis_1.google.auth.JWT({
+                email: serviceAccountKey.client_email,
+                key: serviceAccountKey.private_key,
+                scopes: ['https://www.googleapis.com/auth/gmail.send'],
+                subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+            });
+            await jwtClient.authorize();
+        }
+        return jwtClient;
+    }
+    catch (error) {
+        // If authorization fails, clear cache and try once more
+        jwtClient = null;
+        const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+        const newClient = new googleapis_1.google.auth.JWT({
+            email: serviceAccountKey.client_email,
+            key: serviceAccountKey.private_key,
+            scopes: ['https://www.googleapis.com/auth/gmail.send'],
+            subject: TASK_NOTIFICATION_SENDER,
+        });
+        await newClient.authorize();
+        jwtClient = newClient;
+        return jwtClient;
+    }
+}
 /**
  * Convert Google Task status to OmniTask status
  */
@@ -51,7 +179,6 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -60,9 +187,9 @@ function transformGoogleTaskToOmniTask(googleTask, projectId, googleTaskListId) 
         title: googleTask.title || 'Untitled',
         description: googleTask.notes || '',
         status: googleStatusToOmniStatus(googleTask.status ?? undefined),
-        dueDate: googleTask.due ? firestore_1.Timestamp.fromDate(new Date(googleTask.due)) : undefined,
+        dueDate: googleTask.due ? firestore_2.Timestamp.fromDate(new Date(googleTask.due)) : undefined,
         completedAt: googleTask.completed
-            ? firestore_1.Timestamp.fromDate(new Date(googleTask.completed))
+            ? firestore_2.Timestamp.fromDate(new Date(googleTask.completed))
             : undefined,
         googleTaskId: googleTask.id || undefined,
         googleTaskListId,
@@ -122,7 +249,7 @@ async function syncProject(project, accessToken) {
                         .doc(existingOmniTask.id)
                         .update({
                         ...taskData,
-                        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+                        updatedAt: firestore_2.FieldValue.serverTimestamp(),
                     });
                     updated++;
                 }
@@ -131,8 +258,8 @@ async function syncProject(project, accessToken) {
                 // Create new task in OmniTask
                 await db.collection('tasks').add({
                     ...taskData,
-                    createdAt: firestore_1.FieldValue.serverTimestamp(),
-                    updatedAt: firestore_1.FieldValue.serverTimestamp(),
+                    createdAt: firestore_2.FieldValue.serverTimestamp(),
+                    updatedAt: firestore_2.FieldValue.serverTimestamp(),
                 });
                 added++;
             }
@@ -140,7 +267,7 @@ async function syncProject(project, accessToken) {
         // Update project sync status
         await db.collection('projects').doc(project.id).update({
             syncStatus: 'synced',
-            lastSyncAt: firestore_1.FieldValue.serverTimestamp(),
+            lastSyncAt: firestore_2.FieldValue.serverTimestamp(),
         });
         return { success: true, added, updated };
     }
@@ -252,5 +379,253 @@ exports.manualGoogleTasksSync = (0, https_1.onCall)({
     // Perform sync
     const result = await syncProject(project, accessToken);
     return result;
+});
+/**
+ * Callable function to get workspace contacts from Google Directory
+ * This function uses the People API to fetch directory contacts
+ * which works for Google Workspace users to see other users in their organization
+ */
+exports.getWorkspaceContacts = (0, https_1.onCall)({
+    memory: '256MiB',
+}, async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { accessToken, pageSize = 100 } = request.data;
+    if (!accessToken) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing accessToken');
+    }
+    try {
+        // Set up authenticated client
+        const oauth2Client = new googleapis_1.google.auth.OAuth2();
+        oauth2Client.setCredentials({ access_token: accessToken });
+        // Fetch directory people using People API
+        const response = await peopleApi.people.listDirectoryPeople({
+            readMask: 'names,emailAddresses,photos',
+            sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
+            pageSize: Math.min(pageSize, 1000),
+            auth: oauth2Client,
+        });
+        const people = response.data.people || [];
+        const contacts = [];
+        for (const person of people) {
+            // Get primary or first email
+            const emailAddress = person.emailAddresses?.find((e) => e.metadata?.primary) || person.emailAddresses?.[0];
+            const email = emailAddress?.value;
+            if (!email)
+                continue; // Skip contacts without email
+            // Get primary or first name
+            const nameData = person.names?.find((n) => n.metadata?.primary) || person.names?.[0];
+            const displayName = nameData?.displayName || email.split('@')[0];
+            // Get primary or first photo
+            const photoData = person.photos?.find((p) => p.metadata?.primary) || person.photos?.[0];
+            const photoURL = photoData?.url || undefined;
+            contacts.push({
+                id: email,
+                email,
+                displayName,
+                photoURL,
+                source: 'google-directory',
+            });
+        }
+        // Sort by display name
+        contacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+        return {
+            contacts,
+            totalCount: contacts.length,
+        };
+    }
+    catch (error) {
+        console.error('Failed to fetch workspace contacts:', error);
+        // Check if it's a permission error using error code
+        if (error?.code === 403 || error?.response?.status === 403) {
+            throw new https_1.HttpsError('permission-denied', 'Unable to access directory contacts. This may require Google Workspace admin permissions.');
+        }
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to fetch workspace contacts');
+    }
+});
+/**
+ * Callable function to search workspace contacts
+ * Uses the People API searchDirectoryPeople endpoint
+ */
+exports.searchWorkspaceContacts = (0, https_1.onCall)({
+    memory: '256MiB',
+}, async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { accessToken, query, pageSize = 20 } = request.data;
+    if (!accessToken) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing accessToken');
+    }
+    if (!query || !query.trim()) {
+        return { contacts: [], totalCount: 0 };
+    }
+    try {
+        // Set up authenticated client
+        const oauth2Client = new googleapis_1.google.auth.OAuth2();
+        oauth2Client.setCredentials({ access_token: accessToken });
+        // Search directory people using People API
+        const response = await peopleApi.people.searchDirectoryPeople({
+            query: query.trim(),
+            readMask: 'names,emailAddresses,photos',
+            sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
+            pageSize: Math.min(pageSize, 100),
+            auth: oauth2Client,
+        });
+        const people = response.data.people || [];
+        const contacts = [];
+        for (const person of people) {
+            const emailAddress = person.emailAddresses?.find((e) => e.metadata?.primary) || person.emailAddresses?.[0];
+            const email = emailAddress?.value;
+            if (!email)
+                continue;
+            const nameData = person.names?.find((n) => n.metadata?.primary) || person.names?.[0];
+            const displayName = nameData?.displayName || email.split('@')[0];
+            const photoData = person.photos?.find((p) => p.metadata?.primary) || person.photos?.[0];
+            const photoURL = photoData?.url || undefined;
+            contacts.push({
+                id: email,
+                email,
+                displayName,
+                photoURL,
+                source: 'google-directory',
+            });
+        }
+        return {
+            contacts,
+            totalCount: contacts.length,
+        };
+    }
+    catch (error) {
+        console.error('Failed to search workspace contacts:', error);
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to search workspace contacts');
+    }
+});
+/**
+ * Firestore trigger: Send email notification when a task is assigned
+ * Triggers on task create/update and sends email if assignee changed
+ */
+exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
+    document: 'tasks/{taskId}',
+    secrets: [gmailServiceAccountKey],
+    memory: '256MiB',
+}, async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    // Skip if task was deleted
+    if (!after) {
+        console.log('Task deleted, skipping email notification');
+        return;
+    }
+    // Check if assignee was added or changed
+    const wasNewlyAssigned = !before?.assignedToId && after.assignedToId;
+    const assigneeChanged = before?.assignedToId !== after.assignedToId && after.assignedToId;
+    if (!wasNewlyAssigned && !assigneeChanged) {
+        console.log('No assignee change, skipping email notification');
+        return;
+    }
+    // Get assignee email - prefer email lookup from users collection, fallback to assigneeName
+    let assigneeEmail = after.assigneeName;
+    if (after.assignedToId) {
+        try {
+            const userDoc = await db.collection('users').doc(after.assignedToId).get();
+            if (userDoc.exists) {
+                assigneeEmail = userDoc.data()?.email || assigneeEmail;
+            }
+        }
+        catch (err) {
+            console.warn('Failed to lookup assignee user:', err);
+        }
+    }
+    if (!assigneeEmail || !assigneeEmail.includes('@')) {
+        console.log('No valid assignee email, skipping notification');
+        return;
+    }
+    // Get project name for context
+    let projectName = 'a project';
+    if (after.projectId) {
+        try {
+            const projectDoc = await db.collection('projects').doc(after.projectId).get();
+            if (projectDoc.exists) {
+                projectName = projectDoc.data()?.name || projectName;
+            }
+        }
+        catch (err) {
+            console.warn('Failed to lookup project:', err);
+        }
+    }
+    // Format due date if present
+    let dueDateStr;
+    if (after.dueDate) {
+        const dueDate = after.dueDate.toDate ? after.dueDate.toDate() : new Date(after.dueDate);
+        dueDateStr = dueDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
+    }
+    // Build email HTML from template
+    const emailHtml = populateEmailTemplate({
+        projectName,
+        taskTitle: after.title || 'Untitled Task',
+        taskDescription: after.description,
+        taskPriority: after.priority || 'medium',
+        dueDateStr,
+        taskUrl: `https://omnitask.omniflexfitness.com/projects/${after.projectId}`,
+    });
+    // Build email message
+    const emailSubject = `📋 You've been assigned: ${after.title || 'New Task'}`;
+    // Create raw email (RFC 2822 format)
+    const rawEmail = [
+        `From: OmniTask <${TASK_NOTIFICATION_SENDER}>`,
+        `To: ${assigneeEmail}`,
+        `Subject: ${emailSubject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        emailHtml,
+    ].join('\r\n');
+    // Base64url encode the email
+    const encodedEmail = Buffer.from(rawEmail)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    try {
+        // Get initialized JWT client (reused across invocations for performance)
+        const client = await getGmailJwtClient();
+        await gmailApi.users.messages.send({
+            userId: 'me',
+            requestBody: {
+                raw: encodedEmail,
+            },
+            auth: client,
+        });
+        console.log(`Email sent to ${assigneeEmail} for task: ${after.title}`);
+        // Log notification to Firestore for audit
+        await db.collection('notifications').add({
+            type: 'task_assignment',
+            taskId: event.params.taskId,
+            recipientEmail: assigneeEmail,
+            sentAt: firestore_2.FieldValue.serverTimestamp(),
+            success: true,
+        });
+    }
+    catch (error) {
+        console.error('Failed to send email notification:', error);
+        // Log failed notification
+        await db.collection('notifications').add({
+            type: 'task_assignment',
+            taskId: event.params.taskId,
+            recipientEmail: assigneeEmail,
+            sentAt: firestore_2.FieldValue.serverTimestamp(),
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
 });
 //# sourceMappingURL=index.js.map

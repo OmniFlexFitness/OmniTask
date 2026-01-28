@@ -39,6 +39,20 @@ export class TaskService {
   error = signal<string | null>(null);
 
   /**
+   * Helper to remove undefined values from an object before Firestore operations.
+   * Firestore does not allow undefined as a field value.
+   */
+  private stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+    const result = {} as T;
+    for (const key of Object.keys(obj) as (keyof T)[]) {
+      if (obj[key] !== undefined) {
+        result[key] = obj[key];
+      }
+    }
+    return result;
+  }
+
+  /**
    * Transform Google Tasks API format to OmniTask Task data
    * Maps Google Tasks API fields to local model fields
    */
@@ -87,7 +101,7 @@ export class TaskService {
     const q = query(
       this.tasksCollection,
       where('projectId', '==', projectId),
-      orderBy('order', 'asc')
+      orderBy('order', 'asc'),
     );
     return runInInjectionContext(this.injector, () => {
       return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
@@ -102,7 +116,7 @@ export class TaskService {
       this.tasksCollection,
       where('projectId', '==', projectId),
       where('sectionId', '==', sectionId),
-      orderBy('order', 'asc')
+      orderBy('order', 'asc'),
     );
     return runInInjectionContext(this.injector, () => {
       return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
@@ -117,7 +131,7 @@ export class TaskService {
       this.tasksCollection,
       where('projectId', '==', projectId),
       where('status', '==', status),
-      orderBy('order', 'asc')
+      orderBy('order', 'asc'),
     );
     return runInInjectionContext(this.injector, () => {
       return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
@@ -133,7 +147,7 @@ export class TaskService {
       where('projectId', '==', projectId),
       where('dueDate', '>=', startDate),
       where('dueDate', '<=', endDate),
-      orderBy('dueDate', 'asc')
+      orderBy('dueDate', 'asc'),
     );
     return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
   }
@@ -173,26 +187,27 @@ export class TaskService {
    */
   async createTask(
     task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
-    googleTaskListId?: string
+    googleTaskListId?: string,
   ): Promise<DocumentReference> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
       const user = this.auth.currentUserSig();
-      const data = {
+      // Strip undefined values - Firestore does not accept undefined as a field value
+      const data = this.stripUndefined({
         ...task,
         createdById: user?.uid,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
+      });
       const result = await addDoc(this.tasksCollection, data);
 
       if (googleTaskListId) {
         try {
           const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(task);
           const googleTask = await firstValueFrom(
-            this.googleTasksService.createTask(googleTaskListId, googleTaskData)
+            this.googleTasksService.createTask(googleTaskListId, googleTaskData),
           );
           await updateDoc(doc(this.tasksCollection, result.id), {
             googleTaskId: googleTask.id,
@@ -206,7 +221,7 @@ export class TaskService {
           } catch (rollbackErr) {
             console.error(
               'Failed to rollback Firestore task after Google Task creation error:',
-              rollbackErr
+              rollbackErr,
             );
           }
           throw err;
@@ -240,10 +255,14 @@ export class TaskService {
       const taskDoc = await this.getTask(id);
 
       const taskRef = doc(this.firestore, `tasks/${id}`);
-      await updateDoc(taskRef, {
-        ...data,
-        updatedAt: new Date(),
-      });
+      // Strip undefined values - Firestore does not accept undefined as a field value
+      await updateDoc(
+        taskRef,
+        this.stripUndefined({
+          ...data,
+          updatedAt: new Date(),
+        }),
+      );
 
       // Auto-add assignee to project members
       if (data.assignedToId && taskDoc) {
@@ -259,8 +278,8 @@ export class TaskService {
               this.googleTasksService.updateTask(
                 project.googleTaskListId,
                 taskDoc.googleTaskId,
-                googleTaskData
-              )
+                googleTaskData,
+              ),
             );
           } catch (err) {
             console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
@@ -289,7 +308,7 @@ export class TaskService {
         try {
           await this.googleTasksSyncService.deleteTaskInGoogle(
             taskDoc.googleTaskListId,
-            taskDoc.googleTaskId
+            taskDoc.googleTaskId,
           );
           // Only delete from Firestore after successful Google Tasks deletion
           await deleteDoc(doc(this.firestore, `tasks/${id}`));
@@ -297,7 +316,7 @@ export class TaskService {
         } catch (err) {
           console.error(
             'Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:',
-            err
+            err,
           );
           throw err;
         }
@@ -324,7 +343,7 @@ export class TaskService {
         status: 'done',
         completedAt: new Date(),
       },
-      googleTaskListId
+      googleTaskListId,
     );
   }
 
@@ -338,7 +357,7 @@ export class TaskService {
         status: 'in-progress',
         completedAt: null as any, // Use null to clear field (Firestore rejects undefined)
       },
-      googleTaskListId
+      googleTaskListId,
     );
   }
 

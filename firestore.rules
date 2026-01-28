@@ -15,6 +15,13 @@ service cloud.firestore {
     }
     
     match /users/{userId} {
+      // Allow reading own profile only
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // User's personal contacts cache - scoped to individual users
+    match /users/{userId}/contacts/{contactId} {
       allow read, write: if request.auth.uid == userId;
     }
     
@@ -47,6 +54,14 @@ service cloud.firestore {
       allow create: if isAuthenticated() && canCreateInProject();
       allow read: if isAuthenticated() && isProjectMember();
       allow update, delete: if isAuthenticated() && isProjectMember();
+    }
+    
+    // Notifications - written by Cloud Functions, readable by recipient
+    match /notifications/{notificationId} {
+      // Cloud Functions uses admin SDK (bypasses rules)
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && resource.data.recipientEmail == request.auth.token.email;
+      allow write: if false; // Only Cloud Functions can write
     }
   }
 }
