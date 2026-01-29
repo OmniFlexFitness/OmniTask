@@ -409,6 +409,10 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
         console.log('No assignee change, skipping email notification');
         return;
     }
+    // Log subtask info - subtasks inherit parent's assignee and are included in parent notification
+    if (after.subtasks && after.subtasks.length > 0) {
+        console.log(`Task has ${after.subtasks.length} subtask(s) - included in parent notification`);
+    }
     // Get assignee email - prefer email lookup from users collection, fallback to assigneeName
     let assigneeEmail = after.assigneeName;
     if (after.assignedToId) {
@@ -416,6 +420,20 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
             const userDoc = await db.collection('users').doc(after.assignedToId).get();
             if (userDoc.exists) {
                 assigneeEmail = userDoc.data()?.email || assigneeEmail;
+            }
+            else if (assigneeEmail) {
+                // Fallback to contacts cache if not in users collection
+                // This handles external assignees synced from Google Contacts
+                const contactsQuery = await db
+                    .collection('contacts')
+                    .where('email', '==', assigneeEmail)
+                    .limit(1)
+                    .get();
+                if (!contactsQuery.empty) {
+                    const contactData = contactsQuery.docs[0].data();
+                    assigneeEmail = contactData?.email || assigneeEmail;
+                    console.log(`Found assignee in contacts cache: ${assigneeEmail}`);
+                }
             }
         }
         catch (err) {

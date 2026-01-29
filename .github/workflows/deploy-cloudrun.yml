@@ -93,8 +93,14 @@ jobs:
       - name: Build Angular app
         run: yarn build
 
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy --only hosting,firestore --project ${{ env.PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+      - name: Install Firebase Functions dependencies
+        run: |
+          cd functions
+          npm ci
+          cd ..
+
+      - name: Deploy to Firebase (Hosting, Firestore, Functions)
+        run: npx firebase-tools deploy --only hosting,firestore,functions --project ${{ env.PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Create Release Tag
         run: |
