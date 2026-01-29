@@ -87,14 +87,8 @@ Before deploying, ensure the following secrets are configured in your GitHub rep
 | Secret Name | Description | How to Obtain |
 | :--- | :--- | :--- |
 | `GCP_PROJECT_NUMBER` | Your GCP project number | GCP Console > Project Settings |
-| `FIREBASE_TOKEN` | Firebase CI token for deployments | Run `firebase login:ci` locally |
 
-To generate a Firebase CI token:
-```bash
-npm install -g firebase-tools
-firebase login:ci
-# Copy the token and add it as FIREBASE_TOKEN secret
-```
+**Note:** Firebase deployment uses Google Cloud Application Default Credentials (ADC) via Workload Identity Federation. No separate Firebase token is required.
 
 ---
 
