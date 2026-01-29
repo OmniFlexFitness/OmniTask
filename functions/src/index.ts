@@ -548,26 +548,36 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       console.log(`Task has ${after.subtasks.length} subtask(s) - included in parent notification`);
     }
 
-    // Get assignee email - prefer email lookup from users collection, fallback to assigneeName
+    // Get assignee email - prefer email lookup from users collection, fallback to contacts
+    // Note: assigneeName may be a display name OR an email depending on how the task was assigned
+    // assignedToId may be a user UID or an email for external contacts
     let assigneeEmail = after.assigneeName;
+
+    // Check if assignedToId itself is an email (for external contacts)
+    const assignedToIdIsEmail = after.assignedToId?.includes('@');
+    if (assignedToIdIsEmail) {
+      assigneeEmail = after.assignedToId;
+    }
 
     if (after.assignedToId) {
       try {
         const userDoc = await db.collection('users').doc(after.assignedToId).get();
         if (userDoc.exists) {
-          assigneeEmail = userDoc.data()?.email || assigneeEmail;
-        } else if (assigneeEmail) {
+          const userData = userDoc.data() as { email?: string };
+          assigneeEmail = userData.email || assigneeEmail;
+        } else if (!assignedToIdIsEmail) {
           // Fallback to contacts cache if not in users collection
-          // This handles external assignees synced from Google Contacts
-          const contactsQuery = await db
-            .collection('contacts')
-            .where('email', '==', assigneeEmail)
-            .limit(1)
-            .get();
-          if (!contactsQuery.empty) {
-            const contactData = contactsQuery.docs[0].data();
-            assigneeEmail = contactData?.email || assigneeEmail;
-            console.log(`Found assignee in contacts cache: ${assigneeEmail}`);
+          // Query by document ID (which is the sanitized email for contacts)
+          // or check if assigneeName happens to be an email
+          const possibleEmail = after.assigneeName?.includes('@') ? after.assigneeName : null;
+          if (possibleEmail) {
+            const sanitizedEmail = possibleEmail.replace(/\./g, '_').toLowerCase();
+            const contactDoc = await db.collection('contacts').doc(sanitizedEmail).get();
+            if (contactDoc.exists) {
+              const contactData = contactDoc.data() as { email?: string };
+              assigneeEmail = contactData.email || possibleEmail;
+              console.log(`Found assignee in contacts cache: ${assigneeEmail}`);
+            }
           }
         }
       } catch (err) {
