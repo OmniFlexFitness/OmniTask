@@ -5,6 +5,8 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { google, tasks_v1 } from 'googleapis';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -16,8 +18,8 @@ const googleClientSecret = defineSecret('GOOGLE_CLIENT_SECRET');
 // Service account email for sending emails (with domain-wide delegation)
 const gmailServiceAccountKey = defineSecret('GMAIL_SERVICE_ACCOUNT_KEY');
 
-// Sender email address for task notifications
-const TASK_NOTIFICATION_SENDER = 'task@omniflexfitness.com';
+// Sender email address for task notifications (configurable via environment variable)
+const TASK_NOTIFICATION_SENDER = process.env.TASK_NOTIFICATION_SENDER || 'task@omniflexfitness.com';
 
 // Google Tasks API client
 const tasksApi = google.tasks('v1');
@@ -25,6 +27,129 @@ const tasksApi = google.tasks('v1');
 const peopleApi = google.people('v1');
 // Gmail API client
 const gmailApi = google.gmail('v1');
+
+// Email template cache (loaded once for performance)
+let emailTemplateCache: string | null = null;
+
+/**
+ * Escape HTML entities to prevent XSS attacks
+ */
+function escapeHtml(text: string): string {
+  const htmlEscapeMap: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;',
+  };
+  return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char]);
+}
+
+/**
+ * Load email template from file (cached for performance)
+ */
+function loadEmailTemplate(): string {
+  try {
+    if (!emailTemplateCache) {
+      const templatePath = path.join(__dirname, 'email-templates', 'task-assignment.html');
+      emailTemplateCache = fs.readFileSync(templatePath, 'utf-8');
+    }
+    return emailTemplateCache;
+  } catch (error) {
+    console.error('Failed to load email template:', error);
+    // Fallback to a minimal inline template
+    return `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h1>New Task Assigned</h1>
+  <p>Project: {{PROJECT_NAME}}</p>
+  <h2>{{TASK_TITLE}}</h2>
+  {{TASK_DESCRIPTION}}
+  <p>Priority: {{TASK_PRIORITY}}</p>
+  {{DUE_DATE_HTML}}
+  <p><a href="{{TASK_URL}}">View Task</a></p>
+</body>
+</html>
+    `.trim();
+  }
+}
+
+/**
+ * Populate email template with task data
+ */
+function populateEmailTemplate(data: {
+  projectName: string;
+  taskTitle: string;
+  taskDescription?: string;
+  taskPriority: string;
+  dueDateStr?: string;
+  taskUrl: string;
+}): string {
+  let html = loadEmailTemplate();
+
+  // Escape all user-provided content to prevent XSS
+  html = html.replace(/{{PROJECT_NAME}}/g, escapeHtml(data.projectName));
+  html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
+  
+  const descriptionHtml = data.taskDescription 
+    ? `<p class="description">${escapeHtml(data.taskDescription)}</p>` 
+    : '';
+  html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
+  
+  html = html.replace(/{{TASK_PRIORITY}}/g, escapeHtml(data.taskPriority.toUpperCase()));
+  
+  const dueDateHtml = data.dueDateStr
+    ? `
+      <span class="meta-item">
+        <span class="meta-label">Due:</span>
+        <span class="meta-value">${escapeHtml(data.dueDateStr)}</span>
+      </span>
+      `
+    : '';
+  html = html.replace(/{{DUE_DATE_HTML}}/g, dueDateHtml);
+  
+  // URL doesn't need escaping as it's constructed server-side, but validate it's safe
+  html = html.replace(/{{TASK_URL}}/g, data.taskUrl);
+
+  return html;
+}
+
+// JWT client for Gmail API (initialized outside function handler for performance)
+let jwtClient: InstanceType<typeof google.auth.JWT> | null = null;
+
+/**
+ * Get or initialize JWT client for Gmail API
+ */
+async function getGmailJwtClient(): Promise<InstanceType<typeof google.auth.JWT>> {
+  try {
+    if (!jwtClient) {
+      const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+      jwtClient = new google.auth.JWT({
+        email: serviceAccountKey.client_email,
+        key: serviceAccountKey.private_key,
+        scopes: ['https://www.googleapis.com/auth/gmail.send'],
+        subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
+      });
+      await jwtClient.authorize();
+    }
+    return jwtClient;
+  } catch (error) {
+    // If authorization fails, clear cache and try once more
+    jwtClient = null;
+    const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
+    const newClient = new google.auth.JWT({
+      email: serviceAccountKey.client_email,
+      key: serviceAccountKey.private_key,
+      scopes: ['https://www.googleapis.com/auth/gmail.send'],
+      subject: TASK_NOTIFICATION_SENDER,
+    });
+    await newClient.authorize();
+    jwtClient = newClient;
+    return jwtClient;
+  }
+}
 
 /**
  * Contact interface for workspace contacts
@@ -415,8 +540,8 @@ export const getWorkspaceContacts = onCall<{ accessToken: string; pageSize?: num
     } catch (error) {
       console.error('Failed to fetch workspace contacts:', error);
 
-      // Check if it's a permission error
-      if (error instanceof Error && error.message.includes('403')) {
+      // Check if it's a permission error using error code
+      if ((error as any)?.code === 403 || (error as any)?.response?.status === 403) {
         throw new HttpsError(
           'permission-denied',
           'Unable to access directory contacts. This may require Google Workspace admin permissions.',
@@ -604,7 +729,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     }
 
     // Format due date if present
-    let dueDateStr = '';
+    let dueDateStr: string | undefined;
     if (after.dueDate) {
       const dueDate = after.dueDate.toDate ? after.dueDate.toDate() : new Date(after.dueDate);
       dueDateStr = dueDate.toLocaleDateString('en-US', {
@@ -615,67 +740,15 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       });
     }
 
-    // Build email HTML
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e4e4e7; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; background: #16213e; border-radius: 12px; padding: 24px; }
-    h1 { color: #8b5cf6; margin: 0 0 8px 0; font-size: 24px; }
-    .project { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
-    .task-title { background: #1e293b; border-left: 4px solid #8b5cf6; padding: 16px; border-radius: 8px; margin: 16px 0; }
-    .task-title h2 { color: #f1f5f9; margin: 0; font-size: 20px; }
-    .description { color: #94a3b8; margin-top: 8px; }
-    .meta { display: flex; gap: 16px; margin: 16px 0; }
-    .meta-item { background: #1e293b; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
-    .meta-label { color: #64748b; }
-    .meta-value { color: #e2e8f0; }
-    .cta { display: inline-block; background: #8b5cf6; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; margin-top: 16px; font-weight: 500; }
-    .footer { color: #64748b; font-size: 12px; margin-top: 24px; border-top: 1px solid #334155; padding-top: 16px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>📋 New Task Assigned</h1>
-    <p class="project">In project: ${projectName}</p>
-    
-    <div class="task-title">
-      <h2>${after.title || 'Untitled Task'}</h2>
-      ${after.description ? `<p class="description">${after.description}</p>` : ''}
-    </div>
-    
-    <div class="meta">
-      <span class="meta-item">
-        <span class="meta-label">Priority:</span>
-        <span class="meta-value">${(after.priority || 'medium').toUpperCase()}</span>
-      </span>
-      ${
-        dueDateStr
-          ? `
-      <span class="meta-item">
-        <span class="meta-label">Due:</span>
-        <span class="meta-value">${dueDateStr}</span>
-      </span>
-      `
-          : ''
-      }
-    </div>
-    
-    <a href="https://omnitask.omniflexfitness.com/projects/${after.projectId}" class="cta">
-      View Task in OmniTask
-    </a>
-    
-    <div class="footer">
-      This email was sent by OmniTask because you were assigned a task.<br>
-      OmniFlex Fitness Task Management
-    </div>
-  </div>
-</body>
-</html>
-    `.trim();
+    // Build email HTML from template
+    const emailHtml = populateEmailTemplate({
+      projectName,
+      taskTitle: after.title || 'Untitled Task',
+      taskDescription: after.description,
+      taskPriority: after.priority || 'medium',
+      dueDateStr,
+      taskUrl: `https://omnitask.omniflexfitness.com/projects/${after.projectId}`,
+    });
 
     // Build email message
     const emailSubject = `📋 You've been assigned: ${after.title || 'New Task'}`;
@@ -699,26 +772,15 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       .replace(/=+$/, '');
 
     try {
-      // Parse service account key from secret
-      const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
-
-      // Create JWT client with domain-wide delegation
-      const jwtClient = new google.auth.JWT({
-        email: serviceAccountKey.client_email,
-        key: serviceAccountKey.private_key,
-        scopes: ['https://www.googleapis.com/auth/gmail.send'],
-        subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
-      });
-
-      // Authorize and send email
-      await jwtClient.authorize();
+      // Get initialized JWT client (reused across invocations for performance)
+      const client = await getGmailJwtClient();
 
       await gmailApi.users.messages.send({
         userId: 'me',
         requestBody: {
           raw: encodedEmail,
         },
-        auth: jwtClient,
+        auth: client,
       });
 
       console.log(`Email sent to ${assigneeEmail} for task: ${after.title}`);

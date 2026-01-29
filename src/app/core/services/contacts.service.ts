@@ -29,6 +29,7 @@ import {
 } from 'rxjs';
 import { UserProfile } from '../models/user.model';
 import { GoogleContactsService, GoogleContact } from './google-contacts.service';
+import { AuthService } from '../auth/auth.service';
 
 export interface Contact {
   id: string; // email or uid
@@ -37,7 +38,6 @@ export interface Contact {
   photoURL?: string;
   source:
     | 'workspace'
-    | 'app'
     | 'google-contacts'
     | 'google-directory'
     | 'default-domain'
@@ -62,6 +62,7 @@ export class ContactsService {
   private readonly firestore = inject(Firestore);
   private readonly functions = inject(Functions);
   private readonly googleContactsService = inject(GoogleContactsService);
+  private readonly authService = inject(AuthService);
 
   // Cache for contacts
   private contactsCache$: Observable<Contact[]> | null = null;
@@ -72,9 +73,6 @@ export class ContactsService {
 
   // Default domain for omniflexfitness.com emails
   private readonly DEFAULT_DOMAIN = 'omniflexfitness.com';
-
-  // Firestore collection name for cached contacts
-  private readonly CONTACTS_COLLECTION = 'contacts';
 
   // Preset domain members for fallback when Google APIs unavailable
   // These are always included as lowest-priority options
@@ -113,7 +111,7 @@ export class ContactsService {
       this.loadingSubject.next(true);
 
       this.contactsCache$ = combineLatest([
-        // 1. Cached contacts from Firestore (fast, primary source)
+        // 1. Cached contacts from Firestore (fast, primary source, user-scoped)
         from(this.fetchCachedContacts()).pipe(
           tap((contacts) =>
             console.log('[ContactsService] Firestore cache:', contacts.length, 'contacts'),
@@ -123,13 +121,7 @@ export class ContactsService {
             return of([]);
           }),
         ),
-        // 2. App users from Firestore users collection
-        from(this.fetchAppUsers()).pipe(
-          tap((users) => console.log('[ContactsService] App users:', users.length, 'users')),
-          map((users) => users.map((u) => this.mapUserToContact(u))),
-          catchError(() => of([])),
-        ),
-        // 3. Google Directory people (domain users)
+        // 2. Google Directory people (domain users) - primary source for team contacts
         this.googleContactsService.getDirectoryPeople().pipe(
           tap((contacts) =>
             console.log('[ContactsService] Google Directory:', contacts.length, 'contacts'),
@@ -140,7 +132,7 @@ export class ContactsService {
             return of([]);
           }),
         ),
-        // 4. Google Contacts (personal contacts)
+        // 3. Google Contacts (personal contacts)
         this.googleContactsService.getContacts().pipe(
           tap((contacts) =>
             console.log('[ContactsService] Google Contacts:', contacts.length, 'contacts'),
@@ -148,7 +140,7 @@ export class ContactsService {
           map((contacts) => contacts.map((c) => this.mapGoogleContactToContact(c))),
           catchError(() => of([])),
         ),
-        // 5. Other contacts inferred from interactions
+        // 4. Other contacts inferred from interactions
         this.googleContactsService.getOtherContacts().pipe(
           tap((contacts) =>
             console.log('[ContactsService] Google Other Contacts:', contacts.length, 'contacts'),
@@ -159,22 +151,20 @@ export class ContactsService {
             return of([]);
           }),
         ),
-        // 6. Always include preset domain members as fallback
+        // 5. Always include preset domain members as fallback
         of(this.PRESET_DOMAIN_MEMBERS),
       ]).pipe(
         map(
           ([
             cachedContacts,
-            appUsers,
             directoryPeople,
             googleContacts,
             otherContacts,
             presetMembers,
           ]) => {
             // Merge and deduplicate contacts by email
-            // Priority: app > google-directory > google-contacts > cached > default-domain
+            // Priority: google-directory > google-contacts > other-contacts > cached > default-domain
             const allContacts = [
-              ...appUsers,
               ...directoryPeople,
               ...googleContacts,
               ...otherContacts,
@@ -266,11 +256,17 @@ export class ContactsService {
   }
 
   /**
-   * Fetch cached contacts from Firestore
+   * Fetch cached contacts from Firestore (user-scoped)
    */
   private async fetchCachedContacts(): Promise<Contact[]> {
     try {
-      const contactsRef = collection(this.firestore, this.CONTACTS_COLLECTION);
+      const currentUser = this.authService.currentUserSig();
+      if (!currentUser?.uid) {
+        console.log('No current user, skipping cached contacts fetch');
+        return [];
+      }
+
+      const contactsRef = collection(this.firestore, `users/${currentUser.uid}/contacts`);
       const q = query(contactsRef, orderBy('displayName'), limit(500));
       const snap = await getDocs(q);
 
@@ -291,7 +287,7 @@ export class ContactsService {
   }
 
   /**
-   * Sync contacts to Firestore for caching
+   * Sync contacts to Firestore for caching (user-scoped)
    * Only writes contacts from Google APIs (not app users or presets)
    */
   private async syncContactsToFirestore(contacts: Contact[]): Promise<void> {
@@ -303,13 +299,19 @@ export class ContactsService {
     if (contactsToSync.length === 0) return;
 
     try {
+      const currentUser = this.authService.currentUserSig();
+      if (!currentUser?.uid) {
+        console.log('No current user, skipping contacts sync');
+        return;
+      }
+
       const batch = writeBatch(this.firestore);
       const now = Timestamp.now();
 
       for (const contact of contactsToSync) {
         // Use email as document ID (sanitized for Firestore)
         const docId = this.sanitizeEmail(contact.email);
-        const docRef = doc(this.firestore, this.CONTACTS_COLLECTION, docId);
+        const docRef = doc(this.firestore, `users/${currentUser.uid}/contacts`, docId);
 
         const storedContact: StoredContact = {
           email: contact.email,
@@ -323,7 +325,7 @@ export class ContactsService {
       }
 
       await batch.commit();
-      console.log(`Synced ${contactsToSync.length} contacts to Firestore`);
+      console.log(`Synced ${contactsToSync.length} contacts to Firestore (user-scoped)`);
     } catch (e) {
       console.error('Error syncing contacts to Firestore:', e);
       throw e;
@@ -338,29 +340,6 @@ export class ContactsService {
     return email.toLowerCase().replace(/\//g, '_');
   }
 
-  private async fetchAppUsers(): Promise<UserProfile[]> {
-    try {
-      const usersRef = collection(this.firestore, 'users');
-      // Simple query to get recent users or just all (assuming small team size for now)
-      const q = query(usersRef, limit(100)); // Limit to prevent massive reads
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => d.data() as UserProfile);
-    } catch (e) {
-      console.warn('Error fetching app users from Firestore:', e);
-      return [];
-    }
-  }
-
-  private mapUserToContact(user: UserProfile): Contact {
-    return {
-      id: user.uid,
-      email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      source: 'app',
-    };
-  }
-
   private mapGoogleContactToContact(googleContact: GoogleContact): Contact {
     return {
       id: googleContact.id,
@@ -372,19 +351,18 @@ export class ContactsService {
   }
 
   /**
-   * Deduplicate contacts by email, preferring app users over external sources
+   * Deduplicate contacts by email, preferring higher priority sources
    */
   private deduplicateContacts(contacts: Contact[]): Contact[] {
     const contactMap = new Map<string, Contact>();
 
-    // Priority order: app > google-directory > google-contacts > cached > default-domain
+    // Priority order: google-directory > google-contacts > workspace > cached > default-domain
     const sourcePriority: Record<Contact['source'], number> = {
-      app: 1,
-      'google-directory': 2,
-      'google-contacts': 3,
-      workspace: 4,
-      cached: 5,
-      'default-domain': 6,
+      'google-directory': 1,
+      'google-contacts': 2,
+      workspace: 3,
+      cached: 4,
+      'default-domain': 5,
     };
 
     for (const contact of contacts) {
