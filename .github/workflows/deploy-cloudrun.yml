@@ -82,6 +82,9 @@ jobs:
             --port 8080
 
       # Firebase Deployment Steps
+      - name: Enable Cloud Billing API
+        run: gcloud services enable cloudbilling.googleapis.com --project=${{ env.PROJECT_ID }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
