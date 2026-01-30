@@ -6,7 +6,8 @@ on:
       - live
 
 env:
-  PROJECT_ID: omnitask-475422
+  # Note: GCP_PROJECT_ID must be set in repository secrets
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-east1
   SERVICE_NAME: omnitask
   ARTIFACT_REGISTRY: us-east1-docker.pkg.dev
