@@ -5,6 +5,7 @@ import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
+import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map } from 'rxjs';
@@ -307,9 +308,44 @@ import {
 
           <!-- Description -->
           <div class="mb-6">
-            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
-              >Description</label
-            >
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
+                >Description</label
+              >
+              <button
+                type="button"
+                (click)="aiEnhanceDescription()"
+                [disabled]="!form.value.description?.trim() || enhancingDescription()"
+                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                title="AI enhance description"
+              >
+                @if (enhancingDescription()) {
+                  <svg
+                    class="animate-spin h-3 w-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Enhancing...
+                } @else {
+                  ✨ Enhance
+                }
+              </button>
+            </div>
             <textarea
               formControlName="description"
               rows="4"
@@ -322,12 +358,47 @@ import {
           <!-- Subtasks -->
           <div class="mb-6">
             <div class="flex items-center justify-between mb-3">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
-                >Subtasks</label
+              <div class="flex items-center gap-3">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
+                  >Subtasks</label
+                >
+                <span class="text-xs text-slate-500"
+                  >{{ completedSubtasksCount() }}/{{ subtasks().length }}</span
+                >
+              </div>
+              <button
+                type="button"
+                (click)="aiGenerateSubtasks()"
+                [disabled]="!task()?.title?.trim() || generatingSubtasks()"
+                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                title="AI generate subtasks"
               >
-              <span class="text-xs text-slate-500"
-                >{{ completedSubtasksCount() }}/{{ subtasks().length }}</span
-              >
+                @if (generatingSubtasks()) {
+                  <svg
+                    class="animate-spin h-3 w-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Generating...
+                } @else {
+                  ✨ Generate
+                }
+              </button>
             </div>
 
             <!-- Subtask List -->
@@ -534,6 +605,11 @@ export class TaskDetailModalComponent {
   private projectService = inject(ProjectService);
   private dialogService = inject(DialogService);
   private contactsService = inject(ContactsService);
+  private vertexAiService = inject(VertexAiService);
+
+  // AI Loading states
+  generatingSubtasks = this.vertexAiService.generatingSubtasks;
+  enhancingDescription = this.vertexAiService.enhancingDescription;
 
   // Input
   task = input<Task | null>(null);
@@ -894,6 +970,55 @@ export class TaskDetailModalComponent {
       return d.toISOString().split('T')[0];
     } catch {
       return '';
+    }
+  }
+
+  // AI Methods
+  async aiGenerateSubtasks() {
+    const task = this.task();
+    if (!task?.title?.trim()) return;
+
+    try {
+      const newSubtasks = await this.vertexAiService.generateSubtasks(
+        task.title,
+        this.form.value.description || undefined,
+        this.project()?.name,
+      );
+
+      // Merge with existing subtasks
+      const currentSubtasks = this.subtasks();
+      const mergedSubtasks = [...currentSubtasks, ...newSubtasks];
+      this.subtasks.set(mergedSubtasks);
+
+      // Auto-save the new subtasks
+      const project = this.project();
+      await this.taskService.updateTask(
+        task.id,
+        { subtasks: mergedSubtasks },
+        project?.googleTaskListId,
+      );
+    } catch (err) {
+      console.error('Failed to generate subtasks:', err);
+    }
+  }
+
+  async aiEnhanceDescription() {
+    const task = this.task();
+    const description = this.form.value.description;
+    if (!task?.title?.trim() || !description?.trim()) return;
+
+    try {
+      const result = await this.vertexAiService.enhanceDescription(
+        task.title,
+        description,
+        this.project()?.name,
+      );
+
+      this.form.patchValue({ description: result.enhancedDescription });
+      this.form.markAsDirty();
+      await this.autoSave();
+    } catch (err) {
+      console.error('Failed to enhance description:', err);
     }
   }
 }

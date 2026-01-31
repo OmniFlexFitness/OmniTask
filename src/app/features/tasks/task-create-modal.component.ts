@@ -4,7 +4,8 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
-import { Task, Project, Section } from '../../core/models/domain.model';
+import { VertexAiService } from '../../core/services/vertex-ai.service';
+import { Task, Project, Section, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, startWith, debounceTime } from 'rxjs';
 import {
@@ -84,14 +85,47 @@ import {
             ></textarea>
           </div>
 
-          <!-- Two Column Grid -->
+          <!-- Two Column Grid with AI Buttons -->
           <div class="grid grid-cols-2 gap-3">
             <!-- Priority -->
             <div>
-              <label
-                class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-                >Priority</label
-              >
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
+                  >Priority</label
+                >
+                <button
+                  type="button"
+                  (click)="aiSuggestPriority()"
+                  [disabled]="!form.value.title?.trim() || suggestingPriority()"
+                  class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                  title="AI suggest priority"
+                >
+                  @if (suggestingPriority()) {
+                    <svg
+                      class="animate-spin h-3 w-3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  } @else {
+                    ✨ AI
+                  }
+                </button>
+              </div>
               <select
                 formControlName="priority"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -104,16 +138,108 @@ import {
 
             <!-- Due Date -->
             <div>
-              <label
-                class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-                >Due Date</label
-              >
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
+                  >Due Date</label
+                >
+                <button
+                  type="button"
+                  (click)="aiSuggestDueDate()"
+                  [disabled]="!form.value.title?.trim() || suggestingDueDate()"
+                  class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                  title="AI suggest due date"
+                >
+                  @if (suggestingDueDate()) {
+                    <svg
+                      class="animate-spin h-3 w-3"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  } @else {
+                    ✨ AI
+                  }
+                </button>
+              </div>
               <input
                 type="date"
                 formControlName="dueDate"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
             </div>
+          </div>
+
+          <!-- AI Subtasks Section -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
+                >Subtasks</label
+              >
+              <button
+                type="button"
+                (click)="aiGenerateSubtasks()"
+                [disabled]="!form.value.title?.trim() || generatingSubtasks()"
+                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                title="AI generate subtasks"
+              >
+                @if (generatingSubtasks()) {
+                  <svg
+                    class="animate-spin h-3 w-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Generating...
+                } @else {
+                  ✨ Generate with AI
+                }
+              </button>
+            </div>
+            @if (aiSubtasks().length > 0) {
+              <div class="space-y-1.5 bg-slate-950/30 rounded-lg p-2 border border-purple-500/20">
+                @for (subtask of aiSubtasks(); track subtask.id; let i = $index) {
+                  <div class="flex items-center gap-2 text-sm text-slate-300">
+                    <span class="text-purple-400">✦</span>
+                    <span class="flex-1">{{ subtask.title }}</span>
+                    <button
+                      type="button"
+                      (click)="removeAiSubtask(i)"
+                      class="text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                }
+              </div>
+            }
           </div>
 
           <!-- Section (for Board view) -->
@@ -332,6 +458,7 @@ export class TaskCreateModalComponent {
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
   private contactsService = inject(ContactsService);
+  private vertexAiService = inject(VertexAiService);
 
   // Inputs
   projectId = input.required<string>();
@@ -346,6 +473,12 @@ export class TaskCreateModalComponent {
   saving = signal(false);
   errorMessage = signal<string | null>(null);
   selectedAssigneeId = signal<string | null>(null);
+
+  // AI State
+  aiSubtasks = signal<Subtask[]>([]);
+  generatingSubtasks = this.vertexAiService.generatingSubtasks;
+  suggestingPriority = this.vertexAiService.suggestingPriority;
+  suggestingDueDate = this.vertexAiService.suggestingDueDate;
 
   // Get project sections for dropdown
   project = toSignal(
@@ -601,6 +734,7 @@ export class TaskCreateModalComponent {
         dueDate: dueDate as any,
         tags,
         customFieldValues: this.customFieldValues(),
+        subtasks: this.aiSubtasks().length > 0 ? this.aiSubtasks() : undefined,
       };
 
       const ref = await this.taskService.createTask(taskData, this.project()?.googleTaskListId);
@@ -633,5 +767,57 @@ export class TaskCreateModalComponent {
 
   private toInputDate(date: Date): string {
     return date.toISOString().split('T')[0];
+  }
+
+  // AI Methods
+  async aiGenerateSubtasks() {
+    const title = this.form.value.title;
+    if (!title?.trim()) return;
+
+    try {
+      const subtasks = await this.vertexAiService.generateSubtasks(
+        title,
+        this.form.value.description || undefined,
+        this.project()?.name,
+      );
+      this.aiSubtasks.set(subtasks);
+    } catch (err) {
+      console.error('Failed to generate subtasks:', err);
+    }
+  }
+
+  async aiSuggestPriority() {
+    const title = this.form.value.title;
+    if (!title?.trim()) return;
+
+    try {
+      const result = await this.vertexAiService.suggestPriority(
+        title,
+        this.form.value.description || undefined,
+        this.form.value.dueDate || undefined,
+      );
+      this.form.patchValue({ priority: result.priority });
+    } catch (err) {
+      console.error('Failed to suggest priority:', err);
+    }
+  }
+
+  async aiSuggestDueDate() {
+    const title = this.form.value.title;
+    if (!title?.trim()) return;
+
+    try {
+      const result = await this.vertexAiService.suggestDueDate(
+        title,
+        this.form.value.description || undefined,
+      );
+      this.form.patchValue({ dueDate: result.dueDate });
+    } catch (err) {
+      console.error('Failed to suggest due date:', err);
+    }
+  }
+
+  removeAiSubtask(index: number) {
+    this.aiSubtasks.update((subtasks) => subtasks.filter((_, i) => i !== index));
   }
 }
