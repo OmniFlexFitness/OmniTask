@@ -37,6 +37,9 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }}
 
+      - name: Enable Vertex AI API
+        run: gcloud services enable aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
+
       - name: Get version
         id: version
         run: |

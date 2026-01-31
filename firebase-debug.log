@@ -1,0 +1,13 @@
+[debug] [2026-01-30T03:15:32.569Z] ----------------------------------------------------------------------
+[debug] [2026-01-30T03:15:32.572Z] Command:       C:\nvm4w\nodejs\node.exe C:\nvm4w\nodejs\node_modules\firebase-tools\lib\bin\firebase.js login --reauth
+[debug] [2026-01-30T03:15:32.572Z] CLI Version:   15.3.1
+[debug] [2026-01-30T03:15:32.573Z] Platform:      win32
+[debug] [2026-01-30T03:15:32.573Z] Node Version:  v20.19.2
+[debug] [2026-01-30T03:15:32.573Z] Time:          Thu Jan 29 2026 22:15:32 GMT-0500 (Eastern Standard Time)
+[debug] [2026-01-30T03:15:32.573Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+[info] Visit this URL on this device to log in:
+[info] https://accounts.google.com/o/oauth2/auth?client_id=563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com&scope=email%20openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloudplatformprojects.readonly%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ffirebase%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform&response_type=code&state=384750091&redirect_uri=http%3A%2F%2Flocalhost%3A9005&login_hint=bertin.kenol%40omniflexfitness.com
+[info] 
+[info] Waiting for authentication...

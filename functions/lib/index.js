@@ -15,26 +15,15 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
+exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -44,6 +33,7 @@ const googleapis_1 = require("googleapis");
 const firestore_2 = require("firebase-admin/firestore");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const vertexai_1 = require("@google-cloud/vertexai");
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = (0, firestore_2.getFirestore)();
@@ -166,6 +156,14 @@ async function getGmailJwtClient() {
         return jwtClient;
     }
 }
+// Initialize Vertex AI with Gemini 1.5 Flash (cost-effective model)
+const vertexAI = new vertexai_1.VertexAI({
+    project: 'omnitask-475422',
+    location: 'us-east1',
+});
+const geminiModel = vertexAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+});
 /**
  * Convert Google Task status to OmniTask status
  */
@@ -179,6 +177,7 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -653,6 +652,215 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
         });
+    }
+});
+/**
+ * Generate subtasks from a task title and description using Gemini
+ * Breaks down complex tasks into actionable subtasks
+ */
+exports.generateSubtasks = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { taskTitle, taskDescription, projectContext } = request.data;
+    if (!taskTitle?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Task title is required');
+    }
+    const prompt = `You are a task management assistant. Break down this task into 3-5 actionable subtasks.
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ''}
+${projectContext ? `Project Context: ${projectContext}` : ''}
+
+Return a JSON array of subtask objects. Each object should have:
+- "title": A clear, actionable subtask title (string)
+- "completed": false (boolean)
+
+Only return the JSON array, no other text or markdown formatting.
+Example: [{"title": "Research options", "completed": false}, {"title": "Draft proposal", "completed": false}]`;
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = result.response;
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        // Clean the response - remove markdown code blocks if present
+        const cleanedText = text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim();
+        // Parse and validate response
+        const parsedSubtasks = JSON.parse(cleanedText);
+        // Add unique IDs to subtasks
+        const subtasks = parsedSubtasks.map((st) => ({
+            id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: st.title,
+            completed: false,
+        }));
+        return { subtasks, success: true };
+    }
+    catch (error) {
+        console.error('Failed to generate subtasks:', error);
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to generate subtasks');
+    }
+});
+/**
+ * Suggest task priority based on title and description using Gemini
+ * Returns low, medium, or high priority with reasoning
+ */
+exports.suggestTaskPriority = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { taskTitle, taskDescription, dueDate } = request.data;
+    if (!taskTitle?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Task title is required');
+    }
+    const prompt = `You are a task management assistant. Analyze this task and suggest an appropriate priority level.
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ''}
+${dueDate ? `Due Date: ${dueDate}` : ''}
+
+Consider factors like:
+- Urgency (deadline proximity)
+- Importance (impact if not completed)
+- Complexity (effort required)
+- Keywords indicating priority (urgent, ASAP, critical, important, etc.)
+
+Return a JSON object with:
+- "priority": One of "low", "medium", or "high"
+- "reasoning": A brief explanation (1-2 sentences)
+
+Only return the JSON object, no other text or markdown formatting.
+Example: {"priority": "high", "reasoning": "Contains urgent deadline and critical business impact."}`;
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = result.response;
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanedText = text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim();
+        const parsed = JSON.parse(cleanedText);
+        // Validate priority value
+        const validPriorities = ['low', 'medium', 'high'];
+        const priority = validPriorities.includes(parsed.priority) ? parsed.priority : 'medium';
+        return {
+            priority,
+            reasoning: parsed.reasoning || 'Based on task context analysis.',
+            success: true,
+        };
+    }
+    catch (error) {
+        console.error('Failed to suggest priority:', error);
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to suggest priority');
+    }
+});
+/**
+ * Suggest a due date based on task complexity and description using Gemini
+ * Estimates effort and suggests a realistic deadline
+ */
+exports.suggestDueDate = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { taskTitle, taskDescription, projectDeadline } = request.data;
+    if (!taskTitle?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Task title is required');
+    }
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const prompt = `You are a task management assistant. Analyze this task and suggest a realistic due date.
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ''}
+${projectDeadline ? `Project Deadline: ${projectDeadline}` : ''}
+Today's Date: ${todayStr}
+
+Consider factors like:
+- Task complexity and scope
+- Typical time needed for similar tasks
+- Buffer for unexpected delays
+- If there's a project deadline, ensure the task due date is before it
+
+Return a JSON object with:
+- "dueDate": Suggested date in ISO format (YYYY-MM-DD)
+- "estimatedDays": Number of days from today
+- "reasoning": Brief explanation of the estimate
+
+Only return the JSON object, no other text or markdown formatting.
+Example: {"dueDate": "2026-02-05", "estimatedDays": 7, "reasoning": "Medium complexity task typically requires about a week."}`;
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = result.response;
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanedText = text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim();
+        const parsed = JSON.parse(cleanedText);
+        return {
+            dueDate: parsed.dueDate,
+            estimatedDays: parsed.estimatedDays || 7,
+            reasoning: parsed.reasoning || 'Based on task complexity analysis.',
+            success: true,
+        };
+    }
+    catch (error) {
+        console.error('Failed to suggest due date:', error);
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to suggest due date');
+    }
+});
+/**
+ * Enhance a task description with more detail and actionable information using Gemini
+ * Improves brief descriptions with structure and clarity
+ */
+exports.enhanceTaskDescription = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { taskTitle, taskDescription, projectContext } = request.data;
+    if (!taskTitle?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Task title is required');
+    }
+    if (!taskDescription?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Task description is required');
+    }
+    const prompt = `You are a task management assistant. Enhance this task description to be more detailed, clear, and actionable.
+
+Task Title: ${taskTitle}
+Current Description: ${taskDescription}
+${projectContext ? `Project Context: ${projectContext}` : ''}
+
+Improve the description by:
+- Adding specific, actionable steps if appropriate
+- Clarifying any vague language
+- Adding acceptance criteria or definition of done
+- Keeping it concise but comprehensive
+- Using markdown formatting for readability (headers, lists, etc.)
+
+Return a JSON object with:
+- "enhancedDescription": The improved description (string, can include markdown)
+- "additions": What was added or improved (brief summary)
+
+Only return the JSON object, no other text or markdown formatting around the JSON.`;
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        const response = result.response;
+        const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanedText = text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim();
+        const parsed = JSON.parse(cleanedText);
+        return {
+            enhancedDescription: parsed.enhancedDescription || taskDescription,
+            additions: parsed.additions || 'Added structure and clarity.',
+            success: true,
+        };
+    }
+    catch (error) {
+        console.error('Failed to enhance description:', error);
+        throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to enhance description');
     }
 });
 //# sourceMappingURL=index.js.map
