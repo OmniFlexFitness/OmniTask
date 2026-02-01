@@ -92,7 +92,9 @@ import { AuthService } from '../auth/auth.service';
                   [class.w-0]="!rlaDashboard.isActive"
                   [class.group-hover:w-2/3]="!rlaDashboard.isActive"
                   [class.group-hover:bg-fuchsia-500]="!rlaDashboard.isActive"
-                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaDashboard.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
+                    !rlaDashboard.isActive
+                  "
                 ></span>
                 <span class="relative">Dashboard</span>
               </a>
@@ -122,7 +124,9 @@ import { AuthService } from '../auth/auth.service';
                   [class.w-0]="!rlaProjects.isActive"
                   [class.group-hover:w-2/3]="!rlaProjects.isActive"
                   [class.group-hover:bg-fuchsia-500]="!rlaProjects.isActive"
-                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaProjects.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
+                    !rlaProjects.isActive
+                  "
                 ></span>
                 <span class="relative">Projects</span>
               </a>
@@ -171,15 +175,33 @@ import { AuthService } from '../auth/auth.service';
               }}</span>
             </div>
 
+            <!-- Settings link -->
+            <a
+              routerLink="/settings"
+              class="p-2 text-slate-400 hover:text-fuchsia-400 transition-colors rounded-lg hover:bg-white/5"
+              title="Settings"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </a>
+
             <!-- Cyberpunk logout button - solid border with glow -->
             <button
               (click)="auth.logout()"
               class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105"
             >
               <!-- Solid border -->
-              <span
-                class="absolute inset-0 rounded-lg border border-fuchsia-500 opacity-80"
-              ></span>
+              <span class="absolute inset-0 rounded-lg border border-fuchsia-500 opacity-80"></span>
               <!-- Inner fill -->
               <span
                 class="absolute inset-0 rounded-lg bg-[#0a0f1e] group-hover:bg-fuchsia-500/10 transition-colors"

@@ -80,6 +80,18 @@ Cloudflare sits in front of everything to provide security and performance.
 
 ---
 
+## Required GitHub Secrets
+
+Before deploying, ensure the following secrets are configured in your GitHub repository settings (Settings > Secrets and variables > Actions):
+
+| Secret Name | Description | How to Obtain |
+| :--- | :--- | :--- |
+| `GCP_PROJECT_NUMBER` | Your GCP project number | GCP Console > Project Settings |
+
+**Note:** Firebase deployment uses Google Cloud Application Default Credentials (ADC) via Workload Identity Federation. No separate Firebase token is required.
+
+---
+
 ## Deployment Flow
 
 1. **Commit**: A developer pushes code to the `live` branch on GitHub.

@@ -6,7 +6,8 @@ on:
       - live
 
 env:
-  PROJECT_ID: omnitask-475422
+  # Note: GCP_PROJECT_ID must be set in repository secrets
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: us-east1
   SERVICE_NAME: omnitask
   ARTIFACT_REGISTRY: us-east1-docker.pkg.dev
@@ -35,6 +36,9 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }}
+
+      - name: Enable Vertex AI API
+        run: gcloud services enable aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
 
       - name: Get version
         id: version
@@ -81,6 +85,9 @@ jobs:
             --port 8080
 
       # Firebase Deployment Steps
+      - name: Enable Cloud Billing API
+        run: gcloud services enable cloudbilling.googleapis.com --project=${{ env.PROJECT_ID }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -93,8 +100,14 @@ jobs:
       - name: Build Angular app
         run: yarn build
 
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy --only hosting,firestore --project ${{ env.PROJECT_ID }}
+      - name: Install Firebase Functions dependencies
+        run: |
+          cd functions
+          npm ci
+          cd ..
+
+      - name: Deploy to Firebase (Hosting, Firestore, Functions)
+        run: npx firebase-tools deploy --only hosting,firestore,functions --project ${{ env.PROJECT_ID }} --non-interactive
 
       - name: Create Release Tag
         run: |

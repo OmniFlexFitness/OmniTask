@@ -11,6 +11,40 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
   imports: [CommonModule, FormsModule, DragDropModule],
   template: `
     <div class="flex flex-col h-full bg-[#0a0f1e]/60 rounded-xl overflow-hidden border border-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.05)]">
+      <!-- Filter Bar -->
+      <div class="flex items-center justify-between px-4 py-2 bg-[#0a0f1e]/90 border-b border-cyan-500/10">
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate-400">
+            {{ filteredTasks().length }} of {{ tasks().length }} tasks
+          </span>
+          @if (hiddenCompletedCount() > 0) {
+            <span class="text-xs text-slate-500">
+              ({{ hiddenCompletedCount() }} completed hidden)
+            </span>
+          }
+        </div>
+        
+        <!-- Completed Filter Toggle -->
+        <div class="flex items-center gap-2">
+          <button 
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+            [class.bg-emerald-500/20]="showCompleted()"
+            [class.text-emerald-400]="showCompleted()"
+            [class.border-emerald-500/30]="showCompleted()"
+            [class.bg-slate-800/50]="!showCompleted()"
+            [class.text-slate-400]="!showCompleted()"
+            [class.border-slate-600/30]="!showCompleted()"
+            [class.border]="true"
+            (click)="toggleShowCompleted()"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            {{ showCompleted() ? 'Showing Completed' : 'Hide Completed' }}
+          </button>
+        </div>
+      </div>
+
       <!-- Cyberpunk Header -->
       <div class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]">
         <div class="w-6"></div> <!-- Drag handle placeholder -->
@@ -47,8 +81,8 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <p class="mb-2 text-cyan-400/70">No tasks found</p>
-            <p class="text-xs text-slate-600">Create a task to get started</p>
+            <p class="mb-2 text-cyan-400/70">{{ showCompleted() ? 'No tasks found' : 'No active tasks' }}</p>
+            <p class="text-xs text-slate-600">{{ showCompleted() ? 'Create a task to get started' : 'All tasks are completed!' }}</p>
           </div>
         }
 
@@ -140,7 +174,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
         }
       </div>
     </div>
-  `
+  `,
 })
 export class TaskListViewComponent {
   private taskService = inject(TaskService);
@@ -150,17 +184,58 @@ export class TaskListViewComponent {
   taskClick = output<Task>();
   delete = output<string>();
 
+  // Filter state - hide completed tasks older than 30 minutes by default
+  showCompleted = signal(false);
+
+  // Track session start time to show recently completed tasks
+  private sessionStartTime = new Date();
+
   sortField = signal<'title' | 'dueDate' | 'priority' | 'status'>('title');
   sortDirection = signal<'asc' | 'desc'>('asc');
 
+  // Filter tasks based on completed status
+  filteredTasks = computed(() => {
+    const allTasks = this.tasks();
+
+    if (this.showCompleted()) {
+      return allTasks; // Show all tasks
+    }
+
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+
+    return allTasks.filter((task) => {
+      if (task.status !== 'done') return true; // Always show non-completed tasks
+
+      // Show recently completed tasks (within 30 min or completed during this session)
+      if (task.completedAt) {
+        const completedAt = this.toDate(task.completedAt);
+        return completedAt > thirtyMinutesAgo || completedAt > this.sessionStartTime;
+      }
+
+      // If no completedAt, check updatedAt
+      if (task.updatedAt) {
+        const updatedAt = this.toDate(task.updatedAt);
+        return updatedAt > thirtyMinutesAgo;
+      }
+
+      return false; // Hide old completed tasks
+    });
+  });
+
+  // Count hidden completed tasks
+  hiddenCompletedCount = computed(() => {
+    return this.tasks().length - this.filteredTasks().length;
+  });
+
   sortedTasks = computed(() => {
-    const tasks = [...this.tasks()];
+    const tasks = [...this.filteredTasks()];
     const field = this.sortField();
     const direction = this.sortDirection();
 
     return tasks.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (field) {
         case 'title':
           comparison = a.title.localeCompare(b.title);
@@ -177,7 +252,7 @@ export class TaskListViewComponent {
           comparison = priorityMap[a.priority] - priorityMap[b.priority];
           break;
         case 'status':
-          const statusMap = { 'todo': 1, 'in-progress': 2, 'done': 3 };
+          const statusMap = { todo: 1, 'in-progress': 2, done: 3 };
           comparison = statusMap[a.status] - statusMap[b.status];
           break;
       }
@@ -186,9 +261,19 @@ export class TaskListViewComponent {
     });
   });
 
+  toggleShowCompleted() {
+    this.showCompleted.update((v) => !v);
+  }
+
+  private toDate(dateValue: any): Date {
+    if (dateValue instanceof Date) return dateValue;
+    if (dateValue?.toDate) return dateValue.toDate();
+    return new Date(dateValue);
+  }
+
   toggleSort(field: 'title' | 'dueDate' | 'priority' | 'status') {
     if (this.sortField() === field) {
-      this.sortDirection.update(d => d === 'asc' ? 'desc' : 'asc');
+      this.sortDirection.update((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       this.sortField.set(field);
       this.sortDirection.set('asc');
@@ -197,7 +282,6 @@ export class TaskListViewComponent {
 
   formatDate(date: any): string {
     if (!date) return '-';
-    // Handle Firestore Timestamp or Date object
     const d = date.toDate ? date.toDate() : new Date(date);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
@@ -221,28 +305,7 @@ export class TaskListViewComponent {
   }
 
   onDrop(event: CdkDragDrop<Task[]>) {
-    // Only reorder if sorting is not active (or implement complex reorder with sort logic)
-    // For now, simpler to just allow visual reorder but warn or disable if sorted?
-    // Let's assume reorder updates the 'order' field.
-    
-    // NOTE: In a real grouped list, this logic needs to be robust. 
-    // Here we just emit the reorder event or handle it via service
-    
-    // Ideally we update the order of all items
-    // This part requires calculating new order values
-    // For simplicity in this demo, we'll skip DB reorder logic in sorted lists
-    // and only implement it for drag-drop in Board view where it matters more.
-    // However, if we want to persist list order:
-    
-    const prevIndex = this.tasks().findIndex(t => t.id === event.item.data.id);
-    const newIndex = event.currentIndex; // This index is relative to the sorted list view
-    
-    // Implementation of reorder is best handled in the parent or service
-    // For this step, since we have sorting enabled, drag-drop reordering is visually tricky.
-    // We'll leave the event hooks but maybe disable drag if sort != manual?
-    // Or just accept the drop and let the sort re-arrange it back if sort is active.
-    
-    // Move for visual feedback (optional since data update will trigger re-render)
-    // moveItemInArray(this.tasks(), event.previousIndex, event.currentIndex);
+    const prevIndex = this.tasks().findIndex((t) => t.id === event.item.data.id);
+    const newIndex = event.currentIndex;
   }
 }

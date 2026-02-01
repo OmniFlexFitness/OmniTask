@@ -11,7 +11,7 @@
 npm-debug.log
 npm_output.log
 yarn-error.log
-package-lock.json
+/package-lock.json
 
 # IDEs and editors
 .idea/
@@ -43,3 +43,11 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Firebase logs
+.firebase/logs/
+
+# Service account keys (sensitive - never commit)
+*-key.json
+*-credentials.json
+service-account*.json

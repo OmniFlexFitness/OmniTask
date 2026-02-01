@@ -4,21 +4,27 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angu
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { ContactsService, Contact } from '../../core/services/contacts.service';
+import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of } from 'rxjs';
+import { switchMap, of, map } from 'rxjs';
+import {
+  AutocompleteInputComponent,
+  AutocompleteOption,
+} from '../../shared/components/autocomplete-input/autocomplete-input.component';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, AutocompleteInputComponent],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
       (click)="onExampleClick($event)"
     >
       <div
-        class="w-full h-full sm:h-auto sm:max-w-2xl bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right"
+        class="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right"
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
@@ -32,44 +38,44 @@ import { switchMap, of } from 'rxjs';
                 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20':
                   task()?.status === 'done',
                 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10':
-                  task()?.status !== 'done'
+                  task()?.status !== 'done',
               }"
               (click)="toggleComplete()"
             >
               @if (task()?.status === 'done') {
-              <span class="flex items-center gap-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                Completed
-              </span>
+                <span class="flex items-center gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  Completed
+                </span>
               } @else {
-              <span class="flex items-center gap-1">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Mark Complete
-              </span>
+                <span class="flex items-center gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Mark Complete
+                </span>
               }
             </button>
           </div>
@@ -142,13 +148,14 @@ import { switchMap, of } from 'rxjs';
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Assignee</label
               >
-              <input
-                type="text"
-                formControlName="assigneeName"
-                placeholder="Unassigned"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
-              />
+              <app-autocomplete-input
+                [options]="assigneeOptions()"
+                [value]="form.value.assigneeName || ''"
+                [allowCustom]="true"
+                placeholder="Search contacts..."
+                (optionSelected)="onAssigneeSelected($event)"
+                (valueChange)="onAssigneeValueChange($event)"
+              ></app-autocomplete-input>
             </div>
 
             <!-- Status -->
@@ -221,7 +228,7 @@ import { switchMap, of } from 'rxjs';
               >
                 <option [value]="null">No Section</option>
                 @for (section of projectSections(); track section.id) {
-                <option [value]="section.id">{{ section.name }}</option>
+                  <option [value]="section.id">{{ section.name }}</option>
                 }
               </select>
             </div>
@@ -229,74 +236,116 @@ import { switchMap, of } from 'rxjs';
 
           <!-- Custom Fields -->
           @if (project()?.customFields?.length) {
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-            @for (field of project()?.customFields; track field.id) {
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{
-                field.name
-              }}</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
+              @for (field of project()?.customFields; track field.id) {
+                <div class="flex flex-col gap-1">
+                  <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{
+                    field.name
+                  }}</label>
 
-              @switch (field.type) { @case ('text') {
-              <input
-                type="text"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('number') {
-              <input
-                type="number"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('date') {
-              <input
-                type="date"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } @case ('dropdown') {
-              <select
-                [value]="customFieldValues()[field.id] || ''"
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('status') {
-              <select
-                [value]="customFieldValues()[field.id] || ''"
-                (change)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="">- Select -</option>
-                @for (opt of field.options; track opt.id) {
-                <option [value]="opt.id">{{ opt.label }}</option>
-                }
-              </select>
-              } @case ('user') {
-              <input
-                type="text"
-                [value]="customFieldValues()[field.id] || ''"
-                (input)="updateCustomField(field.id, $any($event.target).value)"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              } }
+                  @switch (field.type) {
+                    @case ('text') {
+                      <input
+                        type="text"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('number') {
+                      <input
+                        type="number"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('date') {
+                      <input
+                        type="date"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                    @case ('dropdown') {
+                      <select
+                        [value]="customFieldValues()[field.id] || ''"
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('status') {
+                      <select
+                        [value]="customFieldValues()[field.id] || ''"
+                        (change)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      >
+                        <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('user') {
+                      <input
+                        type="text"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      />
+                    }
+                  }
+                </div>
+              }
             </div>
-            }
-          </div>
           }
 
           <!-- Description -->
           <div class="mb-6">
-            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
-              >Description</label
-            >
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
+                >Description</label
+              >
+              <button
+                type="button"
+                (click)="aiEnhanceDescription()"
+                [disabled]="!form.value.description?.trim() || enhancingDescription()"
+                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                title="AI enhance description"
+              >
+                @if (enhancingDescription()) {
+                  <svg
+                    class="animate-spin h-3 w-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Enhancing...
+                } @else {
+                  ✨ Enhance
+                }
+              </button>
+            </div>
             <textarea
               formControlName="description"
               rows="4"
@@ -309,67 +358,102 @@ import { switchMap, of } from 'rxjs';
           <!-- Subtasks -->
           <div class="mb-6">
             <div class="flex items-center justify-between mb-3">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
-                >Subtasks</label
+              <div class="flex items-center gap-3">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
+                  >Subtasks</label
+                >
+                <span class="text-xs text-slate-500"
+                  >{{ completedSubtasksCount() }}/{{ subtasks().length }}</span
+                >
+              </div>
+              <button
+                type="button"
+                (click)="aiGenerateSubtasks()"
+                [disabled]="!task()?.title?.trim() || generatingSubtasks()"
+                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
+                title="AI generate subtasks"
               >
-              <span class="text-xs text-slate-500"
-                >{{ completedSubtasksCount() }}/{{ subtasks().length }}</span
-              >
+                @if (generatingSubtasks()) {
+                  <svg
+                    class="animate-spin h-3 w-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Generating...
+                } @else {
+                  ✨ Generate
+                }
+              </button>
             </div>
 
             <!-- Subtask List -->
             <div class="space-y-2 mb-3">
               @for (subtask of subtasks(); track subtask.id) {
-              <div class="flex items-center gap-3 group">
-                <button
-                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                  [class.border-cyan-500]="subtask.completed"
-                  [class.bg-cyan-500]="subtask.completed"
-                  [class.border-slate-500]="!subtask.completed"
-                  (click)="toggleSubtask(subtask.id)"
-                >
-                  @if (subtask.completed) {
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-3 w-3 text-white"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                <div class="flex items-center gap-3 group">
+                  <button
+                    class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                    [class.border-cyan-500]="subtask.completed"
+                    [class.bg-cyan-500]="subtask.completed"
+                    [class.border-slate-500]="!subtask.completed"
+                    (click)="toggleSubtask(subtask.id)"
                   >
-                    <path
-                      fill-rule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  }
-                </button>
-                <span
-                  class="flex-1 text-sm"
-                  [class.text-slate-500]="subtask.completed"
-                  [class.line-through]="subtask.completed"
-                  [class.text-slate-300]="!subtask.completed"
-                  >{{ subtask.title }}</span
-                >
-                <button
-                  class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
-                  (click)="deleteSubtask(subtask.id)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    @if (subtask.completed) {
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3 text-white"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    }
+                  </button>
+                  <span
+                    class="flex-1 text-sm"
+                    [class.text-slate-500]="subtask.completed"
+                    [class.line-through]="subtask.completed"
+                    [class.text-slate-300]="!subtask.completed"
+                    >{{ subtask.title }}</span
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
+                  <button
+                    class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                    (click)="deleteSubtask(subtask.id)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
               }
             </div>
 
@@ -398,25 +482,25 @@ import { switchMap, of } from 'rxjs';
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2"
               >Tags</label
             >
-            
+
             <!-- Existing Project Tags -->
             @if (project()?.tags?.length) {
-            <div class="flex flex-wrap gap-1.5 mb-2">
-              @for (tag of project()?.tags; track tag.id) {
-              <button
-                type="button"
-                (click)="toggleTag(tag.name)"
-                [class.ring-2]="selectedTags().has(tag.name)"
-                [class.ring-white]="selectedTags().has(tag.name)"
-                [style.background-color]="tag.color + '20'"
-                [style.color]="tag.color"
-                [style.border-color]="tag.color + '40'"
-                class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
-              >
-                {{ tag.name }}
-              </button>
-              }
-            </div>
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                @for (tag of project()?.tags; track tag.id) {
+                  <button
+                    type="button"
+                    (click)="toggleTag(tag.name)"
+                    [class.ring-2]="selectedTags().has(tag.name)"
+                    [class.ring-white]="selectedTags().has(tag.name)"
+                    [style.background-color]="tag.color + '20'"
+                    [style.color]="tag.color"
+                    [style.border-color]="tag.color + '40'"
+                    class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
+                  >
+                    {{ tag.name }}
+                  </button>
+                }
+              </div>
             }
 
             <!-- Add New Tag -->
@@ -441,10 +525,42 @@ import { switchMap, of } from 'rxjs';
 
             <!-- Selected Tags Display -->
             @if (selectedTags().size > 0) {
-            <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+              <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
             }
           </div>
         </div>
+
+        <!-- Footer Actions -->
+        <footer
+          class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-slate-800/20"
+        >
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            (click)="close.emit()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-2"
+            (click)="autoSave(); close.emit()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            Done
+          </button>
+        </footer>
       </div>
     </div>
   `,
@@ -488,6 +604,12 @@ export class TaskDetailModalComponent {
   private taskService = inject(TaskService);
   private projectService = inject(ProjectService);
   private dialogService = inject(DialogService);
+  private contactsService = inject(ContactsService);
+  private vertexAiService = inject(VertexAiService);
+
+  // AI Loading states
+  generatingSubtasks = this.vertexAiService.generatingSubtasks;
+  enhancingDescription = this.vertexAiService.enhancingDescription;
 
   // Input
   task = input<Task | null>(null);
@@ -503,14 +625,56 @@ export class TaskDetailModalComponent {
   // Derived project signal
   project = toSignal(
     toObservable(this.projectId).pipe(
-      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null)))
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
     ),
-    { initialValue: null }
+    { initialValue: null },
   );
 
   projectSections = computed(() => {
     return this.project()?.sections || [];
   });
+
+  // Contacts for assignee autocomplete
+  assigneeOptions = toSignal(
+    this.contactsService.getContacts().pipe(
+      map((contacts) =>
+        contacts.map(
+          (c): AutocompleteOption => ({
+            id: c.id,
+            label: c.displayName,
+            sublabel: c.email,
+            avatar: c.photoURL,
+            // Generate consistent color from email for contacts without photos
+            color: c.photoURL ? undefined : this.generateAvatarColor(c.email),
+          }),
+        ),
+      ),
+    ),
+    { initialValue: [] },
+  );
+
+  /**
+   * Generate a consistent color for a contact based on their email
+   */
+  private generateAvatarColor(email: string): string {
+    const colors = [
+      '#8b5cf6',
+      '#3b82f6',
+      '#06b6d4',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#ec4899',
+      '#6366f1',
+      '#14b8a6',
+      '#f97316',
+    ];
+    const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  }
+
+  // Track selected assignee ID
+  selectedAssigneeId = signal<string | null>(null);
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -547,13 +711,16 @@ export class TaskDetailModalComponent {
             priority: task.priority,
             sectionId: task.sectionId || null,
           },
-          { emitEvent: false }
+          { emitEvent: false },
         );
+
+        // Set selected assignee ID from task
+        this.selectedAssigneeId.set(task.assignedToId || null);
 
         // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
         this.customFieldValues.set(task.customFieldValues || {});
-        
+
         // Initialize selected tags
         this.selectedTags.set(new Set(task.tags || []));
       }
@@ -568,18 +735,21 @@ export class TaskDetailModalComponent {
   async updateCustomField(fieldId: string, value: string | number | boolean | Date | null) {
     // Find the field definition to validate
     const project = this.project();
-    const field = project?.customFields?.find(f => f.id === fieldId);
-    
+    const field = project?.customFields?.find((f) => f.id === fieldId);
+
     if (field) {
       // Validate number fields
       if (field.type === 'number' && value) {
         const numValue = parseFloat(value as string);
         if (isNaN(numValue)) {
-          await this.dialogService.alert(`"${field.name}" must be a valid number.`, 'Invalid Input');
+          await this.dialogService.alert(
+            `"${field.name}" must be a valid number.`,
+            'Invalid Input',
+          );
           return;
         }
       }
-      
+
       // Validate date fields
       if (field.type === 'date' && value) {
         const dateValue = new Date(value as string | Date);
@@ -589,7 +759,7 @@ export class TaskDetailModalComponent {
         }
       }
     }
-    
+
     const current = this.customFieldValues();
     this.customFieldValues.set({ ...current, [fieldId]: value });
     this.autoSave();
@@ -639,6 +809,40 @@ export class TaskDetailModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
+  /**
+   * Handle assignee selection from autocomplete
+   */
+  onAssigneeSelected(selection: AutocompleteOption | string): void {
+    if (typeof selection === 'object') {
+      // Selected a contact from the list
+      this.selectedAssigneeId.set(selection.id);
+      this.form.patchValue({ assigneeName: selection.label });
+    } else {
+      // Custom value entered
+      this.selectedAssigneeId.set(null);
+      this.form.patchValue({ assigneeName: selection });
+    }
+    this.form.markAsDirty();
+    this.autoSave();
+  }
+
+  /**
+   * Handle assignee value change (for typing/clearing)
+   */
+  onAssigneeValueChange(value: string): void {
+    this.form.patchValue({ assigneeName: value });
+    // If value doesn't match any option, clear the selected ID
+    const matchingOption = this.assigneeOptions().find(
+      (opt) => opt.label === value || opt.id === value,
+    );
+    if (matchingOption) {
+      this.selectedAssigneeId.set(matchingOption.id);
+    } else {
+      this.selectedAssigneeId.set(null);
+    }
+    this.form.markAsDirty();
+  }
+
   async autoSave() {
     const task = this.task();
     const project = this.project();
@@ -652,6 +856,7 @@ export class TaskDetailModalComponent {
     const updates: Partial<Task> = {
       title: val.title!,
       description: val.description || '',
+      assignedToId: this.selectedAssigneeId() || undefined,
       assigneeName: val.assigneeName || undefined,
       status: val.status as Task['status'],
       dueDate,
@@ -689,7 +894,8 @@ export class TaskDetailModalComponent {
   async deleteTask() {
     const task = this.task();
     const project = this.project();
-    if (!task || !(await this.dialogService.confirm('Are you sure you want to delete this task?'))) return;
+    if (!task || !(await this.dialogService.confirm('Are you sure you want to delete this task?')))
+      return;
 
     await this.taskService.deleteTask(task.id, project?.googleTaskListId);
     this.deleted.emit(task.id);
@@ -712,7 +918,11 @@ export class TaskDetailModalComponent {
     this.subtasks.set(updatedSubtasks);
     this.newSubtaskTitle = '';
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   async toggleSubtask(subtaskId: string) {
@@ -721,11 +931,15 @@ export class TaskDetailModalComponent {
     if (!task) return;
 
     const updatedSubtasks = this.subtasks().map((s) =>
-      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s,
     );
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   async deleteSubtask(subtaskId: string) {
@@ -736,7 +950,11 @@ export class TaskDetailModalComponent {
     const updatedSubtasks = this.subtasks().filter((s) => s.id !== subtaskId);
     this.subtasks.set(updatedSubtasks);
 
-    await this.taskService.updateTask(task.id, { subtasks: updatedSubtasks }, project?.googleTaskListId);
+    await this.taskService.updateTask(
+      task.id,
+      { subtasks: updatedSubtasks },
+      project?.googleTaskListId,
+    );
   }
 
   onExampleClick(e: Event) {
@@ -752,6 +970,55 @@ export class TaskDetailModalComponent {
       return d.toISOString().split('T')[0];
     } catch {
       return '';
+    }
+  }
+
+  // AI Methods
+  async aiGenerateSubtasks() {
+    const task = this.task();
+    if (!task?.title?.trim()) return;
+
+    try {
+      const newSubtasks = await this.vertexAiService.generateSubtasks(
+        task.title,
+        this.form.value.description || undefined,
+        this.project()?.name,
+      );
+
+      // Merge with existing subtasks
+      const currentSubtasks = this.subtasks();
+      const mergedSubtasks = [...currentSubtasks, ...newSubtasks];
+      this.subtasks.set(mergedSubtasks);
+
+      // Auto-save the new subtasks
+      const project = this.project();
+      await this.taskService.updateTask(
+        task.id,
+        { subtasks: mergedSubtasks },
+        project?.googleTaskListId,
+      );
+    } catch (err) {
+      console.error('Failed to generate subtasks:', err);
+    }
+  }
+
+  async aiEnhanceDescription() {
+    const task = this.task();
+    const description = this.form.value.description;
+    if (!task?.title?.trim() || !description?.trim()) return;
+
+    try {
+      const result = await this.vertexAiService.enhanceDescription(
+        task.title,
+        description,
+        this.project()?.name,
+      );
+
+      this.form.patchValue({ description: result.enhancedDescription });
+      this.form.markAsDirty();
+      await this.autoSave();
+    } catch (err) {
+      console.error('Failed to enhance description:', err);
     }
   }
 }

@@ -1079,3 +1079,61 @@ textarea:focus {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   UTILITY CLASSES
+   Helper classes to replace inline styles
+   ============================================ */
+
+/* Z-Index Utility Classes */
+.z-dropdown { z-index: 9999; }
+.z-modal { z-index: 50; }
+.z-overlay { z-index: 40; }
+.z-header { z-index: 30; }
+.z-sidebar { z-index: 20; }
+.z-content { z-index: 10; }
+
+/* Animation Delay Utility Classes */
+.animate-delay-500 { animation-delay: 0.5s; }
+.animate-delay-1000 { animation-delay: 1s; }
+.animate-delay-1500 { animation-delay: 1.5s; }
+.animate-delay-2000 { animation-delay: 2s; }
+.animate-delay-2500 { animation-delay: 2.5s; }
+.animate-delay-3000 { animation-delay: 3s; }
+
+/* Header overflow utility for dropdowns */
+.overflow-visible-header { overflow: visible; }
+
+/* View Switcher Neon Glow - Active State */
+.ofx-view-switch-active {
+  box-shadow: 0 0 20px rgba(224, 64, 251, 0.4), inset 0 0 10px rgba(224, 64, 251, 0.1);
+}
+
+/* Google Tasks Preview styles */
+.ofx-preview-panel {
+  @apply mt-3 p-3 rounded-lg border;
+  background-color: rgba(6, 182, 212, 0.05);
+  border-color: rgba(6, 182, 212, 0.2);
+}
+
+.ofx-task-preview-item {
+  @apply flex items-start gap-2 py-1.5 px-2 rounded;
+}
+
+.ofx-task-preview-item:hover {
+  @apply bg-white/5;
+}
+
+/* Task completion indicator */
+.ofx-task-check {
+  @apply mt-0.5 w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center;
+}
+
+.ofx-task-check-completed {
+  @apply border-emerald-400 bg-emerald-400;
+}
+
+.ofx-task-check-pending {
+  @apply border-slate-500;
+}
+
