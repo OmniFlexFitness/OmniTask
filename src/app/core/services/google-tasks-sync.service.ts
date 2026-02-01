@@ -283,7 +283,6 @@ export class GoogleTasksSyncService {
   async createTaskListForProject(
     projectId: string,
     projectName: string
-    projectName: string,
   ): Promise<string | undefined> {
     try {
       const taskList = await firstValueFrom(this.googleTasksService.createTaskList(projectName));
@@ -313,12 +312,10 @@ export class GoogleTasksSyncService {
     taskDocRef: DocumentReference,
     googleTaskListId: string,
     taskData: Partial<Task>
-    taskTitle: string,
   ): Promise<string> {
     const googleTaskData = this.transformToGoogleTask(taskData);
     const googleTask = await firstValueFrom(
       this.googleTasksService.createTask(googleTaskListId, googleTaskData)
-      this.googleTasksService.createTask(googleTaskListId, { title: taskTitle }),
     );
     // Verify the Google Task was created with an ID
     if (!googleTask.id) {
