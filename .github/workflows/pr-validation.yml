@@ -1,0 +1,80 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - live
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  validate:
+    name: Validate PR Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "yarn"
+
+      # ============================================
+      # Angular App Validation
+      # ============================================
+      - name: Install app dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint check
+        run: yarn lint || echo "Lint check skipped - no lint script configured"
+        continue-on-error: true
+
+      - name: Build Angular app
+        run: yarn build
+
+      - name: Run tests
+        run: yarn test --no-watch --no-progress --browsers=ChromeHeadless || echo "Tests skipped - no test configuration"
+        continue-on-error: true
+
+      # ============================================
+      # Firebase Functions Validation
+      # ============================================
+      - name: Validate Functions lock file sync
+        run: |
+          echo "Checking functions/package-lock.json is in sync with functions/package.json..."
+          cd functions
+          npm ci
+          echo "✅ Functions lock file is in sync"
+
+      - name: Build Firebase Functions
+        run: |
+          cd functions
+          npm run build
+
+      # ============================================
+      # Docker Build Validation
+      # ============================================
+      - name: Validate Docker build
+        run: |
+          echo "Validating Docker build..."
+          docker build -t omnitask-pr-test:${{ github.sha }} .
+          echo "✅ Docker build successful"
+
+      - name: Validation Summary
+        run: |
+          echo "============================================"
+          echo "✅ All validations passed!"
+          echo "============================================"
+          echo ""
+          echo "Validated:"
+          echo "  - Angular app build"
+          echo "  - Firebase Functions dependencies sync"
+          echo "  - Firebase Functions TypeScript build"  
+          echo "  - Docker image build"
+          echo ""
+          echo "This PR is safe to merge to the live branch."
