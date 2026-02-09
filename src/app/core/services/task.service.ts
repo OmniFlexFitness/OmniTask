@@ -53,6 +53,50 @@ export class TaskService {
   }
 
   /**
+   * Map section name to task status.
+   * Used to sync status when dragging tasks between board columns.
+   * @param sectionName - The name of the section/column
+   * @returns The corresponding task status, or null if no match
+   */
+  sectionNameToStatus(sectionName: string): Task['status'] | null {
+    const normalized = sectionName.toLowerCase().replace(/\s+/g, '-');
+    if (normalized.includes('done') || normalized.includes('complete')) return 'done';
+    if (
+      normalized.includes('progress') ||
+      normalized.includes('doing') ||
+      normalized.includes('wip')
+    )
+      return 'in-progress';
+    if (
+      normalized.includes('todo') ||
+      normalized.includes('to-do') ||
+      normalized.includes('backlog')
+    )
+      return 'todo';
+    return null; // Unknown section, don't change status
+  }
+
+  /**
+   * Map task status to section ID.
+   * Used to move tasks to the appropriate section when status changes.
+   * @param status - The task status to find a section for
+   * @param sections - The project's sections array
+   * @returns The section ID that matches the status, or undefined if no match
+   */
+  statusToSectionId(
+    status: Task['status'],
+    sections: { id: string; name: string }[],
+  ): string | undefined {
+    for (const section of sections) {
+      const sectionStatus = this.sectionNameToStatus(section.name);
+      if (sectionStatus === status) {
+        return section.id;
+      }
+    }
+    return undefined;
+  }
+
+  /**
    * Transform Google Tasks API format to OmniTask Task data
    * Maps Google Tasks API fields to local model fields
    */
@@ -334,28 +378,55 @@ export class TaskService {
   }
 
   /**
-   * Mark task as complete
+   * Mark task as complete.
+   * Also moves the task to the "Done" section if one exists in the project.
    */
   async completeTask(id: string, googleTaskListId?: string): Promise<void> {
+    // Get the task to find its project and determine the correct section
+    const task = await this.getTask(id);
+    let sectionId: string | undefined;
+
+    if (task?.projectId) {
+      const project = await this.projectService.getProject(task.projectId);
+      if (project?.sections) {
+        sectionId = this.statusToSectionId('done', project.sections);
+      }
+    }
+
     return this.updateTask(
       id,
       {
         status: 'done',
         completedAt: new Date(),
+        ...(sectionId ? { sectionId } : {}),
       },
       googleTaskListId,
     );
   }
 
   /**
-   * Reopen a completed task
+   * Reopen a completed task.
+   * Also moves the task to the "To Do" section if one exists in the project.
    */
   async reopenTask(id: string, googleTaskListId?: string): Promise<void> {
+    // Get the task to find its project and determine the correct section
+    const task = await this.getTask(id);
+    let sectionId: string | undefined;
+
+    if (task?.projectId) {
+      const project = await this.projectService.getProject(task.projectId);
+      if (project?.sections) {
+        // Move to "To Do" section when reopening
+        sectionId = this.statusToSectionId('todo', project.sections);
+      }
+    }
+
     return this.updateTask(
       id,
       {
-        status: 'in-progress',
+        status: 'todo',
         completedAt: null as any, // Use null to clear field (Firestore rejects undefined)
+        ...(sectionId ? { sectionId } : {}),
       },
       googleTaskListId,
     );
@@ -363,9 +434,12 @@ export class TaskService {
 
   /**
    * Reorder tasks (after drag-and-drop)
-   * Updates the order field for multiple tasks in a batch
+   * Updates the order field for multiple tasks in a batch.
+   * Optionally updates sectionId and status (for board column sync).
    */
-  async reorderTasks(tasks: { id: string; order: number; sectionId?: string }[]): Promise<void> {
+  async reorderTasks(
+    tasks: { id: string; order: number; sectionId?: string; status?: Task['status'] }[],
+  ): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
@@ -374,12 +448,27 @@ export class TaskService {
 
       for (const task of tasks) {
         const taskRef = doc(this.firestore, `tasks/${task.id}`);
-        const updateData: { order: number; updatedAt: Date; sectionId?: string } = {
+        const updateData: {
+          order: number;
+          updatedAt: Date;
+          sectionId?: string;
+          status?: Task['status'];
+          completedAt?: Date | null;
+        } = {
           order: task.order,
           updatedAt: new Date(),
         };
         if (task.sectionId !== undefined) {
           updateData.sectionId = task.sectionId;
+        }
+        if (task.status !== undefined) {
+          updateData.status = task.status;
+          // Set completedAt when marking as done, clear when re-opening
+          if (task.status === 'done') {
+            updateData.completedAt = new Date();
+          } else {
+            updateData.completedAt = null;
+          }
         }
         batch.update(taskRef, updateData);
       }

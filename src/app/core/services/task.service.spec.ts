@@ -103,6 +103,62 @@ describe('TaskService', () => {
     });
   });
 
+  describe('sectionNameToStatus', () => {
+    it('should map "Done" section to done status', () => {
+      expect(service.sectionNameToStatus('Done')).toBe('done');
+      expect(service.sectionNameToStatus('Complete')).toBe('done');
+      expect(service.sectionNameToStatus('Completed Tasks')).toBe('done');
+    });
+
+    it('should map "In Progress" section to in-progress status', () => {
+      expect(service.sectionNameToStatus('In Progress')).toBe('in-progress');
+      expect(service.sectionNameToStatus('Doing')).toBe('in-progress');
+      expect(service.sectionNameToStatus('WIP')).toBe('in-progress');
+    });
+
+    it('should map "To Do" section to todo status', () => {
+      expect(service.sectionNameToStatus('To Do')).toBe('todo');
+      expect(service.sectionNameToStatus('Todo')).toBe('todo');
+      expect(service.sectionNameToStatus('Backlog')).toBe('todo');
+    });
+
+    it('should return null for unknown sections', () => {
+      expect(service.sectionNameToStatus('Random Section')).toBeNull();
+    });
+  });
+
+  describe('statusToSectionId', () => {
+    const mockSections = [
+      { id: 'section-1', name: 'To Do' },
+      { id: 'section-2', name: 'In Progress' },
+      { id: 'section-3', name: 'Done' },
+    ];
+
+    it('should find the Done section for done status', () => {
+      expect(service.statusToSectionId('done', mockSections)).toBe('section-3');
+    });
+
+    it('should find the In Progress section for in-progress status', () => {
+      expect(service.statusToSectionId('in-progress', mockSections)).toBe('section-2');
+    });
+
+    it('should find the To Do section for todo status', () => {
+      expect(service.statusToSectionId('todo', mockSections)).toBe('section-1');
+    });
+
+    it('should return undefined when no matching section exists', () => {
+      const sectionsWithoutDone = [
+        { id: 'section-1', name: 'To Do' },
+        { id: 'section-2', name: 'In Progress' },
+      ];
+      expect(service.statusToSectionId('done', sectionsWithoutDone)).toBeUndefined();
+    });
+
+    it('should return undefined for empty sections array', () => {
+      expect(service.statusToSectionId('done', [])).toBeUndefined();
+    });
+  });
+
   describe('bulk operations', () => {
     it('should have bulkUpdateTasks method', () => {
       expect(service.bulkUpdateTasks).toBeDefined();
