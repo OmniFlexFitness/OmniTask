@@ -32,6 +32,7 @@ jobs:
         run: yarn build
 
       - name: Deploy to Firebase Preview Channel
+        id: firebase_deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
@@ -39,3 +40,25 @@ jobs:
           projectId: omnitask-475422
           channelId: pr-${{ github.event.pull_request.number }}
           expires: 7d
+
+      - name: Add preview domain to Firebase Auth
+        if: steps.firebase_deploy.outputs.details_url
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OMNITASK_475422 }}
+        run: |
+          # Extract the domain from the preview URL
+          PREVIEW_URL="${{ steps.firebase_deploy.outputs.details_url }}"
+          PREVIEW_DOMAIN=$(echo "$PREVIEW_URL" | sed 's|https://||' | sed 's|/.*||')
+          
+          echo "Preview URL: $PREVIEW_URL"
+          echo "Preview Domain: $PREVIEW_DOMAIN"
+          
+          # Create credentials file for Google Auth
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/sa-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json
+          
+          # Run the script to add the domain
+          node scripts/add-auth-domain.js "$PREVIEW_DOMAIN"
+          
+          # Clean up
+          rm /tmp/sa-key.json
