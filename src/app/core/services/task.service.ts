@@ -15,7 +15,7 @@ import {
   getDoc,
   Timestamp,
 } from '@angular/fire/firestore';
-import { Task } from '../models/domain.model';
+import { Task, Section } from '../models/domain.model';
 import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
@@ -53,8 +53,8 @@ export class TaskService {
   }
 
   /**
-   * Map section name to task status.
-   * Used to sync status when dragging tasks between board columns.
+   * Map section name to task status (legacy fallback).
+   * Used when a section doesn't have an explicit `status` field.
    * @param sectionName - The name of the section/column
    * @returns The corresponding task status, or null if no match
    */
@@ -73,27 +73,92 @@ export class TaskService {
       normalized.includes('backlog')
     )
       return 'todo';
-    return null; // Unknown section, don't change status
+    return null;
   }
 
   /**
-   * Map task status to section ID.
-   * Used to move tasks to the appropriate section when status changes.
-   * @param status - The task status to find a section for
-   * @param sections - The project's sections array
-   * @returns The section ID that matches the status, or undefined if no match
+   * Get the status a section represents.
+   * Prefers the data-driven `section.status` field, falls back to name-based matching.
    */
-  statusToSectionId(
-    status: Task['status'],
-    sections: { id: string; name: string }[],
-  ): string | undefined {
-    for (const section of sections) {
-      const sectionStatus = this.sectionNameToStatus(section.name);
-      if (sectionStatus === status) {
-        return section.id;
+  getSectionStatus(section: { name: string; status?: Task['status'] }): Task['status'] | null {
+    return section.status ?? this.sectionNameToStatus(section.name);
+  }
+
+  /**
+   * Find the section that maps to a given status.
+   * Prefers data-driven mapping (section.status), falls back to name-based matching.
+   */
+  findSectionForStatus(status: Task['status'], sections: Section[]): Section | undefined {
+    // Prefer data-driven mapping
+    const byField = sections.find((s) => s.status === status);
+    if (byField) return byField;
+    // Fallback to name-based matching for legacy sections
+    return sections.find((s) => this.sectionNameToStatus(s.name) === status);
+  }
+
+  /**
+   * Map task status to section ID (convenience wrapper).
+   */
+  statusToSectionId(status: Task['status'], sections: Section[]): string | undefined {
+    return this.findSectionForStatus(status, sections)?.id;
+  }
+
+  /**
+   * Reconcile derived task fields before any write.
+   * Given a partial update, infer sectionId from status (or vice versa),
+   * manage completedAt, and handle any future derived properties.
+   *
+   * This is the central reconciliation layer — all task mutations
+   * flow through here to ensure consistency.
+   */
+  private async reconcileTaskFields(
+    taskId: string,
+    changes: Partial<Task>,
+    existingTask?: Task | null,
+  ): Promise<Partial<Task>> {
+    const reconciled = { ...changes };
+    const task = existingTask ?? (await this.getTask(taskId));
+    if (!task) return reconciled;
+
+    const project = await this.projectService.getProject(task.projectId);
+    const sections: Section[] = project?.sections ?? [];
+
+    // 1. Status changed → derive sectionId + completedAt
+    if (reconciled.status && reconciled.status !== task.status) {
+      // Find matching section for new status (unless sectionId was explicitly set)
+      if (!reconciled.sectionId) {
+        const matchingSection = this.findSectionForStatus(reconciled.status, sections);
+        if (matchingSection) {
+          reconciled.sectionId = matchingSection.id;
+        }
+      }
+      // Manage completedAt
+      if (reconciled.status === 'done' && !reconciled.completedAt) {
+        reconciled.completedAt = new Date();
+      } else if (reconciled.status !== 'done') {
+        reconciled.completedAt = null as unknown as Task['completedAt'];
       }
     }
-    return undefined;
+
+    // 2. SectionId changed (e.g. drag-drop) → derive status
+    if (reconciled.sectionId && reconciled.sectionId !== task.sectionId && !reconciled.status) {
+      const targetSection = sections.find((s) => s.id === reconciled.sectionId);
+      if (targetSection) {
+        const derivedStatus = this.getSectionStatus(targetSection);
+        if (derivedStatus) {
+          reconciled.status = derivedStatus;
+          if (derivedStatus === 'done') {
+            reconciled.completedAt = new Date();
+          } else {
+            reconciled.completedAt = null as unknown as Task['completedAt'];
+          }
+        }
+      }
+    }
+
+    // Future derived properties can be added here
+
+    return reconciled;
   }
 
   /**
@@ -259,16 +324,8 @@ export class TaskService {
             isGoogleTask: true,
           });
         } catch (err) {
-          console.error('Failed to create Google Task, rolling back Firestore task creation:', err);
-          try {
-            await deleteDoc(result);
-          } catch (rollbackErr) {
-            console.error(
-              'Failed to rollback Firestore task after Google Task creation error:',
-              rollbackErr,
-            );
-          }
-          throw err;
+          console.warn('Google Tasks sync failed, task was created locally:', err);
+          // Don't rollback or throw — Google Tasks sync is optional
         }
       }
 
@@ -295,29 +352,33 @@ export class TaskService {
     this.error.set(null);
 
     try {
-      // Fetch task before update to avoid race condition
+      // Fetch task before update to use for reconciliation
       const taskDoc = await this.getTask(id);
+
+      // Reconcile derived fields (sectionId, completedAt, etc.)
+      const reconciled = await this.reconcileTaskFields(id, data, taskDoc);
 
       const taskRef = doc(this.firestore, `tasks/${id}`);
       // Strip undefined values - Firestore does not accept undefined as a field value
       await updateDoc(
         taskRef,
         this.stripUndefined({
-          ...data,
+          ...reconciled,
           updatedAt: new Date(),
         }),
       );
 
       // Auto-add assignee to project members
-      if (data.assignedToId && taskDoc) {
-        void this.autoAddMember(taskDoc.projectId, data.assignedToId);
+      if (reconciled.assignedToId && taskDoc) {
+        void this.autoAddMember(taskDoc.projectId, reconciled.assignedToId);
       }
 
+      // Optional Google Tasks sync — never blocks the update
       if (taskDoc?.googleTaskId) {
         const project = await this.projectService.getProject(taskDoc.projectId);
         if (project?.googleTaskListId) {
           try {
-            const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(data);
+            const googleTaskData = this.googleTasksSyncService.transformToGoogleTask(reconciled);
             await firstValueFrom(
               this.googleTasksService.updateTask(
                 project.googleTaskListId,
@@ -326,7 +387,7 @@ export class TaskService {
               ),
             );
           } catch (err) {
-            console.error('Failed to update Google Task, but task was updated in OmniTask:', err);
+            console.warn('Google Tasks sync failed, task was updated locally:', err);
           }
         }
       }
@@ -348,25 +409,20 @@ export class TaskService {
 
     try {
       const taskDoc = await this.getTask(id);
+
+      // Optional Google Tasks deletion — never blocks local delete
       if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
         try {
           await this.googleTasksSyncService.deleteTaskInGoogle(
             taskDoc.googleTaskListId,
             taskDoc.googleTaskId,
           );
-          // Only delete from Firestore after successful Google Tasks deletion
-          await deleteDoc(doc(this.firestore, `tasks/${id}`));
-          return;
         } catch (err) {
-          console.error(
-            'Failed to delete Google Task; OmniTask task was not deleted to avoid inconsistency:',
-            err,
-          );
-          throw err;
+          console.warn('Google Tasks sync failed, proceeding with local deletion:', err);
         }
       }
 
-      // Only delete from Firestore after successful Google Tasks deletion (or if not linked)
+      // Always delete from Firestore
       await deleteDoc(doc(this.firestore, `tasks/${id}`));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';
@@ -379,63 +435,24 @@ export class TaskService {
 
   /**
    * Mark task as complete.
-   * Also moves the task to the "Done" section if one exists in the project.
+   * Reconciliation layer handles sectionId and completedAt automatically.
    */
   async completeTask(id: string, googleTaskListId?: string): Promise<void> {
-    // Get the task to find its project and determine the correct section
-    const task = await this.getTask(id);
-    let sectionId: string | undefined;
-
-    if (task?.projectId) {
-      const project = await this.projectService.getProject(task.projectId);
-      if (project?.sections) {
-        sectionId = this.statusToSectionId('done', project.sections);
-      }
-    }
-
-    return this.updateTask(
-      id,
-      {
-        status: 'done',
-        completedAt: new Date(),
-        ...(sectionId ? { sectionId } : {}),
-      },
-      googleTaskListId,
-    );
+    return this.updateTask(id, { status: 'done' }, googleTaskListId);
   }
 
   /**
    * Reopen a completed task.
-   * Also moves the task to the "To Do" section if one exists in the project.
+   * Reconciliation layer handles sectionId and completedAt automatically.
    */
   async reopenTask(id: string, googleTaskListId?: string): Promise<void> {
-    // Get the task to find its project and determine the correct section
-    const task = await this.getTask(id);
-    let sectionId: string | undefined;
-
-    if (task?.projectId) {
-      const project = await this.projectService.getProject(task.projectId);
-      if (project?.sections) {
-        // Move to "To Do" section when reopening
-        sectionId = this.statusToSectionId('todo', project.sections);
-      }
-    }
-
-    return this.updateTask(
-      id,
-      {
-        status: 'todo',
-        completedAt: null as any, // Use null to clear field (Firestore rejects undefined)
-        ...(sectionId ? { sectionId } : {}),
-      },
-      googleTaskListId,
-    );
+    return this.updateTask(id, { status: 'todo' }, googleTaskListId);
   }
 
   /**
-   * Reorder tasks (after drag-and-drop)
-   * Updates the order field for multiple tasks in a batch.
-   * Optionally updates sectionId and status (for board column sync).
+   * Reorder tasks (after drag-and-drop).
+   * Updates order, sectionId, and derives status/completedAt via section mapping.
+   * Extensible: any additional fields on the update objects are persisted.
    */
   async reorderTasks(
     tasks: { id: string; order: number; sectionId?: string; status?: Task['status'] }[],
@@ -446,30 +463,47 @@ export class TaskService {
     try {
       const batch = writeBatch(this.firestore);
 
+      // We need project sections to derive status from sectionId.
+      // Fetch once and reuse for all tasks in the batch.
+      let sections: Section[] = [];
+      if (tasks.length > 0 && tasks[0].sectionId) {
+        // Get any task to find the project
+        const sampleTask = await this.getTask(tasks[0].id);
+        if (sampleTask?.projectId) {
+          const project = await this.projectService.getProject(sampleTask.projectId);
+          sections = project?.sections ?? [];
+        }
+      }
+
       for (const task of tasks) {
         const taskRef = doc(this.firestore, `tasks/${task.id}`);
-        const updateData: {
-          order: number;
-          updatedAt: Date;
-          sectionId?: string;
-          status?: Task['status'];
-          completedAt?: Date | null;
-        } = {
+        const updateData: Record<string, unknown> = {
           order: task.order,
           updatedAt: new Date(),
         };
+
         if (task.sectionId !== undefined) {
-          updateData.sectionId = task.sectionId;
-        }
-        if (task.status !== undefined) {
-          updateData.status = task.status;
-          // Set completedAt when marking as done, clear when re-opening
-          if (task.status === 'done') {
-            updateData.completedAt = new Date();
-          } else {
-            updateData.completedAt = null;
+          updateData['sectionId'] = task.sectionId;
+
+          // Derive status from section if not explicitly provided
+          if (task.status === undefined) {
+            const targetSection = sections.find((s) => s.id === task.sectionId);
+            if (targetSection) {
+              const derivedStatus = this.getSectionStatus(targetSection);
+              if (derivedStatus) {
+                updateData['status'] = derivedStatus;
+                updateData['completedAt'] = derivedStatus === 'done' ? new Date() : null;
+              }
+            }
           }
         }
+
+        if (task.status !== undefined) {
+          updateData['status'] = task.status;
+          // Set completedAt when marking as done, clear when re-opening
+          updateData['completedAt'] = task.status === 'done' ? new Date() : null;
+        }
+
         batch.update(taskRef, updateData);
       }
 

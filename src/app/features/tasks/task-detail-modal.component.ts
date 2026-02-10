@@ -884,10 +884,18 @@ export class TaskDetailModalComponent {
 
     if (task.status === 'done') {
       await this.taskService.reopenTask(task.id, project?.googleTaskListId);
-      this.updated.emit({ ...task, status: 'in-progress' });
+      this.updated.emit({
+        ...task,
+        status: 'todo',
+        completedAt: null as unknown as Task['completedAt'],
+      });
     } else {
       await this.taskService.completeTask(task.id, project?.googleTaskListId);
-      this.updated.emit({ ...task, status: 'done' });
+      this.updated.emit({
+        ...task,
+        status: 'done',
+        completedAt: new Date() as unknown as Task['completedAt'],
+      });
     }
   }
 
