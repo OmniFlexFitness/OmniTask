@@ -3,6 +3,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
+  profileImage?: string; // Custom profile image URL (Firebase Storage)
   avatarColor?: string; // Custom color for placeholder avatars
   domain: string;
   role: 'admin' | 'user';
