@@ -7,6 +7,11 @@ export const routes: Routes = [
     loadComponent: () => import('./core/auth/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'demo/board',
+    loadComponent: () =>
+      import('./features/demo/board-demo.component').then((m) => m.BoardDemoComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     children: [

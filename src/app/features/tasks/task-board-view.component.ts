@@ -62,25 +62,60 @@ import { ProjectService } from '../../core/services/project.service';
         <div class="h-full flex gap-6 pb-4 min-w-max p-4">
           @for (section of projectSections(); track section.id) {
             <div
-              class="board-column flex flex-col bg-slate-900/40 rounded-xl border border-white/5 h-full max-h-full"
+              class="board-column flex flex-col rounded-xl border h-full max-h-full transition-all duration-300"
+              [class.bg-slate-900/40]="section.status !== 'done'"
+              [class.bg-slate-900/20]="section.status === 'done'"
+              [class.border-white/5]="section.status === 'done'"
+              [class.opacity-75]="section.status === 'done'"
+              [ngClass]="{
+                'cyber-column-todo': section.status === 'todo',
+                'cyber-column-progress': section.status === 'in-progress',
+                'cyber-column-done': section.status === 'done'
+              }"
             >
               <!-- Column Header -->
               <div
-                class="p-4 flex items-center justify-between border-b border-white/5 handle cursor-grab active:cursor-grabbing"
+                class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative overflow-hidden"
+                [class.border-white/10]="section.status === 'done'"
+                [class.border-white/10]="section.status !== 'done'"
               >
-                <div class="flex items-center gap-3">
+                <!-- Neon glow effect for active columns -->
+                @if (section.status !== 'done') {
+                  <div
+                    class="absolute inset-0 opacity-10 pointer-events-none"
+                    [style.background]="'linear-gradient(135deg, ' + (section.color || '#64748b') + '20, transparent)'"
+                  ></div>
+                }
+                
+                <div class="flex items-center gap-3 relative z-10">
                   <span
-                    class="w-3 h-3 rounded-full"
+                    class="w-3 h-3 rounded-full transition-all duration-300"
                     [style.background]="section.color || '#64748b'"
-                    [style.box-shadow]="'0 0 8px ' + (section.color || '#64748b') + '60'"
+                    [style.box-shadow]="section.status !== 'done' ? '0 0 12px ' + (section.color || '#64748b') + '80, 0 0 20px ' + (section.color || '#64748b') + '40' : 'none'"
+                    [class.animate-pulse]="section.status === 'in-progress'"
                   ></span>
-                  <h3 class="font-bold text-slate-200 text-sm tracking-wide">{{ section.name }}</h3>
-                  <span class="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
+                  <h3 
+                    class="font-bold text-sm tracking-wide transition-colors duration-300"
+                    [class.text-slate-200]="section.status !== 'done'"
+                    [class.text-slate-500]="section.status === 'done'"
+                    [style.text-shadow]="section.status !== 'done' ? '0 0 8px ' + (section.color || '#64748b') + '60' : 'none'"
+                  >
+                    {{ section.name }}
+                  </h3>
+                  <span 
+                    class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
+                    [class.bg-white/5]="section.status === 'done'"
+                    [class.text-slate-500]="section.status === 'done'"
+                    [class.text-slate-400]="section.status !== 'done'"
+                    [style.background]="section.status !== 'done' ? (section.color || '#64748b') + '20' : ''"
+                    [style.color]="section.status !== 'done' ? (section.color || '#64748b') : ''"
+                    [style.border]="section.status !== 'done' ? '1px solid ' + (section.color || '#64748b') + '40' : ''"
+                  >
                     {{ getFilteredTasksForSection(section.id).length }}
                   </span>
                 </div>
                 <button
-                  class="text-slate-500 hover:text-white transition-colors"
+                  class="text-slate-500 hover:text-white transition-colors relative z-10"
                   (click)="showColumnMenu(section)"
                 >
                   <svg
@@ -115,38 +150,60 @@ import { ProjectService } from '../../core/services/project.service';
                     [cdkDragData]="task"
                     class="ofx-task-card p-4 rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden"
                     [class.bg-slate-800]="task.status !== 'done'"
-                    [class.bg-slate-800/50]="task.status === 'done'"
-                    [class.border-white/5]="task.status !== 'done'"
-                    [class.border-emerald-500/20]="task.status === 'done'"
-                    [class.opacity-60]="task.status === 'done'"
+                    [class.bg-slate-900/30]="task.status === 'done'"
+                    [class.border-white/5]="task.status === 'done'"
+                    [class.opacity-50]="task.status === 'done'"
+                    [class.grayscale]="task.status === 'done'"
                     [class.hover:shadow-lg]="task.status !== 'done'"
-                    [class.hover:border-cyan-500/30]="task.status !== 'done'"
+                    [ngClass]="{
+                      'task-todo': section.status === 'todo' && task.status !== 'done',
+                      'task-progress': section.status === 'in-progress' && task.status !== 'done',
+                      'task-done': task.status === 'done'
+                    }"
+                    [style.border-color]="task.status !== 'done' ? (section.color || '#64748b') + '30' : ''"
                     (click)="taskClick.emit(task)"
                   >
+                    <!-- Neon glow effect for active tasks -->
+                    @if (task.status !== 'done') {
+                      <div
+                        class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                        [style.background]="'linear-gradient(135deg, ' + (section.color || '#64748b') + '10, transparent)'"
+                        [style.box-shadow]="'0 0 20px ' + (section.color || '#64748b') + '20, inset 0 0 20px ' + (section.color || '#64748b') + '10'"
+                      ></div>
+                    }
+                    
+                    <!-- Scanline effect for done tasks -->
+                    @if (task.status === 'done') {
+                      <div class="absolute inset-0 scanline-overlay pointer-events-none"></div>
+                    }
+                    
                     <!-- Drag Handle (invisible but essentially the whole card) -->
                     <div
                       *cdkDragPlaceholder
-                      class="bg-slate-800/30 border-2 border-dashed border-slate-600 rounded-lg h-24 w-full"
+                      class="bg-slate-800/30 border-2 border-dashed rounded-lg h-24 w-full"
+                      [style.border-color]="section.color || '#64748b'"
                     ></div>
 
                     <!-- Priority Indicator -->
                     <div
-                      class="absolute top-0 right-0 w-2 h-2 m-2 rounded-full"
+                      class="absolute top-0 right-0 w-2 h-2 m-2 rounded-full transition-all duration-300"
                       [ngClass]="{
                         'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]':
-                          task.priority === 'high',
+                          task.priority === 'high' && task.status !== 'done',
                         'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]':
-                          task.priority === 'medium',
+                          task.priority === 'medium' && task.status !== 'done',
                         'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]':
-                          task.priority === 'low',
+                          task.priority === 'low' && task.status !== 'done',
+                        'bg-slate-600': task.status === 'done'
                       }"
                     ></div>
 
                     <h4
-                      class="text-sm font-medium mb-2 pr-4 leading-normal"
+                      class="text-sm font-medium mb-2 pr-4 leading-normal relative z-10 transition-all duration-300"
                       [class.text-slate-100]="task.status !== 'done'"
-                      [class.text-slate-400]="task.status === 'done'"
+                      [class.text-slate-500]="task.status === 'done'"
                       [class.line-through]="task.status === 'done'"
+                      [style.text-shadow]="task.status !== 'done' ? '0 0 4px ' + (section.color || '#64748b') + '20' : 'none'"
                     >
                       {{ task.title }}
                       @if (task.googleTaskId) {
@@ -167,20 +224,26 @@ import { ProjectService } from '../../core/services/project.service';
                       }
                     </h4>
 
-                    <div class="flex items-center justify-between mt-3">
+                    <div class="flex items-center justify-between mt-3 relative z-10">
                       <div class="flex items-center gap-2">
                         @if (task.assigneeName) {
                           <div
-                            class="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center text-[10px] uppercase font-bold"
+                            class="w-6 h-6 rounded-full text-indigo-300 border flex items-center justify-center text-[10px] uppercase font-bold transition-all duration-300"
+                            [class.bg-indigo-500/20]="task.status !== 'done'"
+                            [class.border-indigo-500/30]="task.status !== 'done'"
+                            [class.bg-slate-700/20]="task.status === 'done'"
+                            [class.border-slate-600/30]="task.status === 'done'"
+                            [class.text-slate-500]="task.status === 'done'"
                           >
                             {{ task.assigneeName.substring(0, 2) }}
                           </div>
                         }
                         @if (task.dueDate) {
                           <div
-                            class="flex items-center gap-1 text-[11px]"
-                            [class.text-rose-400]="isOverdue(task)"
-                            [class.text-slate-400]="!isOverdue(task)"
+                            class="flex items-center gap-1 text-[11px] transition-colors duration-300"
+                            [class.text-rose-400]="isOverdue(task) && task.status !== 'done'"
+                            [class.text-slate-400]="!isOverdue(task) && task.status !== 'done'"
+                            [class.text-slate-600]="task.status === 'done'"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -263,6 +326,11 @@ import { ProjectService } from '../../core/services/project.service';
         --board-column-width: 22rem; /* ~352px at 16px root, good desktop size */
         --board-column-min-width: 18rem; /* ~288px minimum for readability */
         --add-section-width: 3.5rem; /* Narrow add section button */
+        
+        /* Cyberpunk color variables */
+        --cyber-purple: #e040fb;
+        --cyber-blue: #00d2ff;
+        --cyber-gray: #6b7280;
       }
 
       /* Responsive adjustments for smaller screens */
@@ -281,6 +349,115 @@ import { ProjectService } from '../../core/services/project.service';
       .add-section-btn {
         width: var(--add-section-width);
         min-width: var(--add-section-width);
+      }
+
+      /* Cyberpunk column styles */
+      .cyber-column-todo {
+        border: 1px solid rgba(224, 64, 251, 0.2);
+        box-shadow: 
+          0 0 20px rgba(224, 64, 251, 0.1),
+          inset 0 0 20px rgba(224, 64, 251, 0.05);
+      }
+      
+      .cyber-column-progress {
+        border: 1px solid rgba(0, 210, 255, 0.2);
+        box-shadow: 
+          0 0 20px rgba(0, 210, 255, 0.1),
+          inset 0 0 20px rgba(0, 210, 255, 0.05);
+        animation: pulse-progress 3s ease-in-out infinite;
+      }
+      
+      .cyber-column-done {
+        position: relative;
+      }
+      
+      .cyber-column-done::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.1) 0px,
+          transparent 1px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.1) 3px
+        );
+        pointer-events: none;
+        opacity: 0.3;
+      }
+
+      /* Task card styles */
+      .task-todo {
+        border: 1px solid rgba(224, 64, 251, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+      }
+      
+      .task-todo:hover {
+        border-color: rgba(224, 64, 251, 0.6);
+        box-shadow: 
+          0 8px 24px rgba(0, 0, 0, 0.4),
+          0 0 20px rgba(224, 64, 251, 0.3);
+        transform: translateY(-2px);
+      }
+      
+      .task-progress {
+        border: 1px solid rgba(0, 210, 255, 0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+      }
+      
+      .task-progress:hover {
+        border-color: rgba(0, 210, 255, 0.6);
+        box-shadow: 
+          0 8px 24px rgba(0, 0, 0, 0.4),
+          0 0 20px rgba(0, 210, 255, 0.3);
+        transform: translateY(-2px);
+      }
+      
+      .task-done {
+        position: relative;
+        filter: grayscale(70%);
+        transition: all 0.3s ease;
+      }
+      
+      .task-done:hover {
+        filter: grayscale(50%);
+        opacity: 0.7 !important;
+      }
+
+      /* Scanline overlay for done tasks */
+      .scanline-overlay {
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.15) 0px,
+          transparent 1px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 3px
+        );
+        animation: scanline 8s linear infinite;
+      }
+      
+      @keyframes scanline {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(100%);
+        }
+      }
+      
+      @keyframes pulse-progress {
+        0%, 100% {
+          box-shadow: 
+            0 0 20px rgba(0, 210, 255, 0.1),
+            inset 0 0 20px rgba(0, 210, 255, 0.05);
+        }
+        50% {
+          box-shadow: 
+            0 0 30px rgba(0, 210, 255, 0.2),
+            inset 0 0 30px rgba(0, 210, 255, 0.1);
+        }
       }
 
       .ofx-task-card:active {
