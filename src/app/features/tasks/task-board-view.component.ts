@@ -649,12 +649,29 @@ export class TaskBoardViewComponent {
    */
   hexToRgba(hex: string, alpha: number): string {
     // Remove # if present
-    hex = hex.replace(/^#/, '');
+    const cleanHex = hex.replace(/^#/, '');
+    
+    // Validate and expand short hex codes (e.g., #fff -> #ffffff)
+    let fullHex = cleanHex;
+    if (cleanHex.length === 3) {
+      fullHex = cleanHex
+        .split('')
+        .map((char) => char + char)
+        .join('');
+    } else if (cleanHex.length !== 6) {
+      // Invalid hex format, return default gray
+      return `rgba(100, 116, 139, ${alpha})`; // #64748b
+    }
     
     // Parse hex to RGB
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
+    const r = parseInt(fullHex.substring(0, 2), 16);
+    const g = parseInt(fullHex.substring(2, 4), 16);
+    const b = parseInt(fullHex.substring(4, 6), 16);
+    
+    // Validate parsed values
+    if (isNaN(r) || isNaN(g) || isNaN(b)) {
+      return `rgba(100, 116, 139, ${alpha})`; // #64748b fallback
+    }
     
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
