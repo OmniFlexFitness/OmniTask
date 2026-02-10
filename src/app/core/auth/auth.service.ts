@@ -205,14 +205,15 @@ export class AuthService {
     const existingData = snap.exists() ? (snap.data() as UserProfile) : null;
 
     // Extract domain from email address (e.g., user@example.com -> example.com)
-    const domain = user.email?.split('@')[1] || 'unknown';
+    // Use pop() to get the last part after splitting by '@' to handle edge cases
+    const domain = user.email?.split('@').pop() || 'unknown';
 
     const data: UserProfile = {
       uid: user.uid,
       email: user.email!,
       displayName: user.displayName || 'User',
       photoURL: user.photoURL || '',
-      domain: domain,
+      domain,
       role: existingData?.role || 'user', // Default to user, preserve if exists
       createdAt: existingData?.createdAt || new Date(),
       lastLoginAt: new Date(),
