@@ -77,7 +77,7 @@ import { AuthService } from './auth.service';
         </div>
 
         <!-- Login Portal Card -->
-        <div class="flex justify-center lg:justify-end animate-fade-in-right delay-200">
+        <div class="flex justify-center lg:justify-center animate-fade-in-right delay-200">
           <div class="w-full max-w-sm relative group">
             <!-- Neon Glow Effect behind card - solid color -->
             <div class="absolute -inset-1 bg-fuchsia-500/30 rounded-2xl blur-lg opacity-40 group-hover:opacity-70 transition duration-500 animate-pulse"></div>
