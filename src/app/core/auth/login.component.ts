@@ -16,7 +16,7 @@ import { AuthService } from './auth.service';
       <!-- Background with Cyberpunk Grid -->
       <div class="absolute inset-0 z-0 select-none">
         <img
-          src="assets/img/marble-brand-bg.jpeg"
+          src="assets/img/27250823_abstract_pixel_design_banner_3112.jpg"
           alt="Background"
           class="w-full h-full object-cover opacity-40"
         />
