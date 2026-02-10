@@ -78,7 +78,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   order: number; // Position in list/section for drag-and-drop
   dueDate?: FirestoreDate;
-  completedAt?: FirestoreDate; // When task was marked done
+  completedAt?: FirestoreDate | null; // When task was marked done (null = cleared)
   tags?: string[];
   subtasks?: Subtask[];
   customFieldValues?: Record<string, any>;

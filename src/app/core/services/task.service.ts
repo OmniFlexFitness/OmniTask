@@ -136,7 +136,7 @@ export class TaskService {
       if (reconciled.status === 'done' && !reconciled.completedAt) {
         reconciled.completedAt = new Date();
       } else if (reconciled.status !== 'done') {
-        reconciled.completedAt = null as unknown as Task['completedAt'];
+        reconciled.completedAt = null;
       }
     }
 
@@ -150,7 +150,7 @@ export class TaskService {
           if (derivedStatus === 'done') {
             reconciled.completedAt = new Date();
           } else {
-            reconciled.completedAt = null as unknown as Task['completedAt'];
+            reconciled.completedAt = null;
           }
         }
       }
@@ -492,7 +492,13 @@ export class TaskService {
               const derivedStatus = this.getSectionStatus(targetSection);
               if (derivedStatus) {
                 updateData['status'] = derivedStatus;
-                updateData['completedAt'] = derivedStatus === 'done' ? new Date() : null;
+                // Only update completedAt when status is actually changing.
+                // Fetch the existing task to avoid resetting completedAt
+                // on same-column reorders (e.g., reordering within Done).
+                const existingTask = await this.getTask(task.id);
+                if (existingTask?.status !== derivedStatus) {
+                  updateData['completedAt'] = derivedStatus === 'done' ? new Date() : null;
+                }
               }
             }
           }
