@@ -93,12 +93,21 @@ export interface Task {
 }
 
 /**
+ * Cyberpunk theme color constants
+ */
+export const CYBERPUNK_COLORS = {
+  TODO: '#e040fb',      // Cyber purple
+  IN_PROGRESS: '#00d2ff', // Cyber blue
+  DONE: '#6b7280',      // Muted gray for dormant
+} as const;
+
+/**
  * Default sections for new projects - Cyberpunk theme colors
  */
 export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
-  { name: 'To Do', order: 0, color: '#e040fb', status: 'todo' }, // Cyber purple
-  { name: 'In Progress', order: 1, color: '#00d2ff', status: 'in-progress' }, // Cyber blue
-  { name: 'Done', order: 2, color: '#6b7280', status: 'done' }, // Muted gray for dormant
+  { name: 'To Do', order: 0, color: CYBERPUNK_COLORS.TODO, status: 'todo' },
+  { name: 'In Progress', order: 1, color: CYBERPUNK_COLORS.IN_PROGRESS, status: 'in-progress' },
+  { name: 'Done', order: 2, color: CYBERPUNK_COLORS.DONE, status: 'done' },
 ];
 
 /**

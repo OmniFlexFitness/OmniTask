@@ -183,8 +183,14 @@ export class ImageUploadComponent {
     this.uploading.set(true);
 
     try {
-      // Create storage reference
-      const storageRef = ref(this.storage, `${this.storagePath()}/${file.name}`);
+      // Generate unique filename using timestamp and random string to prevent collisions
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 15);
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const uniqueFilename = `${timestamp}_${randomStr}.${fileExt}`;
+
+      // Create storage reference with unique filename
+      const storageRef = ref(this.storage, `${this.storagePath()}/${uniqueFilename}`);
 
       // Upload file
       await uploadBytes(storageRef, file);

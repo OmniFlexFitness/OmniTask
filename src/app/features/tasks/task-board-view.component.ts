@@ -76,7 +76,7 @@ import { ProjectService } from '../../core/services/project.service';
               <!-- Column Header -->
               <div
                 class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative overflow-hidden"
-                [class.border-white/5]="section.status === 'done'"
+                [class.border-white/10]="section.status === 'done'"
                 [class.border-white/10]="section.status !== 'done'"
               >
                 <!-- Neon glow effect for active columns -->
