@@ -129,9 +129,9 @@ describe('TaskService', () => {
 
   describe('statusToSectionId', () => {
     const mockSections = [
-      { id: 'section-1', name: 'To Do' },
-      { id: 'section-2', name: 'In Progress' },
-      { id: 'section-3', name: 'Done' },
+      { id: 'section-1', name: 'To Do', order: 0, status: 'todo' as const },
+      { id: 'section-2', name: 'In Progress', order: 1, status: 'in-progress' as const },
+      { id: 'section-3', name: 'Done', order: 2, status: 'done' as const },
     ];
 
     it('should find the Done section for done status', () => {
@@ -148,14 +148,76 @@ describe('TaskService', () => {
 
     it('should return undefined when no matching section exists', () => {
       const sectionsWithoutDone = [
-        { id: 'section-1', name: 'To Do' },
-        { id: 'section-2', name: 'In Progress' },
+        { id: 'section-1', name: 'To Do', order: 0, status: 'todo' as const },
+        { id: 'section-2', name: 'In Progress', order: 1, status: 'in-progress' as const },
       ];
       expect(service.statusToSectionId('done', sectionsWithoutDone)).toBeUndefined();
     });
 
     it('should return undefined for empty sections array', () => {
       expect(service.statusToSectionId('done', [])).toBeUndefined();
+    });
+
+    it('should fall back to name-based matching for legacy sections without status field', () => {
+      const legacySections = [
+        { id: 'section-1', name: 'To Do', order: 0 },
+        { id: 'section-2', name: 'In Progress', order: 1 },
+        { id: 'section-3', name: 'Done', order: 2 },
+      ];
+      expect(service.statusToSectionId('done', legacySections)).toBe('section-3');
+      expect(service.statusToSectionId('in-progress', legacySections)).toBe('section-2');
+      expect(service.statusToSectionId('todo', legacySections)).toBe('section-1');
+    });
+  });
+
+  describe('getSectionStatus', () => {
+    it('should return status from section.status field when present', () => {
+      expect(service.getSectionStatus({ name: 'Custom Name', status: 'done' })).toBe('done');
+      expect(service.getSectionStatus({ name: 'Whatever', status: 'todo' })).toBe('todo');
+    });
+
+    it('should fall back to name-based matching when status field is absent', () => {
+      expect(service.getSectionStatus({ name: 'Done' })).toBe('done');
+      expect(service.getSectionStatus({ name: 'In Progress' })).toBe('in-progress');
+      expect(service.getSectionStatus({ name: 'To Do' })).toBe('todo');
+    });
+
+    it('should return null for unknown sections without status field', () => {
+      expect(service.getSectionStatus({ name: 'Random Section' })).toBeNull();
+    });
+
+    it('should prefer status field over name-based matching', () => {
+      // Section named "Done" but status is actually "todo"
+      expect(service.getSectionStatus({ name: 'Done', status: 'todo' })).toBe('todo');
+    });
+  });
+
+  describe('findSectionForStatus', () => {
+    it('should find section by status field', () => {
+      const sections = [
+        { id: 's1', name: 'Custom', order: 0, status: 'todo' as const },
+        { id: 's2', name: 'Working', order: 1, status: 'in-progress' as const },
+        { id: 's3', name: 'Finished', order: 2, status: 'done' as const },
+      ];
+      expect(service.findSectionForStatus('done', sections)?.id).toBe('s3');
+      expect(service.findSectionForStatus('todo', sections)?.id).toBe('s1');
+    });
+
+    it('should fall back to name-based matching for legacy sections', () => {
+      const legacySections = [
+        { id: 's1', name: 'To Do', order: 0 },
+        { id: 's2', name: 'Done', order: 1 },
+      ];
+      expect(service.findSectionForStatus('done', legacySections)?.id).toBe('s2');
+      expect(service.findSectionForStatus('todo', legacySections)?.id).toBe('s1');
+    });
+
+    it('should return undefined when no match found', () => {
+      const sections = [
+        { id: 's1', name: 'Alpha', order: 0 },
+        { id: 's2', name: 'Beta', order: 1 },
+      ];
+      expect(service.findSectionForStatus('done', sections)).toBeUndefined();
     });
   });
 

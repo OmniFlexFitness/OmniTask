@@ -26,6 +26,8 @@ export interface Section {
   name: string;
   order: number;
   color?: string; // For visual distinction
+  /** The task status this section represents. Used to auto-sync status ↔ sectionId. */
+  status?: Task['status'];
 }
 
 /**
@@ -76,7 +78,7 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   order: number; // Position in list/section for drag-and-drop
   dueDate?: FirestoreDate;
-  completedAt?: FirestoreDate; // When task was marked done
+  completedAt?: FirestoreDate | null; // When task was marked done (null = cleared)
   tags?: string[];
   subtasks?: Subtask[];
   customFieldValues?: Record<string, any>;
@@ -92,9 +94,9 @@ export interface Task {
  * Default sections for new projects
  */
 export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
-  { name: 'To Do', order: 0, color: '#6366f1' },
-  { name: 'In Progress', order: 1, color: '#0ea5e9' },
-  { name: 'Done', order: 2, color: '#10b981' },
+  { name: 'To Do', order: 0, color: '#6366f1', status: 'todo' },
+  { name: 'In Progress', order: 1, color: '#0ea5e9', status: 'in-progress' },
+  { name: 'Done', order: 2, color: '#10b981', status: 'done' },
 ];
 
 /**
