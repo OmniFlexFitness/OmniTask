@@ -63,27 +63,27 @@ import { ProjectService } from '../../core/services/project.service';
           @for (section of projectSections(); track section.id) {
             <div
               class="board-column flex flex-col rounded-xl border h-full max-h-full transition-all duration-300"
-              [class.bg-slate-900/40]="section.status !== 'done'"
-              [class.bg-slate-900/20]="section.status === 'done'"
-              [class.border-white/5]="section.status === 'done'"
-              [class.opacity-75]="section.status === 'done'"
+              [class.bg-slate-900/40]="getSectionStatus(section) !== 'done'"
+              [class.bg-slate-900/20]="getSectionStatus(section) === 'done'"
+              [class.border-white/5]="getSectionStatus(section) === 'done'"
+              [class.opacity-75]="getSectionStatus(section) === 'done'"
               [ngClass]="{
-                'cyber-column-todo': section.status === 'todo',
-                'cyber-column-progress': section.status === 'in-progress',
-                'cyber-column-done': section.status === 'done'
+                'cyber-column-todo': getSectionStatus(section) === 'todo',
+                'cyber-column-progress': getSectionStatus(section) === 'in-progress',
+                'cyber-column-done': getSectionStatus(section) === 'done'
               }"
             >
               <!-- Column Header -->
               <div
                 class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative overflow-hidden"
-                [class.border-white/10]="section.status === 'done'"
-                [class.border-white/10]="section.status !== 'done'"
+                [class.border-white/10]="getSectionStatus(section) === 'done'"
+                [class.border-white/10]="getSectionStatus(section) !== 'done'"
               >
                 <!-- Neon glow effect for active columns -->
-                @if (section.status !== 'done') {
+                @if (getSectionStatus(section) !== 'done') {
                   <div
                     class="absolute inset-0 opacity-10 pointer-events-none"
-                    [style.background]="'linear-gradient(135deg, ' + (section.color || '#64748b') + '20, transparent)'"
+                    [style.background]="'linear-gradient(135deg, ' + getColorWithOpacity(section.color, 0.2) + ', transparent)'"
                   ></div>
                 }
                 
@@ -91,25 +91,25 @@ import { ProjectService } from '../../core/services/project.service';
                   <span
                     class="w-3 h-3 rounded-full transition-all duration-300"
                     [style.background]="section.color || '#64748b'"
-                    [style.box-shadow]="section.status !== 'done' ? '0 0 12px ' + (section.color || '#64748b') + '80, 0 0 20px ' + (section.color || '#64748b') + '40' : 'none'"
-                    [class.animate-pulse]="section.status === 'in-progress'"
+                    [style.box-shadow]="getSectionStatus(section) !== 'done' ? '0 0 12px ' + getColorWithOpacity(section.color, 0.5) + ', 0 0 20px ' + getColorWithOpacity(section.color, 0.25) : 'none'"
+                    [class.animate-pulse]="getSectionStatus(section) === 'in-progress'"
                   ></span>
                   <h3 
                     class="font-bold text-sm tracking-wide transition-colors duration-300"
-                    [class.text-slate-200]="section.status !== 'done'"
-                    [class.text-slate-500]="section.status === 'done'"
-                    [style.text-shadow]="section.status !== 'done' ? '0 0 8px ' + (section.color || '#64748b') + '60' : 'none'"
+                    [class.text-slate-200]="getSectionStatus(section) !== 'done'"
+                    [class.text-slate-500]="getSectionStatus(section) === 'done'"
+                    [style.text-shadow]="getSectionStatus(section) !== 'done' ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6) : 'none'"
                   >
                     {{ section.name }}
                   </h3>
                   <span 
                     class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
-                    [class.bg-white/5]="section.status === 'done'"
-                    [class.text-slate-500]="section.status === 'done'"
-                    [class.text-slate-400]="section.status !== 'done'"
-                    [style.background]="section.status !== 'done' ? (section.color || '#64748b') + '20' : ''"
-                    [style.color]="section.status !== 'done' ? (section.color || '#64748b') : ''"
-                    [style.border]="section.status !== 'done' ? '1px solid ' + (section.color || '#64748b') + '40' : ''"
+                    [class.bg-white/5]="getSectionStatus(section) === 'done'"
+                    [class.text-slate-500]="getSectionStatus(section) === 'done'"
+                    [class.text-slate-400]="getSectionStatus(section) !== 'done'"
+                    [style.background]="getSectionStatus(section) !== 'done' ? getColorWithOpacity(section.color, 0.2) : ''"
+                    [style.color]="getSectionStatus(section) !== 'done' ? (section.color || '#64748b') : ''"
+                    [style.border]="getSectionStatus(section) !== 'done' ? '1px solid ' + getColorWithOpacity(section.color, 0.25) : ''"
                   >
                     {{ getFilteredTasksForSection(section.id).length }}
                   </span>
@@ -156,19 +156,19 @@ import { ProjectService } from '../../core/services/project.service';
                     [class.grayscale]="task.status === 'done'"
                     [class.hover:shadow-lg]="task.status !== 'done'"
                     [ngClass]="{
-                      'task-todo': section.status === 'todo' && task.status !== 'done',
-                      'task-progress': section.status === 'in-progress' && task.status !== 'done',
+                      'task-todo': getSectionStatus(section) === 'todo' && task.status !== 'done',
+                      'task-progress': getSectionStatus(section) === 'in-progress' && task.status !== 'done',
                       'task-done': task.status === 'done'
                     }"
-                    [style.border-color]="task.status !== 'done' ? (section.color || '#64748b') + '30' : ''"
+                    [style.border-color]="task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : ''"
                     (click)="taskClick.emit(task)"
                   >
                     <!-- Neon glow effect for active tasks -->
                     @if (task.status !== 'done') {
                       <div
                         class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                        [style.background]="'linear-gradient(135deg, ' + (section.color || '#64748b') + '10, transparent)'"
-                        [style.box-shadow]="'0 0 20px ' + (section.color || '#64748b') + '20, inset 0 0 20px ' + (section.color || '#64748b') + '10'"
+                        [style.background]="'linear-gradient(135deg, ' + getColorWithOpacity(section.color, 0.1) + ', transparent)'"
+                        [style.box-shadow]="'0 0 20px ' + getColorWithOpacity(section.color, 0.2) + ', inset 0 0 20px ' + getColorWithOpacity(section.color, 0.1)"
                       ></div>
                     }
                     
@@ -203,7 +203,7 @@ import { ProjectService } from '../../core/services/project.service';
                       [class.text-slate-100]="task.status !== 'done'"
                       [class.text-slate-500]="task.status === 'done'"
                       [class.line-through]="task.status === 'done'"
-                      [style.text-shadow]="task.status !== 'done' ? '0 0 4px ' + (section.color || '#64748b') + '20' : 'none'"
+                      [style.text-shadow]="task.status !== 'done' ? '0 0 4px ' + getColorWithOpacity(section.color, 0.2) : 'none'"
                     >
                       {{ task.title }}
                       @if (task.googleTaskId) {
@@ -622,5 +622,65 @@ export class TaskBoardViewComponent {
   showColumnMenu(section: Section) {
     // Placeholder for column actions (Delete, Edit, Color)
     console.log('Column menu', section);
+  }
+
+  /**
+   * Get the status for a section, with fallback logic for sections created before status field was added
+   */
+  getSectionStatus(section: Section): 'todo' | 'in-progress' | 'done' {
+    // If section has explicit status, use it
+    if (section.status) {
+      return section.status;
+    }
+    
+    // Otherwise, infer from section name or color
+    const nameLower = section.name.toLowerCase();
+    if (nameLower.includes('done') || nameLower.includes('complete')) {
+      return 'done';
+    }
+    if (nameLower.includes('progress') || nameLower.includes('doing')) {
+      return 'in-progress';
+    }
+    return 'todo'; // default
+  }
+
+  /**
+   * Convert hex color to rgba with alpha
+   */
+  hexToRgba(hex: string, alpha: number): string {
+    // Remove # if present
+    const cleanHex = hex.replace(/^#/, '');
+    
+    // Validate and expand short hex codes (e.g., #fff -> #ffffff)
+    let fullHex = cleanHex;
+    if (cleanHex.length === 3) {
+      fullHex = cleanHex
+        .split('')
+        .map((char) => char + char)
+        .join('');
+    } else if (cleanHex.length !== 6) {
+      // Invalid hex format, return default gray
+      return `rgba(100, 116, 139, ${alpha})`; // #64748b
+    }
+    
+    // Parse hex to RGB
+    const r = parseInt(fullHex.substring(0, 2), 16);
+    const g = parseInt(fullHex.substring(2, 4), 16);
+    const b = parseInt(fullHex.substring(4, 6), 16);
+    
+    // Validate parsed values
+    if (isNaN(r) || isNaN(g) || isNaN(b)) {
+      return `rgba(100, 116, 139, ${alpha})`; // #64748b fallback
+    }
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  /**
+   * Get color with opacity for dynamic styles
+   */
+  getColorWithOpacity(color: string | undefined, opacity: number): string {
+    const baseColor = color || '#64748b';
+    return this.hexToRgba(baseColor, opacity);
   }
 }
