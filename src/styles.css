@@ -33,7 +33,7 @@
     font-family: var(--default-font);
     color: rgb(240, 246, 255);
     background-color: var(--cyber-bg-deep);
-    background-image: url('assets/img/27250823_abstract_pixel_design_banner_3112.jpg');
+    background-image: linear-gradient(to bottom, rgba(5,10,30,0.92), rgba(10,20,60,0.75), rgba(15,30,80,0.65)), url('assets/img/27250823_abstract_pixel_design_banner_3112.jpg');
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center top;
@@ -201,7 +201,7 @@
 .theme-dark body,
 .theme-dark .site-body {
   color: var(--fg);
-  background-image: url('assets/img/27250823_abstract_pixel_design_banner_3112.jpg');
+  background-image: linear-gradient(to bottom, rgba(5,10,30,0.92), rgba(10,20,60,0.75), rgba(15,30,80,0.65)), url('assets/img/27250823_abstract_pixel_design_banner_3112.jpg');
   background-color: var(--bg);
   background-repeat: repeat-y;
   background-size: 100% auto;
