@@ -51,13 +51,13 @@ import { AuthService } from './auth.service';
 
       <!-- Main Content Container -->
       <div
-        class="relative z-10 w-full max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-10 lg:gap-16 items-center"
+        class="relative z-10 w-full max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         <!-- Brand Section -->
-        <div class="text-center md:text-left space-y-8 animate-fade-in-left">
+        <div class="text-center lg:text-left space-y-8 animate-fade-in-left">
           <!-- Logo & Badge -->
           <div
-            class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6"
+            class="flex flex-col lg:flex-row items-center lg:items-start space-y-4 lg:space-y-0 lg:space-x-6"
           >
             <div class="relative group">
               <!-- Logo - Normal Blend Mode -->
@@ -68,7 +68,7 @@ import { AuthService } from './auth.service';
               />
             </div>
 
-            <div class="flex flex-col items-center md:items-start pt-2">
+            <div class="flex flex-col items-center lg:items-start pt-2">
               <!-- System Status Badge -->
               <div
                 class="inline-flex items-center space-x-2 border border-cyan-500/50 bg-cyan-950/40 px-4 py-1.5 rounded-full backdrop-blur-md mb-3 shadow-[0_0_15px_rgba(0,210,255,0.3)]"
@@ -98,7 +98,7 @@ import { AuthService } from './auth.service';
           </div>
 
           <p
-            class="text-xl text-slate-300 font-light max-w-lg mx-auto md:mx-0 leading-relaxed drop-shadow-md"
+            class="text-xl text-slate-300 font-light max-w-lg mx-auto lg:mx-0 leading-relaxed drop-shadow-md"
           >
             The next-generation project orchestration node for the
             <span class="text-neon-blue font-semibold">OmniFlex Ecosystem</span>. <br /><span
@@ -108,7 +108,7 @@ import { AuthService } from './auth.service';
           </p>
 
           <!-- Decorative Data Lines -->
-          <div class="hidden md:flex items-center gap-2 text-xs text-slate-500 font-mono">
+          <div class="hidden lg:flex items-center gap-2 text-xs text-slate-500 font-mono">
             <span class="text-cyan-500">&gt;</span>
             <span class="animate-pulse">AWAITING_AUTHENTICATION</span>
             <span class="w-2 h-4 bg-cyan-500/50 animate-pulse"></span>
@@ -116,7 +116,7 @@ import { AuthService } from './auth.service';
         </div>
 
         <!-- Login Portal Card -->
-        <div class="flex justify-center animate-fade-in-right delay-200">
+        <div class="flex justify-center lg:justify-end animate-fade-in-right delay-200">
           <div class="w-full max-w-sm relative group">
             <!-- Neon Glow Effect behind card - solid color -->
             <div
