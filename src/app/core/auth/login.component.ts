@@ -158,10 +158,7 @@ import { AuthService } from './auth.service';
               <div class="space-y-6">
                 <button
                   (click)="login()"
-                  class="w-full relative overflow-hidden group/btn py-4 px-6 rounded-xl font-semibold transition-all duration-300
-                         bg-[#0a0f1e]/80
-                         border-2 border-fuchsia-500/50 hover:border-fuchsia-400
-                         shadow-[0_0_20px_rgba(224,64,251,0.2)] hover:shadow-[0_0_30px_rgba(224,64,251,0.4)]"
+                  class="w-full relative overflow-hidden group/btn bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3"
                 >
                   <!-- Shine Effect -->
                   <div

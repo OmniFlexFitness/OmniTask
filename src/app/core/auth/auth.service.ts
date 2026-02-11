@@ -73,9 +73,6 @@ export class AuthService {
 
   async loginWithGoogle() {
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      hd: 'omniflexfitness.com', // Hint to prompt for omniflexfitness.com domain
-    });
     // Add Google Tasks API scope for bidirectional sync
     provider.addScope(GOOGLE_TASKS_SCOPE);
     // Add Google Contacts/Directory API scopes for assignee suggestions
@@ -87,12 +84,10 @@ export class AuthService {
       const credential = await signInWithPopup(this.auth, provider);
       const user = credential.user;
 
-      // Strict Domain Check
-      // In a real app, this should also be enforced by Firebase Security Rules or Blocking Functions
-      if (!user.email?.endsWith('@omniflexfitness.com')) {
-        await this.auth.signOut();
-        throw new Error('Unauthorized Access: OmniFlexFitness account required.');
-      }
+      // Security Note: Domain restrictions removed to allow any Google account.
+      // If domain restrictions are needed in the future, they should be enforced
+      // via Firebase Security Rules or Firebase Authentication Blocking Functions
+      // to ensure backend validation.
 
       // Extract OAuth access token for Google Tasks API calls
       // Security: Token is kept in-memory only, not persisted to storage
@@ -132,7 +127,6 @@ export class AuthService {
       // This opens a popup to request additional permissions
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({
-        hd: 'omniflexfitness.com',
         access_type: 'offline',
         prompt: 'consent', // Force consent screen to get refresh token
       });
@@ -210,12 +204,16 @@ export class AuthService {
     const snap = await getDoc(userRef);
     const existingData = snap.exists() ? (snap.data() as UserProfile) : null;
 
+    // Extract domain from email address (e.g., user@example.com -> example.com)
+    // Use pop() to get the last part after splitting by '@' to handle edge cases
+    const domain = user.email?.split('@').pop() || 'unknown';
+
     const data: UserProfile = {
       uid: user.uid,
       email: user.email!,
       displayName: user.displayName || 'User',
       photoURL: user.photoURL || '',
-      domain: 'omniflexfitness.com',
+      domain,
       role: existingData?.role || 'user', // Default to user, preserve if exists
       createdAt: existingData?.createdAt || new Date(),
       lastLoginAt: new Date(),

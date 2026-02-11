@@ -51,6 +51,7 @@ export interface Project {
   description?: string;
   color?: string; // Project accent color for UI
   icon?: string; // Project icon name
+  coverImage?: string; // Project cover image URL (Firebase Storage)
   ownerId: string;
   memberIds: string[];
   sections: Section[]; // Kanban columns
@@ -82,6 +83,7 @@ export interface Task {
   tags?: string[];
   subtasks?: Subtask[];
   customFieldValues?: Record<string, any>;
+  attachments?: string[]; // Image/file URLs (Firebase Storage)
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
   createdById?: string; // Who created the task
@@ -91,12 +93,21 @@ export interface Task {
 }
 
 /**
- * Default sections for new projects
+ * Cyberpunk theme color constants
+ */
+export const CYBERPUNK_COLORS = {
+  TODO: '#e040fb',      // Cyber purple
+  IN_PROGRESS: '#00d2ff', // Cyber blue
+  DONE: '#6b7280',      // Muted gray for dormant
+} as const;
+
+/**
+ * Default sections for new projects - Cyberpunk theme colors
  */
 export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
-  { name: 'To Do', order: 0, color: '#6366f1', status: 'todo' },
-  { name: 'In Progress', order: 1, color: '#0ea5e9', status: 'in-progress' },
-  { name: 'Done', order: 2, color: '#10b981', status: 'done' },
+  { name: 'To Do', order: 0, color: CYBERPUNK_COLORS.TODO, status: 'todo' },
+  { name: 'In Progress', order: 1, color: CYBERPUNK_COLORS.IN_PROGRESS, status: 'in-progress' },
+  { name: 'Done', order: 2, color: CYBERPUNK_COLORS.DONE, status: 'done' },
 ];
 
 /**
