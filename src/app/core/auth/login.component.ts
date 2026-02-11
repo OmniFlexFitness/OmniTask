@@ -51,10 +51,10 @@ import { AuthService } from './auth.service';
 
       <!-- Main Content Container -->
       <div
-        class="relative z-10 w-full max-w-5xl mx-auto px-6 flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-16"
+        class="relative z-10 w-full max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center"
       >
         <!-- Brand Section -->
-        <div class="text-center md:text-left space-y-8 animate-fade-in-left flex-1">
+        <div class="text-center md:text-left space-y-8 animate-fade-in-left">
           <!-- Logo & Badge -->
           <div
             class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6"
@@ -116,7 +116,7 @@ import { AuthService } from './auth.service';
         </div>
 
         <!-- Login Portal Card -->
-        <div class="flex justify-center animate-fade-in-right delay-200 flex-shrink-0">
+        <div class="flex justify-center md:justify-end animate-fade-in-right delay-200">
           <div class="w-full max-w-sm relative group">
             <!-- Neon Glow Effect behind card - solid color -->
             <div
