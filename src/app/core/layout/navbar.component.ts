@@ -11,9 +11,7 @@ import { AuthService } from '../auth/auth.service';
     <!-- Top neon accent bar - solid color with glow -->
     <div class="h-[3px] w-full relative overflow-hidden">
       <div class="absolute inset-0 bg-cyan-500"></div>
-      <div
-        class="absolute inset-0 shadow-[0_0_20px_rgba(0,210,255,0.8),0_0_40px_rgba(0,210,255,0.4)]"
-      ></div>
+      <div class="absolute inset-0"></div>
     </div>
 
     <nav class="sticky top-0 z-50 relative overflow-hidden">
