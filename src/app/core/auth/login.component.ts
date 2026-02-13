@@ -51,34 +51,34 @@ import { AuthService } from './auth.service';
 
       <!-- Main Content Container -->
       <div
-        class="relative z-10 w-full max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+        class="relative z-10 w-full max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         <!-- Brand Section -->
-        <div class="text-center lg:text-left space-y-8 animate-fade-in-left">
+        <div class="space-y-8 text-center animate-fade-in-left">
           <!-- Logo & Badge -->
           <div
-            class="flex flex-col lg:flex-row items-center lg:items-start space-y-4 lg:space-y-0 lg:space-x-6"
+            class="flex flex-col items-center justify-center space-y-4 lg:flex-row lg:space-y-0 lg:space-x-6"
           >
             <div class="relative group">
               <!-- Logo - Normal Blend Mode -->
               <img
                 src="assets/images/logo.png"
                 alt="OmniFlex Logo"
-                class="relative w-28 h-28 lg:w-36 lg:h-36 object-contain !shadow-none !rounded-none"
+                class="relative object-contain w-28 h-28 lg:w-36 lg:h-36 !shadow-none !rounded-none"
               />
             </div>
 
-            <div class="flex flex-col items-center lg:items-start pt-2">
+            <div class="flex flex-col items-center pt-2">
               <!-- System Status Badge -->
               <div
-                class="inline-flex items-center space-x-2 border border-cyan-500/50 bg-cyan-950/40 px-4 py-1.5 rounded-full backdrop-blur-md mb-3 shadow-[0_0_15px_rgba(0,210,255,0.3)]"
+                class="inline-flex items-center px-4 py-1.5 mb-3 space-x-2 rounded-full border border-cyan-500/50 bg-cyan-950/40 backdrop-blur-md shadow-[0_0_15px_rgba(0,210,255,0.3)]"
               >
-                <span class="relative flex h-2.5 w-2.5">
+                <span class="relative flex w-2.5 h-2.5">
                   <span
-                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"
+                    class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-cyan-400"
                   ></span>
                   <span
-                    class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400 shadow-[0_0_8px_rgba(0,210,255,0.8)]"
+                    class="relative inline-flex w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,210,255,0.8)]"
                   ></span>
                 </span>
                 <span class="text-xs font-bold tracking-[0.2em] text-cyan-300 uppercase"
@@ -88,7 +88,7 @@ import { AuthService } from './auth.service';
 
               <!-- Title with Cyber Font -->
               <h1
-                class="text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none"
+                class="text-6xl font-black leading-none tracking-tight md:text-7xl lg:text-8xl"
                 style="font-family: 'Orbitron', sans-serif;"
               >
                 <span class="text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">OMNI</span
@@ -98,29 +98,29 @@ import { AuthService } from './auth.service';
           </div>
 
           <p
-            class="text-xl text-slate-300 font-light max-w-lg mx-auto lg:mx-0 leading-relaxed drop-shadow-md"
+            class="max-w-lg mx-auto font-light leading-relaxed text-xl text-slate-300 drop-shadow-md"
           >
             The next-generation project orchestration node for the
-            <span class="text-neon-blue font-semibold">OmniFlex Ecosystem</span>. <br /><span
+            <span class="font-semibold text-neon-blue">OmniFlex Ecosystem</span>. <br /><span
               class="text-slate-400"
               >Initialize your workspace.</span
             >
           </p>
 
           <!-- Decorative Data Lines -->
-          <div class="hidden lg:flex items-center gap-2 text-xs text-slate-500 font-mono">
+          <div class="hidden items-center gap-2 font-mono text-xs text-slate-500 lg:flex">
             <span class="text-cyan-500">&gt;</span>
             <span class="animate-pulse">AWAITING_AUTHENTICATION</span>
-            <span class="w-2 h-4 bg-cyan-500/50 animate-pulse"></span>
+            <span class="w-2 h-4 animate-pulse bg-cyan-500/50"></span>
           </div>
         </div>
 
         <!-- Login Portal Card -->
-        <div class="flex justify-center lg:justify-end animate-fade-in-right delay-200">
-          <div class="w-full max-w-sm relative group">
+        <div class="flex justify-center delay-200 animate-fade-in-right">
+          <div class="relative w-full max-w-sm group">
             <!-- Neon Glow Effect behind card - solid color -->
             <div
-              class="absolute -inset-1 bg-fuchsia-500/30 rounded-2xl blur-lg opacity-40 group-hover:opacity-70 transition duration-500 animate-pulse"
+              class="absolute -inset-1 rounded-2xl bg-fuchsia-500/30 blur-lg opacity-40 transition duration-500 group-hover:opacity-70 animate-pulse"
             ></div>
 
             <!-- Corner Brackets -->
@@ -138,31 +138,31 @@ import { AuthService } from './auth.service';
             ></div>
 
             <div
-              class="relative bg-[#0a0f1e]/90 backdrop-blur-2xl border border-cyan-500/30 p-8 rounded-2xl shadow-[0_0_50px_rgba(0,210,255,0.15),0_0_100px_rgba(224,64,251,0.15)]"
+              class="relative p-8 bg-[#0a0f1e]/90 backdrop-blur-2xl border border-cyan-500/30 rounded-2xl shadow-[0_0_50px_rgba(0,210,255,0.15),0_0_100px_rgba(224,64,251,0.15)]"
             >
               <!-- Top Line - solid color -->
               <div class="absolute top-0 left-4 right-4 h-[2px] bg-cyan-500/60"></div>
 
-              <div class="text-center mb-8">
+              <div class="mb-8 text-center">
                 <h2
-                  class="text-2xl font-bold text-white mb-2 tracking-wide"
+                  class="mb-2 text-2xl font-bold tracking-wide text-white"
                   style="font-family: 'Orbitron', sans-serif;"
                 >
                   Identity Verification
                 </h2>
                 <div
-                  class="h-1 w-20 bg-fuchsia-500 mx-auto rounded-full shadow-[0_0_10px_rgba(224,64,251,0.5)]"
+                  class="w-20 h-1 mx-auto rounded-full bg-fuchsia-500 shadow-[0_0_10px_rgba(224,64,251,0.5)]"
                 ></div>
               </div>
 
               <div class="space-y-6">
                 <button
                   (click)="login()"
-                  class="w-full relative overflow-hidden group/btn bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-3"
+                  class="relative flex items-center justify-center w-full px-6 py-4 space-x-3 overflow-hidden font-medium text-white transition-all duration-300 border rounded-xl border-white/10 bg-white/5 group/btn hover:bg-white/10 hover:border-white/30"
                 >
                   <!-- Shine Effect -->
                   <div
-                    class="absolute inset-0 w-0 bg-fuchsia-500/10 transition-all duration-500 group-hover/btn:w-full"
+                    class="absolute inset-0 w-0 transition-all duration-500 bg-fuchsia-500/10 group-hover/btn:w-full"
                   ></div>
 
                   <div class="relative z-10 flex items-center justify-center gap-3 text-white">
@@ -176,7 +176,7 @@ import { AuthService } from './auth.service';
                 </button>
 
                 <div
-                  class="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-[0.15em]"
+                  class="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] text-slate-500"
                 >
                   <span class="flex items-center gap-1.5">
                     <svg class="w-3 h-3 text-cyan-500" fill="currentColor" viewBox="0 0 20 20">
@@ -190,7 +190,7 @@ import { AuthService } from './auth.service';
                   </span>
                   <span class="flex items-center gap-1.5">
                     <span
-                      class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"
+                      class="w-1.5 h-1.5 rounded-full animate-pulse bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
                     ></span>
                     Encrypted
                   </span>
@@ -213,6 +213,10 @@ import { AuthService } from './auth.service';
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+      }
       @keyframes fadeLeft {
         from {
           opacity: 0;
