@@ -45,7 +45,7 @@ import { AuthService } from '../auth/auth.service';
                 <img
                   src="assets/images/logo.png"
                   alt="OmniFlex"
-                  class="relative h-8 w-8 rounded-full object-contain ring-2 ring-cyan-500/40 shadow-[0_0_15px_rgba(0,210,255,0.4)]"
+                  class="relative h-8 w-8 rounded-full object-contain ring-2 ring-cyan-500/40"
                 />
               </div>
               <div class="flex flex-col">

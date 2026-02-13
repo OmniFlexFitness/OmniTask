@@ -111,12 +111,14 @@
   width: 7rem;
   height: 7rem;
   object-fit: contain;
+  box-shadow: none!important;
 }
 
 @media (min-width: 1024px) {
   .brand-logo {
     width: 9rem;
     height: 9rem;
+    box-shadow: none!important;
   }
 }
 
@@ -380,10 +382,10 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-weight: 500;
+  background: rgba(139, 44, 234, 0.08);
+  border: 1.5px solid #8B2CEA;
+  color: #8B2CEA;
+  font-weight: 600;
   padding: 1rem 1.5rem;
   border-radius: 0.75rem;
   cursor: pointer;
@@ -391,18 +393,20 @@
   font-size: 1rem;
   display: block;
   margin-bottom: 1.25rem;
+  box-shadow: 0 0 12px rgba(139, 44, 234, 0.25);
 }
 
 .auth-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(139, 44, 234, 0.15);
+  border-color: #a855f7;
+  box-shadow: 0 0 20px rgba(139, 44, 234, 0.4);
 }
 
 .btn-shine {
   position: absolute;
   inset: 0;
   width: 0;
-  background: rgba(217, 70, 239, 0.1);
+  background: rgba(139, 44, 234, 0.1);
   transition: width 0.5s;
 }
 
@@ -417,12 +421,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  color: #fff;
+  color: #8B2CEA;
 }
 
 .btn-label svg {
   width: 1.25rem;
   height: 1.25rem;
+  color: #8B2CEA;
 }
 
 /* Card footer */
