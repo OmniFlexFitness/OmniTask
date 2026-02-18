@@ -37,6 +37,7 @@ export interface Subtask {
   id: string;
   title: string;
   completed: boolean;
+  description?: string; // Markdown
 }
 
 export interface Tag {
@@ -96,9 +97,9 @@ export interface Task {
  * Cyberpunk theme color constants
  */
 export const CYBERPUNK_COLORS = {
-  TODO: '#e040fb',      // Cyber purple
+  TODO: '#e040fb', // Cyber purple
   IN_PROGRESS: '#00d2ff', // Cyber blue
-  DONE: '#6b7280',      // Muted gray for dormant
+  DONE: '#6b7280', // Muted gray for dormant
 } as const;
 
 /**

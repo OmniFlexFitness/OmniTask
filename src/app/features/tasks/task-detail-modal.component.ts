@@ -13,11 +13,18 @@ import {
   AutocompleteInputComponent,
   AutocompleteOption,
 } from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import { MarkdownEditorComponent } from '../../shared/components/markdown-editor/markdown-editor.component';
 
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, AutocompleteInputComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    AutocompleteInputComponent,
+    MarkdownEditorComponent,
+  ],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all"
@@ -346,13 +353,13 @@ import {
                 }
               </button>
             </div>
-            <textarea
-              formControlName="description"
-              rows="4"
-              placeholder="Add more details to this task..."
-              class="w-full bg-slate-950/30 border border-white/10 rounded-xl p-4 text-slate-300 placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-y leading-relaxed"
-              (blur)="autoSave()"
-            ></textarea>
+            <app-markdown-editor
+              [value]="form.value.description || ''"
+              [rows]="4"
+              placeholder="Add more details to this task... (Markdown supported)"
+              (valueChange)="form.patchValue({ description: $event })"
+              (blurred)="autoSave()"
+            />
           </div>
 
           <!-- Subtasks -->
@@ -404,55 +411,91 @@ import {
             <!-- Subtask List -->
             <div class="space-y-2 mb-3">
               @for (subtask of subtasks(); track subtask.id) {
-                <div class="flex items-center gap-3 group">
-                  <button
-                    class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                    [class.border-cyan-500]="subtask.completed"
-                    [class.bg-cyan-500]="subtask.completed"
-                    [class.border-slate-500]="!subtask.completed"
-                    (click)="toggleSubtask(subtask.id)"
-                  >
-                    @if (subtask.completed) {
+                <div class="group">
+                  <div class="flex items-center gap-3">
+                    <button
+                      class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+                      [class.border-cyan-500]="subtask.completed"
+                      [class.bg-cyan-500]="subtask.completed"
+                      [class.border-slate-500]="!subtask.completed"
+                      (click)="toggleSubtask(subtask.id)"
+                    >
+                      @if (subtask.completed) {
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-3 w-3 text-white"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      }
+                    </button>
+                    <span
+                      class="flex-1 text-sm cursor-pointer"
+                      [class.text-slate-500]="subtask.completed"
+                      [class.line-through]="subtask.completed"
+                      [class.text-slate-300]="!subtask.completed"
+                      (click)="toggleSubtaskExpanded(subtask.id)"
+                      >{{ subtask.title }}</span
+                    >
+                    <button
+                      class="p-1 text-slate-600 hover:text-cyan-400 transition-all"
+                      (click)="toggleSubtaskExpanded(subtask.id)"
+                      title="Toggle description"
+                    >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="h-3 w-3 text-white"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                        class="h-3.5 w-3.5 transition-transform"
+                        [class.rotate-180]="expandedSubtaskIds().has(subtask.id)"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
                       >
                         <path
-                          fill-rule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clip-rule="evenodd"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 9l-7 7-7-7"
                         />
                       </svg>
-                    }
-                  </button>
-                  <span
-                    class="flex-1 text-sm"
-                    [class.text-slate-500]="subtask.completed"
-                    [class.line-through]="subtask.completed"
-                    [class.text-slate-300]="!subtask.completed"
-                    >{{ subtask.title }}</span
-                  >
-                  <button
-                    class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
-                    (click)="deleteSubtask(subtask.id)"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                    </button>
+                    <button
+                      class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+                      (click)="deleteSubtask(subtask.id)"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  @if (expandedSubtaskIds().has(subtask.id)) {
+                    <div class="ml-8 mt-2 mb-1">
+                      <app-markdown-editor
+                        [value]="subtask.description || ''"
+                        [rows]="2"
+                        [minimal]="true"
+                        placeholder="Add subtask description..."
+                        (valueChange)="updateSubtaskDescription(subtask.id, $event)"
+                        (blurred)="autoSave()"
                       />
-                    </svg>
-                  </button>
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -692,6 +735,7 @@ export class TaskDetailModalComponent {
   customFieldValues = signal<Record<string, any>>({});
   selectedTags = signal<Set<string>>(new Set());
   newSubtaskTitle = '';
+  expandedSubtaskIds = signal<Set<string>>(new Set());
 
   completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
 
@@ -959,6 +1003,21 @@ export class TaskDetailModalComponent {
       { subtasks: updatedSubtasks },
       project?.googleTaskListId,
     );
+  }
+
+  toggleSubtaskExpanded(subtaskId: string) {
+    const current = new Set(this.expandedSubtaskIds());
+    if (current.has(subtaskId)) {
+      current.delete(subtaskId);
+    } else {
+      current.add(subtaskId);
+    }
+    this.expandedSubtaskIds.set(current);
+  }
+
+  async updateSubtaskDescription(subtaskId: string, description: string) {
+    const updated = this.subtasks().map((s) => (s.id === subtaskId ? { ...s, description } : s));
+    this.subtasks.set(updated);
   }
 
   onExampleClick(e: Event) {
