@@ -1,4 +1,13 @@
-import { Component, input, output, signal, computed, ElementRef, viewChild } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  signal,
+  computed,
+  ElementRef,
+  viewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
@@ -21,6 +30,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, MarkdownPipe],
   template: `
     <div class="md-editor" [class.md-editor-minimal]="minimal()">
@@ -692,7 +702,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Commit the pending snapshot to the undo stack */
-  private commitSnapshot() {
+  private commitSnapshot(): void {
     if (this.pendingSnapshot !== null) {
       this.undoStack.push(this.pendingSnapshot);
       if (this.undoStack.length > 100) this.undoStack.shift();
@@ -702,14 +712,14 @@ export class MarkdownEditorComponent {
     this.canUndo.set(this.undoStack.length > 0);
   }
 
-  private clearIdleTimer() {
+  private clearIdleTimer(): void {
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
   }
 
-  private startIdleTimer() {
+  private startIdleTimer(): void {
     this.clearIdleTimer();
     this.idleTimer = setTimeout(() => {
       this.commitSnapshot();
@@ -720,7 +730,7 @@ export class MarkdownEditorComponent {
    * Called on every user keystroke change.
    * Determines whether to start a new undo group based on multiple heuristics.
    */
-  private pushHistorySmart(beforeValue: string, newValue: string) {
+  private pushHistorySmart(beforeValue: string, newValue: string): void {
     if (this.isUndoRedo) return;
 
     const ta = this.textareaRef()?.nativeElement;
@@ -811,7 +821,7 @@ export class MarkdownEditorComponent {
    * Immediately push a snapshot (used by toolbar actions like bold, link, etc.)
    * so each formatting action is a discrete undo step.
    */
-  pushHistoryImmediate(before: string) {
+  pushHistoryImmediate(before: string): void {
     if (this.isUndoRedo) return;
     this.commitSnapshot();
     this.undoStack.push(before);
@@ -822,7 +832,7 @@ export class MarkdownEditorComponent {
     this.lastCharType = 'none';
   }
 
-  undo() {
+  undo(): void {
     if (this.undoStack.length === 0 && this.pendingSnapshot === null) return;
     this.commitSnapshot();
     if (this.undoStack.length === 0) return;
@@ -839,7 +849,7 @@ export class MarkdownEditorComponent {
     requestAnimationFrame(() => this.textareaRef()?.nativeElement?.focus());
   }
 
-  redo() {
+  redo(): void {
     if (this.redoStack.length === 0) return;
     const current = this.value() ?? '';
     this.undoStack.push(current);
@@ -854,14 +864,14 @@ export class MarkdownEditorComponent {
     requestAnimationFrame(() => this.textareaRef()?.nativeElement?.focus());
   }
 
-  onValueChange(newValue: string) {
+  onValueChange(newValue: string): void {
     const before = this.value() ?? '';
     this.pushHistorySmart(before, newValue);
     this.valueChange.emit(newValue);
   }
 
   /** Handle keyboard shortcuts */
-  onKeydown(event: KeyboardEvent) {
+  onKeydown(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey) {
       switch (event.key.toLowerCase()) {
         case 'z':
@@ -902,7 +912,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Wrap selected text with prefix/suffix */
-  wrapSelection(prefix: string, suffix: string) {
+  wrapSelection(prefix: string, suffix: string): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);
@@ -928,7 +938,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Insert prefix at the beginning of the current line */
-  insertPrefix(prefix: string) {
+  insertPrefix(prefix: string): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);
@@ -947,7 +957,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Insert raw text at cursor */
-  insertText(content: string) {
+  insertText(content: string): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);
@@ -965,7 +975,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Insert a fenced code block */
-  insertCodeBlock() {
+  insertCodeBlock(): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);
@@ -988,7 +998,7 @@ export class MarkdownEditorComponent {
   }
 
   /** Insert a markdown link */
-  insertLink() {
+  insertLink(): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);
@@ -1015,19 +1025,19 @@ export class MarkdownEditorComponent {
   }
 
   /** Insert a markdown table */
-  insertTable() {
+  insertTable(): void {
     const table =
       '\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Cell 1   | Cell 2   | Cell 3   |\n';
     this.insertText(table);
   }
 
   /** Insert a horizontal rule */
-  insertHorizontalRule() {
+  insertHorizontalRule(): void {
     this.insertText('\n---\n');
   }
 
   /** Insert an Obsidian-style callout */
-  insertCallout() {
+  insertCallout(): void {
     const ta = this.textareaRef()?.nativeElement;
     if (!ta) return;
     this.pushHistoryImmediate(ta.value);

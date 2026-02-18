@@ -1,6 +1,7 @@
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { marked, Renderer } from 'marked';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 /**
  * Custom marked extensions for Obsidian-style features:
@@ -58,7 +59,7 @@ function parseMarkdown(source: string): string {
   let processed = source.replace(/==(.*?)==/g, '<mark class="md-highlight">$1</mark>');
 
   // Parse with marked (GFM enabled by default in v17+)
-  let html = marked.parse(processed, { async: false, gfm: true, breaks: true }) as string;
+  let html = marked.parse(processed, { gfm: true, breaks: true }) as string;
 
   // Post-process: Obsidian-style callouts
   html = html.replace(
@@ -100,7 +101,54 @@ export class MarkdownPipe implements PipeTransform {
   transform(value: string | null | undefined): SafeHtml {
     if (!value?.trim()) return '';
     const html = parseMarkdown(value);
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+    const sanitized = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'p',
+        'br',
+        'hr',
+        'strong',
+        'em',
+        'del',
+        's',
+        'mark',
+        'code',
+        'pre',
+        'ul',
+        'ol',
+        'li',
+        'a',
+        'img',
+        'blockquote',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+        'div',
+        'span',
+        'input',
+      ],
+      ALLOWED_ATTR: [
+        'href',
+        'src',
+        'alt',
+        'title',
+        'class',
+        'type',
+        'checked',
+        'disabled',
+        'target',
+        'rel',
+      ],
+    });
+    return this.sanitizer.bypassSecurityTrustHtml(sanitized);
   }
 }
 

@@ -357,7 +357,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
               [value]="form.value.description || ''"
               [rows]="4"
               placeholder="Add more details to this task... (Markdown supported)"
-              (valueChange)="form.patchValue({ description: $event })"
+              (valueChange)="form.patchValue({ description: $event }); form.markAsDirty()"
               (blurred)="autoSave()"
             />
           </div>
@@ -907,6 +907,7 @@ export class TaskDetailModalComponent {
       priority: val.priority as Task['priority'],
       sectionId: val.sectionId || undefined,
       tags,
+      subtasks: this.subtasks(),
       customFieldValues: this.customFieldValues(),
     };
 
@@ -1015,9 +1016,11 @@ export class TaskDetailModalComponent {
     this.expandedSubtaskIds.set(current);
   }
 
-  async updateSubtaskDescription(subtaskId: string, description: string) {
+  async updateSubtaskDescription(subtaskId: string, description: string): Promise<void> {
     const updated = this.subtasks().map((s) => (s.id === subtaskId ? { ...s, description } : s));
     this.subtasks.set(updated);
+    this.form.markAsDirty();
+    await this.autoSave();
   }
 
   onExampleClick(e: Event) {
