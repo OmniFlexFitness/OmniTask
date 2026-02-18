@@ -4,15 +4,20 @@ import { FormsModule } from '@angular/forms';
 import { Task } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
 @Component({
   selector: 'app-task-list-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule],
+  imports: [CommonModule, FormsModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe],
   template: `
-    <div class="flex flex-col h-full bg-[#0a0f1e]/60 rounded-xl overflow-hidden border border-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.05)]">
+    <div
+      class="flex flex-col h-full bg-[#0a0f1e]/60 rounded-xl overflow-hidden border border-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.05)]"
+    >
       <!-- Filter Bar -->
-      <div class="flex items-center justify-between px-4 py-2 bg-[#0a0f1e]/90 border-b border-cyan-500/10">
+      <div
+        class="flex items-center justify-between px-4 py-2 bg-[#0a0f1e]/90 border-b border-cyan-500/10"
+      >
         <div class="flex items-center gap-3">
           <span class="text-xs text-slate-400">
             {{ filteredTasks().length }} of {{ tasks().length }} tasks
@@ -23,10 +28,60 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
             </span>
           }
         </div>
-        
-        <!-- Completed Filter Toggle -->
+
         <div class="flex items-center gap-2">
-          <button 
+          <!-- View Mode Toggle -->
+          <div class="flex items-center bg-slate-800/60 rounded-lg border border-white/5 p-0.5">
+            <button
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              [class.bg-cyan-500/20]="viewMode() === 'simplified'"
+              [class.text-cyan-400]="viewMode() === 'simplified'"
+              [class.text-slate-500]="viewMode() !== 'simplified'"
+              (click)="viewMode.set('simplified')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h7"
+                />
+              </svg>
+              Simple
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              [class.bg-purple-500/20]="viewMode() === 'detailed'"
+              [class.text-purple-400]="viewMode() === 'detailed'"
+              [class.text-slate-500]="viewMode() !== 'detailed'"
+              (click)="viewMode.set('detailed')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
+              </svg>
+              Detailed
+            </button>
+          </div>
+
+          <!-- Completed Filter Toggle -->
+          <button
             class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             [class.bg-emerald-500/20]="showCompleted()"
             [class.text-emerald-400]="showCompleted()"
@@ -37,8 +92,19 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
             [class.border]="true"
             (click)="toggleShowCompleted()"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             {{ showCompleted() ? 'Showing Completed' : 'Hide Completed' }}
           </button>
@@ -46,135 +112,310 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
       </div>
 
       <!-- Cyberpunk Header -->
-      <div class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]">
-        <div class="w-6"></div> <!-- Drag handle placeholder -->
-        <div class="cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1" (click)="toggleSort('title')">
+      <div
+        class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]"
+      >
+        <div class="w-6"></div>
+        <!-- Drag handle placeholder -->
+        <div
+          class="cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
+          (click)="toggleSort('title')"
+        >
           <span class="text-neon-blue">Task Name</span>
-          <span *ngIf="sortField() === 'title'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'title'" class="ml-1 text-purple-400">{{
+            sortDirection() === 'asc' ? '↑' : '↓'
+          }}</span>
         </div>
-        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('dueDate')">
+        <div
+          class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors"
+          (click)="toggleSort('dueDate')"
+        >
           Due Date
-          <span *ngIf="sortField() === 'dueDate'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'dueDate'" class="ml-1 text-purple-400">{{
+            sortDirection() === 'asc' ? '↑' : '↓'
+          }}</span>
         </div>
-        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('priority')">
+        <div
+          class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors"
+          (click)="toggleSort('priority')"
+        >
           Priority
-          <span *ngIf="sortField() === 'priority'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'priority'" class="ml-1 text-purple-400">{{
+            sortDirection() === 'asc' ? '↑' : '↓'
+          }}</span>
         </div>
-        <div class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors" (click)="toggleSort('status')">
+        <div
+          class="cursor-pointer text-slate-500 hover:text-cyan-400 transition-colors"
+          (click)="toggleSort('status')"
+        >
           Status
-          <span *ngIf="sortField() === 'status'" class="ml-1 text-purple-400">{{ sortDirection() === 'asc' ? '↑' : '↓' }}</span>
+          <span *ngIf="sortField() === 'status'" class="ml-1 text-purple-400">{{
+            sortDirection() === 'asc' ? '↑' : '↓'
+          }}</span>
         </div>
-        <div class="w-8"></div> <!-- Actions placeholder -->
+        <div class="w-8"></div>
+        <!-- Actions placeholder -->
       </div>
 
       <!-- Task List -->
-      <div 
-        cdkDropList 
+      <div
+        cdkDropList
         [cdkDropListData]="sortedTasks()"
         (cdkDropListDropped)="onDrop($event)"
         class="overflow-y-auto flex-1 divide-y divide-cyan-500/5"
       >
         @if (sortedTasks().length === 0) {
           <div class="flex flex-col items-center justify-center p-12 text-slate-500">
-            <div class="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-cyan-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <div
+              class="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mb-4"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-8 w-8 text-cyan-500/50"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
               </svg>
             </div>
-            <p class="mb-2 text-cyan-400/70">{{ showCompleted() ? 'No tasks found' : 'No active tasks' }}</p>
-            <p class="text-xs text-slate-600">{{ showCompleted() ? 'Create a task to get started' : 'All tasks are completed!' }}</p>
+            <p class="mb-2 text-cyan-400/70">
+              {{ showCompleted() ? 'No tasks found' : 'No active tasks' }}
+            </p>
+            <p class="text-xs text-slate-600">
+              {{ showCompleted() ? 'Create a task to get started' : 'All tasks are completed!' }}
+            </p>
           </div>
         }
 
         @for (task of sortedTasks(); track task.id) {
-          <div 
+          <div
             cdkDrag
             [cdkDragData]="task"
             [class.opacity-50]="task.status === 'done'"
-            class="group grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 items-center hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
+            class="group hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
             (click)="taskClick.emit(task)"
           >
             <!-- Custom Drag Preview -->
-            <div *cdkDragPreview class="bg-[#0a0f1e] p-4 rounded-lg shadow-[0_0_20px_rgba(0,210,255,0.2)] border border-cyan-500/30 flex items-center gap-3">
+            <div
+              *cdkDragPreview
+              class="bg-[#0a0f1e] p-4 rounded-lg shadow-[0_0_20px_rgba(0,210,255,0.2)] border border-cyan-500/30 flex items-center gap-3"
+            >
               <span class="text-white font-medium">{{ task.title }}</span>
             </div>
 
-            <!-- Drag Handle -->
-            <div cdkDragHandle class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-              </svg>
-            </div>
-
-            <!-- Title & ID -->
-            <div class="flex items-center gap-3 overflow-hidden">
-              <div 
-                class="w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors"
-                [class.border-cyan-500]="task.status === 'done'"
-                [class.bg-cyan-500]="task.status === 'done'"
-                [class.border-slate-500]="task.status !== 'done'"
-                [class.hover:border-cyan-400]="task.status !== 'done'"
-                (click)="$event.stopPropagation(); toggleCompletion(task)"
+            <!-- Main Row -->
+            <div
+              class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 items-center"
+            >
+              <!-- Drag Handle -->
+              <div
+                cdkDragHandle
+                class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors"
               >
-                @if (task.status === 'done') {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 8h16M4 16h16"
+                  />
+                </svg>
+              </div>
+
+              <!-- Title & ID -->
+              <div class="flex items-center gap-3 overflow-hidden">
+                <div
+                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+                  [class.border-cyan-500]="task.status === 'done'"
+                  [class.bg-cyan-500]="task.status === 'done'"
+                  [class.border-slate-500]="task.status !== 'done'"
+                  [class.hover:border-cyan-400]="task.status !== 'done'"
+                  (click)="$event.stopPropagation(); toggleCompletion(task)"
+                >
+                  @if (task.status === 'done') {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-3 w-3 text-white"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  }
+                </div>
+                <span
+                  class="truncate font-medium text-sm md-inline-title"
+                  [class.line-through]="task.status === 'done'"
+                  [class.text-slate-500]="task.status === 'done'"
+                  [class.text-slate-200]="task.status !== 'done'"
+                  [innerHTML]="task.title | markdown"
+                ></span>
+                @if (task.googleTaskId) {
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 text-blue-400 flex-shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
                   </svg>
                 }
               </div>
-              <span class="truncate font-medium text-sm text-slate-200" [class.line-through]="task.status === 'done'" [class.text-slate-500]="task.status === 'done'">
-                {{ task.title }}
-              </span>
-              @if (task.googleTaskId) {
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              }
-            </div>
 
-            <!-- Due Date -->
-            <div class="text-sm truncate" [class.text-rose-400]="isOverdue(task)" [class.text-slate-400]="!isOverdue(task)">
-              {{ formatDate(task.dueDate) }}
-            </div>
-
-            <!-- Priority -->
-            <div>
-              <span 
-                class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider"
-                [ngClass]="{
-                  'bg-rose-500/10 text-rose-400 border border-rose-500/20': task.priority === 'high',
-                  'bg-amber-500/10 text-amber-400 border border-amber-500/20': task.priority === 'medium',
-                  'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20': task.priority === 'low'
-                }"
+              <!-- Due Date -->
+              <div
+                class="text-sm truncate"
+                [class.text-rose-400]="isOverdue(task)"
+                [class.text-slate-400]="!isOverdue(task)"
               >
-                {{ task.priority }}
-              </span>
-            </div>
+                {{ formatDate(task.dueDate) }}
+              </div>
 
-            <!-- Status -->
-            <div>
-              <span class="text-xs text-slate-400 capitalize bg-white/5 px-2 py-1 rounded">
-                {{ task.status.replace('-', ' ') }}
-              </span>
-            </div>
+              <!-- Priority -->
+              <div>
+                <span
+                  class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider"
+                  [ngClass]="{
+                    'bg-rose-500/10 text-rose-400 border border-rose-500/20':
+                      task.priority === 'high',
+                    'bg-amber-500/10 text-amber-400 border border-amber-500/20':
+                      task.priority === 'medium',
+                    'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':
+                      task.priority === 'low',
+                  }"
+                >
+                  {{ task.priority }}
+                </span>
+              </div>
 
-            <!-- Actions -->
-            <div class="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                class="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
-                (click)="$event.stopPropagation(); delete.emit(task.id)"
-                title="Delete Task"
+              <!-- Status -->
+              <div>
+                <span class="text-xs text-slate-400 capitalize bg-white/5 px-2 py-1 rounded">
+                  {{ task.status.replace('-', ' ') }}
+                </span>
+              </div>
+
+              <!-- Actions -->
+              <div
+                class="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+                <button
+                  class="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                  (click)="$event.stopPropagation(); delete.emit(task.id)"
+                  title="Delete Task"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
+
+            <!-- Description Preview Row -->
+            @if (task.description) {
+              <div class="px-4 pb-3 pl-[3.25rem]">
+                @if (viewMode() === 'detailed') {
+                  <div
+                    class="text-xs text-slate-400 prose prose-invert prose-xs max-w-none md-preview-content"
+                    [innerHTML]="task.description | markdown"
+                  ></div>
+                } @else {
+                  <div class="text-xs text-slate-500 truncate max-w-2xl">
+                    {{ task.description | markdownPlain: 80 }}
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
       </div>
     </div>
   `,
+  styles: [
+    `
+      .md-inline-title :is(p) {
+        display: inline;
+        margin: 0;
+      }
+      .md-inline-title :is(h1, h2, h3, h4, h5, h6) {
+        display: inline;
+        font-size: inherit;
+        margin: 0;
+      }
+      .md-preview-content {
+        max-height: 12rem;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+      }
+      .md-preview-content :is(h1, h2, h3) {
+        font-size: 0.8rem;
+        margin: 0.25rem 0;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+      .md-preview-content p {
+        margin: 0.15rem 0;
+      }
+      .md-preview-content ul,
+      .md-preview-content ol {
+        margin: 0.15rem 0;
+        padding-left: 1rem;
+      }
+      .md-preview-content pre {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 0.25rem;
+        background: rgba(255, 255, 255, 0.03);
+        margin: 0.25rem 0;
+      }
+      .md-preview-content code {
+        font-size: 0.7rem;
+      }
+      .md-preview-content table {
+        font-size: 0.7rem;
+        margin: 0.25rem 0;
+      }
+      .md-preview-content .md-callout {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.5rem;
+        margin: 0.25rem 0;
+      }
+    `,
+  ],
 })
 export class TaskListViewComponent {
   private taskService = inject(TaskService);
@@ -183,6 +424,9 @@ export class TaskListViewComponent {
   googleTaskListId = input<string | undefined>(undefined);
   taskClick = output<Task>();
   delete = output<string>();
+
+  // View mode toggle
+  viewMode = signal<'simplified' | 'detailed'>('simplified');
 
   // Filter state - hide completed tasks older than 30 minutes by default
   showCompleted = signal(false);

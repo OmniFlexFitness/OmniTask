@@ -9,11 +9,12 @@ import {
 import { Task, Section, Project } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
+import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
 @Component({
   selector: 'app-task-board-view',
   standalone: true,
-  imports: [CommonModule, DragDropModule],
+  imports: [CommonModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe],
   template: `
     <div class="h-full flex flex-col overflow-hidden">
       <!-- Filter Bar -->
@@ -56,6 +57,56 @@ import { ProjectService } from '../../core/services/project.service';
           </svg>
           {{ showCompleted() ? 'Showing Completed' : 'Hide Completed' }}
         </button>
+
+        <!-- View Mode Toggle -->
+        <div class="flex items-center bg-slate-800/60 rounded-lg border border-white/5 p-0.5">
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+            [class.bg-cyan-500/20]="viewMode() === 'simplified'"
+            [class.text-cyan-400]="viewMode() === 'simplified'"
+            [class.text-slate-500]="viewMode() !== 'simplified'"
+            (click)="viewMode.set('simplified')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h7"
+              />
+            </svg>
+            Simple
+          </button>
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+            [class.bg-purple-500/20]="viewMode() === 'detailed'"
+            [class.text-purple-400]="viewMode() === 'detailed'"
+            [class.text-slate-500]="viewMode() !== 'detailed'"
+            (click)="viewMode.set('detailed')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+              />
+            </svg>
+            Detailed
+          </button>
+        </div>
       </div>
 
       <div class="flex-1 overflow-x-auto overflow-y-hidden">
@@ -70,7 +121,7 @@ import { ProjectService } from '../../core/services/project.service';
               [ngClass]="{
                 'cyber-column-todo': getSectionStatus(section) === 'todo',
                 'cyber-column-progress': getSectionStatus(section) === 'in-progress',
-                'cyber-column-done': getSectionStatus(section) === 'done'
+                'cyber-column-done': getSectionStatus(section) === 'done',
               }"
             >
               <!-- Column Header -->
@@ -83,33 +134,58 @@ import { ProjectService } from '../../core/services/project.service';
                 @if (getSectionStatus(section) !== 'done') {
                   <div
                     class="absolute inset-0 opacity-10 pointer-events-none"
-                    [style.background]="'linear-gradient(135deg, ' + getColorWithOpacity(section.color, 0.2) + ', transparent)'"
+                    [style.background]="
+                      'linear-gradient(135deg, ' +
+                      getColorWithOpacity(section.color, 0.2) +
+                      ', transparent)'
+                    "
                   ></div>
                 }
-                
+
                 <div class="flex items-center gap-3 relative z-10">
                   <span
                     class="w-3 h-3 rounded-full transition-all duration-300"
                     [style.background]="section.color || '#64748b'"
-                    [style.box-shadow]="getSectionStatus(section) !== 'done' ? '0 0 12px ' + getColorWithOpacity(section.color, 0.5) + ', 0 0 20px ' + getColorWithOpacity(section.color, 0.25) : 'none'"
+                    [style.box-shadow]="
+                      getSectionStatus(section) !== 'done'
+                        ? '0 0 12px ' +
+                          getColorWithOpacity(section.color, 0.5) +
+                          ', 0 0 20px ' +
+                          getColorWithOpacity(section.color, 0.25)
+                        : 'none'
+                    "
                     [class.animate-pulse]="getSectionStatus(section) === 'in-progress'"
                   ></span>
-                  <h3 
+                  <h3
                     class="font-bold text-sm tracking-wide transition-colors duration-300"
                     [class.text-slate-200]="getSectionStatus(section) !== 'done'"
                     [class.text-slate-500]="getSectionStatus(section) === 'done'"
-                    [style.text-shadow]="getSectionStatus(section) !== 'done' ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6) : 'none'"
+                    [style.text-shadow]="
+                      getSectionStatus(section) !== 'done'
+                        ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6)
+                        : 'none'
+                    "
                   >
                     {{ section.name }}
                   </h3>
-                  <span 
+                  <span
                     class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
                     [class.bg-white/5]="getSectionStatus(section) === 'done'"
                     [class.text-slate-500]="getSectionStatus(section) === 'done'"
                     [class.text-slate-400]="getSectionStatus(section) !== 'done'"
-                    [style.background]="getSectionStatus(section) !== 'done' ? getColorWithOpacity(section.color, 0.2) : ''"
-                    [style.color]="getSectionStatus(section) !== 'done' ? (section.color || '#64748b') : ''"
-                    [style.border]="getSectionStatus(section) !== 'done' ? '1px solid ' + getColorWithOpacity(section.color, 0.25) : ''"
+                    [style.background]="
+                      getSectionStatus(section) !== 'done'
+                        ? getColorWithOpacity(section.color, 0.2)
+                        : ''
+                    "
+                    [style.color]="
+                      getSectionStatus(section) !== 'done' ? section.color || '#64748b' : ''
+                    "
+                    [style.border]="
+                      getSectionStatus(section) !== 'done'
+                        ? '1px solid ' + getColorWithOpacity(section.color, 0.25)
+                        : ''
+                    "
                   >
                     {{ getFilteredTasksForSection(section.id).length }}
                   </span>
@@ -157,26 +233,38 @@ import { ProjectService } from '../../core/services/project.service';
                     [class.hover:shadow-lg]="task.status !== 'done'"
                     [ngClass]="{
                       'task-todo': getSectionStatus(section) === 'todo' && task.status !== 'done',
-                      'task-progress': getSectionStatus(section) === 'in-progress' && task.status !== 'done',
-                      'task-done': task.status === 'done'
+                      'task-progress':
+                        getSectionStatus(section) === 'in-progress' && task.status !== 'done',
+                      'task-done': task.status === 'done',
                     }"
-                    [style.border-color]="task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : ''"
+                    [style.border-color]="
+                      task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : ''
+                    "
                     (click)="taskClick.emit(task)"
                   >
                     <!-- Neon glow effect for active tasks -->
                     @if (task.status !== 'done') {
                       <div
                         class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                        [style.background]="'linear-gradient(135deg, ' + getColorWithOpacity(section.color, 0.1) + ', transparent)'"
-                        [style.box-shadow]="'0 0 20px ' + getColorWithOpacity(section.color, 0.2) + ', inset 0 0 20px ' + getColorWithOpacity(section.color, 0.1)"
+                        [style.background]="
+                          'linear-gradient(135deg, ' +
+                          getColorWithOpacity(section.color, 0.1) +
+                          ', transparent)'
+                        "
+                        [style.box-shadow]="
+                          '0 0 20px ' +
+                          getColorWithOpacity(section.color, 0.2) +
+                          ', inset 0 0 20px ' +
+                          getColorWithOpacity(section.color, 0.1)
+                        "
                       ></div>
                     }
-                    
+
                     <!-- Scanline effect for done tasks -->
                     @if (task.status === 'done') {
                       <div class="absolute inset-0 scanline-overlay pointer-events-none"></div>
                     }
-                    
+
                     <!-- Drag Handle (invisible but essentially the whole card) -->
                     <div
                       *cdkDragPlaceholder
@@ -194,7 +282,7 @@ import { ProjectService } from '../../core/services/project.service';
                           task.priority === 'medium' && task.status !== 'done',
                         'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]':
                           task.priority === 'low' && task.status !== 'done',
-                        'bg-slate-600': task.status === 'done'
+                        'bg-slate-600': task.status === 'done',
                       }"
                     ></div>
 
@@ -203,7 +291,11 @@ import { ProjectService } from '../../core/services/project.service';
                       [class.text-slate-100]="task.status !== 'done'"
                       [class.text-slate-500]="task.status === 'done'"
                       [class.line-through]="task.status === 'done'"
-                      [style.text-shadow]="task.status !== 'done' ? '0 0 4px ' + getColorWithOpacity(section.color, 0.2) : 'none'"
+                      [style.text-shadow]="
+                        task.status !== 'done'
+                          ? '0 0 4px ' + getColorWithOpacity(section.color, 0.2)
+                          : 'none'
+                      "
                     >
                       {{ task.title }}
                       @if (task.googleTaskId) {
@@ -223,6 +315,20 @@ import { ProjectService } from '../../core/services/project.service';
                         </svg>
                       }
                     </h4>
+
+                    <!-- Description Preview -->
+                    @if (task.description) {
+                      @if (viewMode() === 'detailed') {
+                        <div
+                          class="text-[11px] text-slate-400 mt-1.5 mb-1 prose prose-invert prose-xs max-w-none relative z-10 board-preview-content"
+                          [innerHTML]="task.description | markdown"
+                        ></div>
+                      } @else {
+                        <div class="text-[11px] text-slate-500 mt-1 line-clamp-2 relative z-10">
+                          {{ task.description | markdownPlain: 60 }}
+                        </div>
+                      }
+                    }
 
                     <div class="flex items-center justify-between mt-3 relative z-10">
                       <div class="flex items-center gap-2">
@@ -326,7 +432,7 @@ import { ProjectService } from '../../core/services/project.service';
         --board-column-width: 22rem; /* ~352px at 16px root, good desktop size */
         --board-column-min-width: 18rem; /* ~288px minimum for readability */
         --add-section-width: 3.5rem; /* Narrow add section button */
-        
+
         /* Cyberpunk color variables */
         --cyber-purple: #e040fb;
         --cyber-blue: #00d2ff;
@@ -354,23 +460,23 @@ import { ProjectService } from '../../core/services/project.service';
       /* Cyberpunk column styles */
       .cyber-column-todo {
         border: 1px solid rgba(224, 64, 251, 0.2);
-        box-shadow: 
+        box-shadow:
           0 0 20px rgba(224, 64, 251, 0.1),
           inset 0 0 20px rgba(224, 64, 251, 0.05);
       }
-      
+
       .cyber-column-progress {
         border: 1px solid rgba(0, 210, 255, 0.2);
-        box-shadow: 
+        box-shadow:
           0 0 20px rgba(0, 210, 255, 0.1),
           inset 0 0 20px rgba(0, 210, 255, 0.05);
         animation: pulse-progress 3s ease-in-out infinite;
       }
-      
+
       .cyber-column-done {
         position: relative;
       }
-      
+
       .cyber-column-done::before {
         content: '';
         position: absolute;
@@ -392,35 +498,35 @@ import { ProjectService } from '../../core/services/project.service';
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: all 0.3s ease;
       }
-      
+
       .task-todo:hover {
         border-color: rgba(224, 64, 251, 0.6);
-        box-shadow: 
+        box-shadow:
           0 8px 24px rgba(0, 0, 0, 0.4),
           0 0 20px rgba(224, 64, 251, 0.3);
         transform: translateY(-2px);
       }
-      
+
       .task-progress {
         border: 1px solid rgba(0, 210, 255, 0.3);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: all 0.3s ease;
       }
-      
+
       .task-progress:hover {
         border-color: rgba(0, 210, 255, 0.6);
-        box-shadow: 
+        box-shadow:
           0 8px 24px rgba(0, 0, 0, 0.4),
           0 0 20px rgba(0, 210, 255, 0.3);
         transform: translateY(-2px);
       }
-      
+
       .task-done {
         position: relative;
         filter: grayscale(70%);
         transition: all 0.3s ease;
       }
-      
+
       .task-done:hover {
         filter: grayscale(50%);
         opacity: 0.7 !important;
@@ -437,7 +543,7 @@ import { ProjectService } from '../../core/services/project.service';
         );
         animation: scanline 8s linear infinite;
       }
-      
+
       @keyframes scanline {
         0% {
           transform: translateY(0);
@@ -446,15 +552,16 @@ import { ProjectService } from '../../core/services/project.service';
           transform: translateY(100%);
         }
       }
-      
+
       @keyframes pulse-progress {
-        0%, 100% {
-          box-shadow: 
+        0%,
+        100% {
+          box-shadow:
             0 0 20px rgba(0, 210, 255, 0.1),
             inset 0 0 20px rgba(0, 210, 255, 0.05);
         }
         50% {
-          box-shadow: 
+          box-shadow:
             0 0 30px rgba(0, 210, 255, 0.2),
             inset 0 0 30px rgba(0, 210, 255, 0.1);
         }
@@ -478,6 +585,49 @@ import { ProjectService } from '../../core/services/project.service';
       .scrollbar-thin::-webkit-scrollbar-thumb:hover {
         background-color: rgba(148, 163, 184, 0.4);
       }
+
+      /* Board card description preview */
+      .board-preview-content {
+        max-height: 10rem;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+      }
+      .board-preview-content :is(h1, h2, h3) {
+        font-size: 0.7rem;
+        margin: 0.2rem 0;
+        font-weight: 600;
+        color: #cbd5e1;
+      }
+      .board-preview-content p {
+        margin: 0.1rem 0;
+      }
+      .board-preview-content ul,
+      .board-preview-content ol {
+        margin: 0.1rem 0;
+        padding-left: 0.8rem;
+      }
+      .board-preview-content pre {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.4rem;
+        border-radius: 0.2rem;
+        background: rgba(255, 255, 255, 0.03);
+        margin: 0.15rem 0;
+      }
+      .board-preview-content code {
+        font-size: 0.65rem;
+      }
+      .board-preview-content .md-callout {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.4rem;
+        margin: 0.15rem 0;
+      }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
     `,
   ],
 })
@@ -496,6 +646,9 @@ export class TaskBoardViewComponent {
 
   // Filter state - hide completed tasks older than 30 minutes by default
   showCompleted = signal(false);
+
+  // View mode toggle
+  viewMode = signal<'simplified' | 'detailed'>('simplified');
 
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();
@@ -632,7 +785,7 @@ export class TaskBoardViewComponent {
     if (section.status) {
       return section.status;
     }
-    
+
     // Otherwise, infer from section name or color
     const nameLower = section.name.toLowerCase();
     if (nameLower.includes('done') || nameLower.includes('complete')) {
@@ -650,7 +803,7 @@ export class TaskBoardViewComponent {
   hexToRgba(hex: string, alpha: number): string {
     // Remove # if present
     const cleanHex = hex.replace(/^#/, '');
-    
+
     // Validate and expand short hex codes (e.g., #fff -> #ffffff)
     let fullHex = cleanHex;
     if (cleanHex.length === 3) {
@@ -662,17 +815,17 @@ export class TaskBoardViewComponent {
       // Invalid hex format, return default gray
       return `rgba(100, 116, 139, ${alpha})`; // #64748b
     }
-    
+
     // Parse hex to RGB
     const r = parseInt(fullHex.substring(0, 2), 16);
     const g = parseInt(fullHex.substring(2, 4), 16);
     const b = parseInt(fullHex.substring(4, 6), 16);
-    
+
     // Validate parsed values
     if (isNaN(r) || isNaN(g) || isNaN(b)) {
       return `rgba(100, 116, 139, ${alpha})`; // #64748b fallback
     }
-    
+
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
