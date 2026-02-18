@@ -1,4 +1,13 @@
-import { Component, input, output, computed, signal, inject, effect } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  computed,
+  signal,
+  inject,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
@@ -150,19 +159,66 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
 
           <!-- Metadata Grid -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-            <!-- Assignee -->
-            <div class="flex flex-col gap-1">
+            <!-- Assignees -->
+            <div class="flex flex-col gap-1 sm:col-span-2">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
-                >Assignee</label
+                >Assignees</label
               >
+              <!-- Selected Assignee Chips -->
+              @if (selectedAssignees().length > 0) {
+                <div class="flex flex-wrap gap-1.5 mb-1">
+                  @for (assignee of selectedAssignees(); track assignee.id) {
+                    <span
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-300"
+                    >
+                      @if (assignee.avatar) {
+                        <img
+                          [src]="assignee.avatar"
+                          class="w-3.5 h-3.5 rounded-full"
+                          referrerpolicy="no-referrer"
+                        />
+                      } @else {
+                        <span
+                          class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white font-bold"
+                          [style.background-color]="assignee.color || '#8b5cf6'"
+                          >{{ assignee.label.charAt(0).toUpperCase() }}</span
+                        >
+                      }
+                      {{ assignee.label }}
+                      <button
+                        type="button"
+                        (click)="removeAssignee(assignee.id)"
+                        class="ml-0.5 text-slate-400 hover:text-rose-400 transition-colors"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  }
+                </div>
+              }
               <app-autocomplete-input
-                [options]="assigneeOptions()"
-                [value]="form.value.assigneeName || ''"
-                [allowCustom]="true"
-                placeholder="Search contacts..."
+                [options]="availableAssigneeOptions()"
+                [value]="''"
+                [allowCustom]="false"
+                placeholder="Search contacts to add..."
                 (optionSelected)="onAssigneeSelected($event)"
-                (valueChange)="onAssigneeValueChange($event)"
               ></app-autocomplete-input>
+            </div>
+
+            <!-- Notify Assignees -->
+            <div class="flex items-center gap-2 sm:col-span-2">
+              <input
+                type="checkbox"
+                id="notifyAssigneesDetail"
+                [checked]="notifyAssigneesSig()"
+                (change)="onNotifyAssigneesChange($any($event.target).checked)"
+                class="w-4 h-4 rounded border-white/20 bg-slate-950 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <label
+                for="notifyAssigneesDetail"
+                class="text-xs text-slate-400 cursor-pointer select-none"
+                >📧 Notify assignees via email (assignment & status updates)</label
+              >
             </div>
 
             <!-- Status -->
@@ -443,6 +499,21 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                       (click)="toggleSubtaskExpanded(subtask.id)"
                       >{{ subtask.title }}</span
                     >
+                    <!-- Subtask assignee avatars -->
+                    @if (subtask.assigneeNames?.length) {
+                      <div class="flex -space-x-1">
+                        @for (name of subtask.assigneeNames; track name; let i = $index) {
+                          <span
+                            class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-bold border border-slate-800"
+                            [style.background-color]="
+                              generateAvatarColor(subtask.assigneeIds?.[i] || name)
+                            "
+                            [title]="name"
+                            >{{ name.charAt(0).toUpperCase() }}</span
+                          >
+                        }
+                      </div>
+                    }
                     <button
                       class="p-1 text-slate-600 hover:text-cyan-400 transition-all"
                       (click)="toggleSubtaskExpanded(subtask.id)"
@@ -485,7 +556,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                     </button>
                   </div>
                   @if (expandedSubtaskIds().has(subtask.id)) {
-                    <div class="ml-8 mt-2 mb-1">
+                    <div class="ml-8 mt-2 mb-1 space-y-2">
                       <app-markdown-editor
                         [value]="subtask.description || ''"
                         [rows]="2"
@@ -494,6 +565,38 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                         (valueChange)="updateSubtaskDescription(subtask.id, $event)"
                         (blurred)="autoSave()"
                       />
+                      <!-- Subtask Assignee -->
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="text-[10px] text-slate-500 uppercase tracking-widest flex-shrink-0"
+                          >Assign:</span
+                        >
+                        <app-autocomplete-input
+                          [options]="assigneeOptions()"
+                          [value]="''"
+                          [allowCustom]="false"
+                          placeholder="Add assignee..."
+                          (optionSelected)="onSubtaskAssigneeSelected(subtask.id, $event)"
+                        ></app-autocomplete-input>
+                      </div>
+                      @if (subtask.assigneeNames?.length) {
+                        <div class="flex flex-wrap gap-1">
+                          @for (name of subtask.assigneeNames; track name; let i = $index) {
+                            <span
+                              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-300"
+                            >
+                              {{ name }}
+                              <button
+                                type="button"
+                                (click)="removeSubtaskAssignee(subtask.id, i)"
+                                class="text-slate-400 hover:text-rose-400"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          }
+                        </div>
+                      }
                     </div>
                   }
                 </div>
@@ -534,7 +637,10 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                     type="button"
                     (click)="toggleTag(tag.name)"
                     [class.ring-2]="selectedTags().has(tag.name)"
-                    [class.ring-white]="selectedTags().has(tag.name)"
+                    [style.ring-color]="selectedTags().has(tag.name) ? tag.color : ''"
+                    [style.--tw-ring-color]="
+                      selectedTags().has(tag.name) ? tag.color : 'transparent'
+                    "
                     [style.background-color]="tag.color + '20'"
                     [style.color]="tag.color"
                     [style.border-color]="tag.color + '40'"
@@ -566,9 +672,29 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
               </button>
             </div>
 
-            <!-- Selected Tags Display -->
+            <!-- Selected Tags Display with Remove -->
             @if (selectedTags().size > 0) {
-              <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                @for (tagName of selectedTagsArray(); track tagName) {
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
+                    [style.background-color]="getTagColor(tagName) + '20'"
+                    [style.color]="getTagColor(tagName)"
+                    [style.border-color]="getTagColor(tagName) + '40'"
+                  >
+                    {{ tagName }}
+                    <button
+                      type="button"
+                      (click)="$event.stopPropagation(); toggleTag(tagName)"
+                      class="ml-0.5 hover:brightness-150 transition-all rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-70 hover:opacity-100"
+                      [style.color]="getTagColor(tagName)"
+                      title="Remove tag"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
             }
           </div>
         </div>
@@ -716,8 +842,17 @@ export class TaskDetailModalComponent {
     return colors[hash % colors.length];
   }
 
-  // Track selected assignee ID
-  selectedAssigneeId = signal<string | null>(null);
+  // Multi-assignee tracking
+  selectedAssignees = signal<AutocompleteOption[]>([]);
+  notifyAssigneesSig = signal(true); // Default: notify on assignment/status
+
+  /**
+   * Compute available assignee options (exclude already selected)
+   */
+  availableAssigneeOptions = computed(() => {
+    const selected = new Set(this.selectedAssignees().map((a) => a.id));
+    return this.assigneeOptions().filter((opt) => !selected.has(opt.id));
+  });
 
   form = this.fb.group({
     title: ['', Validators.required],
@@ -734,6 +869,7 @@ export class TaskDetailModalComponent {
   subtasks = signal<Subtask[]>([]);
   customFieldValues = signal<Record<string, any>>({});
   selectedTags = signal<Set<string>>(new Set());
+  selectedTagsArray = computed(() => Array.from(this.selectedTags()));
   newSubtaskTitle = '';
   expandedSubtaskIds = signal<Set<string>>(new Set());
 
@@ -748,7 +884,6 @@ export class TaskDetailModalComponent {
           {
             title: task.title,
             description: task.description,
-            assigneeName: task.assigneeName || '',
             status: task.status,
             startDate: (task as any).startDate ? this.toInputDate((task as any).startDate) : '',
             dueDate: task.dueDate ? this.toInputDate(task.dueDate) : '',
@@ -758,8 +893,16 @@ export class TaskDetailModalComponent {
           { emitEvent: false },
         );
 
-        // Set selected assignee ID from task
-        this.selectedAssigneeId.set(task.assignedToId || null);
+        // Populate multi-assignee list from task data
+        const ids = task.assigneeIds || (task.assignedToId ? [task.assignedToId] : []);
+        const names = task.assigneeNames || (task.assigneeName ? [task.assigneeName] : []);
+        const options: AutocompleteOption[] = ids.map((id, idx) => ({
+          id,
+          label: names[idx] || id,
+          color: this.generateAvatarColor(id),
+        }));
+        this.selectedAssignees.set(options);
+        this.notifyAssigneesSig.set(task.notifyAssignees ?? true);
 
         // Load subtasks and custom fields
         this.subtasks.set(task.subtasks || []);
@@ -853,38 +996,79 @@ export class TaskDetailModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
+  getTagColor(tagName: string): string {
+    const projectTags = this.project()?.tags || [];
+    const tag = projectTags.find((t) => t.name === tagName);
+    return tag?.color || '#94a3b8';
+  }
+
   /**
    * Handle assignee selection from autocomplete
    */
   onAssigneeSelected(selection: AutocompleteOption | string): void {
     if (typeof selection === 'object') {
-      // Selected a contact from the list
-      this.selectedAssigneeId.set(selection.id);
-      this.form.patchValue({ assigneeName: selection.label });
-    } else {
-      // Custom value entered
-      this.selectedAssigneeId.set(null);
-      this.form.patchValue({ assigneeName: selection });
+      const current = this.selectedAssignees();
+      if (!current.find((a) => a.id === selection.id)) {
+        this.selectedAssignees.set([...current, selection]);
+        this.form.markAsDirty();
+        this.autoSave();
+      }
     }
+  }
+
+  /**
+   * Remove an assignee from the selected list
+   */
+  removeAssignee(id: string): void {
+    this.selectedAssignees.update((list) => list.filter((a) => a.id !== id));
     this.form.markAsDirty();
     this.autoSave();
   }
 
   /**
-   * Handle assignee value change (for typing/clearing)
+   * Handle notify assignees checkbox change
    */
-  onAssigneeValueChange(value: string): void {
-    this.form.patchValue({ assigneeName: value });
-    // If value doesn't match any option, clear the selected ID
-    const matchingOption = this.assigneeOptions().find(
-      (opt) => opt.label === value || opt.id === value,
-    );
-    if (matchingOption) {
-      this.selectedAssigneeId.set(matchingOption.id);
-    } else {
-      this.selectedAssigneeId.set(null);
-    }
+  onNotifyAssigneesChange(checked: boolean): void {
+    this.notifyAssigneesSig.set(checked);
     this.form.markAsDirty();
+    this.autoSave();
+  }
+
+  /**
+   * Select an assignee for a subtask
+   */
+  onSubtaskAssigneeSelected(subtaskId: string, selection: AutocompleteOption | string): void {
+    if (typeof selection !== 'object') return;
+    const updated = this.subtasks().map((s) => {
+      if (s.id !== subtaskId) return s;
+      const ids = [...(s.assigneeIds || [])];
+      const names = [...(s.assigneeNames || [])];
+      if (!ids.includes(selection.id)) {
+        ids.push(selection.id);
+        names.push(selection.label);
+      }
+      return { ...s, assigneeIds: ids, assigneeNames: names };
+    });
+    this.subtasks.set(updated);
+    this.form.markAsDirty();
+    this.autoSave();
+  }
+
+  /**
+   * Remove an assignee from a subtask
+   */
+  removeSubtaskAssignee(subtaskId: string, index: number): void {
+    const updated = this.subtasks().map((s) => {
+      if (s.id !== subtaskId) return s;
+      const ids = [...(s.assigneeIds || [])];
+      const names = [...(s.assigneeNames || [])];
+      ids.splice(index, 1);
+      names.splice(index, 1);
+      return { ...s, assigneeIds: ids, assigneeNames: names };
+    });
+    this.subtasks.set(updated);
+    this.form.markAsDirty();
+    this.autoSave();
   }
 
   async autoSave() {
@@ -897,11 +1081,20 @@ export class TaskDetailModalComponent {
     const dueDate = val.dueDate ? new Date(val.dueDate) : undefined;
     const tags = Array.from(this.selectedTags());
 
+    const assignees = this.selectedAssignees();
+    const assigneeIds = assignees.map((a) => a.id);
+    const assigneeNames = assignees.map((a) => a.label);
+
     const updates: Partial<Task> = {
       title: val.title!,
       description: val.description || '',
-      assignedToId: this.selectedAssigneeId() || undefined,
-      assigneeName: val.assigneeName || undefined,
+      // Multi-assignee fields
+      assigneeIds: assigneeIds.length > 0 ? assigneeIds : [],
+      assigneeNames: assigneeNames.length > 0 ? assigneeNames : [],
+      notifyAssignees: this.notifyAssigneesSig(),
+      // Backward compat
+      assignedToId: assigneeIds[0] || undefined,
+      assigneeName: assigneeNames[0] || undefined,
       status: val.status as Task['status'],
       dueDate,
       priority: val.priority as Task['priority'],
