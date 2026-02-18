@@ -38,6 +38,8 @@ export interface Subtask {
   title: string;
   completed: boolean;
   description?: string; // Markdown
+  assigneeIds?: string[]; // Multiple assignees for subtasks
+  assigneeNames?: string[]; // Display names corresponding to assigneeIds
 }
 
 export interface Tag {
@@ -74,8 +76,13 @@ export interface Task {
   sectionId?: string; // For board view positioning
   title: string;
   description: string; // Markdown
+  /** @deprecated Use assigneeIds instead. Kept for backward compatibility. */
   assignedToId?: string;
+  /** @deprecated Use assigneeNames instead. Kept for backward compatibility. */
   assigneeName?: string;
+  assigneeIds?: string[]; // Multiple assignees
+  assigneeNames?: string[]; // Display names corresponding to assigneeIds
+  notifyAssignees?: boolean; // Whether to send email notifications on assignment/status changes
   status: 'todo' | 'in-progress' | 'done';
   priority: 'low' | 'medium' | 'high';
   order: number; // Position in list/section for drag-and-drop

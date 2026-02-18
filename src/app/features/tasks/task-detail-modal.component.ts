@@ -825,7 +825,7 @@ export class TaskDetailModalComponent {
   /**
    * Generate a consistent color for a contact based on their email
    */
-  private generateAvatarColor(email: string): string {
+  generateAvatarColor(email: string): string {
     const colors = [
       '#8b5cf6',
       '#3b82f6',
@@ -857,7 +857,6 @@ export class TaskDetailModalComponent {
   form = this.fb.group({
     title: ['', Validators.required],
     description: [''],
-    assigneeName: [''],
     status: ['todo'],
     startDate: [''],
     dueDate: [''],

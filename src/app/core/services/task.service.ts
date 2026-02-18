@@ -329,8 +329,12 @@ export class TaskService {
         }
       }
 
-      // Auto-add assignee to project members
-      if (task.assignedToId) {
+      // Auto-add assignees to project members
+      if (task.assigneeIds?.length) {
+        for (const uid of task.assigneeIds) {
+          void this.autoAddMember(task.projectId, uid);
+        }
+      } else if (task.assignedToId) {
         void this.autoAddMember(task.projectId, task.assignedToId);
       }
 
@@ -368,8 +372,12 @@ export class TaskService {
         }),
       );
 
-      // Auto-add assignee to project members
-      if (reconciled.assignedToId && taskDoc) {
+      // Auto-add assignees to project members
+      if (reconciled.assigneeIds?.length && taskDoc) {
+        for (const uid of reconciled.assigneeIds) {
+          void this.autoAddMember(taskDoc.projectId, uid);
+        }
+      } else if (reconciled.assignedToId && taskDoc) {
         void this.autoAddMember(taskDoc.projectId, reconciled.assignedToId);
       }
 
