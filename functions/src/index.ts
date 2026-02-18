@@ -650,8 +650,15 @@ export const searchWorkspaceContacts = onCall<{
 );
 
 /**
- * Firestore trigger: Send email notification when a task is assigned
- * Triggers on task create/update and sends email if assignee changed
+ * Firestore trigger: Send email notifications for task assignment & status changes
+ * Supports multi-assignee (assigneeIds array) and admin notifications.
+ *
+ * Triggers on:
+ * 1. Assignee list changes (new assignees added or removed)
+ * 2. Status changes (if notifyAssignees is true and there are assignees)
+ *
+ * Admin rule: Always notifies bertin.kenol@omniflexfitness.com on any assignment
+ * or status change involving assignees.
  */
 export const sendTaskAssignmentEmail = onDocumentWritten(
   {
@@ -669,63 +676,100 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       return;
     }
 
-    // Check if assignee was added or changed
-    const wasNewlyAssigned = !before?.assignedToId && after.assignedToId;
-    const assigneeChanged = before?.assignedToId !== after.assignedToId && after.assignedToId;
+    // Admin email - always receives notifications about assignment/status changes
+    const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bertin.kenol@omniflexfitness.com';
 
-    if (!wasNewlyAssigned && !assigneeChanged) {
-      console.log('No assignee change, skipping email notification');
+    // Check notifyAssignees flag (default true for backward compatibility)
+    const shouldNotify = after.notifyAssignees !== false;
+
+    // ── Determine what changed ───────────────────────────────────────────
+    // Multi-assignee: use assigneeIds array, fall back to assignedToId for legacy
+    const beforeIds: string[] =
+      before?.assigneeIds ?? (before?.assignedToId ? [before.assignedToId] : []);
+    const afterIds: string[] =
+      after.assigneeIds ?? (after.assignedToId ? [after.assignedToId] : []);
+
+    const addedIds = afterIds.filter((id: string) => !beforeIds.includes(id));
+    const removedIds = beforeIds.filter((id: string) => !afterIds.includes(id));
+    const assigneesChanged = addedIds.length > 0 || removedIds.length > 0;
+
+    const statusChanged = before && before.status !== after.status;
+
+    // Nothing relevant changed → skip
+    if (!assigneesChanged && !statusChanged) {
+      console.log('No assignee or status change, skipping email notification');
       return;
     }
 
-    // Log subtask info - subtasks inherit parent's assignee and are included in parent notification
-    if (after.subtasks && after.subtasks.length > 0) {
-      console.log(`Task has ${after.subtasks.length} subtask(s) - included in parent notification`);
+    // If status changed but no assignees, nothing to notify about
+    if (statusChanged && !assigneesChanged && afterIds.length === 0) {
+      console.log('Status changed but no assignees, skipping notification');
+      return;
     }
 
-    // Get assignee email - prefer email lookup from users collection, fallback to contacts
-    // Note: assigneeName may be a display name OR an email depending on how the task was assigned
-    // assignedToId may be a user UID or an email for external contacts
-    let assigneeEmail = after.assigneeName;
-
-    // Check if assignedToId itself is an email (for external contacts)
-    const assignedToIdIsEmail = after.assignedToId?.includes('@');
-    if (assignedToIdIsEmail) {
-      assigneeEmail = after.assignedToId;
+    // If notification is disabled, still allow admin-only notifications
+    // (admin always gets notified — do NOT skip here)
+    // Only skip if notify is off AND there's no assignment change AND no status change with assignees
+    if (!shouldNotify && !assigneesChanged && !(statusChanged && afterIds.length > 0)) {
+      console.log('notifyAssignees is false and no relevant change for admin, skipping');
+      return;
     }
 
-    if (after.assignedToId) {
+    // ── Resolve emails ───────────────────────────────────────────────────
+    /**
+     * Resolve an assignee ID (could be a UID or email) to an email address.
+     */
+    async function resolveEmail(assigneeId: string, assigneeName?: string): Promise<string | null> {
+      // Only resolve via users collection lookup — do NOT trust raw email strings
+      // from assigneeId to mitigate SSRF (arbitrary email sending)
+
+      // Try users collection first
       try {
-        const userDoc = await db.collection('users').doc(after.assignedToId).get();
+        const userDoc = await db.collection('users').doc(assigneeId).get();
         if (userDoc.exists) {
           const userData = userDoc.data() as { email?: string };
-          assigneeEmail = userData.email || assigneeEmail;
-        } else if (!assignedToIdIsEmail) {
-          // Fallback to contacts cache if not in users collection
-          // Query by document ID (which is the sanitized email for contacts)
-          // or check if assigneeName happens to be an email
-          const possibleEmail = after.assigneeName?.includes('@') ? after.assigneeName : null;
-          if (possibleEmail) {
-            const sanitizedEmail = possibleEmail.replace(/\./g, '_').toLowerCase();
-            const contactDoc = await db.collection('contacts').doc(sanitizedEmail).get();
-            if (contactDoc.exists) {
-              const contactData = contactDoc.data() as { email?: string };
-              assigneeEmail = contactData.email || possibleEmail;
-              console.log(`Found assignee in contacts cache: ${assigneeEmail}`);
-            }
-          }
+          if (userData.email) return userData.email;
         }
       } catch (err) {
-        console.warn('Failed to lookup assignee user:', err);
+        console.warn(`Failed to look up user ${assigneeId}:`, err);
       }
+
+      // If the ID itself is an email, verify it belongs to a known user
+      if (assigneeId.includes('@')) {
+        try {
+          const userSnap = await db
+            .collection('users')
+            .where('email', '==', assigneeId)
+            .limit(1)
+            .get();
+          if (!userSnap.empty) return assigneeId;
+        } catch (err) {
+          console.warn(`Failed to verify email ${assigneeId}:`, err);
+        }
+      }
+
+      // Fallback: check assigneeName against users collection too
+      if (assigneeName && assigneeName.includes('@')) {
+        try {
+          const userSnap = await db
+            .collection('users')
+            .where('email', '==', assigneeName)
+            .limit(1)
+            .get();
+          if (!userSnap.empty) return assigneeName;
+        } catch (err) {
+          console.warn(`Failed to verify assigneeName email ${assigneeName}:`, err);
+        }
+      }
+
+      return null;
     }
 
-    if (!assigneeEmail || !assigneeEmail.includes('@')) {
-      console.log('No valid assignee email, skipping notification');
-      return;
-    }
+    // Build name map from after data for display
+    const afterNames: string[] =
+      after.assigneeNames ?? (after.assigneeName ? [after.assigneeName] : []);
 
-    // Get project name for context
+    // ── Get project name ─────────────────────────────────────────────────
     let projectName = 'a project';
     if (after.projectId) {
       try {
@@ -738,7 +782,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       }
     }
 
-    // Format due date if present
+    // ── Format due date ─────────────────────────────────────────────────
     let dueDateStr: string | undefined;
     if (after.dueDate) {
       const dueDate = after.dueDate.toDate ? after.dueDate.toDate() : new Date(after.dueDate);
@@ -750,71 +794,132 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       });
     }
 
-    // Build email HTML from template
+    // ── Build email content ──────────────────────────────────────────────
+    const taskUrl = `https://omnitask.omniflexfitness.com/projects/${after.projectId}`;
+
     const emailHtml = populateEmailTemplate({
       projectName,
       taskTitle: after.title || 'Untitled Task',
       taskDescription: after.description,
       taskPriority: after.priority || 'medium',
       dueDateStr,
-      taskUrl: `https://omnitask.omniflexfitness.com/projects/${after.projectId}`,
+      taskUrl,
     });
 
-    // Build email message
-    const emailSubject = `📋 You've been assigned: ${after.title || 'New Task'}`;
+    // ── Collect recipients and send emails ────────────────────────────────
+    const recipientEmails = new Set<string>();
 
-    // Create raw email (RFC 2822 format)
-    const rawEmail = [
-      `From: OmniTask <${TASK_NOTIFICATION_SENDER}>`,
-      `To: ${assigneeEmail}`,
-      `Subject: ${emailSubject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      emailHtml,
-    ].join('\r\n');
+    // 1. If assignees were added, email the NEW assignees
+    if (assigneesChanged && addedIds.length > 0 && shouldNotify) {
+      for (let i = 0; i < addedIds.length; i++) {
+        const idx = afterIds.indexOf(addedIds[i]);
+        const name = afterNames[idx] || undefined;
+        const email = await resolveEmail(addedIds[i], name);
+        if (email && email.includes('@')) {
+          recipientEmails.add(email);
+        }
+      }
+    }
 
-    // Base64url encode the email
-    const encodedEmail = Buffer.from(rawEmail)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    // 2. If status changed and notify is on, email ALL current assignees
+    if (statusChanged && shouldNotify && afterIds.length > 0) {
+      for (let i = 0; i < afterIds.length; i++) {
+        const name = afterNames[i] || undefined;
+        const email = await resolveEmail(afterIds[i], name);
+        if (email && email.includes('@')) {
+          recipientEmails.add(email);
+        }
+      }
+    }
 
-    try {
-      // Get initialized JWT client (reused across invocations for performance)
-      const client = await getGmailJwtClient();
+    // 3. Always add admin email for any relevant change
+    recipientEmails.add(ADMIN_EMAIL);
 
-      await gmailApi.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: encodedEmail,
-        },
-        auth: client,
-      });
+    if (recipientEmails.size === 0) {
+      console.log('No valid recipient emails resolved, skipping');
+      return;
+    }
 
-      console.log(`Email sent to ${assigneeEmail} for task: ${after.title}`);
+    // Log subtask info
+    if (after.subtasks && after.subtasks.length > 0) {
+      const assignedSubtasks = after.subtasks.filter(
+        (s: { assigneeIds?: string[] }) => s.assigneeIds && s.assigneeIds.length > 0,
+      );
+      if (assignedSubtasks.length > 0) {
+        console.log(`Task has ${assignedSubtasks.length} subtask(s) with assignees`);
+      }
+    }
 
-      // Log notification to Firestore for audit
-      await db.collection('notifications').add({
-        type: 'task_assignment',
-        taskId: event.params.taskId,
-        recipientEmail: assigneeEmail,
-        sentAt: FieldValue.serverTimestamp(),
-        success: true,
-      });
-    } catch (error) {
-      console.error('Failed to send email notification:', error);
+    // Sanitize title to prevent email header injection via newlines
+    const safeTitle = (after.title || '').replace(/\r\n|\r|\n/g, ' ');
 
-      // Log failed notification
-      await db.collection('notifications').add({
-        type: 'task_assignment',
-        taskId: event.params.taskId,
-        recipientEmail: assigneeEmail,
-        sentAt: FieldValue.serverTimestamp(),
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+    let emailSubject: string;
+    if (assigneesChanged && addedIds.length > 0) {
+      emailSubject = `📋 You've been assigned: ${safeTitle || 'New Task'}`;
+    } else if (statusChanged) {
+      const statusLabel =
+        after.status === 'done'
+          ? '✅ Done'
+          : after.status === 'in-progress'
+            ? '🔄 In Progress'
+            : '📋 To Do';
+      emailSubject = `📋 Status updated to ${statusLabel}: ${safeTitle || 'Task'}`;
+    } else {
+      emailSubject = `📋 Task update: ${safeTitle || 'Task'}`;
+    }
+
+    // Send to each recipient
+    for (const recipientEmail of recipientEmails) {
+      const rawEmail = [
+        `From: OmniTask <${TASK_NOTIFICATION_SENDER}>`,
+        `To: ${recipientEmail}`,
+        `Subject: ${emailSubject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        emailHtml,
+      ].join('\r\n');
+
+      const encodedEmail = Buffer.from(rawEmail)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      try {
+        const client = await getGmailJwtClient();
+
+        await gmailApi.users.messages.send({
+          userId: 'me',
+          requestBody: {
+            raw: encodedEmail,
+          },
+          auth: client,
+        });
+
+        console.log(`Email sent to ${recipientEmail} for task: ${after.title}`);
+
+        // Log notification to Firestore for audit
+        await db.collection('notifications').add({
+          type: assigneesChanged ? 'task_assignment' : 'task_status_change',
+          taskId: event.params.taskId,
+          recipientEmail,
+          sentAt: FieldValue.serverTimestamp(),
+          success: true,
+        });
+      } catch (error) {
+        console.error(`Failed to send email to ${recipientEmail}:`, error);
+
+        // Log failed notification
+        await db.collection('notifications').add({
+          type: assigneesChanged ? 'task_assignment' : 'task_status_change',
+          taskId: event.params.taskId,
+          recipientEmail,
+          sentAt: FieldValue.serverTimestamp(),
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     }
   },
 );
