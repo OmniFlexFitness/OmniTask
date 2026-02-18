@@ -12,11 +12,12 @@ import {
   AutocompleteInputComponent,
   AutocompleteOption,
 } from '../../shared/components/autocomplete-input/autocomplete-input.component';
+import { MarkdownEditorComponent } from '../../shared/components/markdown-editor/markdown-editor.component';
 
 @Component({
   selector: 'app-task-create-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AutocompleteInputComponent],
+  imports: [CommonModule, ReactiveFormsModule, AutocompleteInputComponent, MarkdownEditorComponent],
   template: `
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
@@ -77,12 +78,13 @@ import {
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Description</label
             >
-            <textarea
-              formControlName="description"
-              rows="2"
-              placeholder="Add more details..."
-              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-none"
-            ></textarea>
+            <app-markdown-editor
+              [value]="form.value.description || ''"
+              [rows]="2"
+              [minimal]="true"
+              placeholder="Add more details... (Markdown supported)"
+              (valueChange)="form.patchValue({ description: $event })"
+            />
           </div>
 
           <!-- Two Column Grid with AI Buttons -->
