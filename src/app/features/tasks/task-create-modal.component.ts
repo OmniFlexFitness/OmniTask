@@ -391,7 +391,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
               type="checkbox"
               id="notifyAssignees"
               [checked]="notifyAssignees()"
-              (change)="notifyAssignees.set($any($event.target).checked)"
+              (change)="onNotifyChange($event)"
               class="w-4 h-4 rounded border-white/20 bg-slate-950 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
             />
             <label for="notifyAssignees" class="text-xs text-slate-400 cursor-pointer select-none"
@@ -715,6 +715,11 @@ export class TaskCreateModalComponent {
 
   getSelectedTagsList(): string {
     return Array.from(this.selectedTags()).join(', ');
+  }
+
+  onNotifyChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.notifyAssignees.set(input.checked);
   }
 
   hasCustomFieldErrors(): boolean {

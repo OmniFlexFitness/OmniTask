@@ -211,7 +211,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                 type="checkbox"
                 id="notifyAssigneesDetail"
                 [checked]="notifyAssigneesSig()"
-                (change)="onNotifyAssigneesChange($any($event.target).checked)"
+                (change)="onNotifyAssigneesChange($event)"
                 class="w-4 h-4 rounded border-white/20 bg-slate-950 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
               />
               <label
@@ -637,7 +637,6 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                     type="button"
                     (click)="toggleTag(tag.name)"
                     [class.ring-2]="selectedTags().has(tag.name)"
-                    [style.ring-color]="selectedTags().has(tag.name) ? tag.color : ''"
                     [style.--tw-ring-color]="
                       selectedTags().has(tag.name) ? tag.color : 'transparent'
                     "
@@ -895,11 +894,23 @@ export class TaskDetailModalComponent {
         // Populate multi-assignee list from task data
         const ids = task.assigneeIds || (task.assignedToId ? [task.assignedToId] : []);
         const names = task.assigneeNames || (task.assigneeName ? [task.assigneeName] : []);
-        const options: AutocompleteOption[] = ids.map((id, idx) => ({
-          id,
-          label: names[idx] || id,
-          color: this.generateAvatarColor(id),
-        }));
+        let options: AutocompleteOption[];
+        if (ids.length > 0) {
+          options = ids.map((id: string, idx: number) => ({
+            id,
+            label: names[idx] || id,
+            color: this.generateAvatarColor(id),
+          }));
+        } else if (names.length > 0) {
+          // Legacy: assigneeName set without assignedToId — preserve name-only assignment
+          options = names.map((name: string) => ({
+            id: name,
+            label: name,
+            color: this.generateAvatarColor(name),
+          }));
+        } else {
+          options = [];
+        }
         this.selectedAssignees.set(options);
         this.notifyAssigneesSig.set(task.notifyAssignees ?? true);
 
@@ -1027,8 +1038,9 @@ export class TaskDetailModalComponent {
   /**
    * Handle notify assignees checkbox change
    */
-  onNotifyAssigneesChange(checked: boolean): void {
-    this.notifyAssigneesSig.set(checked);
+  onNotifyAssigneesChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.notifyAssigneesSig.set(input.checked);
     this.form.markAsDirty();
     this.autoSave();
   }
@@ -1088,8 +1100,8 @@ export class TaskDetailModalComponent {
       title: val.title!,
       description: val.description || '',
       // Multi-assignee fields
-      assigneeIds: assigneeIds.length > 0 ? assigneeIds : [],
-      assigneeNames: assigneeNames.length > 0 ? assigneeNames : [],
+      assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
+      assigneeNames: assigneeNames.length > 0 ? assigneeNames : undefined,
       notifyAssignees: this.notifyAssigneesSig(),
       // Backward compat
       assignedToId: assigneeIds[0] || undefined,
