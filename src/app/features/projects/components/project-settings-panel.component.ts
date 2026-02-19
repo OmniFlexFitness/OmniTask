@@ -920,8 +920,11 @@ export class ProjectSettingsPanelComponent {
   }
 
   ngOnChanges() {
-    // Reset when project changes
-    this.resetBasicInfo();
+    // Only reset if user hasn't made unsaved edits — prevents
+    // Firestore live updates from wiping the form mid-edit
+    if (!this.hasBasicChanges()) {
+      this.resetBasicInfo();
+    }
     // Reload task lists if sync is enabled for this project
     this.initGoogleTaskLists();
   }
