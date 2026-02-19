@@ -44,95 +44,95 @@ const TAG_COLORS = [
 
       <!-- Add Tag Form -->
       @if (showAddForm()) {
-      <div class="p-4 bg-slate-800/50 rounded-lg border border-white/10 space-y-3">
-        <input
-          type="text"
-          [(ngModel)]="newTagName"
-          placeholder="Tag name..."
-          class="ofx-input text-sm"
-        />
+        <div class="p-4 bg-slate-800/50 rounded-lg border border-white/10 space-y-3">
+          <input
+            type="text"
+            [(ngModel)]="newTagName"
+            placeholder="Tag name..."
+            class="ofx-input text-sm"
+          />
 
-        <div>
-          <label class="block text-xs text-slate-400 mb-2">Color</label>
-          <div class="flex flex-wrap gap-2">
-            @for (color of colors; track color) {
+          <div>
+            <label class="block text-xs text-slate-400 mb-2">Color</label>
+            <div class="flex flex-wrap gap-2">
+              @for (color of colors; track color) {
+                <button
+                  type="button"
+                  class="w-6 h-6 rounded-full transition-transform hover:scale-110"
+                  [class.ring-2]="newTagColor === color"
+                  [class.ring-white]="newTagColor === color"
+                  [style.background-color]="color"
+                  (click)="newTagColor = color"
+                ></button>
+              }
+            </div>
+          </div>
+
+          <!-- Preview -->
+          @if (newTagName.trim()) {
+            <div>
+              <label class="block text-xs text-slate-400 mb-2">Preview</label>
+              <span
+                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border"
+                [style.background-color]="newTagColor + '20'"
+                [style.color]="newTagColor"
+                [style.border-color]="newTagColor + '40'"
+              >
+                {{ newTagName }}
+              </span>
+            </div>
+          }
+
+          <div class="flex gap-2">
             <button
-              type="button"
-              class="w-6 h-6 rounded-full transition-transform hover:scale-110"
-              [class.ring-2]="newTagColor === color"
-              [class.ring-white]="newTagColor === color"
-              [style.background-color]="color"
-              (click)="newTagColor = color"
-            ></button>
-            }
+              class="ofx-gradient-button text-xs flex-1"
+              [disabled]="!newTagName.trim() || saving()"
+              (click)="addTag()"
+            >
+              {{ saving() ? 'Adding...' : 'Add Tag' }}
+            </button>
+            <button class="ofx-ghost-button text-xs" (click)="cancelAdd()">Cancel</button>
           </div>
         </div>
-
-        <!-- Preview -->
-        @if (newTagName.trim()) {
-        <div>
-          <label class="block text-xs text-slate-400 mb-2">Preview</label>
-          <span
-            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-            [style.background-color]="newTagColor + '20'"
-            [style.color]="newTagColor"
-            [style.border]="'1px solid ' + newTagColor + '40'"
-          >
-            {{ newTagName }}
-          </span>
-        </div>
-        }
-
-        <div class="flex gap-2">
-          <button
-            class="ofx-gradient-button text-xs flex-1"
-            [disabled]="!newTagName.trim() || saving()"
-            (click)="addTag()"
-          >
-            {{ saving() ? 'Adding...' : 'Add Tag' }}
-          </button>
-          <button class="ofx-ghost-button text-xs" (click)="cancelAdd()">Cancel</button>
-        </div>
-      </div>
       }
 
       <!-- Tags List -->
       <div class="flex flex-wrap gap-2">
         @for (tag of tags(); track tag.id) {
-        <div
-          class="group relative inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-          [style.background-color]="tag.color + '20'"
-          [style.color]="tag.color"
-          [style.border]="'1px solid ' + tag.color + '40'"
-        >
-          <span>{{ tag.name }}</span>
-
-          <!-- Delete button on hover -->
-          <button
-            class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
-            (click)="confirmDelete(tag)"
-            title="Delete tag"
+          <div
+            class="group relative inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-all"
+            [style.background-color]="tag.color + '20'"
+            [style.color]="tag.color"
+            [style.border-color]="tag.color + '40'"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <span>{{ tag.name }}</span>
+
+            <!-- Delete button on hover -->
+            <button
+              class="ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:text-white"
+              (click)="confirmDelete(tag)"
+              title="Delete tag"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
         } @empty {
-        <div class="text-slate-500 text-sm py-4 text-center w-full">
-          No tags yet. Create tags to categorize your tasks.
-        </div>
+          <div class="text-slate-500 text-sm py-4 text-center w-full">
+            No tags yet. Create tags to categorize your tasks.
+          </div>
         }
       </div>
     </div>
@@ -182,7 +182,7 @@ export class TagManagerComponent {
   async confirmDelete(tag: Tag) {
     const confirmed = await this.dialogService.confirm(
       `Delete tag "${tag.name}"?\n\nTasks using this tag will no longer have it assigned.`,
-      'Delete Tag'
+      'Delete Tag',
     );
 
     if (confirmed) {

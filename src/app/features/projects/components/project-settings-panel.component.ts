@@ -885,6 +885,7 @@ export class ProjectSettingsPanelComponent {
   saving = signal(false);
 
   hasBasicChanges = signal(false);
+  private previousProjectId: string | null = null;
 
   // Google Tasks state
   googleTasksAuthenticated = computed(() => this.googleTasksService.isAuthenticated());
@@ -920,8 +921,17 @@ export class ProjectSettingsPanelComponent {
   }
 
   ngOnChanges() {
-    // Reset when project changes
-    this.resetBasicInfo();
+    const currentId = this.project().id;
+    const projectSwitched = this.previousProjectId !== null && this.previousProjectId !== currentId;
+    this.previousProjectId = currentId;
+
+    // Always reset when switching between projects to prevent stale
+    // edits from one project leaking into another (component reuse
+    // on parameterized routes). Only preserve edits for same-project
+    // Firestore live updates.
+    if (projectSwitched || !this.hasBasicChanges()) {
+      this.resetBasicInfo();
+    }
     // Reload task lists if sync is enabled for this project
     this.initGoogleTaskLists();
   }
