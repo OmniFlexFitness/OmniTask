@@ -367,14 +367,14 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                 [cdkDropListConnectedTo]="connectedDropLists()"
                 (cdkDropListDropped)="onDrop($event, section.id)"
                 [cdkDropListDisabled]="selectionMode()"
-                class="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+                class="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent relative z-0"
               >
                 @for (task of getFilteredTasksForSection(section.id); track task.id) {
                   <div
                     cdkDrag
                     [cdkDragData]="task"
                     [cdkDragDisabled]="selectionMode()"
-                    class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden"
+                    class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden z-0"
                     [class.p-4]="!getColumnSettings(section.id).compactMode"
                     [class.p-2]="getColumnSettings(section.id).compactMode"
                     [class.bg-slate-800]="task.status !== 'done' && !isSelected(task.id)"
