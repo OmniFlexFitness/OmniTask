@@ -1,4 +1,4 @@
-import { Component, input, output, signal, computed, inject, ElementRef, effect } from '@angular/core';
+import { Component, input, output, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Section, CYBERPUNK_COLORS } from '../../core/models/domain.model';
@@ -239,7 +239,6 @@ const COLUMN_COLORS = [
 })
 export class ColumnSettingsMenuComponent {
   private readonly projectService = inject(ProjectService);
-  private readonly elementRef = inject(ElementRef);
 
   // Inputs
   section = input.required<Section>();
@@ -247,6 +246,7 @@ export class ColumnSettingsMenuComponent {
   isOpen = input.required<boolean>();
   sectionIndex = input.required<number>();
   totalSections = input.required<number>();
+  triggerRect = input<DOMRect | null>(null); // Position of the trigger button
   columnSettings = input<ColumnDisplaySettings>({
     hideCompletedTasks: false,
     compactMode: false,
@@ -380,9 +380,17 @@ export class ColumnSettingsMenuComponent {
   }
 
   private calculateMenuPosition(): void {
-    // Get the position of the host element (the button container)
-    const hostElement = this.elementRef.nativeElement;
-    const rect = hostElement.getBoundingClientRect();
+    // Get the position from the trigger button rect passed as input
+    const rect = this.triggerRect();
+    if (!rect) {
+      // Fallback: center the menu in viewport
+      const menuWidth = 288;
+      this.menuPosition = {
+        top: 100,
+        left: Math.max(8, (window.innerWidth - menuWidth) / 2)
+      };
+      return;
+    }
 
     // Position the menu below and to the left of the button
     const menuWidth = 288; // w-72 = 18rem = 288px

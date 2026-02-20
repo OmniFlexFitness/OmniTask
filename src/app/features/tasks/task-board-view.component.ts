@@ -214,9 +214,17 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
       }
 
       <div class="flex-1 overflow-x-auto overflow-y-hidden">
-        <div class="h-full flex gap-6 pb-4 min-w-max p-4">
+        <div
+          cdkDropList
+          cdkDropListOrientation="horizontal"
+          [cdkDropListData]="projectSections()"
+          (cdkDropListDropped)="onColumnDrop($event)"
+          class="h-full flex gap-6 pb-4 min-w-max p-4"
+        >
           @for (section of projectSections(); track section.id) {
             <div
+              cdkDrag
+              [cdkDragData]="section"
               class="board-column flex flex-col rounded-xl border h-full max-h-full transition-all duration-300"
               [class.bg-slate-900/40]="getSectionStatus(section) !== 'done'"
               [class.bg-slate-900/20]="getSectionStatus(section) === 'done'"
@@ -228,9 +236,13 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                 'cyber-column-done': getSectionStatus(section) === 'done',
               }"
             >
+              <!-- Column drag placeholder -->
+              <div *cdkDragPlaceholder class="board-column-placeholder bg-slate-800/30 border-2 border-dashed border-purple-500/40 rounded-xl h-full min-h-[200px]"></div>
+
               <!-- Column Header -->
               <div
-                class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative"
+                cdkDragHandle
+                class="p-4 flex items-center justify-between border-b cursor-grab active:cursor-grabbing relative"
                 [class.border-white/10]="getSectionStatus(section) === 'done'"
                 [class.border-white/10]="getSectionStatus(section) !== 'done'"
               >
@@ -308,8 +320,9 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                 <!-- Column Menu Button & Settings -->
                 <div class="relative z-10">
                   <button
+                    #menuTrigger
                     class="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-white/5"
-                    (click)="toggleColumnMenu(section.id); $event.stopPropagation()"
+                    (click)="toggleColumnMenu(section.id, menuTrigger); $event.stopPropagation()"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -334,6 +347,7 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                     [isOpen]="openMenuSectionId() === section.id"
                     [sectionIndex]="$index"
                     [totalSections]="projectSections().length"
+                    [triggerRect]="menuTriggerRect()"
                     [columnSettings]="getColumnSettings(section.id)"
                     (close)="closeColumnMenu()"
                     (colorChanged)="handleColorChange($event)"
@@ -616,6 +630,24 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
         min-width: var(--board-column-min-width);
       }
 
+      /* Column drag-and-drop styles */
+      .board-column-placeholder {
+        width: var(--board-column-width);
+        min-width: var(--board-column-min-width);
+      }
+
+      .cdk-drag-preview.board-column {
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.4);
+      }
+
+      .cdk-drag-animating {
+        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      }
+
+      .cdk-drop-list-dragging .board-column:not(.cdk-drag-placeholder) {
+        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      }
+
       .add-section-btn {
         width: var(--add-section-width);
         min-width: var(--add-section-width);
@@ -823,6 +855,7 @@ export class TaskBoardViewComponent {
 
   // Column settings menu state
   openMenuSectionId = signal<string | null>(null);
+  menuTriggerRect = signal<DOMRect | null>(null);
   columnDisplaySettings = signal<Record<string, ColumnDisplaySettings>>({});
 
   // Computed: Get all section IDs for drag-drop connection
@@ -1030,12 +1063,33 @@ export class TaskBoardViewComponent {
   }
 
   // Column menu methods
-  toggleColumnMenu(sectionId: string) {
-    this.openMenuSectionId.update((current) => (current === sectionId ? null : sectionId));
+  toggleColumnMenu(sectionId: string, triggerElement?: HTMLElement) {
+    if (this.openMenuSectionId() === sectionId) {
+      this.openMenuSectionId.set(null);
+      this.menuTriggerRect.set(null);
+    } else {
+      this.openMenuSectionId.set(sectionId);
+      if (triggerElement) {
+        this.menuTriggerRect.set(triggerElement.getBoundingClientRect());
+      }
+    }
   }
 
   closeColumnMenu() {
     this.openMenuSectionId.set(null);
+    this.menuTriggerRect.set(null);
+  }
+
+  // Column drag-and-drop handler
+  async onColumnDrop(event: CdkDragDrop<Section[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+
+    const sections = [...this.projectSections()];
+    moveItemInArray(sections, event.previousIndex, event.currentIndex);
+
+    // Update order values
+    const reorderedSections = sections.map((s, index) => ({ ...s, order: index }));
+    await this.projectService.reorderSections(this.project().id, reorderedSections);
   }
 
   getColumnSettings(sectionId: string): ColumnDisplaySettings {
