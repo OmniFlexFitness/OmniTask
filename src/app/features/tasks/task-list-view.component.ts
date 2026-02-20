@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Task } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
 @Component({
@@ -19,17 +19,61 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
         class="flex items-center justify-between px-4 py-2 bg-[#0a0f1e]/90 border-b border-cyan-500/10"
       >
         <div class="flex items-center gap-3">
-          <span class="text-xs text-slate-400">
-            {{ filteredTasks().length }} of {{ tasks().length }} tasks
-          </span>
-          @if (hiddenCompletedCount() > 0) {
-            <span class="text-xs text-slate-500">
-              ({{ hiddenCompletedCount() }} completed hidden)
+          @if (selectionMode()) {
+            <!-- Selection mode info -->
+            <span class="text-xs text-purple-400 font-medium">
+              {{ selectedTaskIds().size }} selected
             </span>
+            @if (selectedTaskIds().size > 0) {
+              <button
+                class="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                (click)="clearSelection()"
+              >
+                Clear
+              </button>
+            }
+          } @else {
+            <span class="text-xs text-slate-400">
+              {{ filteredTasks().length }} of {{ tasks().length }} tasks
+            </span>
+            @if (hiddenCompletedCount() > 0) {
+              <span class="text-xs text-slate-500">
+                ({{ hiddenCompletedCount() }} completed hidden)
+              </span>
+            }
           }
         </div>
 
         <div class="flex items-center gap-2">
+          <!-- Selection Mode Toggle -->
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"
+            [class.bg-purple-500/20]="selectionMode()"
+            [class.text-purple-400]="selectionMode()"
+            [class.border-purple-500/30]="selectionMode()"
+            [class.bg-slate-800/50]="!selectionMode()"
+            [class.text-slate-400]="!selectionMode()"
+            [class.border-slate-600/30]="!selectionMode()"
+            (click)="toggleSelectionMode()"
+            title="Toggle selection mode for bulk actions"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            {{ selectionMode() ? 'Exit Select' : 'Select' }}
+          </button>
+
           <!-- View Mode Toggle -->
           <div class="flex items-center bg-slate-800/60 rounded-lg border border-white/5 p-0.5">
             <button
@@ -111,10 +155,81 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
         </div>
       </div>
 
+      <!-- Bulk Actions Bar (shown when tasks are selected) -->
+      @if (selectionMode() && selectedTaskIds().size > 0) {
+        <div
+          class="flex items-center justify-between px-4 py-2 bg-purple-500/10 border-b border-purple-500/20"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+              (click)="bulkComplete()"
+              title="Mark selected tasks as complete"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Complete ({{ selectedTaskIds().size }})
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-all"
+              (click)="bulkReopen()"
+              title="Reopen selected tasks"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Reopen
+            </button>
+          </div>
+          <button
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all"
+            (click)="selectAllVisible()"
+          >
+            {{ allVisibleSelected() ? 'Deselect All' : 'Select All' }}
+          </button>
+        </div>
+      }
+
       <!-- Cyberpunk Header -->
       <div
-        class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]"
+        class="grid gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]"
+        [class.grid-cols-[auto_auto_1fr_120px_120px_120px_auto]]="selectionMode()"
+        [class.grid-cols-[auto_1fr_120px_120px_120px_auto]]="!selectionMode()"
       >
+        @if (selectionMode()) {
+          <div class="w-5 flex items-center">
+            <input
+              type="checkbox"
+              class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+              [checked]="allVisibleSelected()"
+              (change)="selectAllVisible()"
+              title="Select all visible tasks"
+            />
+          </div>
+        }
         <div class="w-6"></div>
         <!-- Drag handle placeholder -->
         <div
@@ -197,9 +312,12 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
           <div
             cdkDrag
             [cdkDragData]="task"
+            [cdkDragDisabled]="selectionMode()"
             [class.opacity-50]="task.status === 'done'"
+            [class.bg-purple-500/5]="isSelected(task.id)"
+            [class.border-purple-500/30]="isSelected(task.id)"
             class="group hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
-            (click)="taskClick.emit(task)"
+            (click)="selectionMode() ? toggleTaskSelection(task.id) : taskClick.emit(task)"
           >
             <!-- Custom Drag Preview -->
             <div
@@ -211,12 +329,28 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
 
             <!-- Main Row -->
             <div
-              class="grid grid-cols-[auto_1fr_120px_120px_120px_auto] gap-4 px-4 py-3 items-center"
+              class="grid gap-4 px-4 py-3 items-center"
+              [class.grid-cols-[auto_auto_1fr_120px_120px_120px_auto]]="selectionMode()"
+              [class.grid-cols-[auto_1fr_120px_120px_120px_auto]]="!selectionMode()"
             >
+              <!-- Selection Checkbox (shown in selection mode) -->
+              @if (selectionMode()) {
+                <div class="w-5 flex items-center" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                    [checked]="isSelected(task.id)"
+                    (change)="toggleTaskSelection(task.id)"
+                  />
+                </div>
+              }
+
               <!-- Drag Handle -->
               <div
                 cdkDragHandle
                 class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors"
+                [class.cursor-not-allowed]="selectionMode()"
+                [class.opacity-30]="selectionMode()"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -431,6 +565,10 @@ export class TaskListViewComponent {
   // Filter state - hide completed tasks older than 30 minutes by default
   showCompleted = signal(false);
 
+  // Selection mode for bulk actions
+  selectionMode = signal(false);
+  selectedTaskIds = signal<Set<string>>(new Set());
+
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();
 
@@ -478,6 +616,14 @@ export class TaskListViewComponent {
     const direction = this.sortDirection();
 
     return tasks.sort((a, b) => {
+      // Always keep completed tasks at the bottom to allow rapid completion
+      // by clicking in the same spot repeatedly
+      const aIsDone = a.status === 'done';
+      const bIsDone = b.status === 'done';
+      if (aIsDone !== bIsDone) {
+        return aIsDone ? 1 : -1; // Done tasks go to bottom
+      }
+
       let comparison = 0;
 
       switch (field) {
@@ -507,6 +653,73 @@ export class TaskListViewComponent {
 
   toggleShowCompleted() {
     this.showCompleted.update((v) => !v);
+  }
+
+  // Selection mode methods
+  toggleSelectionMode() {
+    this.selectionMode.update((v) => !v);
+    if (!this.selectionMode()) {
+      this.clearSelection();
+    }
+  }
+
+  toggleTaskSelection(taskId: string) {
+    this.selectedTaskIds.update((ids) => {
+      const newIds = new Set(ids);
+      if (newIds.has(taskId)) {
+        newIds.delete(taskId);
+      } else {
+        newIds.add(taskId);
+      }
+      return newIds;
+    });
+  }
+
+  isSelected(taskId: string): boolean {
+    return this.selectedTaskIds().has(taskId);
+  }
+
+  clearSelection() {
+    this.selectedTaskIds.set(new Set());
+  }
+
+  selectAllVisible() {
+    if (this.allVisibleSelected()) {
+      this.clearSelection();
+    } else {
+      const allIds = new Set(this.sortedTasks().map((t) => t.id));
+      this.selectedTaskIds.set(allIds);
+    }
+  }
+
+  allVisibleSelected(): boolean {
+    const visibleTasks = this.sortedTasks();
+    if (visibleTasks.length === 0) return false;
+    return visibleTasks.every((t) => this.selectedTaskIds().has(t.id));
+  }
+
+  async bulkComplete() {
+    const ids = Array.from(this.selectedTaskIds());
+    if (ids.length === 0) return;
+
+    // Use bulk update for efficiency
+    await this.taskService.bulkUpdateTasks(ids, {
+      status: 'done',
+      completedAt: new Date(),
+    });
+    this.clearSelection();
+  }
+
+  async bulkReopen() {
+    const ids = Array.from(this.selectedTaskIds());
+    if (ids.length === 0) return;
+
+    // Use bulk update for efficiency
+    await this.taskService.bulkUpdateTasks(ids, {
+      status: 'todo',
+      completedAt: null,
+    });
+    this.clearSelection();
   }
 
   private toDate(dateValue: any): Date {

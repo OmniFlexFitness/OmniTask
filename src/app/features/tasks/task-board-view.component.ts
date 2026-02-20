@@ -22,54 +22,72 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
         class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5 flex-shrink-0"
       >
         <div class="flex items-center gap-3">
-          <span class="text-xs text-slate-400"> {{ visibleTaskCount() }} tasks </span>
-          @if (hiddenCompletedCount() > 0) {
-            <span class="text-xs text-slate-500">
-              ({{ hiddenCompletedCount() }} completed hidden)
+          @if (selectionMode()) {
+            <span class="text-xs text-purple-400 font-medium">
+              {{ selectedTaskIds().size }} selected
             </span>
+            @if (selectedTaskIds().size > 0) {
+              <button
+                class="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                (click)="clearSelection()"
+              >
+                Clear
+              </button>
+            }
+          } @else {
+            <span class="text-xs text-slate-400"> {{ visibleTaskCount() }} tasks </span>
+            @if (hiddenCompletedCount() > 0) {
+              <span class="text-xs text-slate-500">
+                ({{ hiddenCompletedCount() }} completed hidden)
+              </span>
+            }
           }
         </div>
 
-        <!-- Completed Filter Toggle -->
-        <button
-          class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
-          [class.bg-emerald-500/20]="showCompleted()"
-          [class.text-emerald-400]="showCompleted()"
-          [class.border-emerald-500/30]="showCompleted()"
-          [class.bg-slate-800/50]="!showCompleted()"
-          [class.text-slate-400]="!showCompleted()"
-          [class.border-slate-600/30]="!showCompleted()"
-          (click)="toggleShowCompleted()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div class="flex items-center gap-2">
+          <!-- Selection Mode Toggle -->
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"
+            [class.bg-purple-500/20]="selectionMode()"
+            [class.text-purple-400]="selectionMode()"
+            [class.border-purple-500/30]="selectionMode()"
+            [class.bg-slate-800/50]="!selectionMode()"
+            [class.text-slate-400]="!selectionMode()"
+            [class.border-slate-600/30]="!selectionMode()"
+            (click)="toggleSelectionMode()"
+            title="Toggle selection mode for bulk actions"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          {{ showCompleted() ? 'Showing Completed' : 'Hide Completed' }}
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            {{ selectionMode() ? 'Exit Select' : 'Select' }}
+          </button>
 
-        <!-- View Mode Toggle -->
-        <div class="flex items-center bg-slate-800/60 rounded-lg border border-white/5 p-0.5">
+          <!-- Completed Filter Toggle -->
           <button
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-            [class.bg-cyan-500/20]="viewMode() === 'simplified'"
-            [class.text-cyan-400]="viewMode() === 'simplified'"
-            [class.text-slate-500]="viewMode() !== 'simplified'"
-            (click)="viewMode.set('simplified')"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border"
+            [class.bg-emerald-500/20]="showCompleted()"
+            [class.text-emerald-400]="showCompleted()"
+            [class.border-emerald-500/30]="showCompleted()"
+            [class.bg-slate-800/50]="!showCompleted()"
+            [class.text-slate-400]="!showCompleted()"
+            [class.border-slate-600/30]="!showCompleted()"
+            (click)="toggleShowCompleted()"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-3.5 w-3.5"
+              class="h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -78,36 +96,121 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h7"
+                d="M5 13l4 4L19 7"
               />
             </svg>
-            Simple
+            {{ showCompleted() ? 'Showing Completed' : 'Hide Completed' }}
           </button>
-          <button
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
-            [class.bg-purple-500/20]="viewMode() === 'detailed'"
-            [class.text-purple-400]="viewMode() === 'detailed'"
-            [class.text-slate-500]="viewMode() !== 'detailed'"
-            (click)="viewMode.set('detailed')"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-3.5 w-3.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+
+          <!-- View Mode Toggle -->
+          <div class="flex items-center bg-slate-800/60 rounded-lg border border-white/5 p-0.5">
+            <button
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              [class.bg-cyan-500/20]="viewMode() === 'simplified'"
+              [class.text-cyan-400]="viewMode() === 'simplified'"
+              [class.text-slate-500]="viewMode() !== 'simplified'"
+              (click)="viewMode.set('simplified')"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 10h16M4 14h16M4 18h16"
-              />
-            </svg>
-            Detailed
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h7"
+                />
+              </svg>
+              Simple
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all"
+              [class.bg-purple-500/20]="viewMode() === 'detailed'"
+              [class.text-purple-400]="viewMode() === 'detailed'"
+              [class.text-slate-500]="viewMode() !== 'detailed'"
+              (click)="viewMode.set('detailed')"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
+              </svg>
+              Detailed
+            </button>
+          </div>
         </div>
       </div>
+
+      <!-- Bulk Actions Bar (shown when tasks are selected) -->
+      @if (selectionMode() && selectedTaskIds().size > 0) {
+        <div
+          class="flex items-center justify-between px-4 py-2 bg-purple-500/10 border-b border-purple-500/20 flex-shrink-0"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
+              (click)="bulkComplete()"
+              title="Mark selected tasks as complete"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Complete ({{ selectedTaskIds().size }})
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-all"
+              (click)="bulkReopen()"
+              title="Reopen selected tasks"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Reopen
+            </button>
+          </div>
+          <button
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all"
+            (click)="selectAllVisible()"
+          >
+            {{ allVisibleSelected() ? 'Deselect All' : 'Select All' }}
+          </button>
+        </div>
+      }
 
       <div class="flex-1 overflow-x-auto overflow-y-hidden">
         <div class="h-full flex gap-6 pb-4 min-w-max p-4">
@@ -218,32 +321,51 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
                 [cdkDropListData]="getTasksForSection(section.id)"
                 [cdkDropListConnectedTo]="connectedDropLists()"
                 (cdkDropListDropped)="onDrop($event, section.id)"
+                [cdkDropListDisabled]="selectionMode()"
                 class="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
               >
                 @for (task of getFilteredTasksForSection(section.id); track task.id) {
                   <div
                     cdkDrag
                     [cdkDragData]="task"
+                    [cdkDragDisabled]="selectionMode()"
                     class="ofx-task-card p-4 rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden"
-                    [class.bg-slate-800]="task.status !== 'done'"
-                    [class.bg-slate-900/30]="task.status === 'done'"
-                    [class.border-white/5]="task.status === 'done'"
-                    [class.opacity-50]="task.status === 'done'"
-                    [class.grayscale]="task.status === 'done'"
+                    [class.bg-slate-800]="task.status !== 'done' && !isSelected(task.id)"
+                    [class.bg-purple-900/30]="isSelected(task.id)"
+                    [class.bg-slate-900/30]="task.status === 'done' && !isSelected(task.id)"
+                    [class.border-purple-500/40]="isSelected(task.id)"
+                    [class.border-white/5]="task.status === 'done' && !isSelected(task.id)"
+                    [class.opacity-50]="task.status === 'done' && !isSelected(task.id)"
+                    [class.grayscale]="task.status === 'done' && !isSelected(task.id)"
                     [class.hover:shadow-lg]="task.status !== 'done'"
                     [ngClass]="{
-                      'task-todo': getSectionStatus(section) === 'todo' && task.status !== 'done',
+                      'task-todo': getSectionStatus(section) === 'todo' && task.status !== 'done' && !isSelected(task.id),
                       'task-progress':
-                        getSectionStatus(section) === 'in-progress' && task.status !== 'done',
-                      'task-done': task.status === 'done',
+                        getSectionStatus(section) === 'in-progress' && task.status !== 'done' && !isSelected(task.id),
+                      'task-done': task.status === 'done' && !isSelected(task.id),
                     }"
                     [style.border-color]="
-                      task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : ''
+                      isSelected(task.id) ? '' : (task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : '')
                     "
-                    (click)="taskClick.emit(task)"
+                    (click)="selectionMode() ? toggleTaskSelection(task.id) : taskClick.emit(task)"
                   >
+                    <!-- Selection checkbox overlay -->
+                    @if (selectionMode()) {
+                      <div
+                        class="absolute top-2 left-2 z-20"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <input
+                          type="checkbox"
+                          class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                          [checked]="isSelected(task.id)"
+                          (change)="toggleTaskSelection(task.id)"
+                        />
+                      </div>
+                    }
+
                     <!-- Neon glow effect for active tasks -->
-                    @if (task.status !== 'done') {
+                    @if (task.status !== 'done' && !isSelected(task.id)) {
                       <div
                         class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                         [style.background]="
@@ -257,6 +379,14 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
                           ', inset 0 0 20px ' +
                           getColorWithOpacity(section.color, 0.1)
                         "
+                      ></div>
+                    }
+
+                    <!-- Selection glow effect -->
+                    @if (isSelected(task.id)) {
+                      <div
+                        class="absolute inset-0 pointer-events-none"
+                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), transparent); box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.2);"
                       ></div>
                     }
 
@@ -288,6 +418,7 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
 
                     <h4
                       class="text-sm font-medium mb-2 pr-4 leading-normal relative z-10 transition-all duration-300"
+                      [class.pl-6]="selectionMode()"
                       [class.text-slate-100]="task.status !== 'done'"
                       [class.text-slate-500]="task.status === 'done'"
                       [class.line-through]="task.status === 'done'"
@@ -650,6 +781,10 @@ export class TaskBoardViewComponent {
   // View mode toggle
   viewMode = signal<'simplified' | 'detailed'>('simplified');
 
+  // Selection mode for bulk actions
+  selectionMode = signal(false);
+  selectedTaskIds = signal<Set<string>>(new Set());
+
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();
 
@@ -676,6 +811,76 @@ export class TaskBoardViewComponent {
     this.showCompleted.update((v) => !v);
   }
 
+  // Selection mode methods
+  toggleSelectionMode() {
+    this.selectionMode.update((v) => !v);
+    if (!this.selectionMode()) {
+      this.clearSelection();
+    }
+  }
+
+  toggleTaskSelection(taskId: string) {
+    this.selectedTaskIds.update((ids) => {
+      const newIds = new Set(ids);
+      if (newIds.has(taskId)) {
+        newIds.delete(taskId);
+      } else {
+        newIds.add(taskId);
+      }
+      return newIds;
+    });
+  }
+
+  isSelected(taskId: string): boolean {
+    return this.selectedTaskIds().has(taskId);
+  }
+
+  clearSelection() {
+    this.selectedTaskIds.set(new Set());
+  }
+
+  selectAllVisible() {
+    if (this.allVisibleSelected()) {
+      this.clearSelection();
+    } else {
+      const allIds = new Set<string>();
+      for (const section of this.projectSections()) {
+        for (const task of this.getFilteredTasksForSection(section.id)) {
+          allIds.add(task.id);
+        }
+      }
+      this.selectedTaskIds.set(allIds);
+    }
+  }
+
+  allVisibleSelected(): boolean {
+    const count = this.visibleTaskCount();
+    if (count === 0) return false;
+    return this.selectedTaskIds().size === count;
+  }
+
+  async bulkComplete() {
+    const ids = Array.from(this.selectedTaskIds());
+    if (ids.length === 0) return;
+
+    await this.taskService.bulkUpdateTasks(ids, {
+      status: 'done',
+      completedAt: new Date(),
+    });
+    this.clearSelection();
+  }
+
+  async bulkReopen() {
+    const ids = Array.from(this.selectedTaskIds());
+    if (ids.length === 0) return;
+
+    await this.taskService.bulkUpdateTasks(ids, {
+      status: 'todo',
+      completedAt: null,
+    });
+    this.clearSelection();
+  }
+
   private toDate(dateValue: unknown): Date {
     if (dateValue instanceof Date) return dateValue;
     if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
@@ -685,17 +890,25 @@ export class TaskBoardViewComponent {
   }
 
   getTasksForSection(sectionId: string) {
-    // Filter tasks for this section and sort by order
+    // Filter tasks for this section and sort by order, keeping completed at bottom
     return this.tasks()
       .filter((t) => t.sectionId === sectionId)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => {
+        // Keep completed tasks at the bottom for rapid task completion
+        const aIsDone = a.status === 'done';
+        const bIsDone = b.status === 'done';
+        if (aIsDone !== bIsDone) {
+          return aIsDone ? 1 : -1;
+        }
+        return a.order - b.order;
+      });
   }
 
   getFilteredTasksForSection(sectionId: string) {
     const sectionTasks = this.getTasksForSection(sectionId);
 
     if (this.showCompleted()) {
-      return sectionTasks; // Show all tasks
+      return sectionTasks; // Show all tasks (already sorted with done at bottom)
     }
 
     const now = new Date();
