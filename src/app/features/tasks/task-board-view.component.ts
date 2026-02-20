@@ -10,12 +10,21 @@ import { Task, Section, Project } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
-import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-settings-menu.component';
+import {
+  ColumnSettingsMenuComponent,
+  ColumnDisplaySettings,
+} from './column-settings-menu.component';
 
 @Component({
   selector: 'app-task-board-view',
   standalone: true,
-  imports: [CommonModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe, ColumnSettingsMenuComponent],
+  imports: [
+    CommonModule,
+    DragDropModule,
+    MarkdownPipe,
+    MarkdownPlainPipe,
+    ColumnSettingsMenuComponent,
+  ],
   template: `
     <div class="h-full flex flex-col overflow-hidden">
       <!-- Filter Bar -->
@@ -237,7 +246,10 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
               }"
             >
               <!-- Column drag placeholder -->
-              <div *cdkDragPlaceholder class="board-column-placeholder bg-slate-800/30 border-2 border-dashed border-purple-500/40 rounded-xl h-full min-h-[200px]"></div>
+              <div
+                *cdkDragPlaceholder
+                class="board-column-placeholder bg-slate-800/30 border-2 border-dashed border-purple-500/40 rounded-xl h-full min-h-[200px]"
+              ></div>
 
               <!-- Column Header -->
               <div
@@ -289,7 +301,9 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                       class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
                       [class.bg-white/5]="getSectionStatus(section) === 'done'"
                       [class.text-slate-500]="getSectionStatus(section) === 'done'"
-                      [class.text-slate-400]="getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)"
+                      [class.text-slate-400]="
+                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)
+                      "
                       [class.bg-amber-500/30]="isOverWipLimit(section.id)"
                       [class.text-amber-300]="isOverWipLimit(section.id)"
                       [class.border-amber-500/40]="isOverWipLimit(section.id)"
@@ -299,19 +313,36 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                           : ''
                       "
                       [style.color]="
-                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id) ? section.color || '#64748b' : ''
+                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)
+                          ? section.color || '#64748b'
+                          : ''
                       "
                       [style.border]="
                         getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)
                           ? '1px solid ' + getColorWithOpacity(section.color, 0.25)
                           : ''
                       "
-                      [title]="isOverWipLimit(section.id) ? 'Over WIP limit (' + getColumnSettings(section.id).taskLimit + ')' : ''"
+                      [title]="
+                        isOverWipLimit(section.id)
+                          ? 'Over WIP limit (' + getColumnSettings(section.id).taskLimit + ')'
+                          : ''
+                      "
                     >
                       {{ getFilteredTasksForSection(section.id).length }}
                       @if (isOverWipLimit(section.id)) {
-                        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-3 w-3 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="inline-block h-3 w-3 ml-0.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
                         </svg>
                       }
                     </span>
@@ -386,22 +417,28 @@ import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-set
                     [class.grayscale]="task.status === 'done' && !isSelected(task.id)"
                     [class.hover:shadow-lg]="task.status !== 'done'"
                     [ngClass]="{
-                      'task-todo': getSectionStatus(section) === 'todo' && task.status !== 'done' && !isSelected(task.id),
+                      'task-todo':
+                        getSectionStatus(section) === 'todo' &&
+                        task.status !== 'done' &&
+                        !isSelected(task.id),
                       'task-progress':
-                        getSectionStatus(section) === 'in-progress' && task.status !== 'done' && !isSelected(task.id),
+                        getSectionStatus(section) === 'in-progress' &&
+                        task.status !== 'done' &&
+                        !isSelected(task.id),
                       'task-done': task.status === 'done' && !isSelected(task.id),
                     }"
                     [style.border-color]="
-                      isSelected(task.id) ? '' : (task.status !== 'done' ? getColorWithOpacity(section.color, 0.3) : '')
+                      isSelected(task.id)
+                        ? ''
+                        : task.status !== 'done'
+                          ? getColorWithOpacity(section.color, 0.3)
+                          : ''
                     "
                     (click)="selectionMode() ? toggleTaskSelection(task.id) : taskClick.emit(task)"
                   >
                     <!-- Selection checkbox overlay -->
                     @if (selectionMode()) {
-                      <div
-                        class="absolute top-2 left-2 z-20"
-                        (click)="$event.stopPropagation()"
-                      >
+                      <div class="absolute top-2 left-2 z-20" (click)="$event.stopPropagation()">
                         <input
                           type="checkbox"
                           class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
@@ -1092,15 +1129,15 @@ export class TaskBoardViewComponent {
     await this.projectService.reorderSections(this.project().id, reorderedSections);
   }
 
+  private readonly defaultColumnSettings: ColumnDisplaySettings = {
+    hideCompletedTasks: false,
+    compactMode: false,
+    showTaskCount: true,
+    taskLimit: null,
+  };
+
   getColumnSettings(sectionId: string): ColumnDisplaySettings {
-    return (
-      this.columnDisplaySettings()[sectionId] || {
-        hideCompletedTasks: false,
-        compactMode: false,
-        showTaskCount: true,
-        taskLimit: null,
-      }
-    );
+    return this.columnDisplaySettings()[sectionId] || this.defaultColumnSettings;
   }
 
   isOverWipLimit(sectionId: string): boolean {
@@ -1150,20 +1187,23 @@ export class TaskBoardViewComponent {
   }
 
   async handleDeleteSection(sectionId: string) {
+    const otherSections = this.projectSections().filter((s) => s.id !== sectionId);
+    if (otherSections.length === 0) {
+      console.warn('Cannot delete the last column of a project.');
+      return;
+    }
+
     // Check if there are tasks in this section
     const tasksInSection = this.tasks().filter((t) => t.sectionId === sectionId);
     if (tasksInSection.length > 0) {
-      // Move tasks to the first available section or remove sectionId
-      const otherSections = this.projectSections().filter((s) => s.id !== sectionId);
-      if (otherSections.length > 0) {
-        const targetSection = otherSections[0];
-        // Move all tasks concurrently to improve performance
-        await Promise.all(
-          tasksInSection.map((task) =>
-            this.taskService.updateTask(task.id, { sectionId: targetSection.id })
-          )
-        );
-      }
+      // Move tasks to the first available section
+      const targetSection = otherSections[0];
+      // Move all tasks concurrently to improve performance
+      await Promise.all(
+        tasksInSection.map((task) =>
+          this.taskService.updateTask(task.id, { sectionId: targetSection.id }),
+        ),
+      );
     }
 
     await this.projectService.removeSection(this.project().id, sectionId);
