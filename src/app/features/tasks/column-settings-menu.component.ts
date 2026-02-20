@@ -1,4 +1,4 @@
-import { Component, input, output, signal, computed, inject, ElementRef, HostListener } from '@angular/core';
+import { Component, input, output, signal, computed, inject, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Section, CYBERPUNK_COLORS } from '../../core/models/domain.model';
@@ -159,7 +159,7 @@ const COLUMN_COLORS = [
                 </span>
               </label>
               <p class="text-xs text-slate-500 pl-7">
-                When enabled, completed tasks older than 30 minutes will be hidden
+                When enabled, all completed tasks in this column will be hidden
               </p>
             </div>
           </div>
@@ -276,22 +276,24 @@ export class ColumnSettingsMenuComponent {
   menuPosition = { top: 0, left: 0 };
 
   constructor() {
-    // Initialize edited name when section input changes
-  }
+    // Use effect() to react to input signal changes
+    effect(() => {
+      // Sync local state with section input
+      this.editedName.set(this.section().name);
 
-  ngOnChanges(): void {
-    // Sync local state with inputs
-    this.editedName.set(this.section().name);
+      // Sync display settings
+      const settings = this.columnSettings();
+      this.hideCompletedTasks.set(settings.hideCompletedTasks);
+      this.compactMode.set(settings.compactMode);
+      this.showTaskCount.set(settings.showTaskCount);
+      this.selectedTaskLimit = settings.taskLimit;
 
-    // Calculate menu position when it opens
-    if (this.isOpen()) {
-      this.calculateMenuPosition();
-    }
-    const settings = this.columnSettings();
-    this.hideCompletedTasks.set(settings.hideCompletedTasks);
-    this.compactMode.set(settings.compactMode);
-    this.showTaskCount.set(settings.showTaskCount);
-    this.selectedTaskLimit = settings.taskLimit;
+      // Calculate menu position when it opens
+      if (this.isOpen()) {
+        // Use setTimeout to ensure DOM is updated before calculating position
+        setTimeout(() => this.calculateMenuPosition(), 0);
+      }
+    });
   }
 
   isNameChanged(): boolean {

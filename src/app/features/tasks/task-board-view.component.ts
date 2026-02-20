@@ -1103,10 +1103,12 @@ export class TaskBoardViewComponent {
       const otherSections = this.projectSections().filter((s) => s.id !== sectionId);
       if (otherSections.length > 0) {
         const targetSection = otherSections[0];
-        // Move tasks to the first section
-        for (const task of tasksInSection) {
-          await this.taskService.updateTask(task.id, { sectionId: targetSection.id });
-        }
+        // Move all tasks concurrently to improve performance
+        await Promise.all(
+          tasksInSection.map((task) =>
+            this.taskService.updateTask(task.id, { sectionId: targetSection.id })
+          )
+        );
       }
     }
 
