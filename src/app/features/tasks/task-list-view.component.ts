@@ -1,9 +1,9 @@
-import { Component, input, output, computed, signal, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Task } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
 @Component({
