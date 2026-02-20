@@ -38,13 +38,13 @@ const COLUMN_COLORS = [
     @if (isOpen()) {
       <!-- Backdrop -->
       <div
-        class="fixed inset-0 z-[100]"
+        class="fixed inset-0 z-[9998] bg-black/50"
         (click)="close.emit()"
       ></div>
 
       <!-- Menu Panel -->
       <div
-        class="fixed z-[101] w-72 max-h-[80vh] overflow-y-auto bg-slate-900/95 border border-white/20 rounded-xl shadow-2xl backdrop-blur-xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        class="fixed z-[9999] w-72 max-h-[80vh] overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
         style="box-shadow: 0 0 30px rgba(139, 92, 246, 0.25)"
         [style.top.px]="menuPosition.top"
         [style.left.px]="menuPosition.left"
