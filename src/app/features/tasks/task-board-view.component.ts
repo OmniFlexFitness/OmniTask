@@ -10,11 +10,12 @@ import { Task, Section, Project } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
+import { ColumnSettingsMenuComponent, ColumnDisplaySettings } from './column-settings-menu.component';
 
 @Component({
   selector: 'app-task-board-view',
   standalone: true,
-  imports: [CommonModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe],
+  imports: [CommonModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe, ColumnSettingsMenuComponent],
   template: `
     <div class="h-full flex flex-col overflow-hidden">
       <!-- Filter Bar -->
@@ -229,7 +230,7 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
             >
               <!-- Column Header -->
               <div
-                class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative overflow-hidden"
+                class="p-4 flex items-center justify-between border-b handle cursor-grab active:cursor-grabbing relative"
                 [class.border-white/10]="getSectionStatus(section) === 'done'"
                 [class.border-white/10]="getSectionStatus(section) !== 'done'"
               >
@@ -271,47 +272,77 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
                   >
                     {{ section.name }}
                   </h3>
-                  <span
-                    class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
-                    [class.bg-white/5]="getSectionStatus(section) === 'done'"
-                    [class.text-slate-500]="getSectionStatus(section) === 'done'"
-                    [class.text-slate-400]="getSectionStatus(section) !== 'done'"
-                    [style.background]="
-                      getSectionStatus(section) !== 'done'
-                        ? getColorWithOpacity(section.color, 0.2)
-                        : ''
-                    "
-                    [style.color]="
-                      getSectionStatus(section) !== 'done' ? section.color || '#64748b' : ''
-                    "
-                    [style.border]="
-                      getSectionStatus(section) !== 'done'
-                        ? '1px solid ' + getColorWithOpacity(section.color, 0.25)
-                        : ''
-                    "
-                  >
-                    {{ getFilteredTasksForSection(section.id).length }}
-                  </span>
+                  @if (getColumnSettings(section.id).showTaskCount) {
+                    <span
+                      class="text-xs px-2 py-0.5 rounded-full transition-colors duration-300"
+                      [class.bg-white/5]="getSectionStatus(section) === 'done'"
+                      [class.text-slate-500]="getSectionStatus(section) === 'done'"
+                      [class.text-slate-400]="getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)"
+                      [class.bg-amber-500/30]="isOverWipLimit(section.id)"
+                      [class.text-amber-300]="isOverWipLimit(section.id)"
+                      [class.border-amber-500/40]="isOverWipLimit(section.id)"
+                      [style.background]="
+                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)
+                          ? getColorWithOpacity(section.color, 0.2)
+                          : ''
+                      "
+                      [style.color]="
+                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id) ? section.color || '#64748b' : ''
+                      "
+                      [style.border]="
+                        getSectionStatus(section) !== 'done' && !isOverWipLimit(section.id)
+                          ? '1px solid ' + getColorWithOpacity(section.color, 0.25)
+                          : ''
+                      "
+                      [title]="isOverWipLimit(section.id) ? 'Over WIP limit (' + getColumnSettings(section.id).taskLimit + ')' : ''"
+                    >
+                      {{ getFilteredTasksForSection(section.id).length }}
+                      @if (isOverWipLimit(section.id)) {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="inline-block h-3 w-3 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      }
+                    </span>
+                  }
                 </div>
-                <button
-                  class="text-slate-500 hover:text-white transition-colors relative z-10"
-                  (click)="showColumnMenu(section)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                <!-- Column Menu Button & Settings -->
+                <div class="relative z-10">
+                  <button
+                    class="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-white/5"
+                    (click)="toggleColumnMenu(section.id); $event.stopPropagation()"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                      />
+                    </svg>
+                  </button>
+
+                  <!-- Column Settings Menu -->
+                  <app-column-settings-menu
+                    [section]="section"
+                    [projectId]="project().id"
+                    [isOpen]="openMenuSectionId() === section.id"
+                    [sectionIndex]="$index"
+                    [totalSections]="projectSections().length"
+                    [columnSettings]="getColumnSettings(section.id)"
+                    (close)="closeColumnMenu()"
+                    (colorChanged)="handleColorChange($event)"
+                    (nameChanged)="handleNameChange($event)"
+                    (reorder)="handleReorder($event)"
+                    (settingsChanged)="handleSettingsChange($event)"
+                    (delete)="handleDeleteSection($event)"
+                  />
+                </div>
               </div>
 
               <!-- Task List -->
@@ -329,7 +360,9 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
                     cdkDrag
                     [cdkDragData]="task"
                     [cdkDragDisabled]="selectionMode()"
-                    class="ofx-task-card p-4 rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden"
+                    class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden"
+                    [class.p-4]="!getColumnSettings(section.id).compactMode"
+                    [class.p-2]="getColumnSettings(section.id).compactMode"
                     [class.bg-slate-800]="task.status !== 'done' && !isSelected(task.id)"
                     [class.bg-purple-900/30]="isSelected(task.id)"
                     [class.bg-slate-900/30]="task.status === 'done' && !isSelected(task.id)"
@@ -788,6 +821,10 @@ export class TaskBoardViewComponent {
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();
 
+  // Column settings menu state
+  openMenuSectionId = signal<string | null>(null);
+  columnDisplaySettings = signal<Record<string, ColumnDisplaySettings>>({});
+
   // Computed: Get all section IDs for drag-drop connection
   connectedDropLists = computed(() => this.project().sections.map((s) => s.id));
 
@@ -906,9 +943,16 @@ export class TaskBoardViewComponent {
 
   getFilteredTasksForSection(sectionId: string) {
     const sectionTasks = this.getTasksForSection(sectionId);
+    const columnSettings = this.getColumnSettings(sectionId);
 
+    // If global "show completed" is on, show all tasks
     if (this.showCompleted()) {
-      return sectionTasks; // Show all tasks (already sorted with done at bottom)
+      return sectionTasks;
+    }
+
+    // If column-specific "hide completed" is enabled, filter more aggressively
+    if (columnSettings.hideCompletedTasks) {
+      return sectionTasks.filter((task) => task.status !== 'done');
     }
 
     const now = new Date();
@@ -985,9 +1029,89 @@ export class TaskBoardViewComponent {
     return due < now;
   }
 
-  showColumnMenu(section: Section) {
-    // Placeholder for column actions (Delete, Edit, Color)
-    console.log('Column menu', section);
+  // Column menu methods
+  toggleColumnMenu(sectionId: string) {
+    this.openMenuSectionId.update((current) => (current === sectionId ? null : sectionId));
+  }
+
+  closeColumnMenu() {
+    this.openMenuSectionId.set(null);
+  }
+
+  getColumnSettings(sectionId: string): ColumnDisplaySettings {
+    return (
+      this.columnDisplaySettings()[sectionId] || {
+        hideCompletedTasks: false,
+        compactMode: false,
+        showTaskCount: true,
+        taskLimit: null,
+      }
+    );
+  }
+
+  isOverWipLimit(sectionId: string): boolean {
+    const settings = this.getColumnSettings(sectionId);
+    if (!settings.taskLimit) return false;
+    const taskCount = this.getFilteredTasksForSection(sectionId).length;
+    return taskCount > settings.taskLimit;
+  }
+
+  async handleColorChange(event: { sectionId: string; color: string }) {
+    const projectId = this.project().id;
+    await this.projectService.updateSection(projectId, event.sectionId, { color: event.color });
+  }
+
+  async handleNameChange(event: { sectionId: string; name: string }) {
+    const projectId = this.project().id;
+    await this.projectService.updateSection(projectId, event.sectionId, { name: event.name });
+  }
+
+  async handleReorder(event: { sectionId: string; direction: 'left' | 'right' }) {
+    const sections = [...this.projectSections()];
+    const currentIndex = sections.findIndex((s) => s.id === event.sectionId);
+
+    if (currentIndex === -1) return;
+
+    const newIndex = event.direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+
+    if (newIndex < 0 || newIndex >= sections.length) return;
+
+    // Swap the sections
+    [sections[currentIndex], sections[newIndex]] = [sections[newIndex], sections[currentIndex]];
+
+    // Update order values
+    const reorderedSections = sections.map((s, index) => ({ ...s, order: index }));
+
+    await this.projectService.reorderSections(this.project().id, reorderedSections);
+  }
+
+  handleSettingsChange(event: { sectionId: string; settings: Partial<ColumnDisplaySettings> }) {
+    this.columnDisplaySettings.update((current) => ({
+      ...current,
+      [event.sectionId]: {
+        ...this.getColumnSettings(event.sectionId),
+        ...event.settings,
+      },
+    }));
+  }
+
+  async handleDeleteSection(sectionId: string) {
+    // Check if there are tasks in this section
+    const tasksInSection = this.tasks().filter((t) => t.sectionId === sectionId);
+    if (tasksInSection.length > 0) {
+      // Move tasks to the first available section or remove sectionId
+      const otherSections = this.projectSections().filter((s) => s.id !== sectionId);
+      if (otherSections.length > 0) {
+        const targetSection = otherSections[0];
+        // Move tasks to the first section
+        for (const task of tasksInSection) {
+          await this.taskService.updateTask(task.id, { sectionId: targetSection.id });
+        }
+      }
+    }
+
+    await this.projectService.removeSection(this.project().id, sectionId);
+    this.closeColumnMenu();
   }
 
   /**
