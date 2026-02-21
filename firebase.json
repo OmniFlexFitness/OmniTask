@@ -48,5 +48,13 @@
                 "firebase-debug.log.*"
             ]
         }
-    ]
+    ],
+    "extensions": {
+        "firestore-send-email": "firebase/firestore-send-email@latest",
+        "delete-user-data": "firebase/delete-user-data@latest",
+        "storage-resize-images": "firebase/storage-resize-images@latest",
+        "speech-to-text": "googlecloud/speech-to-text@latest",
+        "firestore-multimodal-genai": "googlecloud/firestore-multimodal-genai@latest",
+        "firestore-vector-search": "googlecloud/firestore-vector-search@latest"
+    }
 }
