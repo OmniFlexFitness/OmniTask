@@ -37,29 +37,40 @@ const COLUMN_COLORS = [
   template: `
     @if (isOpen()) {
       <!-- Backdrop -->
-      <div
-        class="fixed inset-0 z-[9998] bg-black/50"
-        (click)="close.emit()"
-      ></div>
+      <div class="fixed inset-0 z-[9998] bg-black/50" (click)="close.emit()"></div>
 
       <!-- Menu Panel -->
       <div
-        class="fixed z-[9999] w-72 max-h-[80vh] overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        class="fixed z-[9999] w-72 overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
         style="box-shadow: 0 0 30px rgba(139, 92, 246, 0.25)"
         [style.top.px]="menuPosition.top"
         [style.left.px]="menuPosition.left"
+        [style.max-height.px]="menuMaxHeight"
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
-        <div class="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-purple-600/20 to-fuchsia-600/20">
+        <div
+          class="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-purple-600/20 to-fuchsia-600/20"
+        >
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold text-white">Column Settings</h3>
             <button
               class="text-slate-400 hover:text-white transition-colors"
               (click)="close.emit()"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -94,14 +105,25 @@ const COLUMN_COLORS = [
               <button
                 class="w-8 h-8 rounded-lg transition-all duration-200 relative group"
                 [style.background]="color.value"
-                [style.box-shadow]="section().color === color.value ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value : 'none'"
+                [style.box-shadow]="
+                  section().color === color.value
+                    ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value
+                    : 'none'
+                "
                 [class.ring-2]="section().color === color.value"
                 [class.ring-white/40]="section().color === color.value"
                 (click)="changeColor(color.value)"
                 [title]="color.name"
               >
                 @if (section().color === color.value) {
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute inset-0 m-auto text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4 absolute inset-0 m-auto text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="3"
+                  >
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 }
@@ -124,8 +146,19 @@ const COLUMN_COLORS = [
               [disabled]="!canMoveLeft()"
               (click)="moveLeft()"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Move Left
             </button>
@@ -135,8 +168,19 @@ const COLUMN_COLORS = [
               (click)="moveRight()"
             >
               Move Right
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -211,9 +255,7 @@ const COLUMN_COLORS = [
               <option [ngValue]="15">15 tasks</option>
             </select>
           </div>
-          <p class="text-xs text-slate-500 mt-1.5">
-            Visual warning when column exceeds this limit
-          </p>
+          <p class="text-xs text-slate-500 mt-1.5">Visual warning when column exceeds this limit</p>
         </div>
 
         <!-- Danger Zone -->
@@ -222,8 +264,19 @@ const COLUMN_COLORS = [
             class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition-all border border-rose-500/20"
             (click)="deleteSection()"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
             </svg>
             Delete Column
           </button>
@@ -231,11 +284,13 @@ const COLUMN_COLORS = [
       </div>
     }
   `,
-  styles: [`
-    :host {
-      display: contents;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: contents;
+      }
+    `,
+  ],
 })
 export class ColumnSettingsMenuComponent {
   private readonly projectService = inject(ProjectService);
@@ -274,6 +329,7 @@ export class ColumnSettingsMenuComponent {
 
   // Menu position (calculated when menu opens)
   menuPosition = { top: 0, left: 0 };
+  menuMaxHeight = 800;
 
   constructor() {
     // Use effect() to react to input signal changes
@@ -337,7 +393,9 @@ export class ColumnSettingsMenuComponent {
 
     // Also check name for backwards compatibility
     const nameLower = this.section().name.toLowerCase();
-    return nameLower.includes('done') || nameLower.includes('complete') || nameLower.includes('finished');
+    return (
+      nameLower.includes('done') || nameLower.includes('complete') || nameLower.includes('finished')
+    );
   }
 
   toggleHideCompleted(): void {
@@ -345,7 +403,7 @@ export class ColumnSettingsMenuComponent {
     this.hideCompletedTasks.set(newValue);
     this.settingsChanged.emit({
       sectionId: this.section().id,
-      settings: { hideCompletedTasks: newValue }
+      settings: { hideCompletedTasks: newValue },
     });
   }
 
@@ -354,7 +412,7 @@ export class ColumnSettingsMenuComponent {
     this.compactMode.set(newValue);
     this.settingsChanged.emit({
       sectionId: this.section().id,
-      settings: { compactMode: newValue }
+      settings: { compactMode: newValue },
     });
   }
 
@@ -363,14 +421,14 @@ export class ColumnSettingsMenuComponent {
     this.showTaskCount.set(newValue);
     this.settingsChanged.emit({
       sectionId: this.section().id,
-      settings: { showTaskCount: newValue }
+      settings: { showTaskCount: newValue },
     });
   }
 
   updateTaskLimit(limit: number | null): void {
     this.settingsChanged.emit({
       sectionId: this.section().id,
-      settings: { taskLimit: limit }
+      settings: { taskLimit: limit },
     });
   }
 
@@ -387,7 +445,7 @@ export class ColumnSettingsMenuComponent {
       const menuWidth = 288;
       this.menuPosition = {
         top: 100,
-        left: Math.max(8, (window.innerWidth - menuWidth) / 2)
+        left: Math.max(8, (window.innerWidth - menuWidth) / 2),
       };
       return;
     }
@@ -414,5 +472,6 @@ export class ColumnSettingsMenuComponent {
     }
 
     this.menuPosition = { top, left };
+    this.menuMaxHeight = Math.max(200, window.innerHeight - top - 16);
   }
 }
