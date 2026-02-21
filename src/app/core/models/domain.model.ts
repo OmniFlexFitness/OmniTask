@@ -28,6 +28,8 @@ export interface Section {
   color?: string; // For visual distinction
   /** The task status this section represents. Used to auto-sync status ↔ sectionId. */
   status?: Task['status'];
+  description?: string;
+  wipLimit?: number | null;
 }
 
 /**
