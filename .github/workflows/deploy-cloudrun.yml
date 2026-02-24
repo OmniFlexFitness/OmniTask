@@ -40,6 +40,9 @@ jobs:
       - name: Enable Vertex AI API
         run: gcloud services enable aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
 
+      - name: Enable Mobile SDK API (required for Firebase Extensions)
+        run: gcloud services enable mobilesdk-pa.googleapis.com --project ${{ env.PROJECT_ID }}
+
       - name: Get version
         id: version
         run: |
