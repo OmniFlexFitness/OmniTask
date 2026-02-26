@@ -102,6 +102,8 @@ jobs:
           npm ci
           cd ..
 
+      - name: Enable Required APIs for Firebase Extensions
+        run: gcloud services enable firebaseinstallations.googleapis.com aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
 
       - name: Deploy to Firebase (Hosting, Firestore, Functions, Extensions)
         run: npx firebase-tools deploy --only hosting,firestore,functions,extensions --project ${{ env.PROJECT_ID }} --non-interactive --force
