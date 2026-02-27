@@ -162,6 +162,49 @@ export class TaskService {
   }
 
   /**
+   * Reconcile derived task fields for newly created tasks.
+   * Ensures that if a task is created with a status but no sectionId,
+   * or a sectionId but mismatched status, they are aligned.
+   */
+  private async reconcileNewTaskFields(
+    task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Promise<Omit<Task, 'id' | 'createdAt' | 'updatedAt'>> {
+    const reconciled = { ...task };
+    if (!reconciled.projectId) return reconciled;
+
+    const project = await this.projectService.getProject(reconciled.projectId);
+    const sections: Section[] = project?.sections ?? [];
+
+    // 1. Status is provided but no sectionId
+    if (reconciled.status && !reconciled.sectionId) {
+      const matchingSection = this.findSectionForStatus(reconciled.status, sections);
+      if (matchingSection) {
+        reconciled.sectionId = matchingSection.id;
+      }
+      if (reconciled.status === 'done' && !reconciled.completedAt) {
+        reconciled.completedAt = new Date();
+      }
+    }
+    // 2. SectionId is provided
+    else if (reconciled.sectionId) {
+      const targetSection = sections.find((s) => s.id === reconciled.sectionId);
+      if (targetSection) {
+        const derivedStatus = this.getSectionStatus(targetSection);
+        if (derivedStatus && reconciled.status !== derivedStatus) {
+          reconciled.status = derivedStatus;
+          if (derivedStatus === 'done' && !reconciled.completedAt) {
+            reconciled.completedAt = new Date();
+          } else if (derivedStatus !== 'done') {
+            reconciled.completedAt = undefined;
+          }
+        }
+      }
+    }
+
+    return reconciled;
+  }
+
+  /**
    * Transform Google Tasks API format to OmniTask Task data
    * Maps Google Tasks API fields to local model fields
    */
@@ -303,9 +346,13 @@ export class TaskService {
 
     try {
       const user = this.auth.currentUserSig();
+
+      // Reconcile derived fields for the new task
+      const reconciled = await this.reconcileNewTaskFields(task);
+
       // Strip undefined values - Firestore does not accept undefined as a field value
       const data = this.stripUndefined({
-        ...task,
+        ...reconciled,
         createdById: user?.uid,
         createdAt: new Date(),
         updatedAt: new Date(),

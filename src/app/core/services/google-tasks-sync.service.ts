@@ -164,6 +164,16 @@ export class GoogleTasksSyncService {
     const allTasksQuery = query(this.tasksCollection, where('projectId', '==', projectId));
     const allTasksSnapshot = await getDocs(allTasksQuery);
 
+    // Get project sections to map status to sectionId for new tasks
+    const projectDocRef = doc(this.firestore, `projects/${projectId}`);
+    const projectDoc = await getDocs(
+      query(collection(this.firestore, 'projects'), where('__name__', '==', projectId)),
+    );
+    let sections: any[] = [];
+    if (!projectDoc.empty) {
+      sections = projectDoc.docs[0].data()['sections'] || [];
+    }
+
     // Map 1: Tasks with googleTaskId (primary match)
     const tasksByGoogleId = new Map<
       string,
@@ -261,6 +271,42 @@ export class GoogleTasksSyncService {
       } else {
         // No match found - create new task in OmniTask
         const taskData = this.transformFromGoogleTask(googleTask, projectId, googleTaskListId);
+
+        // Map status to a sectionId so it appears in the right board column
+        if (taskData.status) {
+          const byField = sections.find((s) => s.status === taskData.status);
+          let matchedSectionId = byField?.id;
+          if (!matchedSectionId) {
+            // Fallback matching logic similar to TaskService.sectionNameToStatus
+            matchedSectionId = sections.find((s) => {
+              const nameLower = s.name.toLowerCase().replace(/\s+/g, '-');
+              if (
+                taskData.status === 'done' &&
+                (nameLower.includes('done') || nameLower.includes('complete'))
+              )
+                return true;
+              if (
+                taskData.status === 'in-progress' &&
+                (nameLower.includes('progress') ||
+                  nameLower.includes('doing') ||
+                  nameLower.includes('wip'))
+              )
+                return true;
+              if (
+                taskData.status === 'todo' &&
+                (nameLower.includes('todo') ||
+                  nameLower.includes('to-do') ||
+                  nameLower.includes('backlog'))
+              )
+                return true;
+              return false;
+            })?.id;
+          }
+          if (matchedSectionId) {
+            taskData.sectionId = matchedSectionId;
+          }
+        }
+
         await addDoc(this.tasksCollection, {
           ...taskData,
           createdAt: new Date(),
@@ -282,7 +328,7 @@ export class GoogleTasksSyncService {
    */
   async createTaskListForProject(
     projectId: string,
-    projectName: string
+    projectName: string,
   ): Promise<string | undefined> {
     try {
       const taskList = await firstValueFrom(this.googleTasksService.createTaskList(projectName));
@@ -311,11 +357,11 @@ export class GoogleTasksSyncService {
   async createTaskInGoogle(
     taskDocRef: DocumentReference,
     googleTaskListId: string,
-    taskData: Partial<Task>
+    taskData: Partial<Task>,
   ): Promise<string> {
     const googleTaskData = this.transformToGoogleTask(taskData);
     const googleTask = await firstValueFrom(
-      this.googleTasksService.createTask(googleTaskListId, googleTaskData)
+      this.googleTasksService.createTask(googleTaskListId, googleTaskData),
     );
     // Verify the Google Task was created with an ID
     if (!googleTask.id) {

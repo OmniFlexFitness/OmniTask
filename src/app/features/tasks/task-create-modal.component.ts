@@ -776,11 +776,16 @@ export class TaskCreateModalComponent {
       const assigneeIds = assignees.map((a) => a.id);
       const assigneeNames = assignees.map((a) => a.label);
 
+      const selectedSection = this.sections().find((s) => s.id === val.sectionId);
+      const derivedStatus = selectedSection
+        ? this.taskService.getSectionStatus(selectedSection) || 'todo'
+        : 'todo';
+
       const taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
         projectId: this.projectId(),
         title: val.title!,
         description: val.description || '',
-        status: 'todo',
+        status: derivedStatus,
         priority: val.priority as Task['priority'],
         order: 0, // Will be assigned properly
         sectionId: val.sectionId || undefined,
