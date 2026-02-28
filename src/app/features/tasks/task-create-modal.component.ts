@@ -245,22 +245,20 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
           </div>
 
           <!-- Section (for Board view) -->
-          @if (sections().length > 0) {
-            <div>
-              <label
-                class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-                >Section</label
-              >
-              <select
-                formControlName="sectionId"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                @for (section of sections(); track section.id) {
-                  <option [value]="section.id">{{ section.name }}</option>
-                }
-              </select>
-            </div>
-          }
+          <div [class.hidden]="sections().length === 0">
+            <label
+              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
+              >Section</label
+            >
+            <select
+              formControlName="sectionId"
+              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+            >
+              @for (section of sections(); track section.id) {
+                <option [value]="section.id">{{ section.name }}</option>
+              }
+            </select>
+          </div>
 
           <!-- Custom Fields -->
           @if (project()?.customFields?.length) {
