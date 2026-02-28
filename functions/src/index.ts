@@ -858,7 +858,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     let emailSubject: string;
     if (assigneesChanged && addedIds.length > 0) {
       emailSubject = `📋 You've been assigned: ${safeTitle || 'New Task'}`;
-    } else if (statusChanged) {
+    } else if (statusChangedActual) {
       const statusLabel =
         after.status === 'done'
           ? '✅ Done'
