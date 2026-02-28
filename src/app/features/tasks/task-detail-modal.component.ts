@@ -17,7 +17,7 @@ import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { Task, Project, Subtask } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of, map } from 'rxjs';
+import { switchMap, of, map, BehaviorSubject, debounceTime } from 'rxjs';
 import {
   AutocompleteInputComponent,
   AutocompleteOption,
@@ -201,6 +201,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                 [value]="''"
                 [allowCustom]="false"
                 placeholder="Search contacts to add..."
+                (search)="onAssigneeSearch($event)"
                 (optionSelected)="onAssigneeSelected($event)"
               ></app-autocomplete-input>
             </div>
@@ -576,6 +577,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
                           [value]="''"
                           [allowCustom]="false"
                           placeholder="Add assignee..."
+                          (search)="onAssigneeSearch($event)"
                           (optionSelected)="onSubtaskAssigneeSelected(subtask.id, $event)"
                         ></app-autocomplete-input>
                       </div>
@@ -803,8 +805,12 @@ export class TaskDetailModalComponent {
   });
 
   // Contacts for assignee autocomplete
+  private assigneeSearchSubject = new BehaviorSubject<string>('');
+
   assigneeOptions = toSignal(
-    this.contactsService.getContacts().pipe(
+    this.assigneeSearchSubject.pipe(
+      debounceTime(300),
+      switchMap((query) => this.contactsService.searchContacts(query)),
       map((contacts) =>
         contacts.map(
           (c): AutocompleteOption => ({
@@ -820,6 +826,10 @@ export class TaskDetailModalComponent {
     ),
     { initialValue: [] },
   );
+
+  onAssigneeSearch(query: string): void {
+    this.assigneeSearchSubject.next(query);
+  }
 
   /**
    * Generate a consistent color for a contact based on their email

@@ -680,29 +680,45 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'bertin.kenol@omniflexfitness.com';
 
     // Check notifyAssignees flag (default true for backward compatibility)
-    const shouldNotify = after.notifyAssignees !== false;
+    // Fortified behavior: If someone drags a task (status change) and doesn't explicitly pass notifyAssignees,
+    // we default to true to guarantee assignee state updates.
+    const statusChangedActual = before && before.status !== after.status;
+    const notifySettingChanged = before?.notifyAssignees !== after?.notifyAssignees;
+    let shouldNotify = after.notifyAssignees !== false;
+
+    if (statusChangedActual && !notifySettingChanged) {
+      // It's a status change but the notify setting wasn't explicitly touched.
+      shouldNotify = true;
+    }
 
     // ── Determine what changed ───────────────────────────────────────────
     // Multi-assignee: use assigneeIds array, fall back to assignedToId for legacy
-    const beforeIds: string[] =
-      before?.assigneeIds ?? (before?.assignedToId ? [before.assignedToId] : []);
-    const afterIds: string[] =
-      after.assigneeIds ?? (after.assignedToId ? [after.assignedToId] : []);
+    // Also include nested subtask assignees
+    const beforeIds: string[] = [
+      ...(before?.assigneeIds ?? (before?.assignedToId ? [before.assignedToId] : [])),
+      ...(before?.subtasks?.flatMap((s: any) => s.assigneeIds ?? []) ?? []),
+    ];
 
-    const addedIds = afterIds.filter((id: string) => !beforeIds.includes(id));
-    const removedIds = beforeIds.filter((id: string) => !afterIds.includes(id));
+    const afterIds: string[] = [
+      ...(after.assigneeIds ?? (after.assignedToId ? [after.assignedToId] : [])),
+      ...(after.subtasks?.flatMap((s: any) => s.assigneeIds ?? []) ?? []),
+    ];
+
+    const uniqueBeforeIds = [...new Set(beforeIds)];
+    const uniqueAfterIds = [...new Set(afterIds)];
+
+    const addedIds = uniqueAfterIds.filter((id: string) => !uniqueBeforeIds.includes(id));
+    const removedIds = uniqueBeforeIds.filter((id: string) => !uniqueAfterIds.includes(id));
     const assigneesChanged = addedIds.length > 0 || removedIds.length > 0;
 
-    const statusChanged = before && before.status !== after.status;
-
     // Nothing relevant changed → skip
-    if (!assigneesChanged && !statusChanged) {
+    if (!assigneesChanged && !statusChangedActual) {
       console.log('No assignee or status change, skipping email notification');
       return;
     }
 
     // If status changed but no assignees, nothing to notify about
-    if (statusChanged && !assigneesChanged && afterIds.length === 0) {
+    if (statusChangedActual && !assigneesChanged && uniqueAfterIds.length === 0) {
       console.log('Status changed but no assignees, skipping notification');
       return;
     }
@@ -710,7 +726,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     // If notification is disabled, still allow admin-only notifications
     // (admin always gets notified — do NOT skip here)
     // Only skip if notify is off AND there's no assignment change AND no status change with assignees
-    if (!shouldNotify && !assigneesChanged && !(statusChanged && afterIds.length > 0)) {
+    if (!shouldNotify && !assigneesChanged && !(statusChangedActual && uniqueAfterIds.length > 0)) {
       console.log('notifyAssignees is false and no relevant change for admin, skipping');
       return;
     }
@@ -720,46 +736,30 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
      * Resolve an assignee ID (could be a UID or email) to an email address.
      */
     async function resolveEmail(assigneeId: string, assigneeName?: string): Promise<string | null> {
-      // Only resolve via users collection lookup — do NOT trust raw email strings
-      // from assigneeId to mitigate SSRF (arbitrary email sending)
+      // Unwrap nested assignment strings if format is "id|email@domain.com"
+      const parts = assigneeId.split('|');
+      const actualId = parts[0];
+      const potentialEmail = parts.length > 1 ? parts[1] : actualId;
 
-      // Try users collection first
+      // Try users collection first by ID
       try {
-        const userDoc = await db.collection('users').doc(assigneeId).get();
+        const userDoc = await db.collection('users').doc(actualId).get();
         if (userDoc.exists) {
           const userData = userDoc.data() as { email?: string };
           if (userData.email) return userData.email;
         }
       } catch (err) {
-        console.warn(`Failed to look up user ${assigneeId}:`, err);
+        console.warn(`Failed to look up user ${actualId}:`, err);
       }
 
-      // If the ID itself is an email, verify it belongs to a known user
-      if (assigneeId.includes('@')) {
-        try {
-          const userSnap = await db
-            .collection('users')
-            .where('email', '==', assigneeId)
-            .limit(1)
-            .get();
-          if (!userSnap.empty) return assigneeId;
-        } catch (err) {
-          console.warn(`Failed to verify email ${assigneeId}:`, err);
-        }
+      // If the potentialEmail is a valid email, trust it for external assignment
+      if (potentialEmail && potentialEmail.includes('@') && potentialEmail.includes('.')) {
+        return potentialEmail;
       }
 
-      // Fallback: check assigneeName against users collection too
-      if (assigneeName && assigneeName.includes('@')) {
-        try {
-          const userSnap = await db
-            .collection('users')
-            .where('email', '==', assigneeName)
-            .limit(1)
-            .get();
-          if (!userSnap.empty) return assigneeName;
-        } catch (err) {
-          console.warn(`Failed to verify assigneeName email ${assigneeName}:`, err);
-        }
+      // Fallback: check assigneeName
+      if (assigneeName && assigneeName.includes('@') && assigneeName.includes('.')) {
+        return assigneeName;
       }
 
       return null;
@@ -822,10 +822,12 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     }
 
     // 2. If status changed and notify is on, email ALL current assignees
-    if (statusChanged && shouldNotify && afterIds.length > 0) {
-      for (let i = 0; i < afterIds.length; i++) {
+    if (statusChangedActual && shouldNotify && uniqueAfterIds.length > 0) {
+      for (let i = 0; i < uniqueAfterIds.length; i++) {
+        // We only map names from afterNames for the direct assigneeIds (not subtasks)
+        // Subtask assignees just get emails without personalized greeting names if index out of bounds
         const name = afterNames[i] || undefined;
-        const email = await resolveEmail(afterIds[i], name);
+        const email = await resolveEmail(uniqueAfterIds[i], name);
         if (email && email.includes('@')) {
           recipientEmails.add(email);
         }

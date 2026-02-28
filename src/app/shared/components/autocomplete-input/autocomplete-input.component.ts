@@ -40,18 +40,18 @@ export interface AutocompleteOption {
       >
         <!-- Optional Icon/Avatar prefix -->
         @if (selectedOption()) {
-        <div class="flex-shrink-0">
-          @if (selectedOption()?.avatar) {
-          <img [src]="selectedOption()!.avatar" class="w-5 h-5 rounded-full object-cover" />
-          } @else if (selectedOption()?.color) {
-          <div
-            class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-            [style.background-color]="selectedOption()!.color"
-          >
-            {{ selectedOption()!.label.charAt(0).toUpperCase() }}
+          <div class="flex-shrink-0">
+            @if (selectedOption()?.avatar) {
+              <img [src]="selectedOption()!.avatar" class="w-5 h-5 rounded-full object-cover" />
+            } @else if (selectedOption()?.color) {
+              <div
+                class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                [style.background-color]="selectedOption()!.color"
+              >
+                {{ selectedOption()!.label.charAt(0).toUpperCase() }}
+              </div>
+            }
           </div>
-          }
-        </div>
         }
 
         <input
@@ -68,25 +68,25 @@ export interface AutocompleteOption {
         <!-- Loading Spinner -->
         <!-- Clear Button -->
         @if (displayValue()) {
-        <button
-          tabindex="-1"
-          type="button"
-          (click)="clear()"
-          class="text-slate-500 hover:text-white"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+          <button
+            tabindex="-1"
+            type="button"
+            (click)="clear()"
+            class="text-slate-500 hover:text-white"
           >
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
         }
       </div>
 
@@ -105,66 +105,73 @@ export interface AutocompleteOption {
           <!-- @if (loading) { ... } -->
 
           @if (filteredOptions().length > 0) {
-          <ul class="py-1">
-            @for (option of filteredOptions(); track option.id; let i = $index) {
-            <li
-              (click)="selectOption(option)"
-              class="px-3 py-2 cursor-pointer flex items-center gap-3 transition-colors"
-              [class.bg-slate-800]="i === activeIndex()"
-              [class.text-cyan-400]="i === activeIndex()"
-              [class.text-slate-300]="i !== activeIndex()"
-              (mousemove)="activeIndex.set(i)"
-            >
-              <!-- Avatar/Color -->
-              <div class="flex-shrink-0">
-                @if (option.avatar) {
-                <img [src]="option.avatar" class="w-8 h-8 rounded-full object-cover bg-slate-800" />
-                } @else if (option.color) {
-                <div
-                  class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                  [style.background-color]="option.color"
+            <ul class="py-1">
+              @for (option of filteredOptions(); track option.id; let i = $index) {
+                <li
+                  (click)="selectOption(option)"
+                  class="px-3 py-2 cursor-pointer flex items-center gap-3 transition-colors"
+                  [class.bg-slate-800]="i === activeIndex()"
+                  [class.text-cyan-400]="i === activeIndex()"
+                  [class.text-slate-300]="i !== activeIndex()"
+                  (mousemove)="activeIndex.set(i)"
                 >
-                  {{ option.label.charAt(0).toUpperCase() }}
-                </div>
-                } @else {
-                <div
-                  class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                </div>
-                }
-              </div>
+                  <!-- Avatar/Color -->
+                  <div class="flex-shrink-0">
+                    @if (option.avatar) {
+                      <img
+                        [src]="option.avatar"
+                        class="w-8 h-8 rounded-full object-cover bg-slate-800"
+                      />
+                    } @else if (option.color) {
+                      <div
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                        [style.background-color]="option.color"
+                      >
+                        {{ option.label.charAt(0).toUpperCase() }}
+                      </div>
+                    } @else {
+                      <div
+                        class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                    }
+                  </div>
 
-              <!-- Text -->
-              <div class="flex flex-col min-w-0 flex-1">
-                <span class="text-sm font-medium truncate">{{ option.label }}</span>
-                @if (option.sublabel) {
-                <span class="text-xs text-slate-500 truncate">{{ option.sublabel }}</span>
-                }
-              </div>
+                  <!-- Text -->
+                  <div class="flex flex-col min-w-0 flex-1">
+                    <span class="text-sm font-medium truncate">{{ option.label }}</span>
+                    @if (option.sublabel) {
+                      <span class="text-xs text-slate-500 truncate">{{ option.sublabel }}</span>
+                    }
+                  </div>
 
-              <!-- Checkmark if currently selected (optional, maybe distracting) -->
-            </li>
-            }
-          </ul>
+                  <!-- Checkmark if currently selected (optional, maybe distracting) -->
+                </li>
+              }
+            </ul>
           } @else {
-          <!-- No results -->
-          <div class="px-3 py-3 text-sm text-slate-500 text-center">
-            @if (allowCustom && inputValue().trim()) { Press
-            <span class="font-bold text-slate-400">Enter</span> to use "{{ inputValue() }}" } @else
-            { No matches found }
-          </div>
+            <!-- No results -->
+            <div class="px-3 py-3 text-sm text-slate-500 text-center">
+              @if (allowCustom && inputValue().trim()) {
+                Press <span class="font-bold text-slate-400">Enter</span> to use "{{
+                  inputValue()
+                }}"
+              } @else {
+                No matches found
+              }
+            </div>
           }
         </div>
       </ng-template>
@@ -194,6 +201,7 @@ export class AutocompleteInputComponent {
 
   @Output() optionSelected = new EventEmitter<AutocompleteOption | string>();
   @Output() valueChange = new EventEmitter<string>();
+  @Output() search = new EventEmitter<string>();
 
   @ViewChild('inputEl') inputEl!: ElementRef<HTMLInputElement>;
 
@@ -212,7 +220,7 @@ export class AutocompleteInputComponent {
 
     return this.options.filter(
       (opt) =>
-        opt.label.toLowerCase().includes(query) || opt.sublabel?.toLowerCase().includes(query)
+        opt.label.toLowerCase().includes(query) || opt.sublabel?.toLowerCase().includes(query),
     );
   });
 
@@ -235,7 +243,7 @@ export class AutocompleteInputComponent {
 
     // Try to find matching option by ID or Label (fuzzy match on label if ID fails)
     const match = this.options.find(
-      (o) => o.id === this.currentValue || o.label === this.currentValue
+      (o) => o.id === this.currentValue || o.label === this.currentValue,
     );
 
     if (match) {
@@ -256,6 +264,9 @@ export class AutocompleteInputComponent {
     if (!this.isOpen()) {
       this.isOpen.set(true);
     }
+
+    // Always emit search event for predictive typing
+    this.search.emit(val);
 
     // If custom values allowed, emit immediately
     if (this.allowCustom) {

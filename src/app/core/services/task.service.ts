@@ -510,7 +510,13 @@ export class TaskService {
    * Extensible: any additional fields on the update objects are persisted.
    */
   async reorderTasks(
-    tasks: { id: string; order: number; sectionId?: string; status?: Task['status'] }[],
+    tasks: {
+      id: string;
+      order: number;
+      sectionId?: string;
+      status?: Task['status'];
+      currentStatus?: Task['status'];
+    }[],
   ): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -518,17 +524,8 @@ export class TaskService {
     try {
       const batch = writeBatch(this.firestore);
 
-      // We need project sections to derive status from sectionId.
-      // Fetch once and reuse for all tasks in the batch.
-      let sections: Section[] = [];
-      if (tasks.length > 0 && tasks[0].sectionId) {
-        // Get any task to find the project
-        const sampleTask = await this.getTask(tasks[0].id);
-        if (sampleTask?.projectId) {
-          const project = await this.projectService.getProject(sampleTask.projectId);
-          sections = project?.sections ?? [];
-        }
-      }
+      // Statuses are now preferably resolved by the caller and passed via `status` and `currentStatus`.
+      // The component calling this (e.g. TaskBoardViewComponent) already has project sections and tasks in memory.
 
       for (const task of tasks) {
         const taskRef = doc(this.firestore, `tasks/${task.id}`);
@@ -539,19 +536,23 @@ export class TaskService {
 
         if (task.sectionId !== undefined) {
           updateData['sectionId'] = task.sectionId;
+        }
 
-          // Derive status from section if not explicitly provided
-          if (task.status === undefined) {
-            const targetSection = sections.find((s) => s.id === task.sectionId);
+        // Derive status from section if not explicitly provided (legacy fallback)
+        if (
+          task.sectionId !== undefined &&
+          task.status === undefined &&
+          task.currentStatus === undefined
+        ) {
+          const sampleTask = await this.getTask(task.id);
+          if (sampleTask?.projectId) {
+            const project = await this.projectService.getProject(sampleTask.projectId);
+            const targetSection = project?.sections?.find((s) => s.id === task.sectionId);
             if (targetSection) {
               const derivedStatus = this.getSectionStatus(targetSection);
               if (derivedStatus) {
                 updateData['status'] = derivedStatus;
-                // Only update completedAt when status is actually changing.
-                // Fetch the existing task to avoid resetting completedAt
-                // on same-column reorders (e.g., reordering within Done).
-                const existingTask = await this.getTask(task.id);
-                if (existingTask?.status !== derivedStatus) {
+                if (sampleTask.status !== derivedStatus) {
                   updateData['completedAt'] = derivedStatus === 'done' ? new Date() : null;
                 }
               }
@@ -561,8 +562,15 @@ export class TaskService {
 
         if (task.status !== undefined) {
           updateData['status'] = task.status;
-          // Set completedAt when marking as done, clear when re-opening
-          updateData['completedAt'] = task.status === 'done' ? new Date() : null;
+
+          if (task.currentStatus !== undefined) {
+            if (task.status !== task.currentStatus) {
+              updateData['completedAt'] = task.status === 'done' ? new Date() : null;
+            }
+          } else if (task.sectionId === undefined) {
+            // fallback
+            updateData['completedAt'] = task.status === 'done' ? new Date() : null;
+          }
         }
 
         batch.update(taskRef, updateData);

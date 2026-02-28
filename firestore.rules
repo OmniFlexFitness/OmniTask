@@ -24,6 +24,16 @@ service cloud.firestore {
     match /users/{userId}/contacts/{contactId} {
       allow read, write: if request.auth.uid == userId;
     }
+
+    // Recurring daily tasks - scoped to individual users
+    match /users/{userId}/recurringTasks/{taskId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Weekly schedule blocks - scoped to individual users
+    match /users/{userId}/weeklyBlocks/{blockId} {
+      allow read, write: if request.auth.uid == userId;
+    }
     
     match /projects/{projectId} {
       allow create: if isAuthenticated();

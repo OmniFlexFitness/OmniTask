@@ -13,6 +13,7 @@ import {
   AutocompleteOption,
 } from '../../shared/components/autocomplete-input/autocomplete-input.component';
 import { MarkdownEditorComponent } from '../../shared/components/markdown-editor/markdown-editor.component';
+import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-task-create-modal',
@@ -379,6 +380,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
               [value]="''"
               [allowCustom]="false"
               placeholder="Search contacts to add..."
+              (search)="onAssigneeSearch($event)"
               (optionSelected)="onAssigneeSelected($event)"
             ></app-autocomplete-input>
           </div>
@@ -536,9 +538,13 @@ export class TaskCreateModalComponent {
     { initialValue: null },
   );
 
-  // Contacts for assignee autocomplete - fetch all contacts and map to AutocompleteOption
+  // Contacts for assignee autocomplete - start empty, update on search
+  private assigneeSearchSubject = new BehaviorSubject<string>('');
+
   assigneeOptions = toSignal(
-    this.contactsService.getContacts().pipe(
+    this.assigneeSearchSubject.pipe(
+      debounceTime(300),
+      switchMap((query) => this.contactsService.searchContacts(query)),
       map((contacts) =>
         contacts.map(
           (c): AutocompleteOption => ({
@@ -743,6 +749,13 @@ export class TaskCreateModalComponent {
         this.selectedAssignees.set([...current, selection]);
       }
     }
+  }
+
+  /**
+   * Triggered when user types in the autocomplete
+   */
+  onAssigneeSearch(query: string): void {
+    this.assigneeSearchSubject.next(query);
   }
 
   /**

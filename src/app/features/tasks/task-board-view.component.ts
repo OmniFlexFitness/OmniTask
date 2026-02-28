@@ -14,6 +14,7 @@ import {
   ColumnSettingsMenuComponent,
   ColumnDisplaySettings,
 } from './column-settings-menu.component';
+import { OverlayModule } from '@angular/cdk/overlay';
 
 @Component({
   selector: 'app-task-board-view',
@@ -24,6 +25,7 @@ import {
     MarkdownPipe,
     MarkdownPlainPipe,
     ColumnSettingsMenuComponent,
+    OverlayModule,
   ],
   template: `
     <div class="h-full flex flex-col overflow-hidden">
@@ -239,11 +241,23 @@ import {
               [class.bg-slate-900/20]="getSectionStatus(section) === 'done'"
               [class.border-white/5]="getSectionStatus(section) === 'done'"
               [class.opacity-75]="getSectionStatus(section) === 'done'"
-              [ngClass]="{
-                'cyber-column-todo': getSectionStatus(section) === 'todo',
-                'cyber-column-progress': getSectionStatus(section) === 'in-progress',
-                'cyber-column-done': getSectionStatus(section) === 'done',
-              }"
+              [class.cyber-column-done]="getSectionStatus(section) === 'done'"
+              [style.border-color]="
+                getSectionStatus(section) !== 'done' ? getColorWithOpacity(section.color, 0.2) : ''
+              "
+              [style.box-shadow]="
+                getSectionStatus(section) !== 'done'
+                  ? '0 0 20px ' +
+                    getColorWithOpacity(section.color, 0.1) +
+                    ', inset 0 0 20px ' +
+                    getColorWithOpacity(section.color, 0.05)
+                  : ''
+              "
+              [style.animation]="
+                getSectionStatus(section) === 'in-progress'
+                  ? 'pulse-progress 3s ease-in-out infinite'
+                  : ''
+              "
             >
               <!-- Column drag placeholder -->
               <div
@@ -351,9 +365,10 @@ import {
                 <!-- Column Menu Button & Settings -->
                 <div class="relative z-10">
                   <button
-                    #menuTrigger
+                    #menuTrigger="cdkOverlayOrigin"
+                    cdkOverlayOrigin
                     class="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-white/5"
-                    (click)="toggleColumnMenu(section.id, menuTrigger); $event.stopPropagation()"
+                    (click)="toggleColumnMenu(section.id); $event.stopPropagation()"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -378,7 +393,7 @@ import {
                     [isOpen]="openMenuSectionId() === section.id"
                     [sectionIndex]="$index"
                     [totalSections]="projectSections().length"
-                    [triggerRect]="menuTriggerRect()"
+                    [trigger]="menuTrigger"
                     [columnSettings]="getColumnSettings(section.id)"
                     (close)="closeColumnMenu()"
                     (colorChanged)="handleColorChange($event)"
@@ -1048,30 +1063,27 @@ export class TaskBoardViewComponent {
   }
 
   onDrop(event: CdkDragDrop<Task[]>, targetSectionId: string) {
-    if (event.previousContainer === event.container) {
-      // Reorder within the same column
-      const task = event.item.data as Task;
-      this.reorderTask(task.id, event.currentIndex, targetSectionId, event.container.data);
-    } else {
-      // Moving between columns
-      const task = event.item.data as Task;
-      this.reorderTask(task.id, event.currentIndex, targetSectionId, event.container.data);
-    }
+    // For both same-column and cross-column drops, logic is identical!
+    const task = event.item.data as Task;
+    this.reorderTask(task, event.currentIndex, targetSectionId, event.container.data);
   }
 
-  private reorderTask(taskId: string, newIndex: number, sectionId: string, siblingTasks: Task[]) {
+  private reorderTask(movedTask: Task, newIndex: number, sectionId: string, siblingTasks: Task[]) {
     // Build the complete reordered list with proper indices for ALL tasks in the section
     // This ensures no order collisions occur after drag-drop operations
 
     // Remove the moved task from its current position (if present)
-    const tasksWithoutMoved = siblingTasks.filter((t) => t.id !== taskId);
+    const tasksWithoutMoved = siblingTasks.filter((t) => t.id !== movedTask.id);
 
     // Build the new ordered list by inserting at the target index
-    const reorderedList: { id: string }[] = [
+    const reorderedList: Task[] = [
       ...tasksWithoutMoved.slice(0, newIndex),
-      { id: taskId }, // Insert moved task at new position
+      movedTask, // Insert moved task at new position
       ...tasksWithoutMoved.slice(newIndex),
     ];
+
+    const targetSection = this.projectSections().find((s) => s.id === sectionId);
+    const derivedStatus = targetSection ? this.getSectionStatus(targetSection) : undefined;
 
     // Update ALL tasks in the section with sequential order values.
     // The service's reorderTasks will derive status from the target sectionId
@@ -1080,6 +1092,8 @@ export class TaskBoardViewComponent {
       id: task.id,
       order: index,
       sectionId,
+      status: derivedStatus,
+      currentStatus: task.status,
     }));
 
     this.taskService.reorderTasks(updates);
@@ -1100,21 +1114,16 @@ export class TaskBoardViewComponent {
   }
 
   // Column menu methods
-  toggleColumnMenu(sectionId: string, triggerElement?: HTMLElement) {
+  toggleColumnMenu(sectionId: string) {
     if (this.openMenuSectionId() === sectionId) {
       this.openMenuSectionId.set(null);
-      this.menuTriggerRect.set(null);
     } else {
       this.openMenuSectionId.set(sectionId);
-      if (triggerElement) {
-        this.menuTriggerRect.set(triggerElement.getBoundingClientRect());
-      }
     }
   }
 
   closeColumnMenu() {
     this.openMenuSectionId.set(null);
-    this.menuTriggerRect.set(null);
   }
 
   // Column drag-and-drop handler
