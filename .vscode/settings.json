@@ -1,3 +1,12 @@
 {
-  "git.ignoreLimitWarning": true
+  "git.ignoreLimitWarning": true,
+  "terminal.integrated.env.windows": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}\\firebase-sa-key.json"
+  },
+  "terminal.integrated.env.osx": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/firebase-sa-key.json"
+  },
+  "terminal.integrated.env.linux": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "${workspaceFolder}/firebase-sa-key.json"
+  }
 }

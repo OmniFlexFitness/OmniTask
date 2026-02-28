@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy:firebase": "firebase deploy",
+    "deploy:firestore": "firebase deploy --only firestore",
+    "deploy:functions": "firebase deploy --only functions"
   },
   "prettier": {
     "printWidth": 100,
