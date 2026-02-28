@@ -158,6 +158,38 @@ import { AuthService } from '../auth/auth.service';
                 ></span>
                 <span class="relative">My Tasks</span>
               </a>
+
+              <a
+                routerLink="/schedule"
+                routerLinkActive
+                #rlaSchedule="routerLinkActive"
+                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                [class.text-cyan-400]="rlaSchedule.isActive"
+                [class.text-slate-400]="!rlaSchedule.isActive"
+                [class.hover:text-fuchsia-400]="!rlaSchedule.isActive"
+              >
+                <!-- Active/Hover Background -->
+                <span
+                  class="absolute inset-0 rounded-lg transition-all duration-300"
+                  [class.bg-cyan-500/10]="rlaSchedule.isActive"
+                  [class.bg-fuchsia-500/0]="!rlaSchedule.isActive"
+                  [class.group-hover:bg-fuchsia-500/10]="!rlaSchedule.isActive"
+                ></span>
+                <!-- Underline -->
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300"
+                  [class.bg-cyan-500]="rlaSchedule.isActive"
+                  [class.shadow-[0_0_10px_rgba(0,210,255,0.9)]]="rlaSchedule.isActive"
+                  [class.w-2/3]="rlaSchedule.isActive"
+                  [class.w-0]="!rlaSchedule.isActive"
+                  [class.group-hover:w-2/3]="!rlaSchedule.isActive"
+                  [class.group-hover:bg-fuchsia-500]="!rlaSchedule.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
+                    !rlaSchedule.isActive
+                  "
+                ></span>
+                <span class="relative">Schedule</span>
+              </a>
             </div>
           </div>
 

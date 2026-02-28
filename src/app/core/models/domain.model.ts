@@ -103,6 +103,62 @@ export interface Task {
 }
 
 /**
+ * A task that recurs every day at a specific time.
+ * Stored in users/{uid}/recurringTasks subcollection.
+ */
+export interface RecurringTask {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  /** Scheduled time in HH:mm (24-hour) format */
+  time: string;
+  /** Whether this recurring task is currently active */
+  enabled: boolean;
+  color?: string;
+  createdAt: FirestoreDate;
+  updatedAt: FirestoreDate;
+}
+
+/**
+ * A time-block on the weekly schedule.
+ * Stored in users/{uid}/weeklyBlocks subcollection.
+ */
+export interface WeeklyBlock {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  /** 0 = Sunday, 1 = Monday, … 6 = Saturday */
+  dayOfWeek: number;
+  /** Start time in HH:mm (24-hour) format */
+  startTime: string;
+  /** End time in HH:mm (24-hour) format */
+  endTime: string;
+  color?: string;
+  /** true = repeats every week; false = one-time only */
+  repeating: boolean;
+  /** ISO date string (YYYY-MM-DD) of the Monday of the target week (for one-time blocks) */
+  weekDate?: string;
+  createdAt: FirestoreDate;
+  updatedAt: FirestoreDate;
+}
+
+/**
+ * Curated color palette for schedule items
+ */
+export const SCHEDULE_COLORS = [
+  '#8b5cf6', // Purple
+  '#06b6d4', // Cyan
+  '#f43f5e', // Rose
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#3b82f6', // Blue
+  '#ec4899', // Pink
+  '#6366f1', // Indigo
+] as const;
+
+/**
  * Cyberpunk theme color constants
  */
 export const CYBERPUNK_COLORS = {

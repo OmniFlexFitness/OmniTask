@@ -39,6 +39,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Undo -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           [class.md-btn-disabled]="!canUndo()"
           title="Undo (Ctrl+Z)"
@@ -63,6 +64,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Redo -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           [class.md-btn-disabled]="!canRedo()"
           title="Redo (Ctrl+Y)"
@@ -89,6 +91,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Bold -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           title="Bold (Ctrl+B)"
           (click)="wrapSelection('**', '**')"
@@ -99,6 +102,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Italic -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           title="Italic (Ctrl+I)"
           (click)="wrapSelection('*', '*')"
@@ -109,6 +113,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Strikethrough -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           title="Strikethrough"
           (click)="wrapSelection('~~', '~~')"
@@ -117,19 +122,37 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         </button>
 
         <!-- Highlight -->
-        <button type="button" class="md-btn" title="Highlight" (click)="wrapSelection('==', '==')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Highlight"
+          (click)="wrapSelection('==', '==')"
+        >
           <span class="md-icon-highlight">H</span>
         </button>
 
         <span class="md-divider"></span>
 
         <!-- Heading -->
-        <button type="button" class="md-btn" title="Heading" (click)="insertPrefix('## ')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Heading"
+          (click)="insertPrefix('## ')"
+        >
           <span class="md-icon-bold" style="font-size:10px">H2</span>
         </button>
 
         <!-- Blockquote -->
-        <button type="button" class="md-btn" title="Blockquote" (click)="insertPrefix('> ')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Blockquote"
+          (click)="insertPrefix('> ')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -149,7 +172,13 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <span class="md-divider"></span>
 
         <!-- Bulleted list -->
-        <button type="button" class="md-btn" title="Bulleted list" (click)="insertPrefix('- ')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Bulleted list"
+          (click)="insertPrefix('- ')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -167,7 +196,13 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         </button>
 
         <!-- Numbered list -->
-        <button type="button" class="md-btn" title="Numbered list" (click)="insertPrefix('1. ')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Numbered list"
+          (click)="insertPrefix('1. ')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -185,7 +220,13 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         </button>
 
         <!-- Task list -->
-        <button type="button" class="md-btn" title="Task list" (click)="insertPrefix('- [ ] ')">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Task list"
+          (click)="insertPrefix('- [ ] ')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -207,6 +248,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Code inline -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           title="Inline code (Ctrl+E)"
           (click)="wrapSelection('\`', '\`')"
@@ -228,12 +270,24 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         </button>
 
         <!-- Code block -->
-        <button type="button" class="md-btn" title="Code block" (click)="insertCodeBlock()">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Code block"
+          (click)="insertCodeBlock()"
+        >
           <span class="md-icon-mono">{{ codeBlockLabel }}</span>
         </button>
 
         <!-- Link -->
-        <button type="button" class="md-btn" title="Link (Ctrl+K)" (click)="insertLink()">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Link (Ctrl+K)"
+          (click)="insertLink()"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -251,7 +305,13 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         </button>
 
         <!-- Table -->
-        <button type="button" class="md-btn" title="Insert table" (click)="insertTable()">
+        <button
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Insert table"
+          (click)="insertTable()"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="md-svg"
@@ -271,6 +331,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
         <!-- Horizontal rule -->
         <button
           type="button"
+          tabindex="-1"
           class="md-btn"
           title="Horizontal rule"
           (click)="insertHorizontalRule()"
@@ -280,7 +341,13 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
 
         @if (!minimal()) {
           <!-- Callout (full mode only to save space) -->
-          <button type="button" class="md-btn" title="Callout" (click)="insertCallout()">
+          <button
+            type="button"
+            tabindex="-1"
+            class="md-btn"
+            title="Callout"
+            (click)="insertCallout()"
+          >
             <span class="md-icon-callout">📝</span>
           </button>
         }
@@ -867,6 +934,8 @@ export class MarkdownEditorComponent {
   onValueChange(newValue: string): void {
     const before = this.value() ?? '';
     this.pushHistorySmart(before, newValue);
+    const ta = this.textareaRef()?.nativeElement;
+    if (ta) ta.value = newValue;
     this.valueChange.emit(newValue);
   }
 
@@ -925,6 +994,7 @@ export class MarkdownEditorComponent {
     const replacement = `${prefix}${selected || 'text'}${suffix}`;
     const newValue = text.substring(0, start) + replacement + text.substring(end);
 
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
@@ -948,6 +1018,7 @@ export class MarkdownEditorComponent {
     const lineStart = text.lastIndexOf('\n', start - 1) + 1;
 
     const newValue = text.substring(0, lineStart) + prefix + text.substring(lineStart);
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
@@ -966,6 +1037,7 @@ export class MarkdownEditorComponent {
     const text = ta.value;
     const newValue = text.substring(0, start) + content + text.substring(start);
 
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
@@ -988,6 +1060,7 @@ export class MarkdownEditorComponent {
     const block = '\n```\n' + (selected || 'code') + '\n```\n';
     const newValue = text.substring(0, start) + block + text.substring(end);
 
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
@@ -1011,6 +1084,7 @@ export class MarkdownEditorComponent {
     const link = `[${selected || 'link text'}](url)`;
     const newValue = text.substring(0, start) + link + text.substring(end);
 
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
@@ -1050,6 +1124,7 @@ export class MarkdownEditorComponent {
     const callout = '\n> [!NOTE] ' + (selected || 'Title') + '\n> Content here\n';
     const newValue = text.substring(0, start) + callout + text.substring(end);
 
+    ta.value = newValue;
     this.valueChange.emit(newValue);
 
     requestAnimationFrame(() => {
