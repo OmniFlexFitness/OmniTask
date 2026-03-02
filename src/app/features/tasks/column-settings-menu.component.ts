@@ -20,15 +20,25 @@ export interface ColumnDisplaySettings {
  */
 const COLUMN_COLORS = [
   { name: 'Cyber Purple', value: '#e040fb' },
+  { name: 'Neon Purple', value: '#b026ff' },
   { name: 'Cyber Blue', value: '#00d2ff' },
-  { name: 'Muted Gray', value: '#6b7280' },
+  { name: 'Electric Blue', value: '#2979ff' },
   { name: 'Neon Pink', value: '#ff6090' },
+  { name: 'Hot Pink', value: '#ff4081' },
   { name: 'Electric Green', value: '#00ff9f' },
-  { name: 'Amber', value: '#ffc107' },
-  { name: 'Coral', value: '#ff6b6b' },
+  { name: 'Neon Green', value: '#76ff03' },
   { name: 'Teal', value: '#26a69a' },
-  { name: 'Indigo', value: '#5c6bc0' },
+  { name: 'Cyan', value: '#00e5ff' },
+  { name: 'Amber', value: '#ffc107' },
+  { name: 'Gold', value: '#ffd700' },
+  { name: 'Orange', value: '#ff9800' },
   { name: 'Deep Orange', value: '#ff7043' },
+  { name: 'Coral', value: '#ff6b6b' },
+  { name: 'Red', value: '#ff1744' },
+  { name: 'Indigo', value: '#5c6bc0' },
+  { name: 'Deep Purple', value: '#651fff' },
+  { name: 'Muted Gray', value: '#6b7280' },
+  { name: 'Slate', value: '#94a3b8' },
 ];
 
 @Component({
@@ -44,18 +54,20 @@ const COLUMN_COLORS = [
         [cdkConnectedOverlayOpen]="isOpen()"
         [cdkConnectedOverlayHasBackdrop]="true"
         cdkConnectedOverlayBackdropClass="bg-black/50"
+        [cdkConnectedOverlayPush]="true"
+        [cdkConnectedOverlayFlexibleDimensions]="true"
+        [cdkConnectedOverlayViewportMargin]="16"
         (backdropClick)="close.emit()"
       >
         <div
-          class="w-72 overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent pointer-events-auto"
-          style="box-shadow: 0 0 30px rgba(139, 92, 246, 0.25); max-height: 80vh;"
+          class="column-settings-panel w-[90vw] max-w-[380px] overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent pointer-events-auto"
         >
           <!-- Header -->
-          <div
-            class="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-purple-600/20 to-fuchsia-600/20"
-          >
+          <div class="px-5 py-4 border-b border-white/10 bg-slate-800/80">
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-semibold text-white">Column Settings</h3>
+              <h3 class="text-base font-semibold" [ngStyle]="{ color: section().color || '#fff' }">
+                Column Settings
+              </h3>
               <button
                 class="text-slate-400 hover:text-white transition-colors"
                 (click)="close.emit()"
@@ -106,12 +118,13 @@ const COLUMN_COLORS = [
               @for (color of colors; track color.value) {
                 <button
                   class="w-8 h-8 rounded-lg transition-all duration-200 relative group"
-                  [style.background]="color.value"
-                  [style.box-shadow]="
-                    section().color === color.value
-                      ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value
-                      : 'none'
-                  "
+                  [ngStyle]="{
+                    'background-color': color.value,
+                    'box-shadow':
+                      section().color === color.value
+                        ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value
+                        : 'none',
+                  }"
                   [class.ring-2]="section().color === color.value"
                   [class.ring-white/40]="section().color === color.value"
                   (click)="changeColor(color.value)"
@@ -289,13 +302,7 @@ const COLUMN_COLORS = [
       </ng-template>
     }
   `,
-  styles: [
-    `
-      :host {
-        display: contents;
-      }
-    `,
-  ],
+  styleUrls: ['./column-settings-menu.component.scss'],
 })
 export class ColumnSettingsMenuComponent {
   private readonly projectService = inject(ProjectService);
