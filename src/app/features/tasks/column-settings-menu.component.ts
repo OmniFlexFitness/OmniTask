@@ -302,18 +302,7 @@ const COLUMN_COLORS = [
       </ng-template>
     }
   `,
-  styles: [
-    `
-      :host {
-        display: contents;
-      }
-
-      .column-settings-panel {
-        box-shadow: 0 0 30px rgba(139, 92, 246, 0.25);
-        max-height: 85vh;
-      }
-    `,
-  ],
+  styleUrls: ['./column-settings-menu.component.scss'],
 })
 export class ColumnSettingsMenuComponent {
   private readonly projectService = inject(ProjectService);
