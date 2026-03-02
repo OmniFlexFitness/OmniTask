@@ -300,8 +300,10 @@ import { OverlayModule } from '@angular/cdk/overlay';
                   ></span>
                   <h3
                     class="font-bold text-sm tracking-wide transition-colors duration-300"
-                    [class.text-slate-200]="getSectionStatus(section) !== 'done'"
                     [class.text-slate-500]="getSectionStatus(section) === 'done'"
+                    [style.color]="
+                      getSectionStatus(section) !== 'done' ? section.color || '#e2e8f0' : ''
+                    "
                     [style.text-shadow]="
                       getSectionStatus(section) !== 'done'
                         ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6)
