@@ -60,13 +60,12 @@ const COLUMN_COLORS = [
         (backdropClick)="close.emit()"
       >
         <div
-          class="w-[90vw] max-w-[380px] overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent pointer-events-auto"
-          style="box-shadow: 0 0 30px rgba(139, 92, 246, 0.25); max-height: 85vh;"
+          class="column-settings-panel w-[90vw] max-w-[380px] overflow-y-auto bg-slate-900 border border-white/20 rounded-xl shadow-2xl scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent pointer-events-auto"
         >
           <!-- Header -->
           <div class="px-5 py-4 border-b border-white/10 bg-slate-800/80">
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold" [style.color]="section().color || '#fff'">
+              <h3 class="text-base font-semibold" [ngStyle]="{ color: section().color || '#fff' }">
                 Column Settings
               </h3>
               <button
@@ -119,12 +118,13 @@ const COLUMN_COLORS = [
               @for (color of colors; track color.value) {
                 <button
                   class="w-8 h-8 rounded-lg transition-all duration-200 relative group"
-                  [style.background]="color.value"
-                  [style.box-shadow]="
-                    section().color === color.value
-                      ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value
-                      : 'none'
-                  "
+                  [ngStyle]="{
+                    'background-color': color.value,
+                    'box-shadow':
+                      section().color === color.value
+                        ? '0 0 12px ' + color.value + ', 0 0 4px ' + color.value
+                        : 'none',
+                  }"
                   [class.ring-2]="section().color === color.value"
                   [class.ring-white/40]="section().color === color.value"
                   (click)="changeColor(color.value)"
@@ -306,6 +306,11 @@ const COLUMN_COLORS = [
     `
       :host {
         display: contents;
+      }
+
+      .column-settings-panel {
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.25);
+        max-height: 85vh;
       }
     `,
   ],
