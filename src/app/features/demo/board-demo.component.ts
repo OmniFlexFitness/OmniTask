@@ -12,7 +12,7 @@ import { Task, Project, DEFAULT_SECTIONS } from '../../core/models/domain.model'
       <div class="max-w-7xl mx-auto">
         <div class="mb-8 text-center">
           <h1
-            class="text-4xl font-bold mb-3 drop-shadow-[0_0_8px_rgba(224,64,251,0.8)] [text-shadow:0_0_16px_rgba(224,64,251,0.6),0_0_24px_rgba(0,210,255,0.4)]"
+            class="text-4xl font-bold mb-3 [text-shadow:0_0_8px_rgba(224,64,251,0.8),_0_0_16px_rgba(224,64,251,0.6),_0_0_24px_rgba(0,210,255,0.4)]"
           >
             Board View - Cyberpunk Enhancement Demo
           </h1>

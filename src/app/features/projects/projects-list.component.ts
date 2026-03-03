@@ -24,7 +24,6 @@ import { ProjectFormModalComponent } from './project-form-modal.component';
           </div>
           <button
             (click)="showCreateModal.set(true)"
-            (click)="showCreateModal.set(true)"
             class="group relative px-4 py-2.5 bg-slate-900/80 text-cyan-400 font-semibold rounded-lg transition-all hover:scale-105 border-2 border-transparent bg-clip-padding relative before:absolute before:inset-0 before:-m-[2px] before:-z-10 before:rounded-lg before:bg-gradient-to-br before:from-[#00d2ff] before:to-[#e040fb] shadow-[0_0_15px_rgba(0,210,255,0.3),_0_0_30px_rgba(224,64,251,0.15)]"
           >
             <span class="flex items-center gap-2 group-hover:text-white transition-colors">
@@ -84,8 +83,8 @@ import { ProjectFormModalComponent } from './project-form-modal.component';
             >
               <!-- Color Bar -->
               <div
-                class="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
-                [style.background-color]="project.color || '#6366f1'"
+                class="absolute top-0 left-0 right-0 h-1 rounded-t-xl bg-[var(--project-color)]"
+                [style.--project-color]="project.color || '#6366f1'"
               ></div>
 
               <!-- Project Info -->
