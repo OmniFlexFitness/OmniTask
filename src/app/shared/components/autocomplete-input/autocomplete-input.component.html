@@ -29,7 +29,7 @@
         <input
           #inputEl
           type="text"
-          [placeholder]="placeholder"
+          [placeholder]="placeholder()"
           [value]="displayValue()"
           (input)="onInput($event)"
           (focus)="onFocus()"
@@ -136,7 +136,7 @@
           } @else {
             <!-- No results -->
             <div class="px-3 py-3 text-sm text-slate-500 text-center">
-              @if (allowCustom && inputValue().trim()) {
+              @if (allowCustom() && inputValue().trim()) {
                 Press <span class="font-bold text-slate-400">Enter</span> to use "{{
                   inputValue()
                 }}"
