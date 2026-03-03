@@ -130,14 +130,7 @@ import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        --cyber-purple: #e040fb;
-        --cyber-blue: #00d2ff;
-      }
-    `,
-  ],
+  styleUrls: ['./image-upload.component.css'],
 })
 export class ImageUploadComponent {
   private storage = inject(Storage);

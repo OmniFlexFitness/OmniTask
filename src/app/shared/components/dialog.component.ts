@@ -71,13 +71,7 @@ import { DialogService } from '../../core/services/dialog.service';
     </div>
     }
   `,
-  styles: [
-    `
-      :host {
-        display: contents;
-      }
-    `,
-  ],
+  styleUrls: ['./dialog.component.css'],
 })
 export class DialogComponent {
   dialogService = inject(DialogService);

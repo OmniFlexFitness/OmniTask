@@ -250,21 +250,7 @@ import { AuthService } from '../auth/auth.service';
       </div>
     </nav>
   `,
-  styles: [
-    `
-      @keyframes shimmer {
-        0% {
-          transform: translateX(-100%);
-        }
-        100% {
-          transform: translateX(100%);
-        }
-      }
-      .animate-shimmer {
-        animation: shimmer 3s ease-in-out infinite;
-      }
-    `,
-  ],
+  styleUrls: ['./navbar.component.css'],
 })
 export class NavbarComponent {
   auth = inject(AuthService);

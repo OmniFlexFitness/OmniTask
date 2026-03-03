@@ -301,16 +301,7 @@ import { ProjectFormModalComponent } from './project-form-modal.component';
       }
     </div>
   `,
-  styles: [
-    `
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    `,
-  ],
+  styleUrls: ['./projects-list.component.css'],
 })
 export class ProjectsListComponent {
   private projectService = inject(ProjectService);

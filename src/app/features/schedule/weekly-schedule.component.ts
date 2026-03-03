@@ -179,14 +179,7 @@ import { WeeklyBlockModalComponent } from './weekly-block-modal.component';
       }
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100%;
-      }
-    `,
-  ],
+  styleUrls: ['./weekly-schedule.component.css'],
 })
 export class WeeklyScheduleComponent {
   private scheduleService = inject(ScheduleService);

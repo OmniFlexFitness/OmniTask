@@ -370,28 +370,7 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
       }
     </div>
   `,
-  styles: [
-    `
-      /* Scrollbar styling */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.2);
-        border-radius: 4px;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(148, 163, 184, 0.4);
-      }
-    `,
-  ],
+  styleUrls: ['./project-detail.component.css'],
 })
 export class ProjectDetailComponent {
   private route = inject(ActivatedRoute);

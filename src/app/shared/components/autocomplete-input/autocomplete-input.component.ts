@@ -177,13 +177,7 @@ export interface AutocompleteOption {
       </ng-template>
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
+  styleUrls: ['./autocomplete-input.component.css'],
 })
 export class AutocompleteInputComponent {
   @Input() options: AutocompleteOption[] = [];

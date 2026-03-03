@@ -484,23 +484,7 @@ import { BehaviorSubject } from 'rxjs';
       </div>
     </div>
   `,
-  styles: [
-    `
-      @keyframes scaleIn {
-        from {
-          transform: scale(0.95);
-          opacity: 0;
-        }
-        to {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-      .animate-scale-in {
-        animation: scaleIn 0.2s ease-out;
-      }
-    `,
-  ],
+  styleUrls: ['./task-create-modal.component.css'],
 })
 export class TaskCreateModalComponent {
   private fb = inject(FormBuilder);

@@ -850,21 +850,7 @@ const PROJECT_COLORS = [
       </section>
     </div>
   `,
-  styles: [
-    `
-      .ofx-settings-section {
-        /* Section styling handled by parent */
-      }
-
-      .ofx-section-title {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: rgb(203, 213, 225);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    `,
-  ],
+  styleUrls: ['./project-settings-panel.component.css'],
 })
 export class ProjectSettingsPanelComponent {
   private projectService = inject(ProjectService);

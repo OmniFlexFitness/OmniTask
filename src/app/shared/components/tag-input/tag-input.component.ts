@@ -129,26 +129,7 @@ import { Tag } from '../../../core/models/domain.model';
       </div>
     </div>
   `,
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      @keyframes scaleIn {
-        from {
-          transform: scale(0.9);
-          opacity: 0;
-        }
-        to {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-      .animate-scale-in {
-        animation: scaleIn 0.15s ease-out;
-      }
-    `,
-  ],
+  styleUrls: ['./tag-input.component.css'],
 })
 export class TagInputComponent {
   @Input() availableTags: Tag[] = [];

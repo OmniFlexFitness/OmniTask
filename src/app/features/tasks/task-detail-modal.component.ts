@@ -734,40 +734,7 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
       </div>
     </div>
   `,
-  styles: [
-    `
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-      .animate-slide-in-right {
-        animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      /* Responsive adjustment for mobile: slide up */
-      @media (max-width: 640px) {
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in-right {
-          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-      }
-    `,
-  ],
+  styleUrls: ['./task-detail-modal.component.css'],
 })
 export class TaskDetailModalComponent {
   private fb = inject(FormBuilder);

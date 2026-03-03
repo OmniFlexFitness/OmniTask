@@ -104,11 +104,7 @@ import { Task } from '../../core/models/domain.model';
       </div>
     </div>
   `,
-  styles: [`
-    .scrollbar-none::-webkit-scrollbar {
-      display: none;
-    }
-  `]
+  styleUrls: ['./task-calendar-view.component.css']
 })
 export class TaskCalendarViewComponent {
   tasks = input.required<Task[]>();
