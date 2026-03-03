@@ -1,0 +1,325 @@
+Validate PR Build	UNKNOWN STEP	﻿2026-02-28T03:30:39.6059733Z Current runner version: '2.331.0'
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6086016Z ##[group]Runner Image Provisioner
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6086832Z Hosted Compute Agent
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6087358Z Version: 20260213.493
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6088050Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6088800Z Build Date: 2026-02-13T00:28:41Z
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6089428Z Worker ID: {a207df72-15ff-4bed-be64-13402022bbc1}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6090188Z Azure Region: eastus2
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6090710Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6092423Z ##[group]Operating System
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6093075Z Ubuntu
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6093573Z 24.04.3
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6094028Z LTS
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6094533Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6095063Z ##[group]Runner Image
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6095592Z Image: ubuntu-24.04
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6096162Z Version: 20260224.36.1
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6097368Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260224.36/images/ubuntu/Ubuntu2404-Readme.md
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6098848Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260224.36
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6099803Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6102628Z ##[group]GITHUB_TOKEN Permissions
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6104988Z Actions: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6105596Z ArtifactMetadata: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6106105Z Attestations: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6106737Z Checks: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6107195Z Contents: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6107690Z Deployments: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6108236Z Discussions: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6108780Z Issues: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6109246Z Metadata: read
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6109801Z Models: read
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6110308Z Packages: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6110781Z Pages: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6111429Z PullRequests: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6111968Z RepositoryProjects: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6113275Z SecurityEvents: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6114215Z Statuses: write
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6114953Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6117072Z Secret source: Actions
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6118052Z Prepare workflow directory
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6496071Z Prepare all required actions
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.6533343Z Getting action download info
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:39.9403194Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.0699203Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.2666605Z Complete job name: Validate PR Build
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3404237Z ##[group]Run actions/checkout@v4
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3405041Z with:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3405446Z   repository: OmniFlexFitness/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3406126Z   token: ***
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3406501Z   ssh-strict: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3406888Z   ssh-user: git
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3407287Z   persist-credentials: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3407732Z   clean: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3408124Z   sparse-checkout-cone-mode: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3408597Z   fetch-depth: 1
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3408985Z   fetch-tags: false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3409381Z   show-progress: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3409779Z   lfs: false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3410141Z   submodules: false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3410550Z   set-safe-directory: true
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3411184Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3411543Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.3411925Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4502484Z Syncing repository: OmniFlexFitness/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4504213Z ##[group]Getting Git version info
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4504958Z Working directory is '/home/runner/work/OmniTask/OmniTask'
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4505859Z [command]/usr/bin/git version
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4578779Z git version 2.53.0
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4605215Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4619962Z Temporarily overriding HOME='/home/runner/work/_temp/8b8a696f-9964-4b95-bed7-2db3f397cc84' before making global git config changes
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4621275Z Adding repository directory to the temporary git global config as a safe directory
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4627167Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/OmniTask/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4667110Z Deleting the contents of '/home/runner/work/OmniTask/OmniTask'
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4671296Z ##[group]Initializing the repository
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4676536Z [command]/usr/bin/git init /home/runner/work/OmniTask/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4770381Z hint: Using 'master' as the name for the initial branch. This default branch name
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4771809Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4772942Z hint: to use in all of your new repositories, which will suppress this warning,
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4773641Z hint: call:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4774011Z hint:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4774802Z hint: 	git config --global init.defaultBranch <name>
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4775734Z hint:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4776282Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4777158Z hint: 'development'. The just-created branch can be renamed via this command:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4777859Z hint:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4778221Z hint: 	git branch -m <name>
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4778645Z hint:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4779214Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4780369Z Initialized empty Git repository in /home/runner/work/OmniTask/OmniTask/.git/
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4786912Z [command]/usr/bin/git remote add origin https://github.com/OmniFlexFitness/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4823327Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4824049Z ##[group]Disabling automatic garbage collection
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4827561Z [command]/usr/bin/git config --local gc.auto 0
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4856447Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4857158Z ##[group]Setting up auth
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4864115Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.4898023Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5243802Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5276852Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5509402Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5550984Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5790303Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5829656Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5830859Z ##[group]Fetching the repository
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:40.5842040Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +a712baf358f6af31482c1f870a5869413feec727:refs/remotes/pull/94/merge
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7602285Z From https://github.com/OmniFlexFitness/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7603910Z  * [new ref]         a712baf358f6af31482c1f870a5869413feec727 -> pull/94/merge
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7640919Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7642394Z ##[group]Determining the checkout info
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7644974Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7649539Z [command]/usr/bin/git sparse-checkout disable
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7695838Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7727266Z ##[group]Checking out the ref
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:43.7733222Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/94/merge
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.7937261Z Updating files:  88% (13182/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8096572Z Updating files:  89% (13253/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8238644Z Updating files:  90% (13402/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8317150Z Updating files:  91% (13551/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8394936Z Updating files:  92% (13700/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8497649Z Updating files:  93% (13849/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8564824Z Updating files:  94% (13998/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.8767738Z Updating files:  95% (14147/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.9705522Z Updating files:  96% (14296/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.9768526Z Updating files:  97% (14445/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:44.9854270Z Updating files:  98% (14594/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.1909199Z Updating files:  99% (14743/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.1909870Z Updating files: 100% (14891/14891)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.1910485Z Updating files: 100% (14891/14891), done.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2065678Z Note: switching to 'refs/remotes/pull/94/merge'.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2068256Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2068771Z You are in 'detached HEAD' state. You can look around, make experimental
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2069727Z changes and commit them, and you can discard any commits you make in this
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2070651Z state without impacting any branches by switching back to a branch.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2071149Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2071539Z If you want to create a new branch to retain commits you create, you may
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2072611Z do so (now or later) by using -c with the switch command. Example:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2073112Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2073321Z   git switch -c <new-branch-name>
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2073764Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2073995Z Or undo this operation with:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2074321Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2074482Z   git switch -
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2074709Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2075121Z Turn off this advice by setting config variable advice.detachedHead to false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2075699Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2076360Z HEAD is now at a712baf Merge c2e025102cf72d02b8d328e0b22b7bd97caca169 into 6ce2a3aab09e82976c202449a4c85488b3cbc79d
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2149022Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2197655Z [command]/usr/bin/git log -1 --format=%H
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2225159Z a712baf358f6af31482c1f870a5869413feec727
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2468051Z ##[group]Run actions/setup-node@v4
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2468345Z with:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2468516Z   node-version: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2468700Z   cache: yarn
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2468869Z   always-auth: false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2469065Z   check-latest: false
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2469397Z   token: ***
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2469572Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2469728Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.2469909Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.4260495Z Found in cache @ /opt/hostedtoolcache/node/22.22.0/x64
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.4267349Z ##[group]Environment details
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.7782478Z node: v22.22.0
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.7782964Z npm: 10.9.4
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.7783260Z yarn: 1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.7784301Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.7809181Z [command]/usr/local/bin/yarn --version
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.9005909Z 1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:45.9138128Z [command]/usr/local/bin/yarn cache dir
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:46.0591374Z /home/runner/.cache/yarn/v6
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:46.0832380Z [command]/usr/local/bin/yarn config get enableGlobalCache
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:46.2280048Z undefined
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:46.3250288Z Cache hit for: node-cache-Linux-x64-yarn-7c694e35956a7aa4a58aace2cb04013bcadd7e8ebc71d343624d7c8ac3b7df52
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:47.3728428Z Received 171966464 of 701992355 (24.5%), 164.0 MBs/sec
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:48.3751521Z Received 394264576 of 701992355 (56.2%), 187.8 MBs/sec
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:49.3829736Z Received 603979776 of 701992355 (86.0%), 191.4 MBs/sec
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:49.8235608Z Received 701992355 of 701992355 (100.0%), 194.0 MBs/sec
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:49.8237311Z Cache Size: ~669 MB (701992355 B)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:49.8386138Z [command]/usr/bin/tar -xf /home/runner/work/_temp/f4427ccb-bf7e-48e6-ad72-937a05495a6f/cache.tzst -P -C /home/runner/work/OmniTask/OmniTask --use-compress-program unzstd
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.2768530Z Cache restored successfully
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4105099Z Cache restored from key: node-cache-Linux-x64-yarn-7c694e35956a7aa4a58aace2cb04013bcadd7e8ebc71d343624d7c8ac3b7df52
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4283649Z ##[group]Run yarn install --frozen-lockfile
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4284059Z [36;1myarn install --frozen-lockfile[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4344228Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4344487Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4344672Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.4344863Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.5657352Z yarn install v1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.6156910Z [1/4] Resolving packages...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:54.8193197Z [2/4] Fetching packages...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2136502Z [3/4] Linking dependencies...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2179901Z warning " > @angular/fire@20.0.1" has incorrect peer dependency "@angular/common@^20.0.0".
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2182995Z warning " > @angular/fire@20.0.1" has incorrect peer dependency "@angular/core@^20.0.0".
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2185888Z warning " > @angular/fire@20.0.1" has incorrect peer dependency "@angular/platform-browser@^20.0.0".
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2188998Z warning " > @angular/fire@20.0.1" has unmet peer dependency "@angular/platform-browser-dynamic@^20.0.0".
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:30:55.2229284Z warning "@angular/cli > @modelcontextprotocol/sdk > @hono/node-server@1.19.9" has unmet peer dependency "hono@^4".
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:04.2834028Z [4/4] Building fresh packages...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2277397Z Done in 10.66s.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2685189Z ##[group]Run yarn lint || echo "Lint check skipped - no lint script configured"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2685736Z [36;1myarn lint || echo "Lint check skipped - no lint script configured"[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2738646Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2738875Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2739045Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.2739232Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4033586Z yarn run v1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4358974Z error Command "lint" not found.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4360037Z info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4466452Z Lint check skipped - no lint script configured
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4496452Z ##[group]Run yarn build
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4496697Z [36;1myarn build[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4549183Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4549418Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4549585Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.4549773Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.6128992Z yarn run v1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:05.6393866Z $ ng build
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:06.3298086Z [33m❯[39m Building...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7894305Z [32m✔[39m Building...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7907532Z [1mInitial chunk files[22m  [2m | [22m[1mNames[22m                   [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7909660Z [32mchunk-KMRZADEC.js[39m    [2m | [22m[2m-[22m                       [2m | [22m[36m656.14 kB[39m[2m | [22m              [36m169.49 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7911707Z [32mstyles-LVXAH6YI.css[39m  [2m | [22m[2mstyles[22m                  [2m | [22m [36m89.15 kB[39m[2m | [22m               [36m13.00 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7914091Z [32mmain-CND6XC2K.js[39m     [2m | [22m[2mmain[22m                    [2m | [22m [36m49.67 kB[39m[2m | [22m               [36m15.48 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7916046Z [32mpolyfills-6ISPNSXF.js[39m[2m | [22m[2mpolyfills[22m               [2m | [22m [36m35.68 kB[39m[2m | [22m               [36m11.57 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7917886Z [32mchunk-RNVQW3FU.js[39m    [2m | [22m[2m-[22m                       [2m | [22m [36m18.16 kB[39m[2m | [22m                [36m6.22 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7918683Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7922516Z [1m [22m                    [2m | [22m[1mInitial total[22m           [2m | [22m[1m[93m848.80 kB[39m[22m[2m | [22m              [1m215.75 kB[22m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7923004Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7924095Z [1mLazy chunk files[22m     [2m | [22m[1mNames[22m                   [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7926689Z [32mchunk-EOVHGKDK.js[39m    [2m | [22m[2m-[22m                       [2m | [22m[36m230.19 kB[39m[2m | [22m               [36m56.14 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7928701Z [32mchunk-5LQOHBIY.js[39m    [2m | [22m[2m-[22m                       [2m | [22m[36m131.27 kB[39m[2m | [22m               [36m24.43 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7930806Z [32mchunk-BBUJL3RB.js[39m    [2m | [22m[2mproject-detail-component[22m[2m | [22m [36m74.22 kB[39m[2m | [22m               [36m14.64 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7933050Z [32mchunk-FYYTF5KX.js[39m    [2m | [22m[2m-[22m                       [2m | [22m [36m42.39 kB[39m[2m | [22m                [36m8.76 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7935091Z [32mchunk-XJ44RU2I.js[39m    [2m | [22m[2mschedule-component[22m      [2m | [22m [36m36.70 kB[39m[2m | [22m                [36m7.29 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7937256Z [32mchunk-X326MFBS.js[39m    [2m | [22m[2mdashboard-component[22m     [2m | [22m [36m32.12 kB[39m[2m | [22m                [36m8.17 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7939304Z [32mchunk-IVJH3QUZ.js[39m    [2m | [22m[2m-[22m                       [2m | [22m [36m11.98 kB[39m[2m | [22m                [36m3.02 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7941348Z [32mchunk-22BITPNK.js[39m    [2m | [22m[2mlogin-component[22m         [2m | [22m [36m11.06 kB[39m[2m | [22m                [36m3.04 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7943557Z [32mchunk-YV27O25S.js[39m    [2m | [22m[2mprojects-list-component[22m [2m | [22m [36m11.06 kB[39m[2m | [22m                [36m3.32 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7945528Z [32mchunk-GGZMAYGY.js[39m    [2m | [22m[2msettings-component[22m      [2m | [22m  [36m8.51 kB[39m[2m | [22m                [36m2.78 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7947240Z [32mchunk-KS6YFPDM.js[39m    [2m | [22m[2m-[22m                       [2m | [22m  [36m6.71 kB[39m[2m | [22m                [36m2.48 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7949755Z [32mchunk-EG4KMKOB.js[39m    [2m | [22m[2mboard-demo-component[22m    [2m | [22m  [36m2.61 kB[39m[2m | [22m                [36m1.09 kB[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7951770Z [32mchunk-3TW45KQC.js[39m    [2m | [22m[2m-[22m                       [2m | [22m[36m340 bytes[39m[2m | [22m              [36m340 bytes[39m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7952957Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7953652Z Application bundle generation complete. [11.459 seconds] - 2026-02-28T03:31:17.788Z
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7954327Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7955959Z [1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mbundle initial exceeded maximum budget. Budget 500.00 kB was not met by 348.80 kB with a total of 848.80 kB.[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7957034Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7957043Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7960485Z [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mangular:styles/component:css;eb37b821aea94724e7738d7be5c20ab49a675a1adbd7b40d7ed1562cd6dcd03a;/home/runner/work/OmniTask/OmniTask/src/app/shared/components/markdown-editor/markdown-editor.component.ts exceeded maximum budget. Budget 4.00 kB was not met by 761 bytes with a total of 4.76 kB.[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7963157Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7963171Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7964912Z [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1msrc/app/core/auth/login.component.css exceeded maximum budget. Budget 4.00 kB was not met by 2.23 kB with a total of 6.23 kB.[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7966144Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7966421Z [39m[22m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7967119Z Output location: /home/runner/work/OmniTask/OmniTask/dist/omni-task
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.7967638Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9383812Z Done in 12.33s.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9521732Z ##[group]Run yarn test --no-watch --no-progress --browsers=ChromeHeadless || echo "Tests skipped - no test configuration"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9522899Z [36;1myarn test --no-watch --no-progress --browsers=ChromeHeadless || echo "Tests skipped - no test configuration"[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9572777Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9573009Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9573389Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:17.9573580Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.0864977Z yarn run v1.22.22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.1094216Z $ ng test --no-watch --no-progress --browsers=ChromeHeadless
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5509513Z [1m[31mThe following packages are required but were not found:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5738236Z   - The "browsers" option requires either "@vitest/browser-playwright", "@vitest/browser-webdriverio", or "@vitest/browser-preview" to be installed.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5739609Z Please install the missing packages and rerun the test command.[39m[22m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5740238Z error Command failed with exit code 1.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5740913Z info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5844008Z Tests skipped - no test configuration
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5873645Z ##[group]Run echo "Checking functions/package-lock.json is in sync with functions/package.json..."
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5874642Z [36;1mecho "Checking functions/package-lock.json is in sync with functions/package.json..."[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5875118Z [36;1mcd functions[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5875320Z [36;1mnpm ci[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5875545Z [36;1mecho "✅ Functions lock file is in sync"[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5925969Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5926203Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5926361Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5926547Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:18.5996017Z Checking functions/package-lock.json is in sync with functions/package.json...
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:19.3049283Z npm warn EBADENGINE Unsupported engine {
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:19.3050143Z npm warn EBADENGINE   package: undefined,
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:19.3050641Z npm warn EBADENGINE   required: { node: '20' },
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:19.3051432Z npm warn EBADENGINE   current: { node: 'v22.22.0', npm: '10.9.4' }
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:19.3051899Z npm warn EBADENGINE }
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:27.9998642Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:27.9999492Z added 527 packages, and audited 528 packages in 9s
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:27.9999994Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0000281Z 68 packages are looking for funding
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0000779Z   run `npm fund` for details
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0068703Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0069655Z 5 vulnerabilities (2 low, 1 moderate, 1 high, 1 critical)
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0070222Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0070468Z To address all issues, run:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0070954Z   npm audit fix
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0071206Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0071432Z Run `npm audit` for details.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0859483Z ✅ Functions lock file is in sync
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0891022Z ##[group]Run cd functions
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0891291Z [36;1mcd functions[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0891492Z [36;1mnpm run build[0m
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0944231Z shell: /usr/bin/bash -e {0}
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0944495Z env:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0944668Z   NODE_VERSION: 22
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.0944851Z ##[endgroup]
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.1956007Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.1956470Z > build
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.1956739Z > tsc
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:28.1956861Z 
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.1887572Z ##[error]src/index.ts(861,16): error TS2304: Cannot find name 'statusChanged'.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.2861544Z ##[error]Process completed with exit code 2.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.2993840Z Post job cleanup.
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.3964196Z [command]/usr/bin/git version
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4003670Z git version 2.53.0
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4058845Z Temporarily overriding HOME='/home/runner/work/_temp/59037311-e4bd-4859-b5d0-a8607de4710b' before making global git config changes
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4060456Z Adding repository directory to the temporary git global config as a safe directory
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4065900Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/OmniTask/OmniTask
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4105112Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4141303Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4408826Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4433276Z http.https://github.com/.extraheader
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4446434Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4480015Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4736337Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.4772400Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Validate PR Build	UNKNOWN STEP	2026-02-28T03:31:34.5190936Z Cleaning up orphan processes

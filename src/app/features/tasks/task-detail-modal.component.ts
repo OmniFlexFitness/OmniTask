@@ -23,6 +23,11 @@ import {
   AutocompleteOption,
 } from '../../shared/components/autocomplete-input/autocomplete-input.component';
 import { MarkdownEditorComponent } from '../../shared/components/markdown-editor/markdown-editor.component';
+import {
+  CustomSelectComponent,
+  SelectOption,
+} from '../../shared/components/custom-select/custom-select.component';
+import { CustomDatePickerComponent } from '../../shared/components/custom-date-picker/custom-date-picker.component';
 
 @Component({
   selector: 'app-task-detail-modal',
@@ -33,6 +38,8 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
     FormsModule,
     AutocompleteInputComponent,
     MarkdownEditorComponent,
+    CustomSelectComponent,
+    CustomDatePickerComponent,
   ],
   templateUrl: './task-detail-modal.component.html',
   styleUrls: ['./task-detail-modal.component.css'],
@@ -149,6 +156,26 @@ export class TaskDetailModalComponent {
   selectedTagsArray = computed(() => Array.from(this.selectedTags()));
   newSubtaskTitle = '';
   expandedSubtaskIds = signal<Set<string>>(new Set());
+
+  priorityOptions: SelectOption[] = [
+    { value: 'low', label: 'Low', colorClass: 'bg-emerald-400 text-emerald-400' },
+    { value: 'medium', label: 'Medium', colorClass: 'bg-amber-400 text-amber-400' },
+    { value: 'high', label: 'High', colorClass: 'bg-rose-500 text-rose-500' },
+  ];
+
+  statusOptions: SelectOption[] = [
+    { value: 'todo', label: 'To Do', icon: '📋' },
+    { value: 'in-progress', label: 'In Progress', icon: '⏳' },
+    { value: 'done', label: 'Done', icon: '✅' },
+  ];
+
+  sectionOptions = computed<SelectOption[]>(() => {
+    return this.projectSections().map((s) => ({
+      value: s.id,
+      label: s.name,
+      icon: '📁',
+    }));
+  });
 
   completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
 

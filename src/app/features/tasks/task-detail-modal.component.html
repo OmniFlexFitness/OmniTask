@@ -190,15 +190,12 @@
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Status</label
               >
-              <select
+              <app-custom-select
                 formControlName="status"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (change)="autoSave()"
-              >
-                <option value="todo">📋 To Do</option>
-                <option value="in-progress">🔄 In Progress</option>
-                <option value="done">✅ Done</option>
-              </select>
+                [options]="statusOptions"
+                placeholder="- Select Status -"
+                (valueChange)="autoSave()"
+              ></app-custom-select>
             </div>
 
             <!-- Start Date -->
@@ -206,12 +203,11 @@
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Start Date</label
               >
-              <input
-                type="date"
+              <app-custom-date-picker
                 formControlName="startDate"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
-              />
+                placeholder="mm/dd/yyyy"
+                (valueChange)="autoSave()"
+              ></app-custom-date-picker>
             </div>
 
             <!-- Due Date -->
@@ -219,12 +215,11 @@
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Due Date</label
               >
-              <input
-                type="date"
+              <app-custom-date-picker
                 formControlName="dueDate"
-                class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (blur)="autoSave()"
-              />
+                placeholder="mm/dd/yyyy"
+                (valueChange)="autoSave()"
+              ></app-custom-date-picker>
             </div>
 
             <!-- Priority -->
@@ -232,15 +227,12 @@
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Priority</label
               >
-              <select
+              <app-custom-select
                 formControlName="priority"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (change)="autoSave()"
-              >
-                <option value="low">🟢 Low</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="high">🔴 High</option>
-              </select>
+                [options]="priorityOptions"
+                placeholder="- Select Priority -"
+                (valueChange)="autoSave()"
+              ></app-custom-select>
             </div>
 
             <!-- Section -->
@@ -248,16 +240,12 @@
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest"
                 >Section</label
               >
-              <select
+              <app-custom-select
                 formControlName="sectionId"
-                class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                (change)="autoSave()"
-              >
-                <option [value]="null">No Section</option>
-                @for (section of projectSections(); track section.id) {
-                  <option [value]="section.id">{{ section.name }}</option>
-                }
-              </select>
+                [options]="sectionOptions()"
+                placeholder="No Section"
+                (valueChange)="autoSave()"
+              ></app-custom-select>
             </div>
           </div>
 
@@ -288,12 +276,11 @@
                       />
                     }
                     @case ('date') {
-                      <input
-                        type="date"
-                        [value]="customFieldValues()[field.id] || ''"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
+                      <app-custom-date-picker
+                        [value]="customFieldValues()[field.id] || null"
+                        (valueChange)="updateCustomField(field.id, $event)"
+                        placeholder="mm/dd/yyyy"
+                      ></app-custom-date-picker>
                     }
                     @case ('dropdown') {
                       <select
