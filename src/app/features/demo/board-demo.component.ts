@@ -7,34 +7,7 @@ import { Task, Project, DEFAULT_SECTIONS } from '../../core/models/domain.model'
   selector: 'app-board-demo',
   standalone: true,
   imports: [CommonModule, TaskBoardViewComponent],
-  template: `
-    <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
-      <div class="max-w-7xl mx-auto">
-        <div class="mb-8 text-center">
-          <h1
-            class="text-4xl font-bold mb-3 [text-shadow:0_0_8px_rgba(224,64,251,0.8),_0_0_16px_rgba(224,64,251,0.6),_0_0_24px_rgba(0,210,255,0.4)]"
-          >
-            Board View - Cyberpunk Enhancement Demo
-          </h1>
-          <p class="text-slate-400 text-lg">
-            Showcasing enhanced column styling, task color accents, and dormant state effects
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl overflow-hidden border border-white/10 bg-slate-900/30 backdrop-blur-xl"
-        >
-          <app-task-board-view
-            [tasks]="demoTasks()"
-            [project]="demoProject()"
-            (taskClick)="onTaskClick($event)"
-            (quickAdd)="onQuickAdd($event)"
-            (addSection)="onAddSection()"
-          />
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './board-demo.component.html',
 })
 export class BoardDemoComponent {
   demoProject = signal<Project>({
