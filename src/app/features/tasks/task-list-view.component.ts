@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal, inject } from '@angular/core';
+import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Task } from '../../core/models/domain.model';
@@ -11,61 +11,11 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
   standalone: true,
   imports: [CommonModule, FormsModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe],
   templateUrl: './task-list-view.component.html',
-  styles: [
-    `
-      .md-inline-title :is(p) {
-        display: inline;
-        margin: 0;
-      }
-      .md-inline-title :is(h1, h2, h3, h4, h5, h6) {
-        display: inline;
-        font-size: inherit;
-        margin: 0;
-      }
-      .md-preview-content {
-        max-height: 12rem;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
-      }
-      .md-preview-content :is(h1, h2, h3) {
-        font-size: 0.8rem;
-        margin: 0.25rem 0;
-        font-weight: 600;
-        color: #cbd5e1;
-      }
-      .md-preview-content p {
-        margin: 0.15rem 0;
-      }
-      .md-preview-content ul,
-      .md-preview-content ol {
-        margin: 0.15rem 0;
-        padding-left: 1rem;
-      }
-      .md-preview-content pre {
-        font-size: 0.7rem;
-        padding: 0.35rem 0.5rem;
-        border-radius: 0.25rem;
-        background: rgba(255, 255, 255, 0.03);
-        margin: 0.25rem 0;
-      }
-      .md-preview-content code {
-        font-size: 0.7rem;
-      }
-      .md-preview-content table {
-        font-size: 0.7rem;
-        margin: 0.25rem 0;
-      }
-      .md-preview-content .md-callout {
-        font-size: 0.7rem;
-        padding: 0.35rem 0.5rem;
-        margin: 0.25rem 0;
-      }
-    `,
-  ],
+  styleUrls: ['./task-list-view.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskListViewComponent {
-  private taskService = inject(TaskService);
+  private readonly taskService = inject(TaskService);
 
   tasks = input.required<Task[]>();
   googleTaskListId = input<string | undefined>(undefined);

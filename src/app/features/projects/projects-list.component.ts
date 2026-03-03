@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,20 +12,12 @@ import { ProjectFormModalComponent } from './project-form-modal.component';
   standalone: true,
   imports: [CommonModule, FormsModule, ProjectFormModalComponent],
   templateUrl: './projects-list.component.html',
-  styles: [
-    `
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    `,
-  ],
+  styleUrls: ['./projects-list.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectsListComponent {
-  private projectService = inject(ProjectService);
-  private router = inject(Router);
+  private readonly projectService = inject(ProjectService);
+  private readonly router = inject(Router);
 
   // State
   searchQuery = '';

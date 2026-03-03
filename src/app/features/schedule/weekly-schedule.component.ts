@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { WeeklyBlock } from '../../core/models/domain.model';
@@ -10,17 +10,11 @@ import { WeeklyBlockModalComponent } from './weekly-block-modal.component';
   standalone: true,
   imports: [CommonModule, WeeklyBlockModalComponent],
   templateUrl: './weekly-schedule.component.html',
-  styles: [
-    `
-      :host {
-        display: block;
-        height: 100%;
-      }
-    `,
-  ],
+  styleUrls: ['./weekly-schedule.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WeeklyScheduleComponent {
-  private scheduleService = inject(ScheduleService);
+  private readonly scheduleService = inject(ScheduleService);
 
   allBlocks = toSignal(this.scheduleService.getWeeklyBlocks(), { initialValue: [] });
 

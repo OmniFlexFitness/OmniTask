@@ -1,13 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  signal,
-  computed,
-  ElementRef,
-  ViewChild,
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
@@ -18,26 +9,8 @@ import { Tag } from '../../../core/models/domain.model';
   standalone: true,
   imports: [CommonModule, FormsModule, OverlayModule],
   templateUrl: './tag-input.component.html',
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-      @keyframes scaleIn {
-        from {
-          transform: scale(0.9);
-          opacity: 0;
-        }
-        to {
-          transform: scale(1);
-          opacity: 1;
-        }
-      }
-      .animate-scale-in {
-        animation: scaleIn 0.15s ease-out;
-      }
-    `,
-  ],
+  styleUrls: ['./tag-input.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagInputComponent {
   @Input() availableTags: Tag[] = [];

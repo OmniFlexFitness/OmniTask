@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DialogService } from '../../core/services/dialog.service';
 
@@ -7,16 +7,11 @@ import { DialogService } from '../../core/services/dialog.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './dialog.component.html',
-  styles: [
-    `
-      :host {
-        display: contents;
-      }
-    `,
-  ],
+  styleUrls: ['./dialog.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DialogComponent {
-  dialogService = inject(DialogService);
+  readonly dialogService = inject(DialogService);
 
   onConfirm(): void {
     this.dialogService.confirmAction();

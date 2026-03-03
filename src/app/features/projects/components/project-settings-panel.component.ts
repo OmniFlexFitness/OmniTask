@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { Component, input, output, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
@@ -49,28 +49,15 @@ const PROJECT_COLORS = [
     ProjectMemberManagerComponent,
   ],
   templateUrl: './project-settings-panel.component.html',
-  styles: [
-    `
-      .ofx-settings-section {
-        /* Section styling handled by parent */
-      }
-
-      .ofx-section-title {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: rgb(203, 213, 225);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    `,
-  ],
+  styleUrls: ['./project-settings-panel.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSettingsPanelComponent {
-  private projectService = inject(ProjectService);
-  private dialogService = inject(DialogService);
-  private googleTasksService = inject(GoogleTasksService);
-  private googleTasksSyncService = inject(GoogleTasksSyncService);
-  private authService = inject(AuthService);
+  private readonly projectService = inject(ProjectService);
+  private readonly dialogService = inject(DialogService);
+  private readonly googleTasksService = inject(GoogleTasksService);
+  private readonly googleTasksSyncService = inject(GoogleTasksSyncService);
+  private readonly authService = inject(AuthService);
 
   project = input.required<Project>();
   projectChanged = output<void>();

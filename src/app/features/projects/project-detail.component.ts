@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, effect } from '@angular/core';
+import { Component, computed, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -33,35 +33,15 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
     TaskCreateModalComponent,
   ],
   templateUrl: './project-detail.component.html',
-  styles: [
-    `
-      /* Scrollbar styling */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.2);
-        border-radius: 4px;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(148, 163, 184, 0.4);
-      }
-    `,
-  ],
+  styleUrls: ['./project-detail.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailComponent {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private projectService = inject(ProjectService);
-  private taskService = inject(TaskService);
-  private dialogService = inject(DialogService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly projectService = inject(ProjectService);
+  private readonly taskService = inject(TaskService);
+  private readonly dialogService = inject(DialogService);
 
   // Tab State
   activeTab = signal<ProjectTab>('overview');
