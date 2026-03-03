@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal } from '@angular/core';
+import { Component, input, output, inject, signal , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
@@ -26,6 +26,7 @@ const SECTION_COLORS = [
  * Manages Kanban columns/sections for a project
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-section-manager',
   standalone: true,
   imports: [CommonModule, FormsModule],

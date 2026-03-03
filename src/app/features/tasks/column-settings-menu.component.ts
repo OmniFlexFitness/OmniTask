@@ -1,4 +1,4 @@
-import { Component, input, output, signal, computed, inject, effect } from '@angular/core';
+import { Component, input, output, signal, computed, inject, effect , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule, CdkOverlayOrigin } from '@angular/cdk/overlay';
@@ -42,6 +42,7 @@ const COLUMN_COLORS = [
 ];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-column-settings-menu',
   standalone: true,
   imports: [CommonModule, FormsModule, OverlayModule],

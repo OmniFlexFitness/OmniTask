@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, effect } from '@angular/core';
+import { Component, computed, inject, signal, effect , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
@@ -23,6 +23,7 @@ import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
   standalone: true,
   imports: [

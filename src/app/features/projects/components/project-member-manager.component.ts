@@ -1,4 +1,4 @@
-import { Component, input, inject, signal, computed } from '@angular/core';
+import { Component, input, inject, signal, computed , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
@@ -10,6 +10,7 @@ import { debounceTime, distinctUntilChanged, switchMap, map, startWith } from 'r
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-project-member-manager',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],

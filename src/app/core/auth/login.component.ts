@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './auth.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule],

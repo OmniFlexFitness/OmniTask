@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RecurringTask, SCHEDULE_COLORS } from '../../core/models/domain.model';
@@ -6,6 +6,7 @@ import { ScheduleService } from '../../core/services/schedule.service';
 import { RecurringTaskModalComponent } from './recurring-task-modal.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-daily-schedule',
   standalone: true,
   imports: [CommonModule, RecurringTaskModalComponent],
