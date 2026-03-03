@@ -270,10 +270,8 @@
                   ></span>
                   <h3
                     class="font-bold text-sm tracking-wide transition-colors duration-300"
+                    [class.text-slate-200]="getSectionStatus(section) !== 'done'"
                     [class.text-slate-500]="getSectionStatus(section) === 'done'"
-                    [style.color]="
-                      getSectionStatus(section) !== 'done' ? section.color || '#e2e8f0' : ''
-                    "
                     [style.text-shadow]="
                       getSectionStatus(section) !== 'done'
                         ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6)
@@ -456,8 +454,7 @@
                     <!-- Selection glow effect -->
                     @if (isSelected(task.id)) {
                       <div
-                        class="absolute inset-0 pointer-events-none"
-                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), transparent); box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.2);"
+                        class="absolute inset-0 pointer-events-none bg-gradient-to-br from-purple-500/15 to-transparent shadow-[inset_0_0_20px_rgba(168,85,247,0.2)]"
                       ></div>
                     }
 

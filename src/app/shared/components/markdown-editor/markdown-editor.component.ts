@@ -30,30 +30,10 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, MarkdownPipe],
   templateUrl: './markdown-editor.component.html',
   styleUrls: ['./markdown-editor.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush, {
-        margin-right: 8px;
-        accent-color: rgb(6, 182, 212);
-      }
-
-      /* Obsidian highlight */
-      :host ::ng-deep .md-live-preview mark,
-      :host ::ng-deep .md-live-preview .md-highlight {
-        background: rgba(250, 204, 21, 0.2);
-        color: rgb(253, 224, 71);
-        padding: 0 2px;
-        border-radius: 2px;
-      }
-
-      /* Callouts */
-      :host ::ng-deep .md-live-preview .md-callout {
-        color: rgb(203, 213, 225);
-      }
-    `,
-  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MarkdownEditorComponent {
   /** Current markdown content */

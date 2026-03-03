@@ -9,11 +9,7 @@
       >
         <!-- Current Image or Placeholder -->
         @if (currentImageUrl()) {
-          <img
-            [src]="currentImageUrl()"
-            [alt]="altText()"
-            class="w-full h-full object-cover"
-          />
+          <img [src]="currentImageUrl()" [alt]="altText()" class="w-full h-full object-cover" />
           <div
             class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
           >
@@ -56,7 +52,9 @@
             </svg>
             @if (uploading()) {
               <div class="flex items-center gap-2">
-                <div class="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style="border-color: #00d2ff; border-top-color: transparent;"></div>
+                <div
+                  class="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin border-[#00d2ff]"
+                ></div>
                 <p class="text-sm text-slate-400">Uploading...</p>
               </div>
             } @else {
@@ -68,10 +66,9 @@
 
         <!-- Upload Progress Bar -->
         @if (uploading()) {
-          <div class="absolute bottom-0 left-0 right-0 h-1" style="background-color: rgba(30, 41, 59, 0.8);">
+          <div class="absolute bottom-0 left-0 right-0 h-1 bg-slate-800/80">
             <div
-              class="h-full transition-all duration-300 animate-pulse"
-              style="width: 60%; background: linear-gradient(to right, #e040fb, #00d2ff);"
+              class="h-full transition-all duration-300 animate-pulse w-[60%] bg-gradient-to-r from-[#e040fb] to-[#00d2ff]"
             ></div>
           </div>
         }

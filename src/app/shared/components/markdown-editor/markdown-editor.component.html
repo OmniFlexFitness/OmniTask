@@ -1,4 +1,4 @@
-    <div class="md-editor" [class.md-editor-minimal]="minimal()">
+<div class="md-editor" [class.md-editor-minimal]="minimal()">
       <!-- Toolbar — always visible -->
       <div class="md-toolbar" [class.md-toolbar-minimal]="minimal()">
         <!-- Undo -->
@@ -107,7 +107,7 @@
           title="Heading"
           (click)="insertPrefix('## ')"
         >
-          <span class="md-icon-bold" style="font-size:10px">H2</span>
+          <span class="md-icon-bold text-[10px]">H2</span>
         </button>
 
         <!-- Blockquote -->
@@ -340,4 +340,3 @@
         ></div>
       }
     </div>
-  `,
