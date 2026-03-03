@@ -1,0 +1,85 @@
+<div class="min-h-screen bg-[#0a0a0f] p-6">
+      <div class="max-w-7xl mx-auto">
+        <!-- Page header -->
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1
+              class="text-2xl font-bold text-white tracking-tight"
+              style="font-family: 'Orbitron', sans-serif;"
+            >
+              Schedule
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">
+              Manage your daily routines and weekly time blocks
+            </p>
+          </div>
+        </div>
+
+        <!-- Tab switcher -->
+        <div class="flex gap-1 mb-6 bg-slate-800/40 p-1 rounded-xl border border-white/5 w-fit">
+          <button
+            class="px-5 py-2.5 text-sm font-semibold rounded-lg transition-all"
+            [class.bg-purple-600]="activeTab() === 'daily'"
+            [class.text-white]="activeTab() === 'daily'"
+            [class.shadow-lg]="activeTab() === 'daily'"
+            [class.shadow-purple-500/20]="activeTab() === 'daily'"
+            [class.text-slate-400]="activeTab() !== 'daily'"
+            [class.hover:text-white]="activeTab() !== 'daily'"
+            [class.hover:bg-white/5]="activeTab() !== 'daily'"
+            (click)="activeTab.set('daily')"
+          >
+            <span class="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Daily
+            </span>
+          </button>
+          <button
+            class="px-5 py-2.5 text-sm font-semibold rounded-lg transition-all"
+            [class.bg-cyan-600]="activeTab() === 'weekly'"
+            [class.text-white]="activeTab() === 'weekly'"
+            [class.shadow-lg]="activeTab() === 'weekly'"
+            [class.shadow-cyan-500/20]="activeTab() === 'weekly'"
+            [class.text-slate-400]="activeTab() !== 'weekly'"
+            [class.hover:text-white]="activeTab() !== 'weekly'"
+            [class.hover:bg-white/5]="activeTab() !== 'weekly'"
+            (click)="activeTab.set('weekly')"
+          >
+            <span class="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              Weekly
+            </span>
+          </button>
+        </div>
+
+        <!-- Tab content -->
+        <div class="bg-slate-900/30 rounded-2xl border border-white/5 p-6 min-h-[600px]">
+          @if (activeTab() === 'daily') {
+            <app-daily-schedule />
+          } @else {
+            <app-weekly-schedule />
+          }
+        </div>
+      </div>
+    </div>
