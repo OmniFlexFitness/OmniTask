@@ -1,10 +1,11 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, input, output, signal, inject , ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { WeeklyBlock, SCHEDULE_COLORS } from '../../core/models/domain.model';
 import { ScheduleService } from '../../core/services/schedule.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-weekly-block-modal',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
