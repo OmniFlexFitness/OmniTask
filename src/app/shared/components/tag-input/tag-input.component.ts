@@ -2,7 +2,6 @@ import {
   Component,
   input,
   output,
-  EventEmitter,
   signal,
   computed,
   ElementRef,

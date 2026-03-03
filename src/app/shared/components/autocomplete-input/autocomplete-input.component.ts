@@ -3,7 +3,6 @@ import {
   input,
   output,
   effect,
-  EventEmitter,
   signal,
   computed,
   ElementRef,

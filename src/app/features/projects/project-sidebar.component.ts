@@ -3,7 +3,6 @@ import {
   inject,
   signal,
   output,
-  EventEmitter,
   input,
   effect,
   ChangeDetectionStrategy,
