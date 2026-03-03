@@ -1,4 +1,13 @@
-import { Component, input, output, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  DestroyRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
@@ -6,7 +15,7 @@ import { ProjectService } from '../../core/services/project.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { Task, Project, Section, Subtask } from '../../core/models/domain.model';
-import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { toSignal, toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, startWith, debounceTime } from 'rxjs';
 import {
   AutocompleteInputComponent,
@@ -29,6 +38,7 @@ export class TaskCreateModalComponent {
   private readonly projectService = inject(ProjectService);
   private readonly contactsService = inject(ContactsService);
   private readonly vertexAiService = inject(VertexAiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
   projectId = input.required<string>();
@@ -119,22 +129,26 @@ export class TaskCreateModalComponent {
 
   constructor() {
     // Load sections when project changes
-    toObservable(this.project).subscribe((p) => {
-      if (p?.sections) {
-        this.sections.set(p.sections);
-        // Set default section if provided or first section
-        const initialSection =
-          this.initialSectionId() || (p.sections.length > 0 ? p.sections[0].id : '');
-        this.form.patchValue({ sectionId: initialSection });
-      }
-    });
+    toObservable(this.project)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((p) => {
+        if (p?.sections) {
+          this.sections.set(p.sections);
+          // Set default section if provided or first section
+          const initialSection =
+            this.initialSectionId() || (p.sections.length > 0 ? p.sections[0].id : '');
+          this.form.patchValue({ sectionId: initialSection });
+        }
+      });
 
     // Set initial due date if provided
-    toObservable(this.initialDueDate).subscribe((date) => {
-      if (date) {
-        this.form.patchValue({ dueDate: this.toInputDate(date) });
-      }
-    });
+    toObservable(this.initialDueDate)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((date) => {
+        if (date) {
+          this.form.patchValue({ dueDate: this.toInputDate(date) });
+        }
+      });
   }
 
   updateCustomField(fieldId: string, value: any) {

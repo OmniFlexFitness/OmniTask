@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import {
   Auth,
   GoogleAuthProvider,
@@ -13,6 +13,7 @@ import { UserProfile } from '../models/user.model';
 import { DialogService } from '../services/dialog.service';
 import { switchMap, map } from 'rxjs/operators';
 import { of, from, Observable } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 // Google Tasks API scope for read/write access
 const GOOGLE_TASKS_SCOPE = 'https://www.googleapis.com/auth/tasks';
@@ -40,6 +41,7 @@ export class AuthService {
   private firestore = inject(Firestore);
   private router = inject(Router);
   private dialogService = inject(DialogService);
+  private destroyRef = inject(DestroyRef);
 
   user$ = user(this.auth);
   currentUserSig = signal<UserProfile | null>(null);
@@ -57,6 +59,7 @@ export class AuthService {
           if (!firebaseUser) return of(null);
           return this.getUserProfile(firebaseUser.uid);
         }),
+        takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((profile) => {
         this.currentUserSig.set(profile);
