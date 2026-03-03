@@ -128,7 +128,24 @@ git push origin <BRANCH_NAME>
 
 ---
 
-### Task 8: Verify CI Passes
+### Task 8: Respond to Comments and Resolve Threads
+
+After pushing the fixes, reply to the review comments to explain how they were addressed.
+
+// turbo
+```bash
+# General PR comment stating all issues are resolved
+gh pr review <PR_NUMBER> --comment -b "All actionable feedback has been implemented and pushed. Marking threads as resolved."
+```
+
+> **Note**: To reply to specific inline comments, you can use the GitHub API:
+> ```bash
+> gh api -X POST repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments/<COMMENT_ID>/replies -f body="Implemented as suggested."
+> ```
+
+---
+
+### Task 9: Verify CI Passes
 
 // turbo
 ```bash
@@ -137,7 +154,7 @@ gh pr checks <PR_NUMBER>
 
 ---
 
-### Task 9: Clean Up Temp Files
+### Task 10: Clean Up Temp Files
 
 Remove any temporary files created during review:
 
