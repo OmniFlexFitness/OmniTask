@@ -34,22 +34,20 @@ const firestore_2 = require("firebase-admin/firestore");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const vertexai_1 = require("@google-cloud/vertexai");
+const nodemailer = __importStar(require("nodemailer"));
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = (0, firestore_2.getFirestore)();
 // Define secrets for OAuth (set via Firebase CLI: firebase functions:secrets:set GOOGLE_CLIENT_ID)
 const googleClientId = (0, params_1.defineSecret)('GOOGLE_CLIENT_ID');
 const googleClientSecret = (0, params_1.defineSecret)('GOOGLE_CLIENT_SECRET');
-// Service account email for sending emails (with domain-wide delegation)
-const gmailServiceAccountKey = (0, params_1.defineSecret)('GMAIL_SERVICE_ACCOUNT_KEY');
+const nodemailerSmtpPassword = (0, params_1.defineSecret)('NODEMAILER_SMTP_PASSWORD');
 // Sender email address for task notifications (configurable via environment variable)
-const TASK_NOTIFICATION_SENDER = process.env.TASK_NOTIFICATION_SENDER || 'task@omniflexfitness.com';
+// (Now managed by firestore-send-email extension DEFAULT_FROM)
 // Google Tasks API client
 const tasksApi = googleapis_1.google.tasks('v1');
 // Google People API client (for directory contacts)
 const peopleApi = googleapis_1.google.people('v1');
-// Gmail API client
-const gmailApi = googleapis_1.google.gmail('v1');
 // Email template cache (loaded once for performance)
 let emailTemplateCache = null;
 /**
@@ -121,40 +119,6 @@ function populateEmailTemplate(data) {
     // URL doesn't need escaping as it's constructed server-side, but validate it's safe
     html = html.replace(/{{TASK_URL}}/g, data.taskUrl);
     return html;
-}
-// JWT client for Gmail API (initialized outside function handler for performance)
-let jwtClient = null;
-/**
- * Get or initialize JWT client for Gmail API
- */
-async function getGmailJwtClient() {
-    try {
-        if (!jwtClient) {
-            const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
-            jwtClient = new googleapis_1.google.auth.JWT({
-                email: serviceAccountKey.client_email,
-                key: serviceAccountKey.private_key,
-                scopes: ['https://www.googleapis.com/auth/gmail.send'],
-                subject: TASK_NOTIFICATION_SENDER, // Impersonate this user
-            });
-            await jwtClient.authorize();
-        }
-        return jwtClient;
-    }
-    catch (error) {
-        // If authorization fails, clear cache and try once more
-        jwtClient = null;
-        const serviceAccountKey = JSON.parse(gmailServiceAccountKey.value());
-        const newClient = new googleapis_1.google.auth.JWT({
-            email: serviceAccountKey.client_email,
-            key: serviceAccountKey.private_key,
-            scopes: ['https://www.googleapis.com/auth/gmail.send'],
-            subject: TASK_NOTIFICATION_SENDER,
-        });
-        await newClient.authorize();
-        jwtClient = newClient;
-        return jwtClient;
-    }
 }
 // Initialize Vertex AI with Gemini 1.5 Flash (cost-effective model)
 const vertexAI = new vertexai_1.VertexAI({
@@ -516,8 +480,8 @@ exports.searchWorkspaceContacts = (0, https_1.onCall)({
  */
 exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
     document: 'tasks/{taskId}',
-    secrets: [gmailServiceAccountKey],
     memory: '256MiB',
+    secrets: [nodemailerSmtpPassword],
 }, async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
@@ -693,30 +657,24 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
     else {
         emailSubject = `📋 Task update: ${safeTitle || 'Task'}`;
     }
-    // Send to each recipient
+    // Configure nodemailer with SMTP Password
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+            user: 'bertin.kenol@omniflexfitness.com', // Primary account email for login
+            pass: nodemailerSmtpPassword.value(),
+        },
+    });
+    // Send to each recipient by writing to the 'mail' collection (Now sending directly via nodemailer)
     for (const recipientEmail of recipientEmails) {
-        const rawEmail = [
-            `From: OmniTask <${TASK_NOTIFICATION_SENDER}>`,
-            `To: ${recipientEmail}`,
-            `Subject: ${emailSubject}`,
-            'MIME-Version: 1.0',
-            'Content-Type: text/html; charset=utf-8',
-            '',
-            emailHtml,
-        ].join('\r\n');
-        const encodedEmail = Buffer.from(rawEmail)
-            .toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
         try {
-            const client = await getGmailJwtClient();
-            await gmailApi.users.messages.send({
-                userId: 'me',
-                requestBody: {
-                    raw: encodedEmail,
-                },
-                auth: client,
+            await transporter.sendMail({
+                from: '"OmniTask" <omnitask@omniflexfitness.com>',
+                to: recipientEmail,
+                subject: emailSubject,
+                html: emailHtml,
             });
             console.log(`Email sent to ${recipientEmail} for task: ${after.title}`);
             // Log notification to Firestore for audit
@@ -737,7 +695,7 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
                 recipientEmail,
                 sentAt: firestore_2.FieldValue.serverTimestamp(),
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
+                error: error instanceof Error ? error.message : String(error),
             });
         }
     }
