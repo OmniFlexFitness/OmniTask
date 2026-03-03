@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, output, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProjectService } from '../../core/services/project.service';
@@ -36,8 +36,8 @@ export class ProjectFormModalComponent {
   editProject = input<Project | null>(null);
 
   // Outputs
-  @Output() close = new EventEmitter<void>();
-  @Output() saved = new EventEmitter<Project>();
+  close = output<void>();
+  saved = output<Project>();
 
   // Color options
   colors = PROJECT_COLORS;
@@ -46,7 +46,7 @@ export class ProjectFormModalComponent {
   form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(1)]],
     description: [''],
-    color: ['#6366f1']
+    color: ['#6366f1'],
   });
 
   // Loading state
@@ -58,7 +58,7 @@ export class ProjectFormModalComponent {
       this.form.patchValue({
         name: project.name,
         description: project.description || '',
-        color: project.color || '#6366f1'
+        color: project.color || '#6366f1',
       });
     }
   }
@@ -83,7 +83,7 @@ export class ProjectFormModalComponent {
         await this.projectService.updateProject(editingProject.id, {
           name,
           description,
-          color
+          color,
         });
         this.saved.emit({ ...editingProject, name, description, color });
       } else {
@@ -94,7 +94,7 @@ export class ProjectFormModalComponent {
           this.saved.emit(newProject);
         }
       }
-      
+
       this.close.emit();
     } catch (error) {
       console.error('Failed to save project:', error);

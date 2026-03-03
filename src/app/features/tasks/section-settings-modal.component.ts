@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, output, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Section } from '../../core/models/domain.model';
@@ -37,9 +37,9 @@ export class SectionSettingsModalComponent {
 
   section = input.required<Section>();
 
-  @Output() close = new EventEmitter<void>();
-  @Output() save = new EventEmitter<Partial<Section>>();
-  @Output() delete = new EventEmitter<void>();
+  close = output<void>();
+  save = output<Partial<Section>>();
+  delete = output<void>();
 
   colors = COLUMN_COLORS;
   statusOptions = STATUS_OPTIONS;

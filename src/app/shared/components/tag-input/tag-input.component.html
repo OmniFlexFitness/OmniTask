@@ -1,8 +1,8 @@
 <div class="w-full">
       <!-- Selected Tags Area -->
-      @if (selectedTags.length > 0) {
+      @if (selectedTags().length > 0) {
       <div class="flex flex-wrap gap-2 mb-2">
-        @for (tag of selectedTags; track tag.name) {
+        @for (tag of selectedTags(); track tag.name) {
         <div
           class="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all animate-scale-in"
           [style.background-color]="tag.color + '20'"
@@ -40,7 +40,7 @@
           <input
             #tagInput
             type="text"
-            [placeholder]="placeholder"
+            [placeholder]="placeholder()"
             [(ngModel)]="inputValue"
             (input)="onInput()"
             (focus)="onFocus()"

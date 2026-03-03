@@ -1,4 +1,13 @@
-import { Component, Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  signal,
+  computed,
+  ElementRef,
+  viewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
@@ -13,14 +22,14 @@ import { Tag } from '../../../core/models/domain.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagInputComponent {
-  @Input() availableTags: Tag[] = [];
-  @Input() selectedTags: Tag[] = [];
-  @Input() placeholder: string = 'Add tags...';
+  availableTags = input<Tag[]>([]);
+  selectedTags = input<Tag[]>([]);
+  placeholder = input<string>('Add tags...');
 
-  @Output() tagsChange = new EventEmitter<Tag[]>();
-  @Output() tagCreated = new EventEmitter<string>();
+  tagsChange = output<Tag[]>();
+  tagCreated = output<string>();
 
-  @ViewChild('tagInput') inputEl!: ElementRef<HTMLInputElement>;
+  inputEl = viewChild.required<ElementRef<HTMLInputElement>>('tagInput');
 
   inputValue = '';
   isOpen = signal(false);
@@ -28,15 +37,15 @@ export class TagInputComponent {
 
   filteredTags = computed(() => {
     const query = this.inputValue.toLowerCase().trim();
-    return this.availableTags.filter(
+    return this.availableTags().filter(
       (tag) =>
         tag.name.toLowerCase().includes(query) &&
-        !this.selectedTags.some((selected) => selected.name === tag.name)
+        !this.selectedTags().some((selected) => selected.name === tag.name),
     );
   });
 
   isTagSelected(tag: Tag): boolean {
-    return this.selectedTags.some((t) => t.name === tag.name);
+    return this.selectedTags().some((t) => t.name === tag.name);
   }
 
   onInput() {
@@ -45,7 +54,7 @@ export class TagInputComponent {
   }
 
   onFocus() {
-    if (this.availableTags.length > 0) {
+    if (this.availableTags().length > 0) {
       this.isOpen.set(true);
     }
   }
@@ -57,13 +66,13 @@ export class TagInputComponent {
 
   selectTag(tag: Tag) {
     if (!this.isTagSelected(tag)) {
-      this.tagsChange.emit([...this.selectedTags, tag]);
+      this.tagsChange.emit([...this.selectedTags(), tag]);
     }
     this.clearInput();
   }
 
   removeTag(tagToRemove: Tag) {
-    const newTags = this.selectedTags.filter((tag) => tag.name !== tagToRemove.name);
+    const newTags = this.selectedTags().filter((tag) => tag.name !== tagToRemove.name);
     this.tagsChange.emit(newTags);
   }
 
@@ -72,7 +81,9 @@ export class TagInputComponent {
     if (!name) return;
 
     // Check if it's an existing tag first (case insensitive)
-    const existingTag = this.availableTags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    const existingTag = this.availableTags().find(
+      (t) => t.name.toLowerCase() === name.toLowerCase(),
+    );
     if (existingTag) {
       this.selectTag(existingTag);
     } else {
@@ -87,7 +98,7 @@ export class TagInputComponent {
   private clearInput() {
     this.inputValue = '';
     this.isOpen.set(false);
-    setTimeout(() => this.inputEl.nativeElement.focus(), 0);
+    setTimeout(() => this.inputEl().nativeElement.focus(), 0);
   }
 
   onKeydown(event: KeyboardEvent) {
@@ -121,9 +132,9 @@ export class TagInputComponent {
         this.close();
         break;
       case 'Backspace':
-        if (!this.inputValue && this.selectedTags.length > 0) {
+        if (!this.inputValue && this.selectedTags().length > 0) {
           // Remove last tag on backspace if input is empty
-          this.removeTag(this.selectedTags[this.selectedTags.length - 1]);
+          this.removeTag(this.selectedTags()[this.selectedTags().length - 1]);
         }
         break;
     }

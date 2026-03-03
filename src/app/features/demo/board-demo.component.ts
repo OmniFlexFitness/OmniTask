@@ -1,4 +1,4 @@
-import { Component, signal , ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { Task, Project, DEFAULT_SECTIONS } from '../../core/models/domain.model';

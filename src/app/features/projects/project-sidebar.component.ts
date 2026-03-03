@@ -1,4 +1,12 @@
-import { Component, inject, signal, Output, EventEmitter, input, effect, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  output,
+  input,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services/project.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
@@ -21,7 +29,7 @@ export class ProjectSidebarComponent {
   selectedProjectId = input<string | null>(null);
 
   // Output event when project is selected
-  @Output() projectSelected = new EventEmitter<Project>();
+  projectSelected = output<Project>();
 
   // Projects from service
   projects = toSignal(this.projectService.getMyProjects(), { initialValue: [] });

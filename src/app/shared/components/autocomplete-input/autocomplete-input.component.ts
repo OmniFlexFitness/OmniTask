@@ -1,4 +1,15 @@
-import { Component, Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  effect,
+  signal,
+  computed,
+  ElementRef,
+  viewChild,
+  HostListener,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkOverlayOrigin, OverlayModule } from '@angular/cdk/overlay';
@@ -20,24 +31,18 @@ export interface AutocompleteOption {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AutocompleteInputComponent {
-  @Input() options: AutocompleteOption[] = [];
-  @Input() placeholder: string = '';
-  @Input() allowCustom: boolean = false;
+  options = input<AutocompleteOption[]>([]);
+  placeholder = input<string>('');
+  allowCustom = input<boolean>(false);
 
   // Value can be a string (custom/ID) or an Option object
-  @Input() set value(val: string | null | undefined) {
-    // If value matches an existing option ID or Label, try to reconstruct selection
-    if (val !== this.currentValue) {
-      this.currentValue = val || '';
-      this.syncDisplayValue();
-    }
-  }
+  value = input<string | null | undefined>(undefined);
 
-  @Output() optionSelected = new EventEmitter<AutocompleteOption | string>();
-  @Output() valueChange = new EventEmitter<string>();
-  @Output() search = new EventEmitter<string>();
+  optionSelected = output<AutocompleteOption | string>();
+  valueChange = output<string>();
+  search = output<string>();
 
-  @ViewChild('inputEl') inputEl!: ElementRef<HTMLInputElement>;
+  inputEl = viewChild.required<ElementRef<HTMLInputElement>>('inputEl');
 
   // Internal state
   isOpen = signal(false);
@@ -47,12 +52,22 @@ export class AutocompleteInputComponent {
 
   private currentValue: string = '';
 
+  constructor() {
+    effect(() => {
+      const val = this.value();
+      if (val !== this.currentValue) {
+        this.currentValue = val || '';
+        this.syncDisplayValue();
+      }
+    });
+  }
+
   // Filter options based on input
   filteredOptions = computed(() => {
     const query = this.inputValue().toLowerCase().trim();
-    if (!query) return this.options;
+    if (!query) return this.options();
 
-    return this.options.filter(
+    return this.options().filter(
       (opt) =>
         opt.label.toLowerCase().includes(query) || opt.sublabel?.toLowerCase().includes(query),
     );
@@ -76,7 +91,7 @@ export class AutocompleteInputComponent {
     }
 
     // Try to find matching option by ID or Label (fuzzy match on label if ID fails)
-    const match = this.options.find(
+    const match = this.options().find(
       (o) => o.id === this.currentValue || o.label === this.currentValue,
     );
 
@@ -103,7 +118,7 @@ export class AutocompleteInputComponent {
     this.search.emit(val);
 
     // If custom values allowed, emit immediately
-    if (this.allowCustom) {
+    if (this.allowCustom()) {
       this.valueChange.emit(val);
     }
   }
@@ -122,7 +137,7 @@ export class AutocompleteInputComponent {
     this.activeIndex.set(-1);
 
     // On close, validate
-    if (!this.selectedOption() && !this.allowCustom) {
+    if (!this.selectedOption() && !this.allowCustom()) {
       // Revert to known value or clear
       this.inputValue.set('');
       this.valueChange.emit('');
@@ -137,7 +152,7 @@ export class AutocompleteInputComponent {
     this.currentValue = '';
     this.valueChange.emit('');
     this.optionSelected.emit('');
-    this.inputEl.nativeElement.focus();
+    this.inputEl().nativeElement.focus();
   }
 
   selectOption(option: AutocompleteOption) {
@@ -175,7 +190,7 @@ export class AutocompleteInputComponent {
         event.preventDefault();
         if (this.activeIndex() >= 0 && options[this.activeIndex()]) {
           this.selectOption(options[this.activeIndex()]);
-        } else if (this.allowCustom && this.inputValue().trim()) {
+        } else if (this.allowCustom() && this.inputValue().trim()) {
           // Confirm custom value
           this.close();
           this.valueChange.emit(this.inputValue());
