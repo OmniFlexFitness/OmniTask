@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input, effect } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, input, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../core/services/project.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
@@ -137,10 +137,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
     </aside>
   `,
   styleUrls: ['./project-sidebar.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSidebarComponent {
-  private projectService = inject(ProjectService);
-  private seedService = inject(SeedDataService);
+  private readonly projectService = inject(ProjectService);
+  private readonly seedService = inject(SeedDataService);
 
   // Input for currently selected project
   selectedProjectId = input<string | null>(null);

@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { Component, input, output, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
@@ -851,13 +851,14 @@ const PROJECT_COLORS = [
     </div>
   `,
   styleUrls: ['./project-settings-panel.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectSettingsPanelComponent {
-  private projectService = inject(ProjectService);
-  private dialogService = inject(DialogService);
-  private googleTasksService = inject(GoogleTasksService);
-  private googleTasksSyncService = inject(GoogleTasksSyncService);
-  private authService = inject(AuthService);
+  private readonly projectService = inject(ProjectService);
+  private readonly dialogService = inject(DialogService);
+  private readonly googleTasksService = inject(GoogleTasksService);
+  private readonly googleTasksSyncService = inject(GoogleTasksSyncService);
+  private readonly authService = inject(AuthService);
 
   project = input.required<Project>();
   projectChanged = output<void>();

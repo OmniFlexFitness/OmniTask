@@ -1,4 +1,4 @@
-import { Component, input, output, signal, inject } from '@angular/core';
+import { Component, input, output, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 
@@ -131,9 +131,10 @@ import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage
     </div>
   `,
   styleUrls: ['./image-upload.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImageUploadComponent {
-  private storage = inject(Storage);
+  private readonly storage = inject(Storage);
 
   // Inputs
   currentImageUrl = input<string | null>(null);

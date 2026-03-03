@@ -1,14 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  signal,
-  computed,
-  ElementRef,
-  ViewChild,
-  HostListener,
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkOverlayOrigin, OverlayModule } from '@angular/cdk/overlay';
@@ -178,6 +168,7 @@ export interface AutocompleteOption {
     </div>
   `,
   styleUrls: ['./autocomplete-input.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AutocompleteInputComponent {
   @Input() options: AutocompleteOption[] = [];

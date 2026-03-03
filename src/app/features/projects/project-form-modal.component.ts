@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProjectService } from '../../core/services/project.service';
@@ -114,11 +114,12 @@ const PROJECT_COLORS = [
       </div>
     </div>
   `,
-  styleUrls: ['./project-form-modal.component.css']
+  styleUrls: ['./project-form-modal.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectFormModalComponent {
-  private projectService = inject(ProjectService);
-  private fb = inject(FormBuilder);
+  private readonly projectService = inject(ProjectService);
+  private readonly fb = inject(FormBuilder);
 
   // Input for editing an existing project
   editProject = input<Project | null>(null);

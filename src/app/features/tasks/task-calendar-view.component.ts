@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal, inject } from '@angular/core';
+import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task } from '../../core/models/domain.model';
 
@@ -104,7 +104,8 @@ import { Task } from '../../core/models/domain.model';
       </div>
     </div>
   `,
-  styleUrls: ['./task-calendar-view.component.css']
+  styleUrls: ['./task-calendar-view.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskCalendarViewComponent {
   tasks = input.required<Task[]>();

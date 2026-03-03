@@ -735,14 +735,15 @@ import { MarkdownEditorComponent } from '../../shared/components/markdown-editor
     </div>
   `,
   styleUrls: ['./task-detail-modal.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskDetailModalComponent {
-  private fb = inject(FormBuilder);
-  private taskService = inject(TaskService);
-  private projectService = inject(ProjectService);
-  private dialogService = inject(DialogService);
-  private contactsService = inject(ContactsService);
-  private vertexAiService = inject(VertexAiService);
+  private readonly fb = inject(FormBuilder);
+  private readonly taskService = inject(TaskService);
+  private readonly projectService = inject(ProjectService);
+  private readonly dialogService = inject(DialogService);
+  private readonly contactsService = inject(ContactsService);
+  private readonly vertexAiService = inject(VertexAiService);
 
   // AI Loading states
   generatingSubtasks = this.vertexAiService.generatingSubtasks;

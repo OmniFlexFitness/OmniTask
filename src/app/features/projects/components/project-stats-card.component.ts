@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Task } from '../../../core/models/domain.model';
 
@@ -130,6 +130,7 @@ import { Task } from '../../../core/models/domain.model';
     </div>
   `,
   styleUrls: ['./project-stats-card.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectStatsCardComponent {
   tasks = input.required<Task[]>();

@@ -1,4 +1,4 @@
-import { Component, input, output, computed, signal, inject } from '@angular/core';
+import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Task } from '../../core/models/domain.model';
@@ -499,9 +499,10 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
     </div>
   `,
   styleUrls: ['./task-list-view.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskListViewComponent {
-  private taskService = inject(TaskService);
+  private readonly taskService = inject(TaskService);
 
   tasks = input.required<Task[]>();
   googleTaskListId = input<string | undefined>(undefined);

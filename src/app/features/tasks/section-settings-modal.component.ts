@@ -1,4 +1,4 @@
-import { Component, inject, signal, Output, EventEmitter, input } from '@angular/core';
+import { Component, inject, signal, Output, EventEmitter, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Section } from '../../core/models/domain.model';
@@ -193,9 +193,10 @@ const STATUS_OPTIONS = [
     </div>
   `,
   styleUrls: ['./section-settings-modal.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SectionSettingsModalComponent {
-  private fb = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder);
 
   section = input.required<Section>();
 

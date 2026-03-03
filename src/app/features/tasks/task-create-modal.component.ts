@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, computed } from '@angular/core';
+import { Component, input, output, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
@@ -485,13 +485,14 @@ import { BehaviorSubject } from 'rxjs';
     </div>
   `,
   styleUrls: ['./task-create-modal.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskCreateModalComponent {
-  private fb = inject(FormBuilder);
-  private taskService = inject(TaskService);
-  private projectService = inject(ProjectService);
-  private contactsService = inject(ContactsService);
-  private vertexAiService = inject(VertexAiService);
+  private readonly fb = inject(FormBuilder);
+  private readonly taskService = inject(TaskService);
+  private readonly projectService = inject(ProjectService);
+  private readonly contactsService = inject(ContactsService);
+  private readonly vertexAiService = inject(VertexAiService);
 
   // Inputs
   projectId = input.required<string>();
