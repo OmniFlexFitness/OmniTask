@@ -21,7 +21,7 @@ import { ScheduleService } from '../../core/services/schedule.service';
       >
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 class="text-lg font-bold text-white" style="font-family: 'Orbitron', sans-serif;">
+          <h2 class="text-lg font-bold text-white font-['Orbitron',sans-serif]">
             {{ editTask() ? 'Edit' : 'New' }} Daily Task
           </h2>
           <button

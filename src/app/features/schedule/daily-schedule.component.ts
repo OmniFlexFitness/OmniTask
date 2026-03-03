@@ -14,7 +14,7 @@ import { RecurringTaskModalComponent } from './recurring-task-modal.component';
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-xl font-bold text-white" style="font-family: 'Orbitron', sans-serif;">
+          <h2 class="text-xl font-bold text-white font-['Orbitron',sans-serif]">
             Daily Recurring Tasks
           </h2>
           <p class="text-sm text-slate-400 mt-1">Tasks that repeat every day at scheduled times</p>

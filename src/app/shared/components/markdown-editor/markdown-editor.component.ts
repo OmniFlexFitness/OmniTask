@@ -142,7 +142,7 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
           title="Heading"
           (click)="insertPrefix('## ')"
         >
-          <span class="md-icon-bold" style="font-size:10px">H2</span>
+          <span class="md-icon-bold text-[10px]">H2</span>
         </button>
 
         <!-- Blockquote -->

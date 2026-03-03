@@ -53,8 +53,7 @@ import { AuthService } from '../auth/auth.service';
                   >OmniFlex</span
                 >
                 <span
-                  class="text-lg font-bold text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                  style="font-family: 'Orbitron', sans-serif;"
+                  class="text-lg font-bold text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] font-['Orbitron',sans-serif]"
                   >OmniTask</span
                 >
               </div>

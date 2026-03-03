@@ -484,8 +484,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
                     <!-- Selection glow effect -->
                     @if (isSelected(task.id)) {
                       <div
-                        class="absolute inset-0 pointer-events-none"
-                        style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), transparent); box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.2);"
+                        class="absolute inset-0 pointer-events-none bg-gradient-to-br from-purple-500/15 to-transparent shadow-[inset_0_0_20px_rgba(168,85,247,0.2)]"
                       ></div>
                     }
 
