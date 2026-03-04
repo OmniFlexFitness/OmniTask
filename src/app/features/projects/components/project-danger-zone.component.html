@@ -1,0 +1,81 @@
+<section class="ofx-settings-section">
+  <h3 class="text-sm font-semibold text-rose-400 mb-4">Danger Zone</h3>
+
+  <div class="space-y-3">
+    <!-- Archive/Restore -->
+    @if (project().status === 'active') {
+      <button
+        class="w-full flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-400 hover:bg-amber-500/20 transition-colors"
+        (click)="toggleArchive()"
+      >
+        <span class="flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+            />
+          </svg>
+          Archive Project
+        </span>
+        <span class="text-xs text-amber-500/70">Hide from active projects</span>
+      </button>
+    } @else {
+      <button
+        class="w-full flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+        (click)="toggleArchive()"
+      >
+        <span class="flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          Restore Project
+        </span>
+        <span class="text-xs text-emerald-500/70">Make project active again</span>
+      </button>
+    }
+
+    <!-- Delete -->
+    <button
+      class="w-full flex items-center justify-between p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-rose-400 hover:bg-rose-500/20 transition-colors"
+      (click)="confirmDelete()"
+    >
+      <span class="flex items-center gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+        Delete Project
+      </span>
+      <span class="text-xs text-rose-500/70">Permanently remove project and all tasks</span>
+    </button>
+  </div>
+</section>

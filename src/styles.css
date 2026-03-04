@@ -40,6 +40,15 @@
     background-attachment: fixed;
   }
 
+  /* Force remove default browser outlines on all interactive elements to prevent white rings */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus,
+  [tabindex]:focus {
+    outline: none !important;
+  }
+
   .blur-overlay {
     position: fixed;
     inset: 0;

@@ -107,14 +107,11 @@
                   }
                 </button>
               </div>
-              <select
+              <app-custom-select
                 formControlName="priority"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              >
-                <option value="low">🟢 Low</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="high">🔴 High</option>
-              </select>
+                [options]="priorityOptions"
+                placeholder="Select priority"
+              ></app-custom-select>
             </div>
 
             <!-- Due Date -->
@@ -156,11 +153,10 @@
                   }
                 </button>
               </div>
-              <input
-                type="date"
+              <app-custom-date-picker
                 formControlName="dueDate"
-                class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
+                placeholder="mm/dd/yyyy"
+              ></app-custom-date-picker>
             </div>
           </div>
 
@@ -229,14 +225,11 @@
               class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
               >Section</label
             >
-            <select
+            <app-custom-select
               formControlName="sectionId"
-              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-            >
-              @for (section of sections(); track section.id) {
-                <option [value]="section.id">{{ section.name }}</option>
-              }
-            </select>
+              [options]="sectionOptions()"
+              placeholder="Select a section"
+            ></app-custom-select>
           </div>
 
           <!-- Custom Fields -->
