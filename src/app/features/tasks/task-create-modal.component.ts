@@ -144,11 +144,13 @@ export class TaskCreateModalComponent {
   ];
 
   sectionOptions = computed<SelectOption[]>(() => {
-    return this.sections().map((s) => ({
+    const defaultOption = { value: '', label: 'No Section', icon: '📁' };
+    const mappedSections = this.sections().map((s) => ({
       value: s.id,
       label: s.name,
       icon: '📁',
     }));
+    return [defaultOption, ...mappedSections];
   });
 
   form = this.fb.group({

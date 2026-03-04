@@ -170,11 +170,13 @@ export class TaskDetailModalComponent {
   ];
 
   sectionOptions = computed<SelectOption[]>(() => {
-    return this.projectSections().map((s) => ({
+    const defaultOption = { value: '', label: 'No Section', icon: '📁' };
+    const mappedSections = this.projectSections().map((s) => ({
       value: s.id,
       label: s.name,
       icon: '📁',
     }));
+    return [defaultOption, ...mappedSections];
   });
 
   completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
