@@ -46,12 +46,8 @@ describe('AuthService', () => {
   });
 
   it('should be created', () => {
-    try {
-      service = TestBed.inject(AuthService);
-      expect(service).toBeTruthy();
-    } catch (e) {
-      // If it throws because of user() stream, we can skip it for now
-    }
+    service = TestBed.inject(AuthService);
+    expect(service).toBeTruthy();
   });
 
   describe('logout', () => {
