@@ -398,7 +398,7 @@ describe('TaskService', () => {
       expect.objectContaining({
         title: 'Test Task',
         createdAt: expect.any(Date),
-      })
+      }),
     );
   });
 });
@@ -604,7 +604,9 @@ Use subtle animations to make the UI feel responsive:
 ```css
 /* Hover transitions */
 .task-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .task-card:hover {
@@ -872,10 +874,10 @@ Please implement all the review feedback from this PR.
 
 Only apply Gemini's suggestions, skip Copilot's for now.
 ```
+
 @implement --only=codex
 
-Only apply GitHub Copilot's suggestions, skip Gemini's for now.
----
+## Only apply GitHub Copilot's suggestions, skip Gemini's for now.
 
 ### Comment Selection Markers
 

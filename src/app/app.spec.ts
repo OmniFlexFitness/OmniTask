@@ -1,23 +1,30 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { AuthService } from './core/auth/auth.service';
+import { BehaviorSubject } from 'rxjs';
 
 describe('App', () => {
   beforeEach(async () => {
+    const mockAuthService = {
+      user$: new BehaviorSubject(null),
+      loading$: new BehaviorSubject(false),
+      signInWithGoogle: jasmine.createSpy('signInWithGoogle'),
+      signOut: jasmine.createSpy('signOut'),
+    };
+
     await TestBed.configureTestingModule({
       imports: [App],
+      providers: [{ provide: AuthService, useValue: mockAuthService }],
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('should create the app and render router outlet', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
-  });
 
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
+    // Check if the application renders the router outlet
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, omni-task');
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });
