@@ -20,7 +20,7 @@ export class ProjectsListComponent {
   private readonly router = inject(Router);
 
   // State
-  searchQuery = '';
+  searchQuery = signal('');
   showCreateModal = signal(false);
   editingProject = signal<Project | null>(null);
   projectToDelete = signal<Project | null>(null);
@@ -31,13 +31,13 @@ export class ProjectsListComponent {
 
   // Computed filtered projects
   filteredProjects = computed(() => {
-    const query = this.searchQuery.toLowerCase().trim();
+    const query = this.searchQuery().toLowerCase().trim();
     const allProjects = this.projects();
 
     if (!query) return allProjects;
 
     return allProjects.filter(
-      (p) => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query)
+      (p) => p.name.toLowerCase().includes(query) || p.description?.toLowerCase().includes(query),
     );
   });
 

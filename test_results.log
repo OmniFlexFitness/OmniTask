@@ -1,0 +1,248 @@
+- Generating browser application bundles (phase: setup)...
+[32m✔[39m Browser application bundle generation complete.
+[32m04 03 2026 20:48:30.364:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:10196/
+[32m04 03 2026 20:48:30.366:INFO [launcher]: [39mLaunching browsers Chrome with concurrency unlimited
+[32m04 03 2026 20:48:30.377:INFO [launcher]: [39mStarting browser Chrome
+[32m04 03 2026 20:48:31.642:INFO [Chrome 145.0.0.0 (Windows 10)]: [39mConnected on socket abnxzF4dfQir1ZI7AAAB with id 32640257
+Chrome 145.0.0.0 (Windows 10): Executed 0 of 158[32m SUCCESS[39m (0 secs / 0 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 1 of 158[32m SUCCESS[39m (0 secs / 0.021 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 2 of 158[32m SUCCESS[39m (0 secs / 0.024 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 3 of 158[32m SUCCESS[39m (0 secs / 0.027 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 4 of 158[32m SUCCESS[39m (0 secs / 0.028 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 4 of 158[32m SUCCESS[39m (0 secs / 0.028 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 4 of 158[32m SUCCESS[39m (0 secs / 0.028 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 5 of 158[32m SUCCESS[39m (0 secs / 0.408 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 5 of 158[32m SUCCESS[39m (0 secs / 0.408 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 5 of 158[32m SUCCESS[39m (0 secs / 0.408 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 6 of 158[32m SUCCESS[39m (0 secs / 0.437 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 6 of 158[32m SUCCESS[39m (0 secs / 0.437 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 6 of 158[32m SUCCESS[39m (0 secs / 0.437 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 7 of 158[32m SUCCESS[39m (0 secs / 0.459 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 8 of 158[32m SUCCESS[39m (0 secs / 0.461 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 9 of 158[32m SUCCESS[39m (0 secs / 0.463 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 10 of 158[32m SUCCESS[39m (0 secs / 0.465 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 11 of 158[32m SUCCESS[39m (0 secs / 0.466 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 12 of 158[32m SUCCESS[39m (0 secs / 0.467 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 13 of 158[32m SUCCESS[39m (0 secs / 0.468 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 14 of 158[32m SUCCESS[39m (0 secs / 0.469 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 15 of 158[32m SUCCESS[39m (0 secs / 0.47 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 16 of 158[32m SUCCESS[39m (0 secs / 0.472 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 17 of 158[32m SUCCESS[39m (0 secs / 0.474 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 18 of 158[32m SUCCESS[39m (0 secs / 0.475 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 19 of 158[32m SUCCESS[39m (0 secs / 0.476 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 20 of 158[32m SUCCESS[39m (0 secs / 0.477 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 21 of 158[32m SUCCESS[39m (0 secs / 0.479 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 22 of 158[32m SUCCESS[39m (0 secs / 0.48 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 23 of 158[32m SUCCESS[39m (0 secs / 0.481 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 24 of 158[32m SUCCESS[39m (0 secs / 0.482 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 25 of 158[32m SUCCESS[39m (0 secs / 0.483 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 26 of 158[32m SUCCESS[39m (0 secs / 0.485 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 27 of 158[32m SUCCESS[39m (0 secs / 0.486 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 28 of 158[32m SUCCESS[39m (0 secs / 0.487 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 29 of 158[32m SUCCESS[39m (0 secs / 0.517 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 30 of 158[32m SUCCESS[39m (0 secs / 0.519 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 31 of 158[32m SUCCESS[39m (0 secs / 0.52 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 32 of 158[32m SUCCESS[39m (0 secs / 0.522 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 33 of 158[32m SUCCESS[39m (0 secs / 0.523 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 34 of 158[32m SUCCESS[39m (0 secs / 0.525 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 35 of 158[32m SUCCESS[39m (0 secs / 0.527 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 36 of 158[32m SUCCESS[39m (0 secs / 0.528 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 37 of 158[32m SUCCESS[39m (0 secs / 0.529 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 38 of 158[32m SUCCESS[39m (0 secs / 0.53 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 39 of 158[32m SUCCESS[39m (0 secs / 0.531 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 40 of 158[32m SUCCESS[39m (0 secs / 0.532 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 41 of 158[32m SUCCESS[39m (0 secs / 0.533 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 42 of 158[32m SUCCESS[39m (0 secs / 0.534 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 43 of 158[32m SUCCESS[39m (0 secs / 0.535 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 44 of 158[32m SUCCESS[39m (0 secs / 0.536 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 45 of 158[32m SUCCESS[39m (0 secs / 0.537 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 46 of 158[32m SUCCESS[39m (0 secs / 0.538 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 47 of 158[32m SUCCESS[39m (0 secs / 0.539 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 48 of 158[32m SUCCESS[39m (0 secs / 0.54 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 49 of 158[32m SUCCESS[39m (0 secs / 0.542 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 50 of 158[32m SUCCESS[39m (0 secs / 0.543 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 51 of 158[32m SUCCESS[39m (0 secs / 0.544 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 52 of 158[32m SUCCESS[39m (0 secs / 0.544 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 53 of 158[32m SUCCESS[39m (0 secs / 0.546 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 54 of 158[32m SUCCESS[39m (0 secs / 0.546 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 55 of 158[32m SUCCESS[39m (0 secs / 0.547 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 56 of 158[32m SUCCESS[39m (0 secs / 0.548 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 57 of 158[32m SUCCESS[39m (0 secs / 0.549 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 58 of 158[32m SUCCESS[39m (0 secs / 0.55 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 59 of 158[32m SUCCESS[39m (0 secs / 0.552 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 60 of 158[32m SUCCESS[39m (0 secs / 0.553 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 61 of 158[32m SUCCESS[39m (0 secs / 0.554 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 62 of 158[32m SUCCESS[39m (0 secs / 0.555 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 63 of 158[32m SUCCESS[39m (0 secs / 0.556 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 64 of 158[32m SUCCESS[39m (0 secs / 0.559 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 65 of 158[32m SUCCESS[39m (0 secs / 0.561 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 66 of 158[32m SUCCESS[39m (0 secs / 0.563 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 67 of 158[32m SUCCESS[39m (0 secs / 0.565 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 68 of 158[32m SUCCESS[39m (0 secs / 0.567 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 69 of 158[32m SUCCESS[39m (0 secs / 0.644 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 70 of 158[32m SUCCESS[39m (0 secs / 0.653 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 71 of 158[32m SUCCESS[39m (0 secs / 0.655 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 72 of 158[32m SUCCESS[39m (0 secs / 0.656 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 73 of 158[32m SUCCESS[39m (0 secs / 0.657 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 74 of 158[32m SUCCESS[39m (0 secs / 0.658 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 75 of 158[32m SUCCESS[39m (0 secs / 0.659 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 76 of 158[32m SUCCESS[39m (0 secs / 0.66 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 77 of 158[32m SUCCESS[39m (0 secs / 0.661 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 78 of 158[32m SUCCESS[39m (0 secs / 0.662 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 79 of 158[32m SUCCESS[39m (0 secs / 0.663 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 80 of 158[32m SUCCESS[39m (0 secs / 0.663 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 81 of 158[32m SUCCESS[39m (0 secs / 0.664 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 82 of 158[32m SUCCESS[39m (0 secs / 0.664 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 83 of 158[32m SUCCESS[39m (0 secs / 0.665 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 84 of 158[32m SUCCESS[39m (0 secs / 0.666 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 85 of 158[32m SUCCESS[39m (0 secs / 0.667 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 86 of 158[32m SUCCESS[39m (0 secs / 0.668 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 87 of 158[32m SUCCESS[39m (0 secs / 0.669 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 88 of 158[32m SUCCESS[39m (0 secs / 0.67 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 89 of 158[32m SUCCESS[39m (0 secs / 0.672 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 90 of 158[32m SUCCESS[39m (0 secs / 0.673 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 91 of 158[32m SUCCESS[39m (0 secs / 0.674 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 92 of 158[32m SUCCESS[39m (0 secs / 0.675 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 93 of 158[32m SUCCESS[39m (0 secs / 0.676 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 94 of 158[32m SUCCESS[39m (0 secs / 0.677 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 95 of 158[32m SUCCESS[39m (0 secs / 0.678 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 96 of 158[32m SUCCESS[39m (0 secs / 0.854 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 97 of 158[32m SUCCESS[39m (0 secs / 0.86 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 98 of 158[32m SUCCESS[39m (0 secs / 0.866 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 99 of 158[32m SUCCESS[39m (0 secs / 0.871 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 100 of 158[32m SUCCESS[39m (0 secs / 0.877 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 101 of 158[32m SUCCESS[39m (0 secs / 0.882 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 102 of 158[32m SUCCESS[39m (0 secs / 0.887 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 103 of 158[32m SUCCESS[39m (0 secs / 0.893 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 104 of 158[32m SUCCESS[39m (0 secs / 0.898 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 105 of 158[32m SUCCESS[39m (0 secs / 0.899 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 106 of 158[32m SUCCESS[39m (0 secs / 0.9 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 107 of 158[32m SUCCESS[39m (0 secs / 0.901 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 108 of 158[32m SUCCESS[39m (0 secs / 0.926 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 109 of 158[32m SUCCESS[39m (0 secs / 0.93 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 110 of 158[32m SUCCESS[39m (0 secs / 0.934 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 111 of 158[32m SUCCESS[39m (0 secs / 0.938 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 112 of 158[32m SUCCESS[39m (0 secs / 0.943 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 113 of 158[32m SUCCESS[39m (0 secs / 0.946 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 114 of 158[32m SUCCESS[39m (0 secs / 0.95 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 115 of 158[32m SUCCESS[39m (0 secs / 0.958 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 116 of 158[32m SUCCESS[39m (0 secs / 0.962 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 117 of 158[32m SUCCESS[39m (0 secs / 0.964 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 118 of 158[32m SUCCESS[39m (0 secs / 0.965 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 118 of 158[32m SUCCESS[39m (0 secs / 0.965 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 119 of 158[32m SUCCESS[39m (0 secs / 0.997 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 119 of 158[32m SUCCESS[39m (0 secs / 0.997 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 120 of 158[32m SUCCESS[39m (0 secs / 1.002 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 120 of 158[32m SUCCESS[39m (0 secs / 1.002 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 121 of 158[32m SUCCESS[39m (0 secs / 1.006 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 121 of 158[32m SUCCESS[39m (0 secs / 1.006 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 122 of 158[32m SUCCESS[39m (0 secs / 1.011 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 122 of 158[32m SUCCESS[39m (0 secs / 1.011 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 123 of 158[32m SUCCESS[39m (0 secs / 1.015 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 123 of 158[32m SUCCESS[39m (0 secs / 1.015 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 124 of 158[32m SUCCESS[39m (0 secs / 1.02 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 125 of 158[32m SUCCESS[39m (0 secs / 1.024 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 126 of 158[32m SUCCESS[39m (0 secs / 1.027 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 127 of 158[32m SUCCESS[39m (0 secs / 1.03 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 128 of 158[32m SUCCESS[39m (0 secs / 1.033 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 129 of 158[32m SUCCESS[39m (0 secs / 1.035 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 130 of 158[32m SUCCESS[39m (0 secs / 1.038 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 131 of 158[32m SUCCESS[39m (0 secs / 1.053 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 132 of 158[32m SUCCESS[39m (0 secs / 1.058 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 133 of 158[32m SUCCESS[39m (0 secs / 1.062 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 134 of 158[32m SUCCESS[39m (0 secs / 1.067 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 135 of 158[32m SUCCESS[39m (0 secs / 1.071 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 136 of 158[32m SUCCESS[39m (0 secs / 1.077 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 137 of 158[32m SUCCESS[39m (0 secs / 1.081 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 138 of 158[32m SUCCESS[39m (0 secs / 1.084 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 139 of 158[32m SUCCESS[39m (0 secs / 1.089 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 140 of 158[32m SUCCESS[39m (0 secs / 1.095 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 141 of 158[32m SUCCESS[39m (0 secs / 1.098 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 142 of 158[32m SUCCESS[39m (0 secs / 1.1 secs)
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) AutocompleteInputComponent should clear selection via clearSelection() FAILED[39m
+	Expected true to be false.
+	    at <Jasmine>
+	    at UserContext.apply (src/app/shared/components/autocomplete-input/autocomplete-input.component.spec.ts:117:32)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:158)
+	    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:46)
+Chrome 145.0.0.0 (Windows 10): Executed 143 of 158[31m (1 FAILED)[39m (0 secs / 1.106 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 144 of 158[31m (1 FAILED)[39m (0 secs / 1.111 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 145 of 158[31m (1 FAILED)[39m (0 secs / 1.114 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 146 of 158[31m (1 FAILED)[39m (0 secs / 1.118 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 147 of 158[31m (1 FAILED)[39m (0 secs / 1.123 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 148 of 158[31m (1 FAILED)[39m (0 secs / 1.129 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 148 of 158[31m (1 FAILED)[39m (0 secs / 1.129 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 149 of 158[31m (1 FAILED)[39m (0 secs / 1.132 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 149 of 158[31m (1 FAILED)[39m (0 secs / 1.132 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 150 of 158[31m (1 FAILED)[39m (0 secs / 1.135 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 150 of 158[31m (1 FAILED)[39m (0 secs / 1.135 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 151 of 158[31m (1 FAILED)[39m (0 secs / 1.138 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 151 of 158[31m (1 FAILED)[39m (0 secs / 1.138 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 152 of 158[31m (1 FAILED)[39m (0 secs / 1.142 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 152 of 158[31m (1 FAILED)[39m (0 secs / 1.142 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 153 of 158[31m (1 FAILED)[39m (0 secs / 1.145 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 153 of 158[31m (1 FAILED)[39m (0 secs / 1.145 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 154 of 158[31m (1 FAILED)[39m (0 secs / 1.148 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 154 of 158[31m (1 FAILED)[39m (0 secs / 1.148 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 155 of 158[31m (1 FAILED)[39m (0 secs / 1.151 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 155 of 158[31m (1 FAILED)[39m (0 secs / 1.151 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 156 of 158[31m (1 FAILED)[39m (0 secs / 1.188 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 156 of 158[31m (1 FAILED)[39m (0 secs / 1.188 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 157 of 158[31m (1 FAILED)[39m (0 secs / 1.207 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 157 of 158[31m (1 FAILED)[39m (0 secs / 1.207 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 158 of 158[31m (1 FAILED)[39m (0 secs / 1.222 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 158 of 158[31m (1 FAILED)[39m (1.351 secs / 1.222 secs)
+[31mTOTAL: 1 FAILED, 157 SUCCESS[39m
+[32m✔[39m Browser application bundle generation complete.
+
+=============================== Coverage summary ===============================
+Statements   : 26.77% ( 820/3062 )
+Branches     : 16.21% ( 163/1005 )
+Functions    : 27.39% ( 180/657 )
+Lines        : 27.44% ( 768/2798 )
+================================================================================

@@ -298,8 +298,12 @@ export class ProjectGoogleTasksSyncComponent implements OnInit {
   }
 
   formatPreviewDate(dateStr: string): string {
+    if (!dateStr) return '';
     try {
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
       return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     } catch {
       return dateStr;
