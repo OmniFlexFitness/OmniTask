@@ -15,7 +15,8 @@ import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
-import { Task, Project, Subtask } from '../../core/models/domain.model';
+import { CustomFieldService } from '../../core/services/custom-field.service';
+import { Task, Project, Subtask, CustomFieldDefinition } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, BehaviorSubject, debounceTime } from 'rxjs';
 import {
@@ -49,6 +50,7 @@ export class TaskDetailModalComponent {
   private readonly fb = inject(FormBuilder);
   private readonly taskService = inject(TaskService);
   private readonly projectService = inject(ProjectService);
+  private readonly customFieldService = inject(CustomFieldService);
   private readonly dialogService = inject(DialogService);
   private readonly contactsService = inject(ContactsService);
   private readonly vertexAiService = inject(VertexAiService);
@@ -78,6 +80,13 @@ export class TaskDetailModalComponent {
 
   projectSections = computed(() => {
     return this.project()?.sections || [];
+  });
+
+  globalFields = toSignal(this.customFieldService.getCustomFields(), { initialValue: [] });
+
+  projectCustomFields = computed(() => {
+    const ids = this.project()?.customFieldIds || [];
+    return this.globalFields().filter((f) => ids.includes(f.id));
   });
 
   // Contacts for assignee autocomplete
@@ -237,14 +246,16 @@ export class TaskDetailModalComponent {
     element.style.height = element.scrollHeight + 'px';
   }
 
-  async updateCustomField(fieldId: string, value: string | number | boolean | Date | null) {
+  async updateCustomField(
+    fieldId: string,
+    value: string | number | boolean | Date | null | string[],
+  ) {
     // Find the field definition to validate
-    const project = this.project();
-    const field = project?.customFields?.find((f) => f.id === fieldId);
+    const field = this.projectCustomFields().find((f) => f.id === fieldId);
 
     if (field) {
-      // Validate number fields
-      if (field.type === 'number' && value) {
+      // Validate number/currency fields
+      if ((field.type === 'number' || field.type === 'currency') && value) {
         const numValue = parseFloat(value as string);
         if (isNaN(numValue)) {
           await this.dialogService.alert(
@@ -268,6 +279,11 @@ export class TaskDetailModalComponent {
     const current = this.customFieldValues();
     this.customFieldValues.set({ ...current, [fieldId]: value });
     this.autoSave();
+  }
+
+  getMultiSelectValues(event: Event): string[] {
+    const target = event.target as HTMLSelectElement;
+    return Array.from(target.selectedOptions).map((o) => o.value);
   }
 
   toggleTag(tagName: string) {

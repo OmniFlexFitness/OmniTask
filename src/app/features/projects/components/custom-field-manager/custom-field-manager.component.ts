@@ -1,8 +1,18 @@
-import { Component, input, inject, signal, computed , ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../../core/services/project.service';
+import { CustomFieldService } from '../../../../core/services/custom-field.service';
 import { DialogService } from '../../../../core/services/dialog.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Project,
   CustomFieldType,
@@ -19,37 +29,71 @@ import {
 })
 export class CustomFieldManagerComponent {
   projectService = inject(ProjectService);
+  customFieldService = inject(CustomFieldService);
   dialogService = inject(DialogService);
+
   project = input.required<Project>();
 
-  isAdding = signal(false);
+  // Global field library
+  globalFields = signal<CustomFieldDefinition[]>([]);
+
+  // UI states
+  mode = signal<'list' | 'create' | 'link'>('list');
+
   newFieldType = signal<CustomFieldType>('text');
   newFieldName = '';
   newFieldOptions = signal<CustomFieldOption[]>([]);
+  newFieldCurrency = '$';
   fieldToDelete = signal<CustomFieldDefinition | null>(null);
   deleting = signal(false);
 
   fieldTypes: { value: CustomFieldType; label: string; icon: string }[] = [
     { value: 'text', label: 'Text', icon: 'fas fa-align-left' },
     { value: 'number', label: 'Number', icon: 'fas fa-hashtag' },
+    { value: 'currency', label: 'Currency', icon: 'fas fa-dollar-sign' },
     { value: 'date', label: 'Date', icon: 'fas fa-calendar' },
+    { value: 'checkbox', label: 'Checkbox', icon: 'fas fa-check-square' },
     { value: 'dropdown', label: 'Dropdown', icon: 'fas fa-list' },
+    { value: 'multi-select', label: 'Multi-select', icon: 'fas fa-tags' },
+    { value: 'url', label: 'URL', icon: 'fas fa-link' },
     { value: 'status', label: 'Status', icon: 'fas fa-info-circle' },
     { value: 'user', label: 'User', icon: 'fas fa-user' },
   ];
 
+  constructor() {
+    this.customFieldService
+      .getCustomFields()
+      .pipe(takeUntilDestroyed())
+      .subscribe((fields) => {
+        this.globalFields.set(fields);
+      });
+  }
+
+  // Fields currently linked to this project
+  projectFields = computed(() => {
+    const ids = this.project().customFieldIds || [];
+    return this.globalFields().filter((f) => ids.includes(f.id));
+  });
+
+  // Fields available to be linked (not yet in project)
+  availableFieldsToLink = computed(() => {
+    const ids = this.project().customFieldIds || [];
+    return this.globalFields().filter((f) => !ids.includes(f.id));
+  });
+
   isDuplicateFieldName = computed(() => {
     const name = this.newFieldName.trim().toLowerCase();
     if (!name) return false;
-    return this.project().customFields?.some(f => f.name.toLowerCase() === name) || false;
+    // Check against global library to prevent duplicate global names makes sense, or just project level.
+    // Opting for global level to keep library clean.
+    return this.globalFields().some((f) => f.name.toLowerCase() === name);
   });
 
   canCreateField = computed(() => {
-    if (!this.newFieldName.trim() || this.isDuplicateFieldName()) {
-      return false;
-    }
-    // For dropdown and status fields, require at least one option
-    if (this.newFieldType() === 'dropdown' || this.newFieldType() === 'status') {
+    if (!this.newFieldName.trim() || this.isDuplicateFieldName()) return false;
+
+    const type = this.newFieldType();
+    if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
       return this.newFieldOptions().length > 0;
     }
     return true;
@@ -59,11 +103,12 @@ export class CustomFieldManagerComponent {
     return this.fieldTypes.find((t) => t.value === type)?.icon || 'fas fa-circle';
   }
 
-  startAdding() {
+  startCreating() {
     this.newFieldName = '';
     this.newFieldType.set('text');
     this.newFieldOptions.set([]);
-    this.isAdding.set(true);
+    this.newFieldCurrency = '$';
+    this.mode.set('create');
   }
 
   addOption(label: string) {
@@ -71,7 +116,7 @@ export class CustomFieldManagerComponent {
     const opt: CustomFieldOption = {
       id: crypto.randomUUID(),
       label: label.trim(),
-      color: '#64748b', // Default slate color
+      color: '#64748b',
     };
     this.newFieldOptions.update((opts) => [...opts, opt]);
   }
@@ -84,17 +129,28 @@ export class CustomFieldManagerComponent {
     if (!this.canCreateField()) return;
 
     try {
-      const fieldData: Omit<CustomFieldDefinition, 'id' | 'projectId'> = {
+      const fieldData: any = {
         name: this.newFieldName.trim(),
         type: this.newFieldType(),
       };
 
-      if (this.newFieldType() === 'dropdown' || this.newFieldType() === 'status') {
+      const type = this.newFieldType();
+      if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
         fieldData.options = this.newFieldOptions();
       }
+      if (type === 'currency') {
+        fieldData.currencySymbol = this.newFieldCurrency;
+      }
 
-      await this.projectService.addCustomField(this.project().id, fieldData);
-      this.isAdding.set(false);
+      // 1. Create in global library
+      const newFieldId = await this.customFieldService.createCustomField(fieldData);
+
+      if (newFieldId) {
+        // 2. Link to this project
+        await this.projectService.linkCustomField(this.project().id, newFieldId);
+      }
+
+      this.mode.set('list');
       this.newFieldName = '';
       this.newFieldOptions.set([]);
     } catch (err) {
@@ -103,20 +159,30 @@ export class CustomFieldManagerComponent {
     }
   }
 
-  confirmDeleteField(field: CustomFieldDefinition) {
+  async linkExistingField(fieldId: string) {
+    try {
+      await this.projectService.linkCustomField(this.project().id, fieldId);
+      this.mode.set('list');
+    } catch (err) {
+      console.error('Failed to link field', err);
+    }
+  }
+
+  confirmUnlinkField(field: CustomFieldDefinition) {
     this.fieldToDelete.set(field);
   }
 
-  async deleteField() {
+  async unlinkField() {
     const field = this.fieldToDelete();
     if (!field) return;
 
     this.deleting.set(true);
     try {
-      await this.projectService.removeCustomField(this.project().id, field.id);
+      // Unlink it from the project, dont delete globally
+      await this.projectService.unlinkCustomField(this.project().id, field.id);
       this.fieldToDelete.set(null);
     } catch (err) {
-      console.error('Failed to remove field', err);
+      console.error('Failed to unlink field', err);
     } finally {
       this.deleting.set(false);
     }

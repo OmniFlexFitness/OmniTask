@@ -250,9 +250,9 @@
           </div>
 
           <!-- Custom Fields -->
-          @if (project()?.customFields?.length) {
+          @if (projectCustomFields().length) {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 mb-8">
-              @for (field of project()?.customFields; track field.id) {
+              @for (field of projectCustomFields(); track field.id) {
                 <div class="flex flex-col gap-1">
                   <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">{{
                     field.name
@@ -275,12 +275,42 @@
                         class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                       />
                     }
+                    @case ('currency') {
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{{ field.currencySymbol || '$' }}</span>
+                        <input
+                          type="number"
+                          [value]="customFieldValues()[field.id] || ''"
+                          (input)="updateCustomField(field.id, $any($event.target).value)"
+                          class="bg-transparent border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors w-full"
+                        />
+                      </div>
+                    }
                     @case ('date') {
                       <app-custom-date-picker
                         [value]="customFieldValues()[field.id] || null"
                         (valueChange)="updateCustomField(field.id, $event)"
                         placeholder="mm/dd/yyyy"
                       ></app-custom-date-picker>
+                    }
+                    @case ('checkbox') {
+                      <div class="flex items-center pt-2">
+                        <input
+                          type="checkbox"
+                          [checked]="customFieldValues()[field.id] === true || customFieldValues()[field.id] === 'true'"
+                          (change)="updateCustomField(field.id, $any($event.target).checked)"
+                          class="w-5 h-5 rounded border-white/10 bg-slate-900 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
+                        />
+                      </div>
+                    }
+                    @case ('url') {
+                      <input
+                        type="url"
+                        placeholder="https://"
+                        [value]="customFieldValues()[field.id] || ''"
+                        (input)="updateCustomField(field.id, $any($event.target).value)"
+                        class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-cyan-400 underline"
+                      />
                     }
                     @case ('dropdown') {
                       <select
@@ -289,6 +319,19 @@
                         class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                       >
                         <option value="">- Select -</option>
+                        @for (opt of field.options; track opt.id) {
+                          <option [value]="opt.id">{{ opt.label }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('multi-select') {
+                      <!-- Use a standard multi-select for simplicity in creation modal -->
+                      <select
+                        multiple
+                        [value]="customFieldValues()[field.id] || []"
+                        (change)="updateCustomField(field.id, getMultiSelectValues($event))"
+                        class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors max-h-24 form-multiselect w-full"
+                      >
                         @for (opt of field.options; track opt.id) {
                           <option [value]="opt.id">{{ opt.label }}</option>
                         }
@@ -309,6 +352,7 @@
                     @case ('user') {
                       <input
                         type="text"
+                        placeholder="Username/Email"
                         [value]="customFieldValues()[field.id] || ''"
                         (input)="updateCustomField(field.id, $any($event.target).value)"
                         class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"

@@ -6,6 +6,7 @@ import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
+import { CustomFieldService } from '../../core/services/custom-field.service';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -18,6 +19,7 @@ describe('TaskDetailModalComponent', () => {
   let mockDialogService: any;
   let mockContactsService: any;
   let mockVertexAiService: any;
+  let mockCustomFieldService: any;
 
   beforeEach(async () => {
     mockTaskService = jasmine.createSpyObj('TaskService', ['updateTask', 'deleteTask']);
@@ -46,6 +48,9 @@ describe('TaskDetailModalComponent', () => {
     mockVertexAiService.generatingSubtasks = signal(false);
     mockVertexAiService.enhancingDescription = signal(false);
 
+    mockCustomFieldService = jasmine.createSpyObj('CustomFieldService', ['getCustomFields']);
+    mockCustomFieldService.getCustomFields.and.returnValue(of([]));
+
     await TestBed.configureTestingModule({
       imports: [TaskDetailModalComponent],
       providers: [
@@ -55,6 +60,7 @@ describe('TaskDetailModalComponent', () => {
         { provide: DialogService, useValue: mockDialogService },
         { provide: ContactsService, useValue: mockContactsService },
         { provide: VertexAiService, useValue: mockVertexAiService },
+        { provide: CustomFieldService, useValue: mockCustomFieldService },
       ],
     }).compileComponents();
 

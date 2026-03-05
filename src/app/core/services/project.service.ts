@@ -54,7 +54,7 @@ export class ProjectService {
           return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
         });
       }),
-      map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name)))
+      map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name))),
     );
   }
   /**
@@ -68,7 +68,7 @@ export class ProjectService {
         const uniqueTags = new Map<string, Tag>();
         tags.forEach((t) => uniqueTags.set(t.id, t));
         return Array.from(uniqueTags.values()).sort((a, b) => a.name.localeCompare(b.name));
-      })
+      }),
     );
   }
 
@@ -95,7 +95,7 @@ export class ProjectService {
     return runInInjectionContext(this.injector, () => {
       return collectionData(
         query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
-        { idField: 'id' }
+        { idField: 'id' },
       ).pipe(map((docs) => (docs[0] as Project) || null));
     });
   }
@@ -106,7 +106,7 @@ export class ProjectService {
   async createProject(
     name: string,
     description: string = '',
-    color: string = '#6366f1'
+    color: string = '#6366f1',
   ): Promise<DocumentReference> {
     this.loading.set(true);
     this.error.set(null);
@@ -239,7 +239,7 @@ export class ProjectService {
     if (!project) throw new Error('Project not found');
 
     const updatedSections = project.sections.map((s) =>
-      s.id === sectionId ? { ...s, ...data } : s
+      s.id === sectionId ? { ...s, ...data } : s,
     );
 
     await this.updateProject(projectId, { sections: updatedSections });
@@ -296,55 +296,29 @@ export class ProjectService {
   }
 
   /**
-   * Add a custom field definition to a project
+   * Links a global custom field to a project
    */
-  async addCustomField(
-    projectId: string,
-    field: Omit<CustomFieldDefinition, 'id' | 'projectId'>
-  ): Promise<CustomFieldDefinition> {
+  async linkCustomField(projectId: string, fieldId: string): Promise<void> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    const newField: CustomFieldDefinition = {
-      ...field,
-      id: crypto.randomUUID(),
-      projectId,
-    };
+    const currentIds = project.customFieldIds || [];
+    if (currentIds.includes(fieldId)) return; // Already linked
 
-    const updatedFields = [...(project.customFields || []), newField];
-    await this.updateProject(projectId, { customFields: updatedFields });
-
-    return newField;
+    await this.updateProject(projectId, {
+      customFieldIds: [...currentIds, fieldId],
+    });
   }
 
   /**
-   * Update a custom field definition
+   * Unlinks a global custom field from a project
    */
-  async updateCustomField(
-    projectId: string,
-    fieldId: string,
-    data: Partial<CustomFieldDefinition>
-  ): Promise<void> {
+  async unlinkCustomField(projectId: string, fieldId: string): Promise<void> {
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
-    const updatedFields = (project.customFields || []).map((f) =>
-      f.id === fieldId ? { ...f, ...data } : f
-    );
-
-    await this.updateProject(projectId, { customFields: updatedFields });
-  }
-
-  /**
-   * Remove a custom field definition from a project
-   */
-  async removeCustomField(projectId: string, fieldId: string): Promise<void> {
-    const project = await this.getProject(projectId);
-    if (!project) throw new Error('Project not found');
-
-    const updatedFields = (project.customFields || []).filter((f) => f.id !== fieldId);
-
-    await this.updateProject(projectId, { customFields: updatedFields });
+    const updatedIds = (project.customFieldIds || []).filter((id) => id !== fieldId);
+    await this.updateProject(projectId, { customFieldIds: updatedIds });
   }
 
   /**

@@ -9,7 +9,7 @@ import {
   collectionData,
   orderBy,
   query,
-  serverTimestamp,
+  Timestamp,
 } from '@angular/fire/firestore';
 import { Observable, of } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
@@ -55,8 +55,8 @@ export class ScheduleService {
       await addDoc(col, {
         ...data,
         userId: this.auth.currentUserSig()!.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create recurring task';
@@ -73,7 +73,7 @@ export class ScheduleService {
     try {
       this.loading.set(true);
       const ref = doc(this.firestore, `users/${uid}/recurringTasks/${id}`);
-      await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+      await updateDoc(ref, { ...data, updatedAt: Timestamp.now() });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update recurring task';
       this.error.set(msg);
@@ -127,8 +127,8 @@ export class ScheduleService {
       await addDoc(col, {
         ...data,
         userId: this.auth.currentUserSig()!.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create weekly block';
@@ -145,7 +145,7 @@ export class ScheduleService {
     try {
       this.loading.set(true);
       const ref = doc(this.firestore, `users/${uid}/weeklyBlocks/${id}`);
-      await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+      await updateDoc(ref, { ...data, updatedAt: Timestamp.now() });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update weekly block';
       this.error.set(msg);

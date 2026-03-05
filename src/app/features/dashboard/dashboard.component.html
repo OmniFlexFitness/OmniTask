@@ -290,6 +290,7 @@
               @case ('list') {
                 <app-task-list-view
                   [tasks]="tasks()"
+                  [projectId]="currentProject()!.id"
                   [googleTaskListId]="currentProject()?.googleTaskListId"
                   (taskClick)="openTaskDetail($event)"
                   (delete)="deleteTask($event)"

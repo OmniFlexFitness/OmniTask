@@ -12,9 +12,16 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
+import { CustomFieldService } from '../../core/services/custom-field.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
-import { Task, Project, Section, Subtask } from '../../core/models/domain.model';
+import {
+  Task,
+  Project,
+  Section,
+  Subtask,
+  CustomFieldDefinition,
+} from '../../core/models/domain.model';
 import { toSignal, toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, startWith, debounceTime } from 'rxjs';
 import {
@@ -48,6 +55,7 @@ export class TaskCreateModalComponent {
   private readonly fb = inject(FormBuilder);
   private readonly taskService = inject(TaskService);
   private readonly projectService = inject(ProjectService);
+  private readonly customFieldService = inject(CustomFieldService);
   private readonly contactsService = inject(ContactsService);
   private readonly vertexAiService = inject(VertexAiService);
   private readonly destroyRef = inject(DestroyRef);
@@ -80,6 +88,13 @@ export class TaskCreateModalComponent {
     ),
     { initialValue: null },
   );
+
+  globalFields = toSignal(this.customFieldService.getCustomFields(), { initialValue: [] });
+
+  projectCustomFields = computed(() => {
+    const ids = this.project()?.customFieldIds || [];
+    return this.globalFields().filter((f: CustomFieldDefinition) => ids.includes(f.id));
+  });
 
   // Contacts for assignee autocomplete - start empty, update on search
   private assigneeSearchSubject = new BehaviorSubject<string>('');
@@ -186,7 +201,7 @@ export class TaskCreateModalComponent {
   }
 
   updateCustomField(fieldId: string, value: any) {
-    const field = this.project()?.customFields?.find((f) => f.id === fieldId);
+    const field = this.projectCustomFields().find((f: CustomFieldDefinition) => f.id === fieldId);
     if (!field) return;
 
     // Validate the value based on field type
@@ -212,6 +227,7 @@ export class TaskCreateModalComponent {
     let error = '';
 
     switch (field.type) {
+      case 'currency':
       case 'number':
         // Check if value is a valid number
         if (value !== null && value !== undefined && value !== '') {
@@ -240,6 +256,11 @@ export class TaskCreateModalComponent {
     }
 
     return error;
+  }
+
+  getMultiSelectValues(event: Event): string[] {
+    const target = event.target as HTMLSelectElement;
+    return Array.from(target.selectedOptions).map((o) => o.value);
   }
 
   toggleTag(tagName: string) {
