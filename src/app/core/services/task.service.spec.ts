@@ -245,6 +245,9 @@ describe('TaskService', () => {
       );
       docSpy = safeSpy(firestore, 'doc').and.returnValue({} as any);
       safeSpy(firestore, 'collection').and.returnValue({} as any);
+      safeSpy(firestore, 'query').and.returnValue({} as any);
+      safeSpy(firestore, 'where').and.returnValue({} as any);
+      safeSpy(firestore, 'collectionData').and.returnValue(of([]));
 
       addDocSpy.calls?.reset();
       updateDocSpy.calls?.reset();

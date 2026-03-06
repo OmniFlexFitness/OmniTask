@@ -1,0 +1,776 @@
+
+> omni-task@0.0.0 test
+> ng test --watch=false
+
+- Generating browser application bundles (phase: setup)...
+[32m✔[39m Browser application bundle generation complete.
+[32m06 03 2026 18:03:41.682:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:9876/
+[32m06 03 2026 18:03:41.684:INFO [launcher]: [39mLaunching browsers Chrome with concurrency unlimited
+[32m06 03 2026 18:03:41.705:INFO [launcher]: [39mStarting browser Chrome
+[32m06 03 2026 18:03:43.275:INFO [Chrome 145.0.0.0 (Windows 10)]: [39mConnected on socket UVJ_qgeW0KDDk-KNAAAB with id 7850257
+Chrome 145.0.0.0 (Windows 10): Executed 0 of 290[32m SUCCESS[39m (0 secs / 0 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 1 of 290[32m SUCCESS[39m (0 secs / 0.027 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 2 of 290[32m SUCCESS[39m (0 secs / 0.042 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 3 of 290[32m SUCCESS[39m (0 secs / 0.046 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 4 of 290[32m SUCCESS[39m (0 secs / 0.05 secs)
+[1A[2KERROR: [36m'[ScheduleService] deleteWeeklyBlock error:', Error: Delete Error
+Error: Delete Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:308:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 4 of 290[32m SUCCESS[39m (0 secs / 0.05 secs)
+ERROR: '[ScheduleService] deleteWeeklyBlock error:', Error: Delete Error
+Error: Delete Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:308:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 5 of 290[32m SUCCESS[39m (0 secs / 0.055 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 6 of 290[32m SUCCESS[39m (0 secs / 0.058 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 7 of 290[32m SUCCESS[39m (0 secs / 0.06 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 8 of 290[32m SUCCESS[39m (0 secs / 0.062 secs)
+[1A[2KERROR: [36m'[ScheduleService] createWeeklyBlock error:', Error: Test Error
+Error: Test Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:263:67)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 8 of 290[32m SUCCESS[39m (0 secs / 0.062 secs)
+ERROR: '[ScheduleService] createWeeklyBlock error:', Error: Test Error
+Error: Test Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:263:67)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 9 of 290[32m SUCCESS[39m (0 secs / 0.065 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 10 of 290[32m SUCCESS[39m (0 secs / 0.067 secs)
+[1A[2KERROR: [36m'[ScheduleService] updateWeeklyBlock error:', Error: Update Error
+Error: Update Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:289:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 10 of 290[32m SUCCESS[39m (0 secs / 0.067 secs)
+ERROR: '[ScheduleService] updateWeeklyBlock error:', Error: Update Error
+Error: Update Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:289:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 11 of 290[32m SUCCESS[39m (0 secs / 0.069 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 12 of 290[32m SUCCESS[39m (0 secs / 0.07 secs)
+[1A[2KERROR: [36m'[ScheduleService] createRecurringTask error:', Error: Test Error
+Error: Test Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:129:67)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 12 of 290[32m SUCCESS[39m (0 secs / 0.07 secs)
+ERROR: '[ScheduleService] createRecurringTask error:', Error: Test Error
+Error: Test Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:129:67)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 13 of 290[32m SUCCESS[39m (0 secs / 0.072 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 14 of 290[32m SUCCESS[39m (0 secs / 0.074 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 15 of 290[32m SUCCESS[39m (0 secs / 0.076 secs)
+[1A[2KERROR: [36m'[ScheduleService] updateRecurringTask error:', Error: Update Error
+Error: Update Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:153:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 15 of 290[32m SUCCESS[39m (0 secs / 0.076 secs)
+ERROR: '[ScheduleService] updateRecurringTask error:', Error: Update Error
+Error: Update Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:153:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 16 of 290[32m SUCCESS[39m (0 secs / 0.079 secs)
+[1A[2KERROR: [36m'[ScheduleService] deleteRecurringTask error:', Error: Delete Error
+Error: Delete Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:172:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 16 of 290[32m SUCCESS[39m (0 secs / 0.079 secs)
+ERROR: '[ScheduleService] deleteRecurringTask error:', Error: Delete Error
+Error: Delete Error
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/schedule.service.spec.ts:172:70)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 17 of 290[32m SUCCESS[39m (0 secs / 0.082 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 18 of 290[32m SUCCESS[39m (0 secs / 0.084 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 19 of 290[32m SUCCESS[39m (0 secs / 0.088 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 20 of 290[32m SUCCESS[39m (0 secs / 0.091 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 21 of 290[32m SUCCESS[39m (0 secs / 0.093 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 22 of 290[32m SUCCESS[39m (0 secs / 0.095 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 23 of 290[32m SUCCESS[39m (0 secs / 0.096 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 24 of 290[32m SUCCESS[39m (0 secs / 0.098 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 25 of 290[32m SUCCESS[39m (0 secs / 0.1 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 26 of 290[32m SUCCESS[39m (0 secs / 0.103 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 27 of 290[32m SUCCESS[39m (0 secs / 0.105 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 28 of 290[32m SUCCESS[39m (0 secs / 0.107 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 29 of 290[32m SUCCESS[39m (0 secs / 0.11 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 30 of 290[32m SUCCESS[39m (0 secs / 0.112 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 31 of 290[32m SUCCESS[39m (0 secs / 0.114 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 32 of 290[32m SUCCESS[39m (0 secs / 0.115 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 33 of 290[32m SUCCESS[39m (0 secs / 0.116 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 34 of 290[32m SUCCESS[39m (0 secs / 0.118 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 35 of 290[32m SUCCESS[39m (0 secs / 0.12 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 36 of 290[32m SUCCESS[39m (0 secs / 0.122 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 37 of 290[32m SUCCESS[39m (0 secs / 0.124 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 38 of 290[32m SUCCESS[39m (0 secs / 0.126 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 39 of 290[32m SUCCESS[39m (0 secs / 0.127 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 40 of 290[32m SUCCESS[39m (0 secs / 0.128 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 41 of 290[32m SUCCESS[39m (0 secs / 0.13 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 42 of 290[32m SUCCESS[39m (0 secs / 0.132 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 43 of 290[32m SUCCESS[39m (0 secs / 0.134 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 44 of 290[32m SUCCESS[39m (0 secs / 0.136 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 45 of 290[32m SUCCESS[39m (0 secs / 0.138 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 46 of 290[32m SUCCESS[39m (0 secs / 0.14 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 47 of 290[32m SUCCESS[39m (0 secs / 0.142 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 48 of 290[32m SUCCESS[39m (0 secs / 0.144 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 49 of 290[32m SUCCESS[39m (0 secs / 0.146 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 50 of 290[32m SUCCESS[39m (0 secs / 0.147 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 51 of 290[32m SUCCESS[39m (0 secs / 0.162 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 52 of 290[32m SUCCESS[39m (0 secs / 0.164 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 53 of 290[32m SUCCESS[39m (0 secs / 0.166 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 54 of 290[32m SUCCESS[39m (0 secs / 0.167 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 55 of 290[32m SUCCESS[39m (0 secs / 0.168 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 55 of 290[32m SUCCESS[39m (0 secs / 0.168 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 55 of 290[32m SUCCESS[39m (0 secs / 0.168 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KERROR: [36m'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 55 of 290[32m SUCCESS[39m (0 secs / 0.168 secs)
+ERROR: 'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 56 of 290[32m SUCCESS[39m (0 secs / 0.636 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 56 of 290[32m SUCCESS[39m (0 secs / 0.636 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 56 of 290[32m SUCCESS[39m (0 secs / 0.636 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KERROR: [36m'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 56 of 290[32m SUCCESS[39m (0 secs / 0.636 secs)
+ERROR: 'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)
+[1A[2KERROR: [36m'Failed to generate subtasks:', TypeError: _this13.taskService.createTask is not a function
+TypeError: _this13.taskService.createTask is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:681:32
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+    at _ZoneImpl.run (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:127:35)
+    at apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2066:30)
+    at _ZoneDelegate.invokeTask (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:386:171)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 56 of 290[32m SUCCESS[39m (0 secs / 0.636 secs)
+ERROR: 'Failed to generate subtasks:', TypeError: _this13.taskService.createTask is not a function
+TypeError: _this13.taskService.createTask is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:681:32
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+    at _ZoneImpl.run (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:127:35)
+    at apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2066:30)
+    at _ZoneDelegate.invokeTask (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:386:171)
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) TaskDetailModalComponent should generate subtasks via AI and update task FAILED[39m
+	Expected spy TaskService.updateTask to have been called.
+	    at <Jasmine>
+	    at UserContext.<anonymous> (src/app/features/tasks/task-detail-modal.component.spec.ts:94:40)
+	    at Generator.next (<anonymous>)
+	    at asyncGeneratorStep (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+	    at _next (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+Chrome 145.0.0.0 (Windows 10): Executed 57 of 290[31m (1 FAILED)[39m (0 secs / 0.68 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 57 of 290[31m (1 FAILED)[39m (0 secs / 0.68 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 57 of 290[31m (1 FAILED)[39m (0 secs / 0.68 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KERROR: [36m'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 57 of 290[31m (1 FAILED)[39m (0 secs / 0.68 secs)
+ERROR: 'Failed to load related tasks', TypeError: _this.taskService.getTasksByProject is not a function
+TypeError: _this.taskService.getTasksByProject is not a function
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:265:62
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1
+    at TaskDetailModalComponent.loadRelatedTasks (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:282:6)
+    at fn (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/tasks/task-detail-modal.component.ts:257:14)
+    at Object.fn (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@angular/core/fesm2022/_untracked-chunk.mjs:2964:5)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 58 of 290[31m (1 FAILED)[39m (0 secs / 0.713 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 59 of 290[31m (1 FAILED)[39m (0 secs / 0.734 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 60 of 290[31m (1 FAILED)[39m (0 secs / 0.742 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 61 of 290[31m (1 FAILED)[39m (0 secs / 0.749 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 62 of 290[31m (1 FAILED)[39m (0 secs / 0.755 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 63 of 290[31m (1 FAILED)[39m (0 secs / 0.762 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 64 of 290[31m (1 FAILED)[39m (0 secs / 0.768 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 65 of 290[31m (1 FAILED)[39m (0 secs / 0.774 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 66 of 290[31m (1 FAILED)[39m (0 secs / 0.78 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 67 of 290[31m (1 FAILED)[39m (0 secs / 0.786 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 68 of 290[31m (1 FAILED)[39m (0 secs / 0.855 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 69 of 290[31m (1 FAILED)[39m (0 secs / 0.871 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 70 of 290[31m (1 FAILED)[39m (0 secs / 0.888 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 71 of 290[31m (1 FAILED)[39m (0 secs / 0.9 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 72 of 290[31m (1 FAILED)[39m (0 secs / 0.914 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 73 of 290[31m (1 FAILED)[39m (0 secs / 0.927 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 74 of 290[31m (1 FAILED)[39m (0 secs / 0.946 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 75 of 290[31m (1 FAILED)[39m (0 secs / 0.959 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 76 of 290[31m (1 FAILED)[39m (0 secs / 0.973 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 77 of 290[31m (1 FAILED)[39m (0 secs / 0.987 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 78 of 290[31m (1 FAILED)[39m (0 secs / 1 sec)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 79 of 290[31m (1 FAILED)[39m (0 secs / 1.015 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 80 of 290[31m (1 FAILED)[39m (0 secs / 1.271 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 81 of 290[31m (1 FAILED)[39m (0 secs / 1.277 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 82 of 290[31m (1 FAILED)[39m (0 secs / 1.283 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 83 of 290[31m (1 FAILED)[39m (0 secs / 1.288 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 84 of 290[31m (1 FAILED)[39m (0 secs / 1.294 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 85 of 290[31m (1 FAILED)[39m (0 secs / 1.301 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 86 of 290[31m (1 FAILED)[39m (0 secs / 1.307 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 87 of 290[31m (1 FAILED)[39m (0 secs / 1.312 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 88 of 290[31m (1 FAILED)[39m (0 secs / 1.318 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 89 of 290[31m (1 FAILED)[39m (0 secs / 1.319 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 90 of 290[31m (1 FAILED)[39m (0 secs / 1.32 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 91 of 290[31m (1 FAILED)[39m (0 secs / 1.321 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 92 of 290[31m (1 FAILED)[39m (0 secs / 1.323 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 93 of 290[31m (1 FAILED)[39m (0 secs / 1.325 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 94 of 290[31m (1 FAILED)[39m (0 secs / 1.327 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 95 of 290[31m (1 FAILED)[39m (0 secs / 1.329 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 96 of 290[31m (1 FAILED)[39m (0 secs / 1.331 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 97 of 290[31m (1 FAILED)[39m (0 secs / 1.332 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 98 of 290[31m (1 FAILED)[39m (0 secs / 1.333 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 99 of 290[31m (1 FAILED)[39m (0 secs / 1.335 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 100 of 290[31m (1 FAILED)[39m (0 secs / 1.337 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 101 of 290[31m (1 FAILED)[39m (0 secs / 1.339 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 102 of 290[31m (1 FAILED)[39m (0 secs / 1.34 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 103 of 290[31m (1 FAILED)[39m (0 secs / 1.341 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 104 of 290[31m (1 FAILED)[39m (0 secs / 1.342 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 105 of 290[31m (1 FAILED)[39m (0 secs / 1.343 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 106 of 290[31m (1 FAILED)[39m (0 secs / 1.344 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 107 of 290[31m (1 FAILED)[39m (0 secs / 1.345 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 108 of 290[31m (1 FAILED)[39m (0 secs / 1.346 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 109 of 290[31m (1 FAILED)[39m (0 secs / 1.347 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 110 of 290[31m (1 FAILED)[39m (0 secs / 1.348 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 111 of 290[31m (1 FAILED)[39m (0 secs / 1.349 secs)
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) TaskService CRUD operations should delete from google tasks if linked FAILED[39m
+	TypeError: source.subscribe is not a function
+	    at executor (node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+	    at new ZoneAwarePromise (node_modules/zone.js/fesm2015/zone.js:2221:23)
+	    at firstValueFrom (node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+	    at src/app/core/services/task.service.ts:485:40
+	    at Generator.next (<anonymous>)
+	    at asyncGeneratorStep (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+	    at apply (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:158)
+	    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:46)
+Chrome 145.0.0.0 (Windows 10): Executed 112 of 290[31m (2 FAILED)[39m (0 secs / 1.352 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 113 of 290[31m (2 FAILED)[39m (0 secs / 1.354 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 114 of 290[31m (2 FAILED)[39m (0 secs / 1.356 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 115 of 290[31m (2 FAILED)[39m (0 secs / 1.358 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 116 of 290[31m (2 FAILED)[39m (0 secs / 1.36 secs)
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) TaskService CRUD operations should delete a task FAILED[39m
+	TypeError: source.subscribe is not a function
+	    at executor (node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+	    at new ZoneAwarePromise (node_modules/zone.js/fesm2015/zone.js:2221:23)
+	    at firstValueFrom (node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+	    at src/app/core/services/task.service.ts:485:40
+	    at Generator.next (<anonymous>)
+	    at asyncGeneratorStep (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+	    at apply (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:158)
+	    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:46)
+Chrome 145.0.0.0 (Windows 10): Executed 117 of 290[31m (3 FAILED)[39m (0 secs / 1.362 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 118 of 290[31m (3 FAILED)[39m (0 secs / 1.364 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 119 of 290[31m (3 FAILED)[39m (0 secs / 1.365 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 120 of 290[31m (3 FAILED)[39m (0 secs / 1.366 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 121 of 290[31m (3 FAILED)[39m (0 secs / 1.368 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 122 of 290[31m (3 FAILED)[39m (0 secs / 1.369 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 123 of 290[31m (3 FAILED)[39m (0 secs / 1.37 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 124 of 290[31m (3 FAILED)[39m (0 secs / 1.37 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 125 of 290[31m (3 FAILED)[39m (0 secs / 1.371 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 126 of 290[31m (3 FAILED)[39m (0 secs / 1.373 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 127 of 290[31m (3 FAILED)[39m (0 secs / 1.374 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 128 of 290[31m (3 FAILED)[39m (0 secs / 1.376 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 129 of 290[31m (3 FAILED)[39m (0 secs / 1.377 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 130 of 290[31m (3 FAILED)[39m (0 secs / 1.378 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 131 of 290[31m (3 FAILED)[39m (0 secs / 1.379 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 132 of 290[31m (3 FAILED)[39m (0 secs / 1.38 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 133 of 290[31m (3 FAILED)[39m (0 secs / 1.381 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 134 of 290[31m (3 FAILED)[39m (0 secs / 1.382 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 135 of 290[31m (3 FAILED)[39m (0 secs / 1.384 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 136 of 290[31m (3 FAILED)[39m (0 secs / 1.386 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 137 of 290[31m (3 FAILED)[39m (0 secs / 1.388 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 138 of 290[31m (3 FAILED)[39m (0 secs / 1.39 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 139 of 290[31m (3 FAILED)[39m (0 secs / 1.391 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 140 of 290[31m (3 FAILED)[39m (0 secs / 1.395 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 141 of 290[31m (3 FAILED)[39m (0 secs / 1.397 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 142 of 290[31m (3 FAILED)[39m (0 secs / 1.405 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 143 of 290[31m (3 FAILED)[39m (0 secs / 1.406 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 144 of 290[31m (3 FAILED)[39m (0 secs / 1.407 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 145 of 290[31m (3 FAILED)[39m (0 secs / 1.427 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 146 of 290[31m (3 FAILED)[39m (0 secs / 1.437 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 147 of 290[31m (3 FAILED)[39m (0 secs / 1.445 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 148 of 290[31m (3 FAILED)[39m (0 secs / 1.452 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 149 of 290[31m (3 FAILED)[39m (0 secs / 1.46 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 150 of 290[31m (3 FAILED)[39m (0 secs / 1.468 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 151 of 290[31m (3 FAILED)[39m (0 secs / 1.474 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 152 of 290[31m (3 FAILED)[39m (0 secs / 1.476 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 153 of 290[31m (3 FAILED)[39m (0 secs / 1.479 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 154 of 290[31m (3 FAILED)[39m (0 secs / 1.483 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 155 of 290[31m (3 FAILED)[39m (0 secs / 1.486 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 156 of 290[31m (3 FAILED)[39m (0 secs / 1.488 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 157 of 290[31m (3 FAILED)[39m (0 secs / 1.49 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 158 of 290[31m (3 FAILED)[39m (0 secs / 1.493 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 159 of 290[31m (3 FAILED)[39m (0 secs / 1.495 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 160 of 290[31m (3 FAILED)[39m (0 secs / 1.498 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 161 of 290[31m (3 FAILED)[39m (0 secs / 1.5 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 162 of 290[31m (3 FAILED)[39m (0 secs / 1.503 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 163 of 290[31m (3 FAILED)[39m (0 secs / 1.505 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 164 of 290[31m (3 FAILED)[39m (0 secs / 1.507 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 165 of 290[31m (3 FAILED)[39m (0 secs / 1.511 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 166 of 290[31m (3 FAILED)[39m (0 secs / 1.515 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 167 of 290[31m (3 FAILED)[39m (0 secs / 1.517 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 168 of 290[31m (3 FAILED)[39m (0 secs / 1.519 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 169 of 290[31m (3 FAILED)[39m (0 secs / 1.521 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 170 of 290[31m (3 FAILED)[39m (0 secs / 1.523 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 171 of 290[31m (3 FAILED)[39m (0 secs / 1.524 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 172 of 290[31m (3 FAILED)[39m (0 secs / 1.526 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 173 of 290[31m (3 FAILED)[39m (0 secs / 1.527 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 173 of 290[31m (3 FAILED)[39m (0 secs / 1.527 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 174 of 290[31m (3 FAILED)[39m (0 secs / 1.56 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 174 of 290[31m (3 FAILED)[39m (0 secs / 1.56 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 175 of 290[31m (3 FAILED)[39m (0 secs / 1.576 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 175 of 290[31m (3 FAILED)[39m (0 secs / 1.576 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 176 of 290[31m (3 FAILED)[39m (0 secs / 1.593 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 177 of 290[31m (3 FAILED)[39m (0 secs / 1.596 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 178 of 290[31m (3 FAILED)[39m (0 secs / 1.598 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 179 of 290[31m (3 FAILED)[39m (0 secs / 1.6 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 180 of 290[31m (3 FAILED)[39m (0 secs / 1.603 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 181 of 290[31m (3 FAILED)[39m (0 secs / 1.606 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 182 of 290[31m (3 FAILED)[39m (0 secs / 1.609 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 183 of 290[31m (3 FAILED)[39m (0 secs / 1.61 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 184 of 290[31m (3 FAILED)[39m (0 secs / 1.611 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 185 of 290[31m (3 FAILED)[39m (0 secs / 1.613 secs)
+[1A[2KWARN: [36m'Failed to fetch Google Contacts:', HttpErrorResponse{headers: HttpHeaders{headers: Map{}, normalizedNames: Map{}, lazyInit: undefined, lazyUpdate: null}, status: 0, statusText: 'Unknown Error', url: 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,photos&pageSize=100', ok: false, type: undefined, redirected: undefined, responseType: undefined, name: 'HttpErrorResponse', message: 'Http failure response for https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,photos&pageSize=100: 0 ', error: ProgressEvent{isTrusted: false}}[39m
+Chrome 145.0.0.0 (Windows 10): Executed 185 of 290[31m (3 FAILED)[39m (0 secs / 1.613 secs)
+WARN: 'Failed to fetch Google Contacts:', HttpErrorResponse{headers: HttpHeaders{headers: Map{}, normalizedNames: Map{}, lazyInit: undefined, lazyUpdate: null}, status: 0, statusText: 'Unknown Error', url: 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,photos&pageSize=100', ok: false, type: undefined, redirected: undefined, responseType: undefined, name: 'HttpErrorResponse', message: 'Http failure response for https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,photos&pageSize=100: 0 ', error: ProgressEvent{isTrusted: false}}
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 186 of 290[31m (3 FAILED)[39m (0 secs / 1.615 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 187 of 290[31m (3 FAILED)[39m (0 secs / 1.616 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 188 of 290[31m (3 FAILED)[39m (0 secs / 1.617 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 189 of 290[31m (3 FAILED)[39m (0 secs / 1.618 secs)
+[1A[2KWARN: [36m'Failed to fetch Directory users (may require admin privileges):', HttpErrorResponse{headers: HttpHeaders{headers: Map{}, normalizedNames: Map{}, lazyInit: undefined, lazyUpdate: null}, status: 0, statusText: 'Unknown Error', url: 'https://admin.googleapis.com/admin/directory/v1/users?domain=omniflexfitness.com&maxResults=100&orderBy=email', ok: false, type: undefined, redirected: undefined, responseType: undefined, name: 'HttpErrorResponse', message: 'Http failure response for https://admin.googleapis.com/admin/directory/v1/users?domain=omniflexfitness.com&maxResults=100&orderBy=email: 0 ', error: ProgressEvent{isTrusted: false}}[39m
+Chrome 145.0.0.0 (Windows 10): Executed 189 of 290[31m (3 FAILED)[39m (0 secs / 1.618 secs)
+WARN: 'Failed to fetch Directory users (may require admin privileges):', HttpErrorResponse{headers: HttpHeaders{headers: Map{}, normalizedNames: Map{}, lazyInit: undefined, lazyUpdate: null}, status: 0, statusText: 'Unknown Error', url: 'https://admin.googleapis.com/admin/directory/v1/users?domain=omniflexfitness.com&maxResults=100&orderBy=email', ok: false, type: undefined, redirected: undefined, responseType: undefined, name: 'HttpErrorResponse', message: 'Http failure response for https://admin.googleapis.com/admin/directory/v1/users?domain=omniflexfitness.com&maxResults=100&orderBy=email: 0 ', error: ProgressEvent{isTrusted: false}}
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 190 of 290[31m (3 FAILED)[39m (0 secs / 1.62 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 191 of 290[31m (3 FAILED)[39m (0 secs / 1.621 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 192 of 290[31m (3 FAILED)[39m (0 secs / 1.655 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 193 of 290[31m (3 FAILED)[39m (0 secs / 1.66 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 194 of 290[31m (3 FAILED)[39m (0 secs / 1.666 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 195 of 290[31m (3 FAILED)[39m (0 secs / 1.671 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 196 of 290[31m (3 FAILED)[39m (0 secs / 1.676 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 197 of 290[31m (3 FAILED)[39m (0 secs / 1.681 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 198 of 290[31m (3 FAILED)[39m (0 secs / 1.686 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 199 of 290[31m (3 FAILED)[39m (0 secs / 1.689 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 200 of 290[31m (3 FAILED)[39m (0 secs / 1.694 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 201 of 290[31m (3 FAILED)[39m (0 secs / 1.696 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 202 of 290[31m (3 FAILED)[39m (0 secs / 1.698 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 203 of 290[31m (3 FAILED)[39m (0 secs / 1.7 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 204 of 290[31m (3 FAILED)[39m (0 secs / 1.701 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 205 of 290[31m (3 FAILED)[39m (0 secs / 1.703 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 206 of 290[31m (3 FAILED)[39m (0 secs / 1.704 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 207 of 290[31m (3 FAILED)[39m (0 secs / 1.705 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 208 of 290[31m (3 FAILED)[39m (0 secs / 1.707 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 209 of 290[31m (3 FAILED)[39m (0 secs / 1.708 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 210 of 290[31m (3 FAILED)[39m (0 secs / 1.709 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 211 of 290[31m (3 FAILED)[39m (0 secs / 1.711 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 212 of 290[31m (3 FAILED)[39m (0 secs / 1.713 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 213 of 290[31m (3 FAILED)[39m (0 secs / 1.715 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 214 of 290[31m (3 FAILED)[39m (0 secs / 1.717 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 215 of 290[31m (3 FAILED)[39m (0 secs / 1.719 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 216 of 290[31m (3 FAILED)[39m (0 secs / 1.721 secs)
+[1A[2KERROR: [36m'Failed to update Google Task, but task was updated in OmniTask:', Error: API Err
+Error: API Err
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:235:76)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:388:27[39m
+Chrome 145.0.0.0 (Windows 10): Executed 216 of 290[31m (3 FAILED)[39m (0 secs / 1.721 secs)
+ERROR: 'Failed to update Google Task, but task was updated in OmniTask:', Error: API Err
+Error: API Err
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:235:76)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:388:27
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 217 of 290[31m (3 FAILED)[39m (0 secs / 1.724 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 218 of 290[31m (3 FAILED)[39m (0 secs / 1.726 secs)
+[1A[2KERROR: [36m'Failed to create Google Task list, but project was created in OmniTask:', Error: API Error
+Error: API Error
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:190:28)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:334:44[39m
+Chrome 145.0.0.0 (Windows 10): Executed 218 of 290[31m (3 FAILED)[39m (0 secs / 1.726 secs)
+ERROR: 'Failed to create Google Task list, but project was created in OmniTask:', Error: API Error
+Error: API Error
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:190:28)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:334:44
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 219 of 290[31m (3 FAILED)[39m (0 secs / 1.729 secs)
+[1A[2KLOG: [36m'Sync result: 1 added, 0 updated, 0 pushed, 0 linked by title'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 219 of 290[31m (3 FAILED)[39m (0 secs / 1.729 secs)
+LOG: 'Sync result: 1 added, 0 updated, 0 pushed, 0 linked by title'
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) GoogleTasksSyncService service methods pullFromGoogleTasks should process additions, updates, and pushes FAILED[39m
+	Expected [object Promise] to be rejected.
+	    at <Jasmine>
+	    at UserContext.<anonymous> (src/app/core/services/google-tasks-sync.service.spec.ts:273:76)
+	    at Generator.next (<anonymous>)
+	    at asyncGeneratorStep (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+	    at _next (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+	    at executor (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+	    at new ZoneAwarePromise (node_modules/zone.js/fesm2015/zone.js:2221:23)
+	    at UserContext.apply (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:360:158)
+Chrome 145.0.0.0 (Windows 10): Executed 220 of 290[31m (4 FAILED)[39m (0 secs / 1.733 secs)
+[1A[2KERROR: [36m'Failed to fetch Google Tasks:', Error: API Error
+Error: API Error
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:252:74)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:149:38[39m
+Chrome 145.0.0.0 (Windows 10): Executed 220 of 290[31m (4 FAILED)[39m (0 secs / 1.733 secs)
+ERROR: 'Failed to fetch Google Tasks:', Error: API Error
+Error: API Error
+    at errorFactory (http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.spec.ts:252:74)
+    at Observable._subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/observable/throwError.js:5:51)
+    at Observable._trySubscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:37:25)
+    at cb (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:31:30)
+    at errorContext (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/util/errorContext.js:19:9)
+    at Observable.subscribe (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/Observable.js:22:21)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:9876/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:9876/_karma_webpack_/webpack:/src/app/core/services/google-tasks-sync.service.ts:149:38
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 221 of 290[31m (4 FAILED)[39m (0 secs / 1.735 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 222 of 290[31m (4 FAILED)[39m (0 secs / 1.736 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 223 of 290[31m (4 FAILED)[39m (0 secs / 1.738 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 224 of 290[31m (4 FAILED)[39m (0 secs / 1.74 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 225 of 290[31m (4 FAILED)[39m (0 secs / 1.741 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 226 of 290[31m (4 FAILED)[39m (0 secs / 1.743 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 227 of 290[31m (4 FAILED)[39m (0 secs / 1.744 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 228 of 290[31m (4 FAILED)[39m (0 secs / 1.745 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 229 of 290[31m (4 FAILED)[39m (0 secs / 1.746 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 229 of 290[31m (4 FAILED)[39m (0 secs / 1.746 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 230 of 290[31m (4 FAILED)[39m (0 secs / 1.783 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 230 of 290[31m (4 FAILED)[39m (0 secs / 1.783 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 231 of 290[31m (4 FAILED)[39m (0 secs / 1.788 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 231 of 290[31m (4 FAILED)[39m (0 secs / 1.788 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 232 of 290[31m (4 FAILED)[39m (0 secs / 1.792 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 232 of 290[31m (4 FAILED)[39m (0 secs / 1.792 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 233 of 290[31m (4 FAILED)[39m (0 secs / 1.796 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 233 of 290[31m (4 FAILED)[39m (0 secs / 1.796 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 234 of 290[31m (4 FAILED)[39m (0 secs / 1.8 secs)
+[1A[2KLOG: [36m'Sample data created for new user!'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 234 of 290[31m (4 FAILED)[39m (0 secs / 1.8 secs)
+LOG: 'Sample data created for new user!'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 235 of 290[31m (4 FAILED)[39m (0 secs / 1.804 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 236 of 290[31m (4 FAILED)[39m (0 secs / 1.857 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 237 of 290[31m (4 FAILED)[39m (0 secs / 1.871 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 238 of 290[31m (4 FAILED)[39m (0 secs / 1.881 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 239 of 290[31m (4 FAILED)[39m (0 secs / 1.893 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 240 of 290[31m (4 FAILED)[39m (0 secs / 1.901 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 241 of 290[31m (4 FAILED)[39m (0 secs / 1.911 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 242 of 290[31m (4 FAILED)[39m (0 secs / 1.921 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 243 of 290[31m (4 FAILED)[39m (0 secs / 1.93 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 244 of 290[31m (4 FAILED)[39m (0 secs / 1.941 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 245 of 290[31m (4 FAILED)[39m (0 secs / 1.95 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 246 of 290[31m (4 FAILED)[39m (0 secs / 1.959 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 247 of 290[31m (4 FAILED)[39m (0 secs / 1.969 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 248 of 290[31m (4 FAILED)[39m (0 secs / 1.978 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 249 of 290[31m (4 FAILED)[39m (0 secs / 1.988 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 250 of 290[31m (4 FAILED)[39m (0 secs / 1.997 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 251 of 290[31m (4 FAILED)[39m (0 secs / 2.007 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 251 of 290[31m (4 FAILED)[39m (0 secs / 2.007 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 252 of 290[31m (4 FAILED)[39m (0 secs / 2.011 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 252 of 290[31m (4 FAILED)[39m (0 secs / 2.011 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 253 of 290[31m (4 FAILED)[39m (0 secs / 2.014 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 253 of 290[31m (4 FAILED)[39m (0 secs / 2.014 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 254 of 290[31m (4 FAILED)[39m (0 secs / 2.016 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 254 of 290[31m (4 FAILED)[39m (0 secs / 2.016 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 255 of 290[31m (4 FAILED)[39m (0 secs / 2.018 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 255 of 290[31m (4 FAILED)[39m (0 secs / 2.018 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 256 of 290[31m (4 FAILED)[39m (0 secs / 2.021 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 256 of 290[31m (4 FAILED)[39m (0 secs / 2.021 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 257 of 290[31m (4 FAILED)[39m (0 secs / 2.024 secs)
+[1A[2KWARN: [36m'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 257 of 290[31m (4 FAILED)[39m (0 secs / 2.024 secs)
+WARN: 'The 'allowSignalWrites' flag is deprecated and no longer impacts effect() (writes are always allowed)'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 258 of 290[31m (4 FAILED)[39m (0 secs / 2.027 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 259 of 290[31m (4 FAILED)[39m (0 secs / 2.033 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 260 of 290[31m (4 FAILED)[39m (0 secs / 2.036 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 261 of 290[31m (4 FAILED)[39m (0 secs / 2.039 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 262 of 290[31m (4 FAILED)[39m (0 secs / 2.043 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 263 of 290[31m (4 FAILED)[39m (0 secs / 2.048 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 264 of 290[31m (4 FAILED)[39m (0 secs / 2.05 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 265 of 290[31m (4 FAILED)[39m (0 secs / 2.053 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 266 of 290[31m (4 FAILED)[39m (0 secs / 2.055 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 267 of 290[31m (4 FAILED)[39m (0 secs / 2.059 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 268 of 290[31m (4 FAILED)[39m (0 secs / 2.07 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 269 of 290[31m (4 FAILED)[39m (0 secs / 2.077 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 270 of 290[31m (4 FAILED)[39m (0 secs / 2.084 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 271 of 290[31m (4 FAILED)[39m (0 secs / 2.087 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 272 of 290[31m (4 FAILED)[39m (0 secs / 2.092 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 273 of 290[31m (4 FAILED)[39m (0 secs / 2.096 secs)
+[1A[2KLOG: [36m'Sync complete: 1 added, 0 updated'[39m
+Chrome 145.0.0.0 (Windows 10): Executed 273 of 290[31m (4 FAILED)[39m (0 secs / 2.096 secs)
+LOG: 'Sync complete: 1 added, 0 updated'
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 274 of 290[31m (4 FAILED)[39m (0 secs / 2.1 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 275 of 290[31m (4 FAILED)[39m (0 secs / 2.103 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 276 of 290[31m (4 FAILED)[39m (0 secs / 2.107 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 277 of 290[31m (4 FAILED)[39m (0 secs / 2.112 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 278 of 290[31m (4 FAILED)[39m (0 secs / 2.115 secs)
+[1A[2KERROR: [36m'Failed to enable scheduled sync:', Error: Failed access
+Error: Failed access
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/projects/components/project-google-tasks-sync.component.spec.ts:241:24)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 278 of 290[31m (4 FAILED)[39m (0 secs / 2.115 secs)
+ERROR: 'Failed to enable scheduled sync:', Error: Failed access
+Error: Failed access
+    at UserContext.<anonymous> (http://localhost:9876/_karma_webpack_/webpack:/src/app/features/projects/components/project-google-tasks-sync.component.spec.ts:241:24)
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at _next (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at executor (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:22:1)
+    at new ZoneAwarePromise (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at UserContext.apply (http://localhost:9876/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:14:1)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:9876/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 279 of 290[31m (4 FAILED)[39m (0 secs / 2.12 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 280 of 290[31m (4 FAILED)[39m (0 secs / 2.124 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 281 of 290[31m (4 FAILED)[39m (0 secs / 2.128 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 282 of 290[31m (4 FAILED)[39m (0 secs / 2.132 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 283 of 290[31m (4 FAILED)[39m (0 secs / 2.136 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 284 of 290[31m (4 FAILED)[39m (0 secs / 2.139 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 285 of 290[31m (4 FAILED)[39m (0 secs / 2.143 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 286 of 290[31m (4 FAILED)[39m (0 secs / 2.147 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 287 of 290[31m (4 FAILED)[39m (0 secs / 2.15 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 288 of 290[31m (4 FAILED)[39m (0 secs / 2.154 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 289 of 290[31m (4 FAILED)[39m (0 secs / 2.158 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 290 of 290[31m (4 FAILED)[39m (0 secs / 2.181 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 290 of 290[31m (4 FAILED)[39m (2.334 secs / 2.181 secs)
+[31mTOTAL: 4 FAILED, 286 SUCCESS[39m
+[32m✔[39m Browser application bundle generation complete.
+[33m06 03 2026 18:03:50.470:WARN [launcher]: [39mChrome was not killed in 2000 ms, sending SIGKILL.
+[33m06 03 2026 18:03:52.485:WARN [launcher]: [39mChrome was not killed by SIGKILL in 2000 ms, continuing.

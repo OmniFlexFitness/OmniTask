@@ -322,9 +322,14 @@
 
             <!-- Main Row -->
             <div
-              class="grid gap-4 px-4 py-3 items-center"
+              class="grid gap-4 px-4 py-3 items-center border-l-2 border-transparent transition-all relative"
               [style.grid-template-columns]="gridTemplateCols()"
             >
+              <!-- Tree Depth Indentation line indicator -->
+              @if ($any(task)._depth > 0) {
+                <div class="absolute left-0 top-0 bottom-0 border-l border-cyan-500/20" [style.left]="$any(task)._depth * 1.5 + 'rem'"></div>
+              }
+
               <!-- Selection Checkbox (shown in selection mode) -->
               @if (selectionMode()) {
                 <div class="w-5 flex items-center" (click)="$event.stopPropagation()">
@@ -337,13 +342,14 @@
                 </div>
               }
 
-              <!-- Drag Handle -->
-              <div
-                cdkDragHandle
-                class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors"
-                [class.cursor-not-allowed]="selectionMode()"
-                [class.opacity-30]="selectionMode()"
-              >
+              <!-- Drag Handle & Depth spacer -->
+              <div class="flex items-center" [style.margin-left]="$any(task)._depth ? ($any(task)._depth * 1.5) + 'rem' : '0'">
+                <div
+                  cdkDragHandle
+                  class="w-6 h-6 flex items-center justify-center text-slate-600 hover:text-cyan-400 cursor-grab active:cursor-grabbing transition-colors"
+                  [class.cursor-not-allowed]="selectionMode()"
+                  [class.opacity-30]="selectionMode()"
+                >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   class="h-4 w-4"
@@ -359,9 +365,20 @@
                   />
                 </svg>
               </div>
+            </div>
 
               <!-- Title & ID -->
               <div class="flex items-center gap-3 overflow-hidden">
+                <div class="flex items-center gap-1.5 flex-shrink-0 w-4">
+                  @if (hasSubtasks(task.id)) {
+                    <button class="text-slate-400 hover:text-cyan-400 transition-transform" 
+                      [class.rotate-90]="expandedTaskIds().has(task.id)"
+                      (click)="toggleExpand(task.id, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  }
+                </div>
+
                 <div
                   class="w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
                   [class.border-cyan-500]="task.status === 'done'"
@@ -385,13 +402,19 @@
                     </svg>
                   }
                 </div>
-                <span
-                  class="truncate font-medium text-sm md-inline-title"
+                
+                <div class="flex items-center gap-2 truncate font-medium text-sm md-inline-title"
                   [class.line-through]="task.status === 'done'"
                   [class.text-slate-500]="task.status === 'done'"
-                  [class.text-slate-200]="task.status !== 'done'"
-                  [innerHTML]="task.title | markdown"
-                ></span>
+                  [class.text-slate-200]="task.status !== 'done'">
+                  <span [innerHTML]="task.title | markdown"></span>
+                  @if (isTaskBlocked(task)) {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-rose-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" title="Blocked by other tasks">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                  }
+                </div>
+                
                 @if (task.googleTaskId) {
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

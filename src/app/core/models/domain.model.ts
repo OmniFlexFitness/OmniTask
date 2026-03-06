@@ -104,7 +104,11 @@ export interface Task {
   dueDate?: FirestoreDate;
   completedAt?: FirestoreDate | null; // When task was marked done (null = cleared)
   tags?: string[];
+  /** @deprecated Subtasks are now independent Task documents linked via parentId. */
   subtasks?: Subtask[];
+  parentId?: string | null; // Indicates this task is a subtask of another task
+  blockingIds?: string[]; // IDs of tasks this task blocks
+  blockedByIds?: string[]; // IDs of tasks that block this task from being completed
   customFieldValues?: Record<string, any>;
   attachments?: string[]; // Image/file URLs (Firebase Storage)
   createdAt: FirestoreDate;

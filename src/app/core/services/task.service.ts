@@ -261,6 +261,20 @@ export class TaskService {
   }
 
   /**
+   * Get subtasks for a specific parent task
+   */
+  getSubtasks(parentId: string): Observable<Task[]> {
+    const q = query(
+      this.tasksCollection,
+      where('parentId', '==', parentId),
+      orderBy('order', 'asc'),
+    );
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
+  }
+
+  /**
    * Get tasks by section (for board view)
    */
   getTasksBySection(projectId: string, sectionId: string): Observable<Task[]> {
@@ -456,7 +470,7 @@ export class TaskService {
   }
 
   /**
-   * Delete a task
+   * Delete a task and all of its subtasks
    */
   async deleteTask(id: string, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
@@ -464,9 +478,17 @@ export class TaskService {
 
     try {
       const taskDoc = await this.getTask(id);
+      if (!taskDoc) return;
+
+      // First, find and delete any subtasks
+      const subtasksQ = query(this.tasksCollection, where('parentId', '==', id));
+      const snap = await firstValueFrom(collectionData(subtasksQ, { idField: 'id' }));
+      for (const subtask of snap as Task[]) {
+        await this.deleteTask(subtask.id);
+      }
 
       // Optional Google Tasks deletion — never blocks local delete
-      if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
+      if (taskDoc.googleTaskId && taskDoc.googleTaskListId) {
         try {
           await this.googleTasksSyncService.deleteTaskInGoogle(
             taskDoc.googleTaskListId,

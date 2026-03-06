@@ -22,9 +22,16 @@ describe('TaskDetailModalComponent', () => {
   let mockCustomFieldService: any;
 
   beforeEach(async () => {
-    mockTaskService = jasmine.createSpyObj('TaskService', ['updateTask', 'deleteTask']);
+    mockTaskService = jasmine.createSpyObj('TaskService', [
+      'updateTask',
+      'deleteTask',
+      'createTask',
+      'getTasksByProject',
+    ]);
     mockTaskService.updateTask.and.returnValue(Promise.resolve());
     mockTaskService.deleteTask.and.returnValue(Promise.resolve());
+    mockTaskService.createTask.and.returnValue(Promise.resolve({ id: 'new-sub' } as any));
+    mockTaskService.getTasksByProject.and.returnValue(of([]));
 
     mockProjectService = jasmine.createSpyObj('ProjectService', ['getProject$']);
     mockProjectService.getProject$.and.returnValue(
@@ -91,7 +98,7 @@ describe('TaskDetailModalComponent', () => {
     await component.aiGenerateSubtasks();
 
     expect(mockVertexAiService.generateSubtasks).toHaveBeenCalled();
-    expect(mockTaskService.updateTask).toHaveBeenCalled();
+    expect(mockTaskService.createTask).toHaveBeenCalled();
   });
 
   it('should emit close on backdrop click', () => {

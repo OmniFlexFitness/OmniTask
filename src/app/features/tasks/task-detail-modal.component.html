@@ -466,12 +466,12 @@
                   <div class="flex items-center gap-3">
                     <button
                       class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
-                      [class.border-cyan-500]="subtask.completed"
-                      [class.bg-cyan-500]="subtask.completed"
-                      [class.border-slate-500]="!subtask.completed"
+                      [class.border-cyan-500]="subtask.status === 'done'"
+                      [class.bg-cyan-500]="subtask.status === 'done'"
+                      [class.border-slate-500]="subtask.status !== 'done'"
                       (click)="toggleSubtask(subtask.id)"
                     >
-                      @if (subtask.completed) {
+                      @if (subtask.status === 'done') {
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           class="h-3 w-3 text-white"
@@ -488,9 +488,9 @@
                     </button>
                     <span
                       class="flex-1 text-sm cursor-pointer"
-                      [class.text-slate-500]="subtask.completed"
-                      [class.line-through]="subtask.completed"
-                      [class.text-slate-300]="!subtask.completed"
+                      [class.text-slate-500]="subtask.status === 'done'"
+                      [class.line-through]="subtask.status === 'done'"
+                      [class.text-slate-300]="subtask.status !== 'done'"
                       (click)="toggleSubtaskExpanded(subtask.id)"
                       >{{ subtask.title }}</span
                     >
@@ -616,6 +616,71 @@
               >
                 Add
               </button>
+            </div>
+          </div>
+
+          <!-- Dependencies -->
+          <div class="mb-6">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3"
+              >Dependencies</label
+            >
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+              <!-- Blocked By (waiting on) -->
+              <div>
+                <div class="flex items-center gap-2 mb-2 text-rose-400 text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  Blocked By
+                </div>
+                <div class="text-xs text-slate-500 mb-2">Tasks that must be completed before this one.</div>
+                
+                @if (blockedByTasks().length) {
+                  <ul class="space-y-1 mt-2 mb-3">
+                    @for (b of blockedByTasks(); track b.id) {
+                      <li class="flex items-center justify-between text-sm bg-rose-500/10 border border-rose-500/20 px-2 py-1.5 rounded-lg text-rose-300">
+                        <span class="truncate pr-2" [class.line-through]="b.status === 'done'" [class.opacity-50]="b.status === 'done'">{{ b.title }}</span>
+                        <button type="button" class="text-rose-400 hover:text-rose-200" (click)="removeDependency('isBlockedBy', b.id)" title="Remove dependency">×</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                
+                <app-autocomplete-input
+                  [options]="dependencyOptions()"
+                  [value]="''"
+                  [allowCustom]="false"
+                  placeholder="Select task that blocks this..."
+                  (optionSelected)="onAddDependency('isBlockedBy', $event)"
+                ></app-autocomplete-input>
+              </div>
+
+              <!-- Blocks (others waiting on this) -->
+              <div>
+                <div class="flex items-center gap-2 mb-2 text-amber-400 text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  Blocks
+                </div>
+                <div class="text-xs text-slate-500 mb-2">Tasks that cannot be completed until this is done.</div>
+                
+                @if (blockingTasks().length) {
+                  <ul class="space-y-1 mt-2 mb-3">
+                    @for (b of blockingTasks(); track b.id) {
+                      <li class="flex items-center justify-between text-sm bg-amber-500/10 border border-amber-500/20 px-2 py-1.5 rounded-lg text-amber-300">
+                        <span class="truncate pr-2" [class.line-through]="b.status === 'done'" [class.opacity-50]="b.status === 'done'">{{ b.title }}</span>
+                        <button type="button" class="text-amber-400 hover:text-amber-200" (click)="removeDependency('blocks', b.id)" title="Remove dependency">×</button>
+                      </li>
+                    }
+                  </ul>
+                }
+
+                <app-autocomplete-input
+                  [options]="dependencyOptions()"
+                  [value]="''"
+                  [allowCustom]="false"
+                  placeholder="Select task this blocks..."
+                  (optionSelected)="onAddDependency('blocks', $event)"
+                ></app-autocomplete-input>
+              </div>
             </div>
           </div>
 
