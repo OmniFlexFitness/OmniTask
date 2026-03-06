@@ -1,8 +1,20 @@
-import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  computed,
+  signal,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Task } from '../../core/models/domain.model';
+import { Task, CustomFieldDefinition } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
+import { ProjectService } from '../../core/services/project.service';
+import { CustomFieldService } from '../../core/services/custom-field.service';
+import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { switchMap, of } from 'rxjs';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
@@ -16,8 +28,11 @@ import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pip
 })
 export class TaskListViewComponent {
   private readonly taskService = inject(TaskService);
+  private readonly projectService = inject(ProjectService);
+  private readonly customFieldService = inject(CustomFieldService);
 
   tasks = input.required<Task[]>();
+  projectId = input.required<string>();
   googleTaskListId = input<string | undefined>(undefined);
   taskClick = output<Task>();
   delete = output<string>();
@@ -31,6 +46,29 @@ export class TaskListViewComponent {
   // Selection mode for bulk actions
   selectionMode = signal(false);
   selectedTaskIds = signal<Set<string>>(new Set());
+
+  project = toSignal(
+    toObservable(this.projectId).pipe(
+      switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
+    ),
+    { initialValue: null },
+  );
+
+  globalFields = toSignal(this.customFieldService.getCustomFields(), { initialValue: [] });
+
+  projectCustomFields = computed(() => {
+    const ids = this.project()?.customFieldIds || [];
+    return this.globalFields().filter((f: CustomFieldDefinition) => ids.includes(f.id));
+  });
+
+  gridTemplateCols = computed(() => {
+    const fieldCount = this.projectCustomFields().length;
+    const customFieldCols = Array(fieldCount).fill('120px').join(' ');
+    if (this.selectionMode()) {
+      return `auto auto 1fr 120px 120px 120px ${customFieldCols} auto`;
+    }
+    return `auto 1fr 120px 120px 120px ${customFieldCols} auto`;
+  });
 
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();
@@ -213,6 +251,33 @@ export class TaskListViewComponent {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return due < now;
+  }
+
+  getCustomFieldValueLabel(task: Task, field: CustomFieldDefinition): string {
+    const val = task.customFieldValues?.[field.id];
+    if (val === undefined || val === null || val === '') return '-';
+
+    switch (field.type) {
+      case 'currency':
+        return `${field.currencySymbol || '$'}${val}`;
+      case 'date':
+        return this.formatDate(val);
+      case 'checkbox':
+        return val ? 'Yes' : 'No';
+      case 'multi-select':
+        if (Array.isArray(val)) {
+          return val.map((id) => field.options?.find((o) => o.id === id)?.label || id).join(', ');
+        }
+        return String(val);
+      case 'status':
+      case 'dropdown':
+        const opt = field.options?.find((o) => o.id === val);
+        return opt ? opt.label : String(val);
+      case 'url':
+        return String(val).replace(/^https?:\/\//, ''); // Clean URL
+      default:
+        return String(val);
+    }
   }
 
   toggleCompletion(task: Task) {

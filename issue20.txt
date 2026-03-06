@@ -1,0 +1,44 @@
+**Goal**: Allow users to define custom data fields for tasks beyond the default set.
+
+#### ✅ Tasks
+- [ ] **Data Modeling**
+    - [ ] Create `CustomFieldDefinition` interface (id, name, type, config).
+    - [ ] Update `Project` model to hold field definitions.
+    - [ ] Update `Task` model to hold `customFieldValues` map.
+- [ ] **UI Implementation**
+    - [ ] Build `FieldManagerComponent` (Modal to add/edit fields).
+    - [ ] Update `TaskDetailModal` to dynamically render inputs based on field type.
+    - [ ] Support types: Text, Number, Date, Dropdown, Status, People.
+- [ ] **Integration**
+    - [ ] Update `TaskService` to handle dynamic value updates.
+    - [ ] Display custom fields in `TaskListView` columns.
+
+#### 🤖 AI Agent Prompt
+> Copy the block below to assign this module to an AI Agent.
+
+```markdown
+# Role: Senior Angular Developer
+# Task: Implement Custom Fields System for OmniTask
+
+## Context
+We are upgrading a task management app (Angular 17 + Firebase). Currently, tasks have fixed fields. We need a flexible Custom Field system similar to Asana/Monday.
+
+## Requirements
+1. **Data Model**: 
+   - Create interfaces for `CustomFieldDefinition` (id, name, type, options, projectId).
+   - Supported types: 'text', 'number', 'date', 'dropdown', 'checkbox', 'user'.
+   - Update `Task` interface to include `customFieldValues: Record<string, any>`.
+2. **UI Components**:
+   - Create `ManageCustomFieldsComponent`: A modal to add/edit fields for a project.
+   - Update `TaskDetailModal`: Dynamically render form controls for defined fields. Use an appropriate input type for each field definition.
+3. **Services**:
+   - Update `ProjectService` to manage field definitions.
+   - Ensure `TaskService` correctly saves/updates these dynamic values.
+
+## Deliverables
+- Modified `domain.model.ts`
+- New components in `features/projects/custom-fields/`
+- Updated `TaskDetailModalComponent`
+- Verification that fields persist to Firestore.
+```
+

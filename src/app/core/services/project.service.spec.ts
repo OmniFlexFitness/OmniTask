@@ -256,25 +256,45 @@ describe('ProjectService', () => {
     });
 
     // Custom Fields
-    it('should add a custom field', async () => {
-      const res = await service.addCustomField('proj-1', {
-        name: 'Size',
-        type: 'select',
-        projectId: 'proj-1',
-        options: [],
-      } as any);
-      expect(res.name).toBe('Size');
+    it('should link a custom field', async () => {
+      // Create a mock project
+      (service.getProject as jasmine.Spy).and.returnValue(
+        Promise.resolve({
+          id: 'proj-1',
+          customFieldIds: ['f0'],
+        }),
+      );
+      await service.linkCustomField('proj-1', 'f1');
       expect(service.updateProject).toHaveBeenCalled();
+      const callArgs = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(callArgs[1].customFieldIds).toContain('f1');
     });
 
-    it('should update a custom field', async () => {
-      await service.updateCustomField('proj-1', 'f1', { name: 'New Priority' });
-      expect(service.updateProject).toHaveBeenCalled();
+    it('should not link a custom field if already linked', async () => {
+      // Create a mock project
+      (service.getProject as jasmine.Spy).and.returnValue(
+        Promise.resolve({
+          id: 'proj-1',
+          customFieldIds: ['f1'],
+        }),
+      );
+      await service.linkCustomField('proj-1', 'f1');
+      expect(service.updateProject).not.toHaveBeenCalled();
     });
 
-    it('should remove a custom field', async () => {
-      await service.removeCustomField('proj-1', 'f1');
+    it('should unlink a custom field', async () => {
+      // Create a mock project
+      (service.getProject as jasmine.Spy).and.returnValue(
+        Promise.resolve({
+          id: 'proj-1',
+          customFieldIds: ['f1', 'f2'],
+        }),
+      );
+      await service.unlinkCustomField('proj-1', 'f1');
       expect(service.updateProject).toHaveBeenCalled();
+      const callArgs = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(callArgs[1].customFieldIds).not.toContain('f1');
+      expect(callArgs[1].customFieldIds).toContain('f2');
     });
 
     // Tags

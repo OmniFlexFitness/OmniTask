@@ -1,0 +1,24 @@
+title:	Configure Firebase SMTP Secrets
+state:	OPEN
+author:	bkenol
+labels:	enhancement
+comments:	0
+assignees:	bkenol
+projects:	
+milestone:	
+number:	91
+--
+## Objective
+Inject the final SMTP credentials into Google Cloud Secret Manager so the `firestore-send-email` Firebase Extension can authenticate and send notifications.
+
+## Context
+All the necessary Firebase Extension `.env` files and Google Cloud Secret Manager IAM permissions have been configured and merged into the `live` branch by the AI assistant. 
+
+The only remaining step is to inject the actual passwords via the Google Cloud Console.
+
+## Steps to Complete
+1. Generate a Google App Password for the `omnitask@omniflexfitness.com` alias (via the `bertin.kenol@omniflexfitness.com` Google Workspace account).
+2. Go to the [Google Cloud Secret Manager Dashboard](https://console.cloud.google.com/security/secret-manager?project=omnitask-475422).
+3. Update `EXT_MAIL_SMTP_CONNECTION_URI` to the new connection string: `smtps://bertin.kenol%40omniflexfitness.com@smtp.gmail.com:465`.
+4. Update `EXT_MAIL_SMTP_PASSWORD` to the newly generated 16-character App Password.
+5. Deploy the extensions by triggering the GitHub Action on the `live` branch or by running `npx firebase-tools deploy --only extensions` locally.

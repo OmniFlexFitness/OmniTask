@@ -3,12 +3,17 @@ import { TaskListViewComponent } from './task-list-view.component';
 import { TaskService } from '../../core/services/task.service';
 import { generateMockTask } from '../../../testing/mock-data';
 import { ComponentRef } from '@angular/core';
+import { ProjectService } from '../../core/services/project.service';
+import { CustomFieldService } from '../../core/services/custom-field.service';
+import { of } from 'rxjs';
 
 describe('TaskListViewComponent', () => {
   let component: TaskListViewComponent;
   let fixture: ComponentFixture<TaskListViewComponent>;
   let componentRef: ComponentRef<TaskListViewComponent>;
   let mockTaskService: jasmine.SpyObj<TaskService>;
+  let mockProjectService: any;
+  let mockCustomFieldService: any;
 
   beforeEach(async () => {
     mockTaskService = jasmine.createSpyObj('TaskService', [
@@ -17,9 +22,19 @@ describe('TaskListViewComponent', () => {
       'reopenTask',
     ]);
 
+    mockProjectService = jasmine.createSpyObj('ProjectService', ['getProject$']);
+    mockProjectService.getProject$.and.returnValue(of({ id: 'p1', customFieldIds: [] }));
+
+    mockCustomFieldService = jasmine.createSpyObj('CustomFieldService', ['getCustomFields']);
+    mockCustomFieldService.getCustomFields.and.returnValue(of([]));
+
     await TestBed.configureTestingModule({
       imports: [TaskListViewComponent],
-      providers: [{ provide: TaskService, useValue: mockTaskService }],
+      providers: [
+        { provide: TaskService, useValue: mockTaskService },
+        { provide: ProjectService, useValue: mockProjectService },
+        { provide: CustomFieldService, useValue: mockCustomFieldService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TaskListViewComponent);
@@ -27,6 +42,7 @@ describe('TaskListViewComponent', () => {
     componentRef = fixture.componentRef;
 
     // Set initial tasks
+    componentRef.setInput('projectId', 'p1');
     componentRef.setInput('tasks', [
       generateMockTask({ id: 't1', title: 'A task', priority: 'high', status: 'todo' }),
       generateMockTask({ id: 't2', title: 'B task', priority: 'medium', status: 'in-progress' }),

@@ -2,7 +2,17 @@ import { Timestamp } from '@angular/fire/firestore';
 
 type FirestoreDate = Timestamp | Date;
 
-export type CustomFieldType = 'text' | 'number' | 'date' | 'dropdown' | 'status' | 'user';
+export type CustomFieldType =
+  | 'text'
+  | 'number'
+  | 'currency'
+  | 'date'
+  | 'dropdown'
+  | 'multi-select'
+  | 'checkbox'
+  | 'url'
+  | 'status'
+  | 'user';
 
 export interface CustomFieldOption {
   id: string;
@@ -12,10 +22,13 @@ export interface CustomFieldOption {
 
 export interface CustomFieldDefinition {
   id: string;
+  userId: string; // Belongs to a user's global library
   name: string;
   type: CustomFieldType;
-  options?: CustomFieldOption[]; // For dropdown/status
-  projectId: string;
+  options?: CustomFieldOption[]; // For dropdown/status/multi-select
+  currencySymbol?: string; // e.g. '$', '€'
+  createdAt: FirestoreDate;
+  updatedAt: FirestoreDate;
 }
 
 /**
@@ -60,7 +73,7 @@ export interface Project {
   ownerId: string;
   memberIds: string[];
   sections: Section[]; // Kanban columns
-  customFields?: CustomFieldDefinition[];
+  customFieldIds?: string[]; // References to global CustomFieldDefinitions
   tags?: Tag[]; // Defined tags for this project
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;

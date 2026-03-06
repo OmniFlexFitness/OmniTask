@@ -203,8 +203,7 @@
       <!-- Cyberpunk Header -->
       <div
         class="grid gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]"
-        [class.grid-cols-[auto_auto_1fr_120px_120px_120px_auto]]="selectionMode()"
-        [class.grid-cols-[auto_1fr_120px_120px_120px_auto]]="!selectionMode()"
+        [style.grid-template-columns]="gridTemplateCols()"
       >
         @if (selectionMode()) {
           <div class="w-5 flex items-center">
@@ -255,6 +254,13 @@
             sortDirection() === 'asc' ? '↑' : '↓'
           }}</span>
         </div>
+
+        @for (field of projectCustomFields(); track field.id) {
+          <div class="text-slate-500 truncate" [title]="field.name">
+            {{ field.name }}
+          </div>
+        }
+
         <div class="w-8"></div>
         <!-- Actions placeholder -->
       </div>
@@ -317,8 +323,7 @@
             <!-- Main Row -->
             <div
               class="grid gap-4 px-4 py-3 items-center"
-              [class.grid-cols-[auto_auto_1fr_120px_120px_120px_auto]]="selectionMode()"
-              [class.grid-cols-[auto_1fr_120px_120px_120px_auto]]="!selectionMode()"
+              [style.grid-template-columns]="gridTemplateCols()"
             >
               <!-- Selection Checkbox (shown in selection mode) -->
               @if (selectionMode()) {
@@ -437,6 +442,13 @@
                   {{ task.status.replace('-', ' ') }}
                 </span>
               </div>
+
+              <!-- Custom Fields -->
+              @for (field of projectCustomFields(); track field.id) {
+                <div class="text-sm text-slate-400 truncate" [title]="getCustomFieldValueLabel(task, field)">
+                  {{ getCustomFieldValueLabel(task, field) | markdownPlain: 50 }}
+                </div>
+              }
 
               <!-- Actions -->
               <div

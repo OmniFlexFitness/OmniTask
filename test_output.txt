@@ -1,0 +1,50 @@
+- Generating browser application bundles (phase: setup)...
+[32m✔[39m Browser application bundle generation complete.
+[1m[31m
+./src/app/core/services/custom-field.service.ts:38:21-36 - Error: export 'serverTimestamp' (imported as 'serverTimestamp') was not found in '@angular/fire/firestore' (possible exports: Firestore, Timestamp, addDoc, collection, collectionData, deleteDoc, doc, docData, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, writeBatch)
+
+./src/app/core/services/custom-field.service.ts:39:21-36 - Error: export 'serverTimestamp' (imported as 'serverTimestamp') was not found in '@angular/fire/firestore' (possible exports: Firestore, Timestamp, addDoc, collection, collectionData, deleteDoc, doc, docData, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, writeBatch)
+
+./src/app/core/services/custom-field.service.ts:66:21-36 - Error: export 'serverTimestamp' (imported as 'serverTimestamp') was not found in '@angular/fire/firestore' (possible exports: Firestore, Timestamp, addDoc, collection, collectionData, deleteDoc, doc, docData, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where, writeBatch)
+
+Error: [96msrc/app/core/services/custom-field.service.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2305: [0mModule '"@angular/fire/firestore"' has no exported member 'serverTimestamp'.
+
+[7m12[0m   serverTimestamp,
+[7m  [0m [91m  ~~~~~~~~~~~~~~~[0m
+
+
+Error: [96msrc/app/core/services/project.service.spec.ts[0m:[93m260[0m:[93m33[0m - [91merror[0m[90m TS2339: [0mProperty 'addCustomField' does not exist on type 'ProjectService'.
+
+[7m260[0m       const res = await service.addCustomField('proj-1', {
+[7m   [0m [91m                                ~~~~~~~~~~~~~~[0m
+
+
+Error: [96msrc/app/core/services/project.service.spec.ts[0m:[93m271[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'updateCustomField' does not exist on type 'ProjectService'.
+
+[7m271[0m       await service.updateCustomField('proj-1', 'f1', { name: 'New Priority' });
+[7m   [0m [91m                    ~~~~~~~~~~~~~~~~~[0m
+
+
+Error: [96msrc/app/core/services/project.service.spec.ts[0m:[93m276[0m:[93m21[0m - [91merror[0m[90m TS2339: [0mProperty 'removeCustomField' does not exist on type 'ProjectService'.
+
+[7m276[0m       await service.removeCustomField('proj-1', 'f1');
+[7m   [0m [91m                    ~~~~~~~~~~~~~~~~~[0m
+
+
+Error: [96msrc/app/core/services/schedule.service.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2305: [0mModule '"@angular/fire/firestore"' has no exported member 'serverTimestamp'.
+
+[7m12[0m   serverTimestamp,
+[7m  [0m [91m  ~~~~~~~~~~~~~~~[0m
+
+
+[39m[22m
+[32m05 03 2026 16:57:11.886:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:9876/
+[32m05 03 2026 16:57:11.887:INFO [launcher]: [39mLaunching browsers Chrome with concurrency unlimited
+[91m05 03 2026 16:57:11.888:ERROR [karma-server]: [39mError: Found 1 load error
+    at Server.<anonymous> (C:\Antigravity\OmniTask\node_modules\karma\lib\server.js:243:26)
+    at Object.onceWrapper (node:events:638:28)
+    at Server.emit (node:events:536:35)
+    at Server.emit (node:domain:489:12)
+    at emitListeningNT (node:net:1951:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)
+[32m✔[39m Browser application bundle generation complete.

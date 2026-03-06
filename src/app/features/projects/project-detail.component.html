@@ -258,6 +258,7 @@
                     @case ('list') {
                       <app-task-list-view
                         [tasks]="tasks()"
+                        [projectId]="project.id"
                         (taskClick)="openTaskDetail($event)"
                         (delete)="deleteTask($event)"
                       ></app-task-list-view>
