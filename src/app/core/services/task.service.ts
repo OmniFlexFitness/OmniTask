@@ -261,6 +261,20 @@ export class TaskService {
   }
 
   /**
+   * Get subtasks for a specific parent task
+   */
+  getSubtasks(parentId: string): Observable<Task[]> {
+    const q = query(
+      this.tasksCollection,
+      where('parentId', '==', parentId),
+      orderBy('order', 'asc'),
+    );
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
+  }
+
+  /**
    * Get tasks by section (for board view)
    */
   getTasksBySection(projectId: string, sectionId: string): Observable<Task[]> {
@@ -456,29 +470,58 @@ export class TaskService {
   }
 
   /**
-   * Delete a task
+   * Delete a task and all of its subtasks using batch deletion.
+   * Uses BFS with a visited-set to prevent infinite loops from parentId cycles.
    */
   async deleteTask(id: string, googleTaskListId?: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
 
     try {
-      const taskDoc = await this.getTask(id);
+      // Collect all descendant task IDs using BFS with cycle guard
+      const toDelete: Task[] = [];
+      const visited = new Set<string>();
+      const queue = [id];
 
-      // Optional Google Tasks deletion — never blocks local delete
-      if (taskDoc?.googleTaskId && taskDoc?.googleTaskListId) {
-        try {
-          await this.googleTasksSyncService.deleteTaskInGoogle(
-            taskDoc.googleTaskListId,
-            taskDoc.googleTaskId,
-          );
-        } catch (err) {
-          console.warn('Google Tasks sync failed, proceeding with local deletion:', err);
+      while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+
+        const taskDoc = await this.getTask(currentId);
+        if (!taskDoc) continue;
+        toDelete.push(taskDoc);
+
+        // Find children of this task
+        const subtasksQ = query(this.tasksCollection, where('parentId', '==', currentId));
+        const snap = await firstValueFrom(collectionData(subtasksQ, { idField: 'id' }));
+        for (const subtask of snap as Task[]) {
+          if (!visited.has(subtask.id)) {
+            queue.push(subtask.id);
+          }
         }
       }
 
-      // Always delete from Firestore
-      await deleteDoc(doc(this.firestore, `tasks/${id}`));
+      // Best-effort Google Tasks cleanup for each linked task
+      for (const task of toDelete) {
+        if (task.googleTaskId && task.googleTaskListId) {
+          try {
+            await this.googleTasksSyncService.deleteTaskInGoogle(
+              task.googleTaskListId,
+              task.googleTaskId,
+            );
+          } catch (err) {
+            console.warn('Google Tasks sync failed for task', task.id, err);
+          }
+        }
+      }
+
+      // Batch-delete all collected tasks atomically
+      const batch = writeBatch(this.firestore);
+      for (const task of toDelete) {
+        batch.delete(doc(this.firestore, `tasks/${task.id}`));
+      }
+      await batch.commit();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete task';
       this.error.set(message);

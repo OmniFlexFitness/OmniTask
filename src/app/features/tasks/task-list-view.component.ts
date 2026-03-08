@@ -18,6 +18,10 @@ import { switchMap, of } from 'rxjs';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 
+export interface TaskListViewNode extends Task {
+  _depth: number;
+}
+
 @Component({
   selector: 'app-task-list-view',
   standalone: true,
@@ -46,6 +50,9 @@ export class TaskListViewComponent {
   // Selection mode for bulk actions
   selectionMode = signal(false);
   selectedTaskIds = signal<Set<string>>(new Set());
+
+  // Expanding/collapsing tree nodes
+  expandedTaskIds = signal<Set<string>>(new Set());
 
   project = toSignal(
     toObservable(this.projectId).pipe(
@@ -112,11 +119,12 @@ export class TaskListViewComponent {
   });
 
   sortedTasks = computed(() => {
-    const tasks = [...this.filteredTasks()];
+    const allTasks = this.filteredTasks();
     const field = this.sortField();
     const direction = this.sortDirection();
+    const expanded = this.expandedTaskIds();
 
-    return tasks.sort((a, b) => {
+    const sortFn = (a: Task, b: Task) => {
       // Always keep completed tasks at the bottom to allow rapid completion
       // by clicking in the same spot repeatedly
       const aIsDone = a.status === 'done';
@@ -149,8 +157,66 @@ export class TaskListViewComponent {
       }
 
       return direction === 'asc' ? comparison : -comparison;
-    });
+    };
+
+    /** Max recursion depth to prevent stack overflow from parentId cycles */
+    const MAX_TREE_DEPTH = 20;
+    const visited = new Set<string>();
+
+    const flattenTree = (
+      parentId: string | null | undefined,
+      depth: number,
+    ): TaskListViewNode[] => {
+      if (depth > MAX_TREE_DEPTH) return [];
+
+      const children = allTasks.filter((t) => (t.parentId || null) === (parentId || null));
+      children.sort(sortFn);
+
+      const result: TaskListViewNode[] = [];
+      for (const child of children) {
+        // Skip if already visited (cycle in parentId chain)
+        if (visited.has(child.id)) continue;
+        visited.add(child.id);
+
+        result.push({ ...child, _depth: depth });
+        // Only recurse if expanded
+        if (expanded.has(child.id)) {
+          result.push(...flattenTree(child.id, depth + 1));
+        }
+      }
+      return result;
+    };
+
+    return flattenTree(null, 0);
   });
+
+  hasSubtasks(taskId: string): boolean {
+    return this.filteredTasks().some((t) => t.parentId === taskId);
+  }
+
+  toggleExpand(taskId: string, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedTaskIds.update((set) => {
+      const newSet = new Set(set);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  }
+
+  isTaskBlocked(task: Task): boolean {
+    if (!task.blockedByIds?.length) return false;
+    const allTasks = this.tasks(); // use all tasks so we know true state even if filtered out
+    return task.blockedByIds.some((id) => {
+      const blocker = allTasks.find((t) => t.id === id);
+      return blocker && blocker.status !== 'done';
+    });
+  }
 
   toggleShowCompleted() {
     this.showCompleted.update((v) => !v);
@@ -289,7 +355,7 @@ export class TaskListViewComponent {
     }
   }
 
-  onDrop(event: CdkDragDrop<Task[]>) {
+  onDrop(event: CdkDragDrop<TaskListViewNode[]>) {
     const prevIndex = this.tasks().findIndex((t) => t.id === event.item.data.id);
     const newIndex = event.currentIndex;
   }

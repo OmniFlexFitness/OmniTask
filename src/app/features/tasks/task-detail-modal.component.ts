@@ -16,9 +16,10 @@ import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService, Contact } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
-import { Task, Project, Subtask, CustomFieldDefinition } from '../../core/models/domain.model';
+import { TaskDependencyService } from '../../core/services/task-dependency.service';
+import { Task, Project, CustomFieldDefinition } from '../../core/models/domain.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
-import { switchMap, of, map, BehaviorSubject, debounceTime } from 'rxjs';
+import { switchMap, of, map, BehaviorSubject, debounceTime, firstValueFrom } from 'rxjs';
 import {
   AutocompleteInputComponent,
   AutocompleteOption,
@@ -54,6 +55,7 @@ export class TaskDetailModalComponent {
   private readonly dialogService = inject(DialogService);
   private readonly contactsService = inject(ContactsService);
   private readonly vertexAiService = inject(VertexAiService);
+  private readonly taskDependencyService = inject(TaskDependencyService);
 
   // AI Loading states
   generatingSubtasks = this.vertexAiService.generatingSubtasks;
@@ -158,8 +160,12 @@ export class TaskDetailModalComponent {
     sectionId: [null as string | null],
   });
 
-  // Subtasks state
-  subtasks = signal<Subtask[]>([]);
+  // Subtasks & Dependencies state
+  subtasks = signal<Task[]>([]);
+  blockingTasks = signal<Task[]>([]);
+  blockedByTasks = signal<Task[]>([]);
+  allProjectTasks = signal<Task[]>([]); // For dependency autocomplete
+
   customFieldValues = signal<Record<string, any>>({});
   selectedTags = signal<Set<string>>(new Set());
   selectedTagsArray = computed(() => Array.from(this.selectedTags()));
@@ -188,7 +194,17 @@ export class TaskDetailModalComponent {
     return [defaultOption, ...mappedSections];
   });
 
-  completedSubtasksCount = computed(() => this.subtasks().filter((s) => s.completed).length);
+  completedSubtasksCount = computed(
+    () => this.subtasks().filter((s) => s.status === 'done').length,
+  );
+
+  // Options for dependency autocomplete
+  dependencyOptions = computed(() => {
+    const currentId = this.task()?.id;
+    return this.allProjectTasks()
+      .filter((t) => t.id !== currentId && !t.parentId)
+      .map((t) => ({ id: t.id, label: t.title }));
+  });
 
   constructor() {
     // Sync form with task input
@@ -231,14 +247,43 @@ export class TaskDetailModalComponent {
         this.selectedAssignees.set(options);
         this.notifyAssigneesSig.set(task.notifyAssignees ?? true);
 
-        // Load subtasks and custom fields
-        this.subtasks.set(task.subtasks || []);
+        // Load custom fields
         this.customFieldValues.set(task.customFieldValues || {});
 
         // Initialize selected tags
         this.selectedTags.set(new Set(task.tags || []));
+
+        // Fetch subtasks and dependencies
+        this.loadRelatedTasks(task.id, task.projectId);
       }
     });
+  }
+
+  private async loadRelatedTasks(taskId: string, projectId: string) {
+    try {
+      // Load all project tasks for dependency autocomplete dropdown
+      const allTasks = await firstValueFrom(this.taskService.getTasksByProject(projectId));
+      this.allProjectTasks.set(allTasks);
+
+      // Filter subtasks from the already-fetched data (targeted by parentId)
+      const subtasks = allTasks.filter((t) => t.parentId === taskId);
+      this.subtasks.set(subtasks);
+
+      // Fetch blocking/blockedBy tasks by their specific IDs (typically small arrays)
+      const currentTask = await this.taskService.getTask(taskId);
+      if (currentTask) {
+        const blockingList = await Promise.all(
+          (currentTask.blockingIds || []).map((id) => this.taskService.getTask(id)),
+        );
+        const blockedByList = await Promise.all(
+          (currentTask.blockedByIds || []).map((id) => this.taskService.getTask(id)),
+        );
+        this.blockingTasks.set(blockingList.filter((t): t is Task => t !== null));
+        this.blockedByTasks.set(blockedByList.filter((t): t is Task => t !== null));
+      }
+    } catch (err) {
+      console.error('Failed to load related tasks', err);
+    }
   }
 
   autoResize(element: any) {
@@ -372,38 +417,51 @@ export class TaskDetailModalComponent {
   /**
    * Select an assignee for a subtask
    */
-  onSubtaskAssigneeSelected(subtaskId: string, selection: AutocompleteOption | string): void {
+  async onSubtaskAssigneeSelected(
+    subtaskId: string,
+    selection: AutocompleteOption | string,
+  ): Promise<void> {
     if (typeof selection !== 'object') return;
-    const updated = this.subtasks().map((s) => {
-      if (s.id !== subtaskId) return s;
-      const ids = [...(s.assigneeIds || [])];
-      const names = [...(s.assigneeNames || [])];
-      if (!ids.includes(selection.id)) {
-        ids.push(selection.id);
-        names.push(selection.label);
-      }
-      return { ...s, assigneeIds: ids, assigneeNames: names };
-    });
-    this.subtasks.set(updated);
+
+    const subtask = this.subtasks().find((s) => s.id === subtaskId);
+    if (!subtask) return;
+
+    const ids = [...(subtask.assigneeIds || [])];
+    const names = [...(subtask.assigneeNames || [])];
+    if (!ids.includes(selection.id)) {
+      ids.push(selection.id);
+      names.push(selection.label);
+    }
+
+    await this.taskService.updateTask(subtaskId, { assigneeIds: ids, assigneeNames: names });
     this.form.markAsDirty();
-    this.autoSave();
+    await this.autoSave();
+
+    // Reload
+    if (this.task()?.id && this.task()?.projectId) {
+      this.loadRelatedTasks(this.task()!.id, this.task()!.projectId);
+    }
   }
 
   /**
    * Remove an assignee from a subtask
    */
-  removeSubtaskAssignee(subtaskId: string, index: number): void {
-    const updated = this.subtasks().map((s) => {
-      if (s.id !== subtaskId) return s;
-      const ids = [...(s.assigneeIds || [])];
-      const names = [...(s.assigneeNames || [])];
-      ids.splice(index, 1);
-      names.splice(index, 1);
-      return { ...s, assigneeIds: ids, assigneeNames: names };
-    });
-    this.subtasks.set(updated);
+  async removeSubtaskAssignee(subtaskId: string, index: number): Promise<void> {
+    const subtask = this.subtasks().find((s) => s.id === subtaskId);
+    if (!subtask) return;
+
+    const ids = [...(subtask.assigneeIds || [])];
+    const names = [...(subtask.assigneeNames || [])];
+    ids.splice(index, 1);
+    names.splice(index, 1);
+
+    await this.taskService.updateTask(subtaskId, { assigneeIds: ids, assigneeNames: names });
     this.form.markAsDirty();
-    this.autoSave();
+    await this.autoSave();
+
+    if (this.task()?.id && this.task()?.projectId) {
+      this.loadRelatedTasks(this.task()!.id, this.task()!.projectId);
+    }
   }
 
   async autoSave() {
@@ -435,7 +493,6 @@ export class TaskDetailModalComponent {
       priority: val.priority as Task['priority'],
       sectionId: val.sectionId || undefined,
       tags,
-      subtasks: this.subtasks(),
       customFieldValues: this.customFieldValues(),
     };
 
@@ -459,6 +516,16 @@ export class TaskDetailModalComponent {
       await this.taskService.reopenTask(task.id, project?.googleTaskListId);
       this.updated.emit({ ...task, status: 'todo', completedAt: null });
     } else {
+      // Check for blockers
+      const incompleteBlockers = this.blockedByTasks().filter((t) => t.status !== 'done');
+      if (incompleteBlockers.length > 0) {
+        await this.dialogService.alert(
+          'This task is blocked by other tasks that are not yet completed.',
+          'Cannot Complete Task',
+        );
+        return; // Prevent completion
+      }
+
       await this.taskService.completeTask(task.id, project?.googleTaskListId);
       this.updated.emit({
         ...task,
@@ -485,21 +552,40 @@ export class TaskDetailModalComponent {
     const project = this.project();
     if (!task || !this.newSubtaskTitle.trim()) return;
 
-    const newSubtask: Subtask = {
-      id: crypto.randomUUID(),
-      title: this.newSubtaskTitle.trim(),
-      completed: false,
-    };
-
-    const updatedSubtasks = [...this.subtasks(), newSubtask];
-    this.subtasks.set(updatedSubtasks);
+    const title = this.newSubtaskTitle.trim();
     this.newSubtaskTitle = '';
 
-    await this.taskService.updateTask(
-      task.id,
-      { subtasks: updatedSubtasks },
+    const docRef = await this.taskService.createTask(
+      {
+        projectId: task.projectId,
+        title: title,
+        status: 'todo',
+        priority: 'medium',
+        order: this.subtasks().length,
+        parentId: task.id,
+        description: '',
+      },
       project?.googleTaskListId,
     );
+
+    // Optimistic local update — add the new subtask to the signal immediately
+    this.subtasks.update((list) => [
+      ...list,
+      {
+        id: docRef.id,
+        projectId: task.projectId,
+        title,
+        status: 'todo',
+        priority: 'medium',
+        order: list.length,
+        parentId: task.id,
+        description: '',
+        tags: [],
+        subtasks: [],
+        createdById: '',
+        assigneeIds: [],
+      } as unknown as Task,
+    ]);
   }
 
   async toggleSubtask(subtaskId: string) {
@@ -507,15 +593,19 @@ export class TaskDetailModalComponent {
     const project = this.project();
     if (!task) return;
 
-    const updatedSubtasks = this.subtasks().map((s) =>
-      s.id === subtaskId ? { ...s, completed: !s.completed } : s,
-    );
-    this.subtasks.set(updatedSubtasks);
+    const subtask = this.subtasks().find((s) => s.id === subtaskId);
+    if (!subtask) return;
 
-    await this.taskService.updateTask(
-      task.id,
-      { subtasks: updatedSubtasks },
-      project?.googleTaskListId,
+    const newStatus = subtask.status === 'done' ? 'todo' : 'done';
+    if (subtask.status === 'done') {
+      await this.taskService.reopenTask(subtaskId, project?.googleTaskListId);
+    } else {
+      await this.taskService.completeTask(subtaskId, project?.googleTaskListId);
+    }
+
+    // Optimistic local update
+    this.subtasks.update((list) =>
+      list.map((s) => (s.id === subtaskId ? { ...s, status: newStatus as Task['status'] } : s)),
     );
   }
 
@@ -524,14 +614,10 @@ export class TaskDetailModalComponent {
     const project = this.project();
     if (!task) return;
 
-    const updatedSubtasks = this.subtasks().filter((s) => s.id !== subtaskId);
-    this.subtasks.set(updatedSubtasks);
+    await this.taskService.deleteTask(subtaskId, project?.googleTaskListId);
 
-    await this.taskService.updateTask(
-      task.id,
-      { subtasks: updatedSubtasks },
-      project?.googleTaskListId,
-    );
+    // Optimistic local update — remove from signal immediately
+    this.subtasks.update((list) => list.filter((s) => s.id !== subtaskId));
   }
 
   toggleSubtaskExpanded(subtaskId: string) {
@@ -545,10 +631,46 @@ export class TaskDetailModalComponent {
   }
 
   async updateSubtaskDescription(subtaskId: string, description: string): Promise<void> {
-    const updated = this.subtasks().map((s) => (s.id === subtaskId ? { ...s, description } : s));
-    this.subtasks.set(updated);
-    this.form.markAsDirty();
-    await this.autoSave();
+    await this.taskService.updateTask(subtaskId, { description });
+    if (this.task()?.id && this.task()?.projectId) {
+      this.loadRelatedTasks(this.task()!.id, this.task()!.projectId);
+    }
+  }
+
+  // Dependency methods
+  async onAddDependency(type: 'blocks' | 'isBlockedBy', evt: AutocompleteOption | string) {
+    if (typeof evt !== 'object') return;
+    const task = this.task();
+    if (!task) return;
+
+    try {
+      if (type === 'blocks') {
+        // This task blocks the selected task
+        await this.taskDependencyService.addDependency(task.id, evt.id);
+      } else {
+        // The selected task blocks this task
+        await this.taskDependencyService.addDependency(evt.id, task.id);
+      }
+      this.loadRelatedTasks(task.id, task.projectId);
+    } catch (err: any) {
+      await this.dialogService.alert(err.message || 'Could not add dependency.', 'Error');
+    }
+  }
+
+  async removeDependency(type: 'blocks' | 'isBlockedBy', otherTaskId: string) {
+    const task = this.task();
+    if (!task) return;
+
+    try {
+      if (type === 'blocks') {
+        await this.taskDependencyService.removeDependency(task.id, otherTaskId);
+      } else {
+        await this.taskDependencyService.removeDependency(otherTaskId, task.id);
+      }
+      this.loadRelatedTasks(task.id, task.projectId);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   onExampleClick(e: Event) {
@@ -567,30 +689,48 @@ export class TaskDetailModalComponent {
     }
   }
 
+  /** Maximum number of AI-generated subtasks to prevent resource exhaustion */
+  private static readonly MAX_AI_SUBTASKS = 10;
+
   // AI Methods
   async aiGenerateSubtasks() {
     const task = this.task();
     if (!task?.title?.trim()) return;
 
     try {
-      const newSubtasks = await this.vertexAiService.generateSubtasks(
+      let newSubtasks = await this.vertexAiService.generateSubtasks(
         task.title,
         this.form.value.description || undefined,
         this.project()?.name,
       );
 
-      // Merge with existing subtasks
-      const currentSubtasks = this.subtasks();
-      const mergedSubtasks = [...currentSubtasks, ...newSubtasks];
-      this.subtasks.set(mergedSubtasks);
+      // Cap the number of AI-generated subtasks to prevent resource exhaustion
+      if (newSubtasks.length > TaskDetailModalComponent.MAX_AI_SUBTASKS) {
+        console.warn(
+          `AI returned ${newSubtasks.length} subtasks, capping at ${TaskDetailModalComponent.MAX_AI_SUBTASKS}`,
+        );
+        newSubtasks = newSubtasks.slice(0, TaskDetailModalComponent.MAX_AI_SUBTASKS);
+      }
 
-      // Auto-save the new subtasks
-      const project = this.project();
-      await this.taskService.updateTask(
-        task.id,
-        { subtasks: mergedSubtasks },
-        project?.googleTaskListId,
-      );
+      // In the new system, we map the text to actual independent task documents
+      const googleId = this.project()?.googleTaskListId;
+      for (const st of newSubtasks) {
+        await this.taskService.createTask(
+          {
+            title: st.title,
+            description: st.description || '',
+            projectId: task.projectId,
+            parentId: task.id,
+            status: 'todo',
+            priority: 'medium',
+            order: this.subtasks().length,
+          },
+          googleId,
+        );
+      }
+
+      // Reload subtasks from server after AI generation
+      this.loadRelatedTasks(task.id, task.projectId);
     } catch (err) {
       console.error('Failed to generate subtasks:', err);
     }

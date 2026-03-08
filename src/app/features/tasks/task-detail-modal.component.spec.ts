@@ -7,6 +7,7 @@ import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
+import { TaskDependencyService } from '../../core/services/task-dependency.service';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -20,11 +21,21 @@ describe('TaskDetailModalComponent', () => {
   let mockContactsService: any;
   let mockVertexAiService: any;
   let mockCustomFieldService: any;
+  let mockTaskDependencyService: any;
 
   beforeEach(async () => {
-    mockTaskService = jasmine.createSpyObj('TaskService', ['updateTask', 'deleteTask']);
+    mockTaskService = jasmine.createSpyObj('TaskService', [
+      'updateTask',
+      'deleteTask',
+      'createTask',
+      'getTasksByProject',
+      'getTask',
+    ]);
     mockTaskService.updateTask.and.returnValue(Promise.resolve());
     mockTaskService.deleteTask.and.returnValue(Promise.resolve());
+    mockTaskService.createTask.and.returnValue(Promise.resolve({ id: 'new-sub' } as any));
+    mockTaskService.getTasksByProject.and.returnValue(of([]));
+    mockTaskService.getTask.and.returnValue(Promise.resolve(null));
 
     mockProjectService = jasmine.createSpyObj('ProjectService', ['getProject$']);
     mockProjectService.getProject$.and.returnValue(
@@ -51,6 +62,13 @@ describe('TaskDetailModalComponent', () => {
     mockCustomFieldService = jasmine.createSpyObj('CustomFieldService', ['getCustomFields']);
     mockCustomFieldService.getCustomFields.and.returnValue(of([]));
 
+    mockTaskDependencyService = jasmine.createSpyObj('TaskDependencyService', [
+      'addDependency',
+      'removeDependency',
+    ]);
+    mockTaskDependencyService.addDependency.and.returnValue(Promise.resolve());
+    mockTaskDependencyService.removeDependency.and.returnValue(Promise.resolve());
+
     await TestBed.configureTestingModule({
       imports: [TaskDetailModalComponent],
       providers: [
@@ -61,6 +79,7 @@ describe('TaskDetailModalComponent', () => {
         { provide: ContactsService, useValue: mockContactsService },
         { provide: VertexAiService, useValue: mockVertexAiService },
         { provide: CustomFieldService, useValue: mockCustomFieldService },
+        { provide: TaskDependencyService, useValue: mockTaskDependencyService },
       ],
     }).compileComponents();
 
@@ -91,7 +110,7 @@ describe('TaskDetailModalComponent', () => {
     await component.aiGenerateSubtasks();
 
     expect(mockVertexAiService.generateSubtasks).toHaveBeenCalled();
-    expect(mockTaskService.updateTask).toHaveBeenCalled();
+    expect(mockTaskService.createTask).toHaveBeenCalled();
   });
 
   it('should emit close on backdrop click', () => {

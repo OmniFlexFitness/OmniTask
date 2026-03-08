@@ -270,7 +270,7 @@ describe('GoogleTasksSyncService', () => {
         spyOn(service as any, 'firestore').and.returnValue({} as any);
 
         // Execute pullFromGoogleTasks
-        await expectAsync(service.pullFromGoogleTasks('proj-1', 'list-1')).toBeRejected();
+        await expectAsync(service.pullFromGoogleTasks('proj-1', 'list-1')).toBeResolved();
 
         // At least getTasks was called
         expect(googleTasksServiceMock.getTasks).toHaveBeenCalled();

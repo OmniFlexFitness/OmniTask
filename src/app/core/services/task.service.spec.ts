@@ -227,6 +227,9 @@ describe('TaskService', () => {
     let deleteDocSpy: jasmine.Spy;
     let getDocSpy: jasmine.Spy;
     let docSpy: jasmine.Spy;
+    let writeBatchSpy: jasmine.Spy;
+    let batchDeleteSpy: jasmine.Spy;
+    let batchCommitSpy: jasmine.Spy;
 
     beforeEach(() => {
       const safeSpy = (obj: any, method: string) =>
@@ -245,12 +248,23 @@ describe('TaskService', () => {
       );
       docSpy = safeSpy(firestore, 'doc').and.returnValue({} as any);
       safeSpy(firestore, 'collection').and.returnValue({} as any);
+      safeSpy(firestore, 'query').and.returnValue({} as any);
+      safeSpy(firestore, 'where').and.returnValue({} as any);
+      safeSpy(firestore, 'collectionData').and.returnValue(of([]));
+
+      batchDeleteSpy = jasmine.createSpy('batchDelete');
+      batchCommitSpy = jasmine.createSpy('batchCommit').and.returnValue(Promise.resolve());
+      writeBatchSpy = safeSpy(firestore, 'writeBatch').and.returnValue({
+        delete: batchDeleteSpy,
+        commit: batchCommitSpy,
+      } as any);
 
       addDocSpy.calls?.reset();
       updateDocSpy.calls?.reset();
       deleteDocSpy.calls?.reset();
       getDocSpy.calls?.reset();
       docSpy.calls?.reset();
+      writeBatchSpy.calls?.reset();
 
       projectServiceMock.getProject = jasmine
         .createSpy()
@@ -332,7 +346,9 @@ describe('TaskService', () => {
     it('should delete a task', async () => {
       await service.deleteTask('task-1');
       expect(getDocSpy).toHaveBeenCalled();
-      expect(deleteDocSpy).toHaveBeenCalled();
+      expect(writeBatchSpy).toHaveBeenCalled();
+      expect(batchDeleteSpy).toHaveBeenCalled();
+      expect(batchCommitSpy).toHaveBeenCalled();
     });
 
     it('should delete from google tasks if linked', async () => {
@@ -352,7 +368,8 @@ describe('TaskService', () => {
 
       await service.deleteTask('task-1');
       expect(googleTasksSyncServiceMock.deleteTaskInGoogle).toHaveBeenCalled();
-      expect(deleteDocSpy).toHaveBeenCalled();
+      expect(batchDeleteSpy).toHaveBeenCalled();
+      expect(batchCommitSpy).toHaveBeenCalled();
     });
 
     it('should auto-add assigned user to project when creating', async () => {
