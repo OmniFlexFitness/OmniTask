@@ -159,15 +159,25 @@ export class TaskListViewComponent {
       return direction === 'asc' ? comparison : -comparison;
     };
 
+    /** Max recursion depth to prevent stack overflow from parentId cycles */
+    const MAX_TREE_DEPTH = 20;
+    const visited = new Set<string>();
+
     const flattenTree = (
       parentId: string | null | undefined,
       depth: number,
     ): TaskListViewNode[] => {
+      if (depth > MAX_TREE_DEPTH) return [];
+
       const children = allTasks.filter((t) => (t.parentId || null) === (parentId || null));
       children.sort(sortFn);
 
       const result: TaskListViewNode[] = [];
       for (const child of children) {
+        // Skip if already visited (cycle in parentId chain)
+        if (visited.has(child.id)) continue;
+        visited.add(child.id);
+
         result.push({ ...child, _depth: depth });
         // Only recurse if expanded
         if (expanded.has(child.id)) {

@@ -261,21 +261,25 @@ export class TaskDetailModalComponent {
 
   private async loadRelatedTasks(taskId: string, projectId: string) {
     try {
-      // Load all project tasks for dependency select
+      // Load all project tasks for dependency autocomplete dropdown
       const allTasks = await firstValueFrom(this.taskService.getTasksByProject(projectId));
       this.allProjectTasks.set(allTasks);
 
-      // Filter subtasks
+      // Filter subtasks from the already-fetched data (targeted by parentId)
       const subtasks = allTasks.filter((t) => t.parentId === taskId);
       this.subtasks.set(subtasks);
 
-      // Find blocking/blockedBy
-      const currentTask = allTasks.find((t) => t.id === taskId);
+      // Fetch blocking/blockedBy tasks by their specific IDs (typically small arrays)
+      const currentTask = await this.taskService.getTask(taskId);
       if (currentTask) {
-        const blockingList = allTasks.filter((t) => currentTask.blockingIds?.includes(t.id));
-        const blockedByList = allTasks.filter((t) => currentTask.blockedByIds?.includes(t.id));
-        this.blockingTasks.set(blockingList);
-        this.blockedByTasks.set(blockedByList);
+        const blockingList = await Promise.all(
+          (currentTask.blockingIds || []).map((id) => this.taskService.getTask(id)),
+        );
+        const blockedByList = await Promise.all(
+          (currentTask.blockedByIds || []).map((id) => this.taskService.getTask(id)),
+        );
+        this.blockingTasks.set(blockingList.filter((t): t is Task => t !== null));
+        this.blockedByTasks.set(blockedByList.filter((t): t is Task => t !== null));
       }
     } catch (err) {
       console.error('Failed to load related tasks', err);
@@ -551,7 +555,7 @@ export class TaskDetailModalComponent {
     const title = this.newSubtaskTitle.trim();
     this.newSubtaskTitle = '';
 
-    await this.taskService.createTask(
+    const docRef = await this.taskService.createTask(
       {
         projectId: task.projectId,
         title: title,
@@ -564,8 +568,24 @@ export class TaskDetailModalComponent {
       project?.googleTaskListId,
     );
 
-    // Refresh
-    this.loadRelatedTasks(task.id, task.projectId);
+    // Optimistic local update — add the new subtask to the signal immediately
+    this.subtasks.update((list) => [
+      ...list,
+      {
+        id: docRef.id,
+        projectId: task.projectId,
+        title,
+        status: 'todo',
+        priority: 'medium',
+        order: list.length,
+        parentId: task.id,
+        description: '',
+        tags: [],
+        subtasks: [],
+        createdById: '',
+        assigneeIds: [],
+      } as unknown as Task,
+    ]);
   }
 
   async toggleSubtask(subtaskId: string) {
@@ -576,13 +596,17 @@ export class TaskDetailModalComponent {
     const subtask = this.subtasks().find((s) => s.id === subtaskId);
     if (!subtask) return;
 
+    const newStatus = subtask.status === 'done' ? 'todo' : 'done';
     if (subtask.status === 'done') {
       await this.taskService.reopenTask(subtaskId, project?.googleTaskListId);
     } else {
       await this.taskService.completeTask(subtaskId, project?.googleTaskListId);
     }
 
-    this.loadRelatedTasks(task.id, task.projectId);
+    // Optimistic local update
+    this.subtasks.update((list) =>
+      list.map((s) => (s.id === subtaskId ? { ...s, status: newStatus as Task['status'] } : s)),
+    );
   }
 
   async deleteSubtask(subtaskId: string) {
@@ -591,7 +615,9 @@ export class TaskDetailModalComponent {
     if (!task) return;
 
     await this.taskService.deleteTask(subtaskId, project?.googleTaskListId);
-    this.loadRelatedTasks(task.id, task.projectId);
+
+    // Optimistic local update — remove from signal immediately
+    this.subtasks.update((list) => list.filter((s) => s.id !== subtaskId));
   }
 
   toggleSubtaskExpanded(subtaskId: string) {
@@ -663,17 +689,28 @@ export class TaskDetailModalComponent {
     }
   }
 
+  /** Maximum number of AI-generated subtasks to prevent resource exhaustion */
+  private static readonly MAX_AI_SUBTASKS = 10;
+
   // AI Methods
   async aiGenerateSubtasks() {
     const task = this.task();
     if (!task?.title?.trim()) return;
 
     try {
-      const newSubtasks = await this.vertexAiService.generateSubtasks(
+      let newSubtasks = await this.vertexAiService.generateSubtasks(
         task.title,
         this.form.value.description || undefined,
         this.project()?.name,
       );
+
+      // Cap the number of AI-generated subtasks to prevent resource exhaustion
+      if (newSubtasks.length > TaskDetailModalComponent.MAX_AI_SUBTASKS) {
+        console.warn(
+          `AI returned ${newSubtasks.length} subtasks, capping at ${TaskDetailModalComponent.MAX_AI_SUBTASKS}`,
+        );
+        newSubtasks = newSubtasks.slice(0, TaskDetailModalComponent.MAX_AI_SUBTASKS);
+      }
 
       // In the new system, we map the text to actual independent task documents
       const googleId = this.project()?.googleTaskListId;
@@ -692,7 +729,7 @@ export class TaskDetailModalComponent {
         );
       }
 
-      // Reload
+      // Reload subtasks from server after AI generation
       this.loadRelatedTasks(task.id, task.projectId);
     } catch (err) {
       console.error('Failed to generate subtasks:', err);
