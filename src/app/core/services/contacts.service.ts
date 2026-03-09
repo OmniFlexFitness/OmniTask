@@ -30,13 +30,7 @@ import { UserProfile } from '../models/user.model';
 import { GoogleContactsService, GoogleContact } from './google-contacts.service';
 import { AuthService } from '../auth/auth.service';
 
-export interface Contact {
-  id: string; // email or uid
-  email: string;
-  displayName: string;
-  photoURL?: string;
-  source: 'workspace' | 'google-contacts' | 'google-directory' | 'default-domain' | 'cached';
-}
+import { Contact } from '../models/contact.model';
 
 /**
  * Stored contact in Firestore

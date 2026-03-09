@@ -13,7 +13,8 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormsModule } from '@angu
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
-import { ContactsService, Contact } from '../../core/services/contacts.service';
+import { ContactsService } from '../../core/services/contacts.service';
+import { Contact } from '../../core/models/contact.model';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { TaskDependencyService } from '../../core/services/task-dependency.service';
