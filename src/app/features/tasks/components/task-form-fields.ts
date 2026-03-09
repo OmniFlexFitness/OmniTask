@@ -38,4 +38,9 @@ export class TaskFormFieldsComponent {
   assigneeSelected = output<AutocompleteOption | string>();
   assigneeRemoved = output<string>();
   notifyAssigneesChange = output<boolean>();
+
+  onNotifyAssigneesChange(event: Event) {
+    const isChecked = (event.target as HTMLInputElement).checked;
+    this.notifyAssigneesChange.emit(isChecked);
+  }
 }

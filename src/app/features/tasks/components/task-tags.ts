@@ -6,7 +6,7 @@ import { Project } from '../../../core/models/domain.model';
   selector: 'app-task-tags',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './task-tags.component.html',
+  templateUrl: './task-tags.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskTagsComponent {

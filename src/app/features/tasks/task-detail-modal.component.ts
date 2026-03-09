@@ -44,6 +44,9 @@ import { TaskAiActionsComponent } from './components/task-ai-actions';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
+    AutocompleteInputComponent,
+    MarkdownEditorComponent,
     TaskDetailHeaderComponent,
     TaskFieldsSidebarComponent,
     TaskSubtasksComponent,
@@ -554,12 +557,11 @@ export class TaskDetailModalComponent {
   }
 
   // Subtask methods
-  async addSubtask() {
+  async addSubtask(title: string) {
     const task = this.task();
     const project = this.project();
-    if (!task || !this.newSubtaskTitle.trim()) return;
+    if (!task || !title.trim()) return;
 
-    const title = this.newSubtaskTitle.trim();
     this.newSubtaskTitle = '';
 
     const docRef = await this.taskService.createTask(

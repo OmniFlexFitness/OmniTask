@@ -12,7 +12,7 @@ import {
   selector: 'app-task-subtasks',
   standalone: true,
   imports: [CommonModule, FormsModule, MarkdownEditorComponent, AutocompleteInputComponent],
-  templateUrl: './task-subtasks.component.html',
+  templateUrl: './task-subtasks.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskSubtasksComponent {

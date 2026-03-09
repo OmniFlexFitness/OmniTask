@@ -161,10 +161,11 @@
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span
-            class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse"
-            *ngIf="!syncing()"
-          ></span>
+          @if (!syncing()) {
+            <span
+              class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse"
+            ></span>
+          }
         </button>
       }
 
@@ -207,7 +208,7 @@
           {{ auth.currentUserSig()?.displayName?.charAt(0) }}
         </button>
         <div
-          class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-[60]"
+          class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-50"
         >
           <div class="px-4 py-2 border-b border-white/5 mb-2">
             <p class="text-sm font-medium text-white">

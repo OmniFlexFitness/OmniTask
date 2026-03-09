@@ -12,7 +12,7 @@ import { AuthService } from '../../../core/auth/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardHeaderComponent {
-  auth = inject(AuthService);
+  readonly auth = inject(AuthService);
 
   currentProject = input<Project | null>(null);
   viewMode = input<TaskViewMode>('list');

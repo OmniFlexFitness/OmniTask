@@ -6,7 +6,7 @@ import { Task } from '../../../core/models/domain.model';
   selector: 'app-task-detail-header',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './task-detail-header.component.html',
+  templateUrl: './task-detail-header.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskDetailHeaderComponent {

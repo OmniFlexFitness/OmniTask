@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-project-google-tasks-sync',
+  standalone: true,
   imports: [],
   templateUrl: './project-google-tasks-sync.html',
-  styleUrl: './project-google-tasks-sync.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectGoogleTasksSync {
-
-}
+export class ProjectGoogleTasksSync {}

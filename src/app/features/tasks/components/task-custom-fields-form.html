@@ -12,7 +12,7 @@
           @case ('text') {
             <input
               type="text"
-              (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
@@ -20,7 +20,7 @@
           @case ('number') {
             <input
               type="number"
-              (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
@@ -30,7 +30,7 @@
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{{ field.currencySymbol || '$' }}</span>
               <input
                 type="number"
-                (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+                (input)="onFieldUpdate($event, field.id)"
                 [class.border-rose-500]="customFieldErrors()[field.id]"
                 class="w-full bg-slate-950/50 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
               />
@@ -39,7 +39,7 @@
           @case ('date') {
             <input
               type="date"
-              (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
@@ -48,7 +48,7 @@
             <div class="flex items-center h-full pt-1">
               <input
                 type="checkbox"
-                (change)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).checked})"
+                (change)="onCheckboxUpdate($event, field.id)"
                 class="w-5 h-5 rounded border-white/10 bg-slate-950/50 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
               />
             </div>
@@ -57,14 +57,14 @@
             <input
               type="url"
               placeholder="https://"
-              (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
           }
           @case ('dropdown') {
             <select
-              (change)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (change)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             >
@@ -89,7 +89,7 @@
           }
           @case ('status') {
             <select
-              (change)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (change)="onFieldUpdate($event, field.id)"
               [class.border-rose-500]="customFieldErrors()[field.id]"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             >
@@ -103,7 +103,7 @@
             <input
               type="text"
               placeholder="Username/Email"
-              (input)="fieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onFieldUpdate($event, field.id)"
               class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
           }
