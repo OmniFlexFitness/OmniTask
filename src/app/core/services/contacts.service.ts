@@ -24,25 +24,13 @@ import {
   forkJoin,
   switchMap,
   tap,
-  BehaviorSubject,
   firstValueFrom,
 } from 'rxjs';
 import { UserProfile } from '../models/user.model';
 import { GoogleContactsService, GoogleContact } from './google-contacts.service';
 import { AuthService } from '../auth/auth.service';
 
-export interface Contact {
-  id: string; // email or uid
-  email: string;
-  displayName: string;
-  photoURL?: string;
-  source:
-    | 'workspace'
-    | 'google-contacts'
-    | 'google-directory'
-    | 'default-domain'
-    | 'cached';
-}
+import { Contact } from '../models/contact.model';
 
 /**
  * Stored contact in Firestore
@@ -68,8 +56,8 @@ export class ContactsService {
   private contactsCache$: Observable<Contact[]> | null = null;
 
   // Loading state
-  private readonly loadingSubject = new BehaviorSubject<boolean>(false);
-  loading$ = this.loadingSubject.asObservable();
+  private readonly loadingSignal = signal<boolean>(false);
+  loading = this.loadingSignal.asReadonly();
 
   // Default domain for omniflexfitness.com emails
   private readonly DEFAULT_DOMAIN = 'omniflexfitness.com';
@@ -108,7 +96,7 @@ export class ContactsService {
    */
   getContacts(): Observable<Contact[]> {
     if (!this.contactsCache$) {
-      this.loadingSubject.next(true);
+      this.loadingSignal.set(true);
 
       this.contactsCache$ = combineLatest([
         // 1. Cached contacts from Firestore (fast, primary source, user-scoped)
@@ -154,28 +142,20 @@ export class ContactsService {
         // 5. Always include preset domain members as fallback
         of(this.PRESET_DOMAIN_MEMBERS),
       ]).pipe(
-        map(
-          ([
-            cachedContacts,
-            directoryPeople,
-            googleContacts,
-            otherContacts,
-            presetMembers,
-          ]) => {
-            // Merge and deduplicate contacts by email
-            // Priority: google-directory > google-contacts > other-contacts > cached > default-domain
-            const allContacts = [
-              ...directoryPeople,
-              ...googleContacts,
-              ...otherContacts,
-              ...cachedContacts,
-              ...presetMembers,
-            ];
-            return this.deduplicateContacts(allContacts);
-          },
-        ),
+        map(([cachedContacts, directoryPeople, googleContacts, otherContacts, presetMembers]) => {
+          // Merge and deduplicate contacts by email
+          // Priority: google-directory > google-contacts > other-contacts > cached > default-domain
+          const allContacts = [
+            ...directoryPeople,
+            ...googleContacts,
+            ...otherContacts,
+            ...cachedContacts,
+            ...presetMembers,
+          ];
+          return this.deduplicateContacts(allContacts);
+        }),
         tap((contacts) => {
-          this.loadingSubject.next(false);
+          this.loadingSignal.set(false);
           // Sync fresh contacts to Firestore in background
           this.syncContactsToFirestore(contacts).catch((err) =>
             console.warn('Failed to sync contacts to Firestore:', err),
@@ -184,7 +164,7 @@ export class ContactsService {
         shareReplay(1),
         catchError((err) => {
           console.error('Failed to fetch contacts', err);
-          this.loadingSubject.next(false);
+          this.loadingSignal.set(false);
           return of([]);
         }),
       );

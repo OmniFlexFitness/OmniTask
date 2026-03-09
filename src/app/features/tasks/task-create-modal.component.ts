@@ -13,7 +13,8 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
-import { ContactsService, Contact } from '../../core/services/contacts.service';
+import { ContactsService } from '../../core/services/contacts.service';
+import { Contact } from '../../core/models/contact.model';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import {
   Task,

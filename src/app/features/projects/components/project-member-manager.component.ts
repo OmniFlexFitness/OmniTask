@@ -1,8 +1,9 @@
-import { Component, input, inject, signal, computed , ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
-import { ContactsService, Contact } from '../../../core/services/contacts.service';
+import { ContactsService } from '../../../core/services/contacts.service';
+import { Contact } from '../../../core/models/contact.model';
 import { DialogService } from '../../../core/services/dialog.service';
 import { Project } from '../../../core/models/domain.model';
 import { toSignal } from '@angular/core/rxjs-interop';
