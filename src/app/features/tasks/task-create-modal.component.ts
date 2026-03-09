@@ -37,16 +37,21 @@ import {
 import { CustomDatePickerComponent } from '../../shared/components/custom-date-picker/custom-date-picker.component';
 import { BehaviorSubject } from 'rxjs';
 
+import { TaskFormFieldsComponent } from './components/task-form-fields';
+import { TaskAiSuggestionsComponent } from './components/task-ai-suggestions';
+import { TaskCustomFieldsFormComponent } from './components/task-custom-fields-form';
+import { TaskTagsComponent } from './components/task-tags';
+
 @Component({
   selector: 'app-task-create-modal',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    AutocompleteInputComponent,
-    MarkdownEditorComponent,
-    CustomSelectComponent,
-    CustomDatePickerComponent,
+    TaskFormFieldsComponent,
+    TaskAiSuggestionsComponent,
+    TaskCustomFieldsFormComponent,
+    TaskTagsComponent,
   ],
   templateUrl: './task-create-modal.component.html',
   styleUrls: ['./task-create-modal.component.css'],
@@ -311,6 +316,14 @@ export class TaskCreateModalComponent {
   getSelectedTagsList(): string {
     return Array.from(this.selectedTags()).join(', ');
   }
+
+  getSelectedTagsArray = computed(() => Array.from(this.selectedTags()));
+
+  getTagColor = (tagName: string): string => {
+    const projectTags = this.project()?.tags || [];
+    const tag = projectTags.find((t) => t.name === tagName);
+    return tag?.color || '#94a3b8';
+  };
 
   onNotifyChange(event: Event): void {
     const input = event.target as HTMLInputElement;

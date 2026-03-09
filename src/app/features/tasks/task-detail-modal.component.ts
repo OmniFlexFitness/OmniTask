@@ -32,17 +32,23 @@ import {
 } from '../../shared/components/custom-select/custom-select.component';
 import { CustomDatePickerComponent } from '../../shared/components/custom-date-picker/custom-date-picker.component';
 
+import { TaskDetailHeaderComponent } from './components/task-detail-header';
+import { TaskFieldsSidebarComponent } from './components/task-fields-sidebar';
+import { TaskSubtasksComponent } from './components/task-subtasks';
+import { TaskTagsComponent } from './components/task-tags';
+import { TaskAiActionsComponent } from './components/task-ai-actions';
+
 @Component({
   selector: 'app-task-detail-modal',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    FormsModule,
-    AutocompleteInputComponent,
-    MarkdownEditorComponent,
-    CustomSelectComponent,
-    CustomDatePickerComponent,
+    TaskDetailHeaderComponent,
+    TaskFieldsSidebarComponent,
+    TaskSubtasksComponent,
+    TaskTagsComponent,
+    TaskAiActionsComponent,
   ],
   templateUrl: './task-detail-modal.component.html',
   styleUrls: ['./task-detail-modal.component.css'],
@@ -122,7 +128,7 @@ export class TaskDetailModalComponent {
   /**
    * Generate a consistent color for a contact based on their email
    */
-  generateAvatarColor(email: string): string {
+  generateAvatarColor = (email: string): string => {
     const colors = [
       '#8b5cf6',
       '#3b82f6',
@@ -137,7 +143,7 @@ export class TaskDetailModalComponent {
     ];
     const hash = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
-  }
+  };
 
   // Multi-assignee tracking
   selectedAssignees = signal<AutocompleteOption[]>([]);
@@ -376,11 +382,11 @@ export class TaskDetailModalComponent {
     return Array.from(this.selectedTags()).join(', ');
   }
 
-  getTagColor(tagName: string): string {
+  getTagColor = (tagName: string): string => {
     const projectTags = this.project()?.tags || [];
     const tag = projectTags.find((t) => t.name === tagName);
     return tag?.color || '#94a3b8';
-  }
+  };
 
   /**
    * Handle assignee selection from autocomplete

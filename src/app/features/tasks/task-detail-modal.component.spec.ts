@@ -56,6 +56,7 @@ describe('TaskDetailModalComponent', () => {
       'generateSubtasks',
       'enhanceDescription',
     ]);
+
     mockVertexAiService.generatingSubtasks = signal(false);
     mockVertexAiService.enhancingDescription = signal(false);
 
