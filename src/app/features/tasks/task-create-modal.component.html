@@ -32,8 +32,10 @@
           priority-actions
           type="priority"
           [disabled]="!form.value.title?.trim()"
-          [loading]="suggestingPriority()"
-          (suggest)="aiSuggestPriority()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          [currentDueDate]="form.value.dueDate || ''"
+          (suggestedPriority)="form.patchValue({ priority: $event })"
         ></app-task-ai-suggestions>
 
         <!-- Projected Due Date AI Action -->
@@ -41,8 +43,9 @@
           due-date-actions
           type="dueDate"
           [disabled]="!form.value.title?.trim()"
-          [loading]="suggestingDueDate()"
-          (suggest)="aiSuggestDueDate()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          (suggestedDueDate)="form.patchValue({ dueDate: $event })"
         ></app-task-ai-suggestions>
       </app-task-form-fields>
 
@@ -50,10 +53,10 @@
       <app-task-ai-suggestions
         type="subtasks"
         [disabled]="!form.value.title?.trim()"
-        [loading]="generatingSubtasks()"
-        [subtasks]="aiSubtasks()"
-        (suggest)="aiGenerateSubtasks()"
-        (removeSubtask)="removeAiSubtask($event)"
+        [title]="form.value.title || ''"
+        [description]="form.value.description || ''"
+        [projectName]="project()?.name || ''"
+        [(subtasks)]="aiSubtasks"
       ></app-task-ai-suggestions>
 
       <!-- Custom Fields -->
@@ -68,11 +71,7 @@
         <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Tags</label>
         <app-task-tags
           [project]="project() || null"
-          [selectedTags]="selectedTags()"
-          [selectedTagsArray]="getSelectedTagsArray()"
-          [getTagColor]="getTagColor"
-          (toggleTag)="toggleTag($event)"
-          (addTag)="addTag($event)"
+          [(selectedTags)]="selectedTags"
         ></app-task-tags>
       </div>
 

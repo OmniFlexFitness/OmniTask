@@ -9,7 +9,7 @@
       @for (tag of project()?.tags; track tag.id) {
         <button
           type="button"
-          (click)="toggleTag.emit(tag.name)"
+          (click)="toggleTag(tag.name)"
           [class.ring-2]="selectedTags().has(tag.name)"
           [style.--tw-ring-color]="
             selectedTags().has(tag.name) ? tag.color : 'transparent'
@@ -31,14 +31,14 @@
       type="text"
       #tagInput
       (keydown.enter)="
-        $event.preventDefault(); addTag.emit(tagInput.value); tagInput.value = ''
+        $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
       "
       placeholder="Add new tag..."
       class="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
     />
     <button
       type="button"
-      (click)="addTag.emit(tagInput.value); tagInput.value = ''"
+      (click)="addTag(tagInput.value); tagInput.value = ''"
       class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
     >
       Add
@@ -51,16 +51,16 @@
       @for (tagName of selectedTagsArray(); track tagName) {
         <span
           class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
-          [style.background-color]="getTagColor()(tagName) + '20'"
-          [style.color]="getTagColor()(tagName)"
-          [style.border-color]="getTagColor()(tagName) + '40'"
+          [style.background-color]="getTagColor(tagName) + '20'"
+          [style.color]="getTagColor(tagName)"
+          [style.border-color]="getTagColor(tagName) + '40'"
         >
           {{ tagName }}
           <button
             type="button"
-            (click)="$event.stopPropagation(); toggleTag.emit(tagName)"
+            (click)="$event.stopPropagation(); toggleTag(tagName)"
             class="ml-0.5 hover:brightness-150 transition-all rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-70 hover:opacity-100"
-            [style.color]="getTagColor()(tagName)"
+            [style.color]="getTagColor(tagName)"
             title="Remove tag"
           >
             ×

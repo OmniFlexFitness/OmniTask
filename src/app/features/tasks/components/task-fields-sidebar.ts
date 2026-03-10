@@ -22,7 +22,7 @@ import { Task, CustomFieldDefinition } from '../../../core/models/domain.model';
     CustomSelectComponent,
     CustomDatePickerComponent,
   ],
-  templateUrl: './task-fields-sidebar.component.html',
+  templateUrl: './task-fields-sidebar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskFieldsSidebarComponent {

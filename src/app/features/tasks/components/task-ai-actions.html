@@ -1,11 +1,11 @@
 <button
   type="button"
-  (click)="aiGenerateSubtasks.emit()"
-  [disabled]="!taskTitle().trim() || generatingSubtasks()"
+  (click)="executeAction()"
+  [disabled]="disabled() || !task()?.title?.trim() || loading()"
   class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
-  title="AI generate subtasks"
+  [title]="type() === 'enhanceDescription' ? 'AI enhance description' : 'AI generate subtasks'"
 >
-  @if (generatingSubtasks()) {
+  @if (loading()) {
     <svg
       class="animate-spin h-3 w-3"
       xmlns="http://www.w3.org/2000/svg"
@@ -26,8 +26,8 @@
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       ></path>
     </svg>
-    Generating...
+    {{ type() === 'enhanceDescription' ? 'Enhancing...' : 'Generating...' }}
   } @else {
-    ✨ Generate
+    ✨ {{ type() === 'enhanceDescription' ? 'Enhance' : 'Generate' }}
   }
 </button>

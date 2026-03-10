@@ -103,17 +103,6 @@ describe('TaskDetailModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should generate subtasks via AI and update task', async () => {
-    mockVertexAiService.generateSubtasks.and.returnValue(
-      Promise.resolve([{ id: 'sub1', title: 'New Sub', completed: false }]),
-    );
-
-    await component.aiGenerateSubtasks();
-
-    expect(mockVertexAiService.generateSubtasks).toHaveBeenCalled();
-    expect(mockTaskService.createTask).toHaveBeenCalled();
-  });
-
   it('should emit close on backdrop click', () => {
     spyOn(component.close, 'emit');
     const ev = { target: 1, currentTarget: 1 } as any;

@@ -1,7 +1,7 @@
 @if (type() === 'priority' || type() === 'dueDate') {
   <button
     type="button"
-    (click)="suggest.emit()"
+    (click)="onSuggest()"
     [disabled]="disabled() || loading()"
     class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
     title="AI suggest {{ type() }}"
@@ -26,7 +26,7 @@
       <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Subtasks</label>
       <button
         type="button"
-        (click)="suggest.emit()"
+        (click)="onSuggest()"
         [disabled]="disabled() || loading()"
         class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
         title="AI generate subtasks"
@@ -55,7 +55,7 @@
             <span class="flex-1">{{ subtask.title }}</span>
             <button
               type="button"
-              (click)="removeSubtask.emit(i)"
+              (click)="removeSubtask(i)"
               class="text-slate-500 hover:text-rose-400 transition-colors"
             >
               ×

@@ -15,10 +15,9 @@
         <div class="flex items-center gap-3">
           <button
             class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
-            [class.border-cyan-500]="subtask.status === 'done'"
             [class.bg-cyan-500]="subtask.status === 'done'"
             [class.border-slate-500]="subtask.status !== 'done'"
-            (click)="toggleSubtask.emit(subtask.id)"
+            (click)="toggleSubtask(subtask.id)"
           >
             @if (subtask.status === 'done') {
               <svg
@@ -37,10 +36,9 @@
           </button>
           <span
             class="flex-1 text-sm cursor-pointer"
-            [class.text-slate-500]="subtask.status === 'done'"
             [class.line-through]="subtask.status === 'done'"
             [class.text-slate-300]="subtask.status !== 'done'"
-            (click)="toggleSubtaskExpanded.emit(subtask.id)"
+            (click)="toggleSubtaskExpanded(subtask.id)"
             >{{ subtask.title }}</span>
           <!-- Subtask assignee avatars -->
           @if (subtask.assigneeNames?.length) {
@@ -58,7 +56,7 @@
           }
           <button
             class="p-1 text-slate-600 hover:text-cyan-400 transition-all"
-            (click)="toggleSubtaskExpanded.emit(subtask.id)"
+            (click)="toggleSubtaskExpanded(subtask.id)"
             title="Toggle description"
           >
             <svg
@@ -74,7 +72,7 @@
           </button>
           <button
             class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
-            (click)="deleteSubtask.emit(subtask.id)"
+            (click)="deleteSubtask(subtask.id)"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -91,10 +89,9 @@
           <div class="ml-8 mt-2 mb-1 space-y-2">
             <app-markdown-editor
               [value]="subtask.description || ''"
-              [rows]="2"
               [minimal]="true"
               placeholder="Add subtask description..."
-              (valueChange)="updateSubtaskDescription.emit({subtaskId: subtask.id, description: $event})"
+              (valueChange)="updateSubtaskDescription(subtask.id, $event)"
               (blurred)="autoSave.emit()"
             />
             <!-- Subtask Assignee -->
@@ -102,20 +99,18 @@
               <span class="text-[10px] text-slate-500 uppercase tracking-widest flex-shrink-0">Assign:</span>
               <app-autocomplete-input
                 [options]="assigneeOptions()"
-                [value]="''"
                 [allowCustom]="false"
                 placeholder="Add assignee..."
-                (optionSelected)="subtaskAssigneeSelected.emit({subtaskId: subtask.id, selection: $event})"
+                (optionSelected)="subtaskAssigneeSelected(subtask.id, $event)"
               ></app-autocomplete-input>
             </div>
             @if (subtask.assigneeNames?.length) {
               <div class="flex flex-wrap gap-1">
                 @for (name of subtask.assigneeNames; track name; let i = $index) {
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-300">
-                    {{ name }}
                     <button
                       type="button"
-                      (click)="removeSubtaskAssignee.emit({subtaskId: subtask.id, index: i})"
+                      (click)="removeSubtaskAssignee(subtask.id, i)"
                       class="text-slate-400 hover:text-rose-400"
                     >
                       ×

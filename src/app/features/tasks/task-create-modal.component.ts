@@ -15,7 +15,6 @@ import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { ContactsService } from '../../core/services/contacts.service';
 import { Contact } from '../../core/models/contact.model';
-import { VertexAiService } from '../../core/services/vertex-ai.service';
 import {
   Task,
   Project,
@@ -63,7 +62,6 @@ export class TaskCreateModalComponent {
   private readonly projectService = inject(ProjectService);
   private readonly customFieldService = inject(CustomFieldService);
   private readonly contactsService = inject(ContactsService);
-  private readonly vertexAiService = inject(VertexAiService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Inputs
@@ -83,9 +81,6 @@ export class TaskCreateModalComponent {
 
   // AI State
   aiSubtasks = signal<Subtask[]>([]);
-  generatingSubtasks = this.vertexAiService.generatingSubtasks;
-  suggestingPriority = this.vertexAiService.suggestingPriority;
-  suggestingDueDate = this.vertexAiService.suggestingDueDate;
 
   // Get project sections for dropdown
   project = toSignal(
@@ -269,62 +264,6 @@ export class TaskCreateModalComponent {
     return Array.from(target.selectedOptions).map((o) => o.value);
   }
 
-  toggleTag(tagName: string) {
-    this.selectedTags.update((tags) => {
-      const newTags = new Set(tags);
-      if (newTags.has(tagName)) {
-        newTags.delete(tagName);
-      } else {
-        newTags.add(tagName);
-      }
-      return newTags;
-    });
-  }
-
-  async addTag(tagName: string) {
-    const name = tagName.trim();
-    if (!name) return;
-
-    // Add to project definitions first if it doesn't exist
-    const project = this.project();
-    if (project) {
-      try {
-        // Simple hash for color generation
-        const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-        const colorIndex =
-          name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-
-        await this.projectService.addTag(project.id, {
-          name: name,
-          color: colors[colorIndex],
-        });
-      } catch (err) {
-        console.error('Failed to add tag', err);
-        // Don't select the tag if adding to project failed
-        return;
-      }
-    }
-
-    // Select it
-    this.selectedTags.update((tags) => {
-      const newTags = new Set(tags);
-      newTags.add(name);
-      return newTags;
-    });
-  }
-
-  getSelectedTagsList(): string {
-    return Array.from(this.selectedTags()).join(', ');
-  }
-
-  getSelectedTagsArray = computed(() => Array.from(this.selectedTags()));
-
-  getTagColor = (tagName: string): string => {
-    const projectTags = this.project()?.tags || [];
-    const tag = projectTags.find((t) => t.name === tagName);
-    return tag?.color || '#94a3b8';
-  };
-
   onNotifyChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.notifyAssignees.set(input.checked);
@@ -447,57 +386,5 @@ export class TaskCreateModalComponent {
 
   private toInputDate(date: Date): string {
     return date.toISOString().split('T')[0];
-  }
-
-  // AI Methods
-  async aiGenerateSubtasks() {
-    const title = this.form.value.title;
-    if (!title?.trim()) return;
-
-    try {
-      const subtasks = await this.vertexAiService.generateSubtasks(
-        title,
-        this.form.value.description || undefined,
-        this.project()?.name,
-      );
-      this.aiSubtasks.set(subtasks);
-    } catch (err) {
-      console.error('Failed to generate subtasks:', err);
-    }
-  }
-
-  async aiSuggestPriority() {
-    const title = this.form.value.title;
-    if (!title?.trim()) return;
-
-    try {
-      const result = await this.vertexAiService.suggestPriority(
-        title,
-        this.form.value.description || undefined,
-        this.form.value.dueDate || undefined,
-      );
-      this.form.patchValue({ priority: result.priority });
-    } catch (err) {
-      console.error('Failed to suggest priority:', err);
-    }
-  }
-
-  async aiSuggestDueDate() {
-    const title = this.form.value.title;
-    if (!title?.trim()) return;
-
-    try {
-      const result = await this.vertexAiService.suggestDueDate(
-        title,
-        this.form.value.description || undefined,
-      );
-      this.form.patchValue({ dueDate: result.dueDate });
-    } catch (err) {
-      console.error('Failed to suggest due date:', err);
-    }
-  }
-
-  removeAiSubtask(index: number) {
-    this.aiSubtasks.update((subtasks) => subtasks.filter((_, i) => i !== index));
   }
 }

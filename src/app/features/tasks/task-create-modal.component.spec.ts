@@ -71,17 +71,6 @@ describe('TaskCreateModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  // Since fakeAsync is used or async/await, we handle Promises
-  it('should generate subtasks via AI', async () => {
-    mockVertexAiService.generateSubtasks.and.returnValue(Promise.resolve(['sub1', 'sub2']));
-    component.form.patchValue({ title: 'do something' });
-
-    await component.aiGenerateSubtasks();
-
-    expect(mockVertexAiService.generateSubtasks).toHaveBeenCalled();
-    expect(component.aiSubtasks().length).toBe(2);
-  });
-
   it('should emit close when backdrop is clicked', () => {
     spyOn(component.close, 'emit');
     component.onBackdropClick({ target: null, currentTarget: null } as any);
