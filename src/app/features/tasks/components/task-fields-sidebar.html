@@ -121,7 +121,7 @@
             <input
               type="text"
               [value]="customFieldValues()[field.id] || ''"
-              (input)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onCustomFieldUpdate($event, field.id)"
               class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
           }
@@ -129,7 +129,7 @@
             <input
               type="number"
               [value]="customFieldValues()[field.id] || ''"
-              (input)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onCustomFieldUpdate($event, field.id)"
               class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
           }
@@ -139,7 +139,7 @@
               <input
                 type="number"
                 [value]="customFieldValues()[field.id] || ''"
-                (input)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+                (input)="onCustomFieldUpdate($event, field.id)"
                 class="bg-transparent border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors w-full"
               />
             </div>
@@ -156,7 +156,7 @@
               <input
                 type="checkbox"
                 [checked]="customFieldValues()[field.id] === true || customFieldValues()[field.id] === 'true'"
-                (change)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).checked})"
+                (change)="onCustomFieldCheckboxUpdate($event, field.id)"
                 class="w-5 h-5 rounded border-white/10 bg-slate-900 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
               />
             </div>
@@ -166,14 +166,14 @@
               type="url"
               placeholder="https://"
               [value]="customFieldValues()[field.id] || ''"
-              (input)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onCustomFieldUpdate($event, field.id)"
               class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors text-cyan-400 underline"
             />
           }
           @case ('dropdown') {
             <select
               [value]="customFieldValues()[field.id] || ''"
-              (change)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (change)="onCustomFieldUpdate($event, field.id)"
               class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             >
               <option value="">- Select -</option>
@@ -197,7 +197,7 @@
           @case ('status') {
             <select
               [value]="customFieldValues()[field.id] || ''"
-              (change)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (change)="onCustomFieldUpdate($event, field.id)"
               class="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             >
               <option value="">- Select -</option>
@@ -211,7 +211,7 @@
               type="text"
               placeholder="Username/Email"
               [value]="customFieldValues()[field.id] || ''"
-              (input)="customFieldUpdated.emit({fieldId: field.id, value: $any($event.target).value})"
+              (input)="onCustomFieldUpdate($event, field.id)"
               class="bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
             />
           }

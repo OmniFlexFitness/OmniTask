@@ -53,6 +53,16 @@ export class TaskFieldsSidebarComponent {
     this.notifyAssigneesChange.emit(input.checked);
   }
 
+  onCustomFieldUpdate(event: Event, fieldId: string): void {
+    const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    this.customFieldUpdated.emit({ fieldId, value: target.value });
+  }
+
+  onCustomFieldCheckboxUpdate(event: Event, fieldId: string): void {
+    const target = event.target as HTMLInputElement;
+    this.customFieldUpdated.emit({ fieldId, value: target.checked });
+  }
+
   getMultiSelectValues(event: Event): string[] {
     const target = event.target as HTMLSelectElement;
     return Array.from(target.selectedOptions).map((o) => o.value);
