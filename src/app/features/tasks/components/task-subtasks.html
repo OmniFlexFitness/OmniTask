@@ -1,0 +1,146 @@
+<!-- Subtasks -->
+<div class="mb-6">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Subtasks</label>
+      <span class="text-xs text-slate-500">{{ completedSubtasksCount() }}/{{ subtasks().length }}</span>
+    </div>
+    <ng-content select="[actions]"></ng-content>
+  </div>
+
+  <!-- Subtask List -->
+  <div class="space-y-2 mb-3">
+    @for (subtask of subtasks(); track subtask.id) {
+      <div class="group">
+        <div class="flex items-center gap-3">
+          <button
+            class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0"
+            [class.bg-cyan-500]="subtask.status === 'done'"
+            [class.border-slate-500]="subtask.status !== 'done'"
+            (click)="toggleSubtask(subtask.id)"
+          >
+            @if (subtask.status === 'done') {
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3 w-3 text-white"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            }
+          </button>
+          <span
+            class="flex-1 text-sm cursor-pointer"
+            [class.line-through]="subtask.status === 'done'"
+            [class.text-slate-300]="subtask.status !== 'done'"
+            (click)="toggleSubtaskExpanded(subtask.id)"
+            >{{ subtask.title }}</span>
+          <!-- Subtask assignee avatars -->
+          @if (subtask.assigneeNames?.length) {
+            <div class="flex -space-x-1">
+              @for (name of subtask.assigneeNames; track name; let i = $index) {
+                <span
+                  class="w-5 h-5 rounded-full flex items-center justify-center text-[8px] text-white font-bold border border-slate-800"
+                  [style.background-color]="
+                    generateAvatarColor()(subtask.assigneeIds?.[i] || name)
+                  "
+                  [title]="name"
+                  >{{ name.charAt(0).toUpperCase() }}</span>
+              }
+            </div>
+          }
+          <button
+            class="p-1 text-slate-600 hover:text-cyan-400 transition-all"
+            (click)="toggleSubtaskExpanded(subtask.id)"
+            title="Toggle description"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 transition-transform"
+              [class.rotate-180]="expandedSubtaskIds().has(subtask.id)"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <button
+            class="p-1 text-slate-600 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all"
+            (click)="deleteSubtask(subtask.id)"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        @if (expandedSubtaskIds().has(subtask.id)) {
+          <div class="ml-8 mt-2 mb-1 space-y-2">
+            <app-markdown-editor
+              [value]="subtask.description || ''"
+              [minimal]="true"
+              placeholder="Add subtask description..."
+              (valueChange)="updateSubtaskDescription(subtask.id, $event)"
+              (blurred)="autoSave.emit()"
+            />
+            <!-- Subtask Assignee -->
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-500 uppercase tracking-widest flex-shrink-0">Assign:</span>
+              <app-autocomplete-input
+                [options]="assigneeOptions()"
+                [allowCustom]="false"
+                placeholder="Add assignee..."
+                (optionSelected)="subtaskAssigneeSelected(subtask.id, $event)"
+              ></app-autocomplete-input>
+            </div>
+            @if (subtask.assigneeNames?.length) {
+              <div class="flex flex-wrap gap-1">
+                @for (name of subtask.assigneeNames; track name; let i = $index) {
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                    <button
+                      type="button"
+                      (click)="removeSubtaskAssignee(subtask.id, i)"
+                      class="text-slate-400 hover:text-rose-400"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Add Subtask Input -->
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      [(ngModel)]="newSubtaskTitle"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="Add a subtask..."
+      class="flex-1 bg-transparent border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+      (keydown.enter)="onAddSubtask()"
+    />
+    <button
+      class="px-3 py-2 bg-cyan-600/20 text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-600/30 transition-colors"
+      [disabled]="!newSubtaskTitle.trim()"
+      (click)="onAddSubtask()"
+    >
+      Add
+    </button>
+  </div>
+</div>

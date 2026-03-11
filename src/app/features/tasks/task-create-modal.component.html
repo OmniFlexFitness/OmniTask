@@ -1,500 +1,97 @@
-<div
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
-      (click)="onBackdropClick($event)"
-    >
-      <div
-        class="w-full max-w-lg max-h-[90vh] flex flex-col bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
-        (click)="$event.stopPropagation()"
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm" (click)="onBackdropClick($event)">
+  <div class="w-full max-w-lg max-h-[90vh] flex flex-col bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-scale-in" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <header class="px-5 py-2.5 border-b border-fuchsia-500/20 bg-[#0a0f1e]/90">
+      <h2 class="text-base font-bold text-white flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New Task
+      </h2>
+    </header>
+
+    <!-- Body -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto p-4 space-y-3">
+      
+      <!-- Base Form Fields -->
+      <app-task-form-fields
+        [form]="form"
+        [priorityOptions]="priorityOptions"
+        [sectionOptions]="sectionOptions()"
+        [availableAssigneeOptions]="availableAssigneeOptions()"
+        [selectedAssignees]="selectedAssignees()"
+        [notifyAssignees]="notifyAssignees()"
+        (assigneeSearch)="onAssigneeSearch($event)"
+        (assigneeSelected)="onAssigneeSelected($event)"
+        (assigneeRemoved)="removeAssignee($event)"
+        (notifyAssigneesChange)="notifyAssignees.set($event)"
       >
-        <!-- Header -->
-        <header class="px-5 py-2.5 border-b border-fuchsia-500/20 bg-[#0a0f1e]/90">
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-cyan-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            New Task
-          </h2>
-        </header>
+        <!-- Projected Priority AI Action -->
+        <app-task-ai-suggestions
+          priority-actions
+          type="priority"
+          [disabled]="!form.value.title?.trim()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          [currentDueDate]="form.value.dueDate || ''"
+          (suggestedPriority)="form.patchValue({ priority: $event })"
+        ></app-task-ai-suggestions>
 
-        <!-- Body -->
-        <form
-          [formGroup]="form"
-          (ngSubmit)="onSubmit()"
-          class="flex-1 overflow-y-auto p-4 space-y-3"
-        >
-          <!-- Title -->
-          <div>
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Task Name *</label
-            >
-            <input
-              type="text"
-              formControlName="title"
-              placeholder="What needs to be done?"
-              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              autofocus
-            />
-            @if (form.controls.title.touched && form.controls.title.invalid) {
-              <p class="text-xs text-rose-400 mt-1">Task name is required</p>
-            }
-          </div>
+        <!-- Projected Due Date AI Action -->
+        <app-task-ai-suggestions
+          due-date-actions
+          type="dueDate"
+          [disabled]="!form.value.title?.trim()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          (suggestedDueDate)="form.patchValue({ dueDate: $event })"
+        ></app-task-ai-suggestions>
+      </app-task-form-fields>
 
-          <!-- Description -->
-          <div>
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Description</label
-            >
-            <app-markdown-editor
-              [value]="form.value.description || ''"
-              [rows]="2"
-              [minimal]="true"
-              placeholder="Add more details... (Markdown supported)"
-              (valueChange)="form.patchValue({ description: $event })"
-            />
-          </div>
+      <!-- AI Subtasks Section -->
+      <app-task-ai-suggestions
+        type="subtasks"
+        [disabled]="!form.value.title?.trim()"
+        [title]="form.value.title || ''"
+        [description]="form.value.description || ''"
+        [projectName]="project()?.name || ''"
+        [(subtasks)]="aiSubtasks"
+      ></app-task-ai-suggestions>
 
-          <!-- Two Column Grid with AI Buttons -->
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Priority -->
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
-                  >Priority</label
-                >
-                <button
-                  type="button"
-                  (click)="aiSuggestPriority()"
-                  [disabled]="!form.value.title?.trim() || suggestingPriority()"
-                  class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
-                  title="AI suggest priority"
-                >
-                  @if (suggestingPriority()) {
-                    <svg
-                      class="animate-spin h-3 w-3"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  } @else {
-                    ✨ AI
-                  }
-                </button>
-              </div>
-              <app-custom-select
-                formControlName="priority"
-                [options]="priorityOptions"
-                placeholder="Select priority"
-              ></app-custom-select>
-            </div>
+      <!-- Custom Fields -->
+      <app-task-custom-fields-form
+        [customFields]="projectCustomFields()"
+        [customFieldErrors]="customFieldErrors()"
+        (fieldUpdated)="updateCustomField($event.fieldId, $event.value)"
+      ></app-task-custom-fields-form>
 
-            <!-- Due Date -->
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
-                  >Due Date</label
-                >
-                <button
-                  type="button"
-                  (click)="aiSuggestDueDate()"
-                  [disabled]="!form.value.title?.trim() || suggestingDueDate()"
-                  class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
-                  title="AI suggest due date"
-                >
-                  @if (suggestingDueDate()) {
-                    <svg
-                      class="animate-spin h-3 w-3"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      ></circle>
-                      <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  } @else {
-                    ✨ AI
-                  }
-                </button>
-              </div>
-              <app-custom-date-picker
-                formControlName="dueDate"
-                placeholder="mm/dd/yyyy"
-              ></app-custom-date-picker>
-            </div>
-          </div>
-
-          <!-- AI Subtasks Section -->
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest"
-                >Subtasks</label
-              >
-              <button
-                type="button"
-                (click)="aiGenerateSubtasks()"
-                [disabled]="!form.value.title?.trim() || generatingSubtasks()"
-                class="text-[9px] text-purple-400 hover:text-purple-300 disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-0.5 transition-colors"
-                title="AI generate subtasks"
-              >
-                @if (generatingSubtasks()) {
-                  <svg
-                    class="animate-spin h-3 w-3"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Generating...
-                } @else {
-                  ✨ Generate with AI
-                }
-              </button>
-            </div>
-            @if (aiSubtasks().length > 0) {
-              <div class="space-y-1.5 bg-slate-950/30 rounded-lg p-2 border border-purple-500/20">
-                @for (subtask of aiSubtasks(); track subtask.id; let i = $index) {
-                  <div class="flex items-center gap-2 text-sm text-slate-300">
-                    <span class="text-purple-400">✦</span>
-                    <span class="flex-1">{{ subtask.title }}</span>
-                    <button
-                      type="button"
-                      (click)="removeAiSubtask(i)"
-                      class="text-slate-500 hover:text-rose-400 transition-colors"
-                    >
-                      ×
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Section (for Board view) -->
-          <div [class.hidden]="sections().length === 0">
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Section</label
-            >
-            <app-custom-select
-              formControlName="sectionId"
-              [options]="sectionOptions()"
-              placeholder="Select a section"
-            ></app-custom-select>
-          </div>
-
-          <!-- Custom Fields -->
-          @if (projectCustomFields().length) {
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              @for (field of projectCustomFields(); track field.id) {
-                <div>
-                  <label
-                    class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1 flex items-center justify-between"
-                  >
-                    {{ field.name }}
-                  </label>
-
-                  @switch (field.type) {
-                    @case ('text') {
-                      <input
-                        type="text"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
-                    }
-                    @case ('number') {
-                      <input
-                        type="number"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
-                    }
-                    @case ('currency') {
-                      <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{{ field.currencySymbol || '$' }}</span>
-                        <input
-                          type="number"
-                          (input)="updateCustomField(field.id, $any($event.target).value)"
-                          [class.border-rose-500]="customFieldErrors()[field.id]"
-                          class="w-full bg-slate-950/50 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                        />
-                      </div>
-                    }
-                    @case ('date') {
-                      <input
-                        type="date"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
-                    }
-                    @case ('checkbox') {
-                      <div class="flex items-center h-full pt-1">
-                        <input
-                          type="checkbox"
-                          (change)="updateCustomField(field.id, $any($event.target).checked)"
-                          class="w-5 h-5 rounded border-white/10 bg-slate-950/50 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
-                        />
-                      </div>
-                    }
-                    @case ('url') {
-                      <input
-                        type="url"
-                        placeholder="https://"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
-                    }
-                    @case ('dropdown') {
-                      <select
-                        (change)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      >
-                        <option value="">- Select -</option>
-                        @for (opt of field.options; track opt.id) {
-                          <option [value]="opt.id">{{ opt.label }}</option>
-                        }
-                      </select>
-                    }
-                    @case ('multi-select') {
-                      <!-- Use a standard multi-select for simplicity in creation modal -->
-                      <select
-                        multiple
-                        (change)="updateCustomField(field.id, getMultiSelectValues($event))"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors max-h-24 form-multiselect"
-                      >
-                        @for (opt of field.options; track opt.id) {
-                          <option [value]="opt.id">{{ opt.label }}</option>
-                        }
-                      </select>
-                    }
-                    @case ('status') {
-                      <select
-                        (change)="updateCustomField(field.id, $any($event.target).value)"
-                        [class.border-rose-500]="customFieldErrors()[field.id]"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      >
-                        <option value="">- Select -</option>
-                        @for (opt of field.options; track opt.id) {
-                          <option [value]="opt.id">{{ opt.label }}</option>
-                        }
-                      </select>
-                    }
-                    @case ('user') {
-                      <input
-                        type="text"
-                        placeholder="Username/Email"
-                        (input)="updateCustomField(field.id, $any($event.target).value)"
-                        class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                      />
-                    }
-                  }
-
-                  @if (customFieldErrors()[field.id]) {
-                    <p class="text-xs text-rose-400 mt-1">{{ customFieldErrors()[field.id] }}</p>
-                  }
-                </div>
-              }
-            </div>
-          }
-
-          <!-- Assignees -->
-          <div>
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Assignees</label
-            >
-            <!-- Selected Assignee Chips -->
-            @if (selectedAssignees().length > 0) {
-              <div class="flex flex-wrap gap-1.5 mb-2">
-                @for (assignee of selectedAssignees(); track assignee.id) {
-                  <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-300"
-                  >
-                    @if (assignee.avatar) {
-                      <img
-                        [src]="assignee.avatar"
-                        class="w-3.5 h-3.5 rounded-full"
-                        referrerpolicy="no-referrer"
-                      />
-                    } @else {
-                      <span
-                        class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white font-bold"
-                        [style.background-color]="assignee.color || '#8b5cf6'"
-                        >{{ assignee.label.charAt(0).toUpperCase() }}</span
-                      >
-                    }
-                    {{ assignee.label }}
-                    <button
-                      type="button"
-                      (click)="removeAssignee(assignee.id)"
-                      class="ml-0.5 text-slate-400 hover:text-rose-400 transition-colors"
-                    >
-                      ×
-                    </button>
-                  </span>
-                }
-              </div>
-            }
-            <app-autocomplete-input
-              [options]="availableAssigneeOptions()"
-              [value]="''"
-              [allowCustom]="false"
-              placeholder="Search contacts to add..."
-              (search)="onAssigneeSearch($event)"
-              (optionSelected)="onAssigneeSelected($event)"
-            ></app-autocomplete-input>
-          </div>
-
-          <!-- Notify Assignees Checkbox -->
-          <div class="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="notifyAssignees"
-              [checked]="notifyAssignees()"
-              (change)="onNotifyChange($event)"
-              class="w-4 h-4 rounded border-white/20 bg-slate-950 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
-            />
-            <label for="notifyAssignees" class="text-xs text-slate-400 cursor-pointer select-none"
-              >📧 Notify assignees via email (assignment & status updates)</label
-            >
-          </div>
-
-          <!-- Tags -->
-          <div>
-            <label
-              class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1"
-              >Tags</label
-            >
-
-            <!-- Existing Project Tags -->
-            @if (project()?.tags?.length) {
-              <div class="flex flex-wrap gap-1.5 mb-2">
-                @for (tag of project()?.tags; track tag.id) {
-                  <button
-                    type="button"
-                    (click)="toggleTag(tag.name)"
-                    [class.ring-2]="selectedTags().has(tag.name)"
-                    [style.--tw-ring-color]="
-                      selectedTags().has(tag.name) ? tag.color : 'transparent'
-                    "
-                    [style.background-color]="tag.color + '20'"
-                    [style.color]="tag.color"
-                    [style.border-color]="tag.color + '40'"
-                    class="px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all hover:brightness-110"
-                  >
-                    {{ tag.name }}
-                  </button>
-                }
-              </div>
-            }
-
-            <!-- Add New Tag -->
-            <div class="flex gap-2">
-              <input
-                type="text"
-                #tagInput
-                (keydown.enter)="
-                  $event.preventDefault(); addTag(tagInput.value); tagInput.value = ''
-                "
-                placeholder="Add new tag..."
-                class="flex-1 bg-slate-950/50 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-              />
-              <button
-                type="button"
-                (click)="addTag(tagInput.value); tagInput.value = ''"
-                class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Add
-              </button>
-            </div>
-
-            <!-- Selected Tags Display (Feedback for new tags not yet in project definitions) -->
-            @if (selectedTags().size > 0) {
-              <div class="mt-2 text-xs text-slate-500">Selected: {{ getSelectedTagsList() }}</div>
-            }
-          </div>
-
-          <!-- Error Message -->
-          @if (errorMessage()) {
-            <div
-              class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"
-            >
-              {{ errorMessage() }}
-            </div>
-          }
-
-          <!-- Actions -->
-          <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
-            <button
-              type="button"
-              class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              (click)="close.emit()"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-              [disabled]="form.invalid || saving() || hasCustomFieldErrors()"
-            >
-              Create Task
-            </button>
-          </div>
-        </form>
+      <!-- Tags -->
+      <div>
+        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Tags</label>
+        <app-task-tags
+          [project]="project() || null"
+          [(selectedTags)]="selectedTags"
+        ></app-task-tags>
       </div>
-    </div>
+
+      <!-- Error Message -->
+      @if (errorMessage()) {
+        <div class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
+        <button type="button" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" (click)="close.emit()">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors" [disabled]="form.invalid || saving() || hasCustomFieldErrors()">
+          Create Task
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

@@ -1,7 +1,14 @@
-import { Component, computed, inject, signal, effect , ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { switchMap, of } from 'rxjs';
 
 import { TaskService } from '../../core/services/task.service';
@@ -21,6 +28,7 @@ import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
+import { DashboardHeaderComponent } from './components/dashboard-header';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,7 +36,6 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
     ProjectSidebarComponent,
     ProjectFormModalComponent,
     TaskListViewComponent,
@@ -37,6 +44,7 @@ import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
     TaskDetailModalComponent,
     TaskCreateModalComponent,
     CustomFieldManagerComponent,
+    DashboardHeaderComponent,
   ],
   templateUrl: './dashboard.component.html',
 })

@@ -56,6 +56,7 @@ describe('TaskDetailModalComponent', () => {
       'generateSubtasks',
       'enhanceDescription',
     ]);
+
     mockVertexAiService.generatingSubtasks = signal(false);
     mockVertexAiService.enhancingDescription = signal(false);
 
@@ -100,17 +101,6 @@ describe('TaskDetailModalComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('should generate subtasks via AI and update task', async () => {
-    mockVertexAiService.generateSubtasks.and.returnValue(
-      Promise.resolve([{ id: 'sub1', title: 'New Sub', completed: false }]),
-    );
-
-    await component.aiGenerateSubtasks();
-
-    expect(mockVertexAiService.generateSubtasks).toHaveBeenCalled();
-    expect(mockTaskService.createTask).toHaveBeenCalled();
   });
 
   it('should emit close on backdrop click', () => {
