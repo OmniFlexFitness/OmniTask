@@ -15,6 +15,7 @@ import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { ContactsService } from '../../core/services/contacts.service';
 import { Contact } from '../../core/models/contact.model';
+
 import {
   Task,
   Project,

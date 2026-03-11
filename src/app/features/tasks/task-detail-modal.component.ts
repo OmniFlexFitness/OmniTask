@@ -15,6 +15,7 @@ import { ProjectService } from '../../core/services/project.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ContactsService } from '../../core/services/contacts.service';
 import { Contact } from '../../core/models/contact.model';
+
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { TaskDependencyService } from '../../core/services/task-dependency.service';
 import { Task, Project, CustomFieldDefinition } from '../../core/models/domain.model';
