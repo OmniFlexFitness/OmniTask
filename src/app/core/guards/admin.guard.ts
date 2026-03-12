@@ -9,9 +9,11 @@ export const adminGuard: CanActivateFn = (route, state) => {
 
   return auth.user$.pipe(
     take(1),
-    map(() => {
+    map((firebaseUser) => {
+      if (!firebaseUser) return false;
       const user = auth.currentUserSig();
-      return !!user && user.role === 'admin';
+      // This check helps ensure the profile in the signal corresponds to the user from the auth stream.
+      return !!user && user.uid === firebaseUser.uid && user.role === 'admin';
     }),
     tap((isAdmin) => {
       if (!isAdmin) {

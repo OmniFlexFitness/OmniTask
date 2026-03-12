@@ -7,6 +7,7 @@ import { UserService } from '../../core/services/user.service';
 import { ProjectService } from '../../core/services/project.service';
 import { TaskService } from '../../core/services/task.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { UserProfile } from '../../core/models/user.model';
 
 @Component({
@@ -262,11 +263,13 @@ import { UserProfile } from '../../core/models/user.model';
   `,
 })
 export class AdminDashboardComponent {
-  userService = inject(UserService);
-  projectService = inject(ProjectService);
-  taskService = inject(TaskService);
-  dialogService = inject(DialogService);
-  router = inject(Router);
+  readonly userService = inject(UserService);
+  readonly projectService = inject(ProjectService);
+  readonly taskService = inject(TaskService);
+  readonly dialogService = inject(DialogService);
+  readonly router = inject(Router);
+  readonly authService = inject(AuthService);
+  currentUser = this.authService.currentUserSig;
 
   tabs = ['Users', 'Projects', 'Tasks'];
   activeTab = signal('Users');
@@ -281,17 +284,33 @@ export class AdminDashboardComponent {
         `Are you sure you want to promote ${user.displayName} to Admin?`,
       )
     ) {
-      await this.userService.updateUserRole(user.uid, 'admin');
+      try {
+        await this.userService.updateUserRole(user.uid, 'admin');
+        // Optionally show a success toast here
+      } catch (error) {
+        console.error('Failed to promote user:', error);
+        this.dialogService.alert('Failed to promote user. Please try again.', 'Error');
+      }
     }
   }
 
   async demoteToUser(user: UserProfile) {
+    if (user.uid === this.currentUser()?.uid) {
+      this.dialogService.alert('You cannot demote your own account.', 'Action Not Allowed');
+      return;
+    }
+
     if (
       await this.dialogService.confirm(
         `Are you sure you want to demote ${user.displayName} to User?`,
       )
     ) {
-      await this.userService.updateUserRole(user.uid, 'user');
+      try {
+        await this.userService.updateUserRole(user.uid, 'user');
+      } catch (error) {
+        console.error('Failed to demote user:', error);
+        this.dialogService.alert('Failed to demote user. Please try again.', 'Error');
+      }
     }
   }
 }

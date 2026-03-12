@@ -39,10 +39,11 @@ export class UserService {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const userRef = doc(this.firestore, `users/${uid}`);
+      const userRef = doc(this.firestore, 'users', uid);
       await updateDoc(userRef, { role });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update user role';
+      const message = 'Failed to update user role';
+      console.error(`${message}:`, err);
       this.error.set(message);
       throw err;
     } finally {
