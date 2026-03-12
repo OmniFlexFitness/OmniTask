@@ -23,7 +23,11 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow reading own profile only
       allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if request.auth.uid == userId || isAdmin();
+      
+      // Prevent privilege escalation: only admins can set or update the role to 'admin'
+      allow create: if isAdmin() || (request.auth.uid == userId && request.resource.data.get('role', 'user') != 'admin');
+      allow update: if isAdmin() || (request.auth.uid == userId && request.resource.data.get('role', '') == resource.data.get('role', ''));
+      allow delete: if request.auth.uid == userId || isAdmin();
     }
     
     // User's personal contacts cache - scoped to individual users
@@ -38,6 +42,11 @@ service cloud.firestore {
 
     // Weekly schedule blocks - scoped to individual users
     match /users/{userId}/weeklyBlocks/{blockId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Custom Fields - scoped to individual users
+    match /users/{userId}/customFields/{fieldId} {
       allow read, write: if request.auth.uid == userId;
     }
     
