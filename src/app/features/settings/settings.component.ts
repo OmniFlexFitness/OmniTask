@@ -1,6 +1,14 @@
-import { Component, inject, signal, computed, effect , ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
 
@@ -21,7 +29,7 @@ const AVATAR_COLORS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {

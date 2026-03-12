@@ -6,6 +6,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Helper to check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Helper to check if user is owner or member of the resource
     function isMember(resourceData) {
       return isAuthenticated() && (
@@ -16,8 +22,8 @@ service cloud.firestore {
     
     match /users/{userId} {
       // Allow reading own profile only
-      allow read: if request.auth.uid == userId;
-      allow write: if request.auth.uid == userId;
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow write: if request.auth.uid == userId || isAdmin();
     }
     
     // User's personal contacts cache - scoped to individual users
@@ -37,9 +43,9 @@ service cloud.firestore {
     
     match /projects/{projectId} {
       allow create: if isAuthenticated();
-      allow read: if isMember(resource.data);
-      allow update: if isMember(resource.data);
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.ownerId;
+      allow read: if isMember(resource.data) || isAdmin();
+      allow update: if isMember(resource.data) || isAdmin();
+      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.ownerId) || isAdmin();
     }
     
     match /tasks/{taskId} {
@@ -61,9 +67,9 @@ service cloud.firestore {
         );
       }
 
-      allow create: if isAuthenticated() && canCreateInProject();
-      allow read: if isAuthenticated() && isProjectMember();
-      allow update, delete: if isAuthenticated() && isProjectMember();
+      allow create: if (isAuthenticated() && canCreateInProject()) || isAdmin();
+      allow read: if (isAuthenticated() && isProjectMember()) || isAdmin();
+      allow update, delete: if (isAuthenticated() && isProjectMember()) || isAdmin();
     }
     
     // Notifications - written by Cloud Functions, readable by recipient
