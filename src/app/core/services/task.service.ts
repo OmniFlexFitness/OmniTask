@@ -247,6 +247,16 @@ export class TaskService {
   }
 
   /**
+   * Get all tasks globally (for Admin view)
+   */
+  getAllTasks(): Observable<Task[]> {
+    const q = query(this.tasksCollection, orderBy('createdAt', 'desc'));
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
+  }
+
+  /**
    * Get all tasks for a project, sorted by order
    */
   getTasksByProject(projectId: string): Observable<Task[]> {

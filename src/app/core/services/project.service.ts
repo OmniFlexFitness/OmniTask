@@ -42,6 +42,16 @@ export class ProjectService {
   selectedProjectId = signal<string | null>(null);
 
   /**
+   * Get all projects globally (for Admin view)
+   */
+  getAllProjects(): Observable<Project[]> {
+    const q = query(this.projectsCollection);
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+    });
+  }
+
+  /**
    * Get all projects for the current user
    */
   getMyProjects(): Observable<Project[]> {

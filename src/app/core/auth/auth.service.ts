@@ -44,6 +44,14 @@ export class AuthService {
   private destroyRef = inject(DestroyRef);
 
   user$ = user(this.auth);
+
+  userProfile$: Observable<UserProfile | null> = this.user$.pipe(
+    switchMap((firebaseUser) => {
+      if (!firebaseUser) return of(null);
+      return this.getUserProfile(firebaseUser.uid);
+    }),
+  );
+
   currentUserSig = signal<UserProfile | null>(null);
 
   // Google Tasks API access token for authenticated API calls
@@ -53,21 +61,13 @@ export class AuthService {
   hasOfflineAccess = signal<boolean>(false);
 
   constructor() {
-    this.user$
-      .pipe(
-        switchMap((firebaseUser) => {
-          if (!firebaseUser) return of(null);
-          return this.getUserProfile(firebaseUser.uid);
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((profile) => {
-        this.currentUserSig.set(profile);
-        // Check if user has stored refresh token
-        if (profile?.hasGoogleTasksOfflineAccess) {
-          this.hasOfflineAccess.set(true);
-        }
-      });
+    this.userProfile$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((profile) => {
+      this.currentUserSig.set(profile);
+      // Check if user has stored refresh token
+      if (profile?.hasGoogleTasksOfflineAccess) {
+        this.hasOfflineAccess.set(true);
+      }
+    });
 
     // Security Note: Access token is kept in-memory only (not sessionStorage) to prevent XSS attacks.
     // User will need to re-authenticate for Google Tasks after page refresh.
