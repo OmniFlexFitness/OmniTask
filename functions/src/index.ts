@@ -881,6 +881,146 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
   },
 );
 
+/**
+ * Scheduled function that runs every 5 minutes to check for upcoming task reminders.
+ * Supports both Daily Recurring Tasks and Weekly Time Blocks.
+ */
+export const checkScheduledReminders = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    timeZone: 'America/New_York',
+    memory: '256MiB',
+    secrets: [nodemailerSmtpPassword],
+  },
+  async (event) => {
+    console.log('Starting checkScheduledReminders...');
+
+    // Calculate current time window
+    const now = new Date();
+    // Round down to nearest 5 minutes for stable matching
+    const currentMins = Math.floor(now.getMinutes() / 5) * 5;
+    const currentHours = now.getHours();
+    const currentDayOfWeek = now.getDay(); // 0 is Sunday
+
+    // Setup mailer
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'bertin.kenol@omniflexfitness.com',
+        pass: nodemailerSmtpPassword.value(),
+      },
+    });
+
+    const usersSnapshot = await db.collection('users').get();
+    let emailsSent = 0;
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      const userEmail = userData.email;
+      if (!userEmail) continue;
+
+      // 1. Check Recurring Tasks
+      const recurringTasksSnapshot = await db
+        .collection(`users/${userDoc.id}/recurringTasks`)
+        .where('enabled', '==', true)
+        .get();
+
+      for (const taskDoc of recurringTasksSnapshot.docs) {
+        const task = taskDoc.data();
+        const reminders: number[] = task.reminders || [];
+        if (reminders.length === 0) continue;
+
+        const [taskH, taskM] = task.time.split(':').map(Number);
+        const taskTimeInMins = taskH * 60 + taskM;
+        const nowTimeInMins = currentHours * 60 + currentMins;
+
+        for (const r of reminders) {
+          let reminderTriggerTime = taskTimeInMins - r;
+          if (reminderTriggerTime < 0) reminderTriggerTime += 24 * 60; // Handle previous day wrap around
+
+          const diff = reminderTriggerTime - nowTimeInMins;
+          // Valid match if triggered within this current 5-min window
+          if (diff >= 0 && diff < 5) {
+            const emailHtml = loadEmailTemplate()
+              .replace(/{{PROJECT_NAME}}/g, escapeHtml('Daily Schedule'))
+              .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${task.title}`))
+              .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(task.description || ''))
+              .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
+              .replace(
+                /{{DUE_DATE_HTML}}/g,
+                `<p>Starts in ${r === 0 ? 'now' : r + ' minutes'} (at ${task.time})</p>`,
+              )
+              .replace(/{{TASK_URL}}/g, 'https://omnitask.omniflexfitness.com/schedule');
+
+            try {
+              await transporter.sendMail({
+                from: '"OmniTask Schedule" <omnitask@omniflexfitness.com>',
+                to: userEmail,
+                subject: `⏰ Reminder: ${task.title} starts ${r === 0 ? 'now' : 'in ' + r + ' minutes'}`,
+                html: emailHtml,
+              });
+              emailsSent++;
+              console.log(`Sent recurring task reminder to ${userEmail} for ${task.title}`);
+            } catch (err) {
+              console.error(`Failed to send reminder to ${userEmail}:`, err);
+            }
+          }
+        }
+      }
+
+      // 2. Check Weekly Blocks
+      const weeklyBlocksSnapshot = await db.collection(`users/${userDoc.id}/weeklyBlocks`).get();
+      for (const blockDoc of weeklyBlocksSnapshot.docs) {
+        const block = blockDoc.data();
+        const reminders: number[] = block.reminders || [];
+        if (reminders.length === 0) continue;
+
+        // Note: For simplicity, this doesn't fully handle timezone day-crossing.
+        if (block.dayOfWeek !== currentDayOfWeek && block.repeating) continue;
+
+        const [blockH, blockM] = block.startTime.split(':').map(Number);
+        const blockTimeInMins = blockH * 60 + blockM;
+        const nowTimeInMins = currentHours * 60 + currentMins;
+
+        for (const r of reminders) {
+          let reminderTriggerTime = blockTimeInMins - r;
+          if (reminderTriggerTime < 0 && block.dayOfWeek === currentDayOfWeek) continue;
+
+          const diff = reminderTriggerTime - nowTimeInMins;
+          if (diff >= 0 && diff < 5) {
+            const emailHtml = loadEmailTemplate()
+              .replace(/{{PROJECT_NAME}}/g, escapeHtml('Weekly Schedule'))
+              .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${block.title}`))
+              .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(block.description || ''))
+              .replace(/{{TASK_PRIORITY}}/g, 'MEDIUM')
+              .replace(
+                /{{DUE_DATE_HTML}}/g,
+                `<p>Starts in ${r === 0 ? 'now' : r + ' minutes'} (at ${block.startTime})</p>`,
+              )
+              .replace(/{{TASK_URL}}/g, 'https://omnitask.omniflexfitness.com/schedule');
+
+            try {
+              await transporter.sendMail({
+                from: '"OmniTask Schedule" <omnitask@omniflexfitness.com>',
+                to: userEmail,
+                subject: `⏰ Reminder: ${block.title} starts ${r === 0 ? 'now' : 'in ' + r + ' minutes'}`,
+                html: emailHtml,
+              });
+              emailsSent++;
+              console.log(`Sent weekly block reminder to ${userEmail} for ${block.title}`);
+            } catch (err) {
+              console.error(`Failed to send reminder to ${userEmail}:`, err);
+            }
+          }
+        }
+      }
+    }
+    console.log(`Completed checkScheduledReminders. Emails sent: ${emailsSent}`);
+  },
+);
+
 // =============================================================================
 // Vertex AI - AI-Powered Task Features
 // =============================================================================

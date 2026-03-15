@@ -133,6 +133,8 @@ export interface RecurringTask {
   /** Whether this recurring task is currently active */
   enabled: boolean;
   color?: string;
+  /** Array of minute offsets for reminders (e.g., [0, 15] for at time and 15 mins before) */
+  reminders?: number[];
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
 }
@@ -157,6 +159,8 @@ export interface WeeklyBlock {
   repeating: boolean;
   /** ISO date string (YYYY-MM-DD) of the Monday of the target week (for one-time blocks) */
   weekDate?: string;
+  /** Array of minute offsets for reminders (e.g., [0, 15] for at time and 15 mins before) */
+  reminders?: number[];
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
 }

@@ -1,4 +1,4 @@
-import { Component, input, output, signal, inject , ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { WeeklyBlock, SCHEDULE_COLORS } from '../../core/models/domain.model';
@@ -38,6 +38,14 @@ export class WeeklyBlockModalComponent {
     { short: 'Sat', value: 6 },
   ];
 
+  availableReminders = [
+    { value: 0, label: 'At time of event' },
+    { value: 5, label: '5 minutes before' },
+    { value: 15, label: '15 minutes before' },
+    { value: 30, label: '30 minutes before' },
+    { value: 60, label: '1 hour before' },
+  ];
+
   form = this.fb.group({
     title: ['', Validators.required],
     dayOfWeek: [1],
@@ -46,6 +54,7 @@ export class WeeklyBlockModalComponent {
     description: [''],
     color: [SCHEDULE_COLORS[1] as string],
     repeating: [true],
+    reminders: [[] as number[]],
   });
 
   constructor() {
@@ -59,6 +68,7 @@ export class WeeklyBlockModalComponent {
         description: block.description ?? '',
         color: block.color ?? (SCHEDULE_COLORS[1] as string),
         repeating: block.repeating,
+        reminders: block.reminders ?? [],
       });
     } else {
       // Apply preselected values from grid click
@@ -78,6 +88,19 @@ export class WeeklyBlockModalComponent {
     }
   }
 
+  toggleReminder(minutes: number) {
+    const current = this.form.get('reminders')?.value || [];
+    if (current.includes(minutes)) {
+      this.form.patchValue({ reminders: current.filter((r) => r !== minutes) });
+    } else {
+      this.form.patchValue({ reminders: [...current, minutes] });
+    }
+  }
+
+  hasReminder(minutes: number): boolean {
+    return (this.form.get('reminders')?.value || []).includes(minutes);
+  }
+
   async onSubmit() {
     if (this.form.invalid) return;
     const val = this.form.getRawValue();
@@ -91,6 +114,7 @@ export class WeeklyBlockModalComponent {
       description: val.description || undefined,
       color: val.color!,
       repeating: val.repeating!,
+      reminders: val.reminders ?? [],
     };
 
     // Set weekDate for one-time blocks
