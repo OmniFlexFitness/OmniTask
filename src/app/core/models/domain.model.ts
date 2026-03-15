@@ -133,6 +133,8 @@ export interface RecurringTask {
   /** Whether this recurring task is currently active */
   enabled: boolean;
   color?: string;
+  /** Array of minute offsets for reminders (e.g., [0, 15] for at time and 15 mins before) */
+  reminders?: number[];
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
 }
@@ -157,6 +159,8 @@ export interface WeeklyBlock {
   repeating: boolean;
   /** ISO date string (YYYY-MM-DD) of the Monday of the target week (for one-time blocks) */
   weekDate?: string;
+  /** Array of minute offsets for reminders (e.g., [0, 15] for at time and 15 mins before) */
+  reminders?: number[];
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
 }
@@ -174,6 +178,14 @@ export const SCHEDULE_COLORS = [
   '#ec4899', // Pink
   '#6366f1', // Indigo
 ] as const;
+
+export const AVAILABLE_REMINDERS = [
+  { value: 0, label: 'At time of event' },
+  { value: 5, label: '5 minutes before' },
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 60, label: '1 hour before' },
+];
 
 /**
  * Cyberpunk theme color constants

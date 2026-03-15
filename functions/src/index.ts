@@ -881,6 +881,240 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
   },
 );
 
+// Helper to send reminder emails
+async function sendReminderEmail(
+  transporter: nodemailer.Transporter,
+  email: string,
+  title: string,
+  description: string,
+  timeString: string,
+  offset: number,
+  typeStr: string,
+) {
+  const emailHtml = loadEmailTemplate()
+    .replace(/{{PROJECT_NAME}}/g, escapeHtml(typeStr))
+    .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${title}`))
+    .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(description))
+    .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
+    .replace(
+      /{{DUE_DATE_HTML}}/g,
+      `<p>Starts in ${offset === 0 ? 'now' : offset + ' minutes'} (at ${timeString})</p>`,
+    )
+    .replace(/{{TASK_URL}}/g, 'https://omnitask.omniflexfitness.com/schedule');
+
+  await transporter.sendMail({
+    from: process.env.NODEMAILER_SMTP_USER || '"OmniTask Schedule" <omnitask@omniflexfitness.com>',
+    to: email,
+    subject: `⏰ Reminder: ${title} starts ${offset === 0 ? 'now' : 'in ' + offset + ' minutes'}`,
+    html: emailHtml,
+  });
+}
+
+/**
+ * Scheduled function that runs every 5 minutes to check for upcoming task reminders.
+ * Queries the top-level 'reminders' collection to avoid N+1 queries.
+ */
+export const checkScheduledReminders = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    timeZone: 'America/New_York',
+    memory: '256MiB',
+    secrets: [nodemailerSmtpPassword],
+  },
+  async (event) => {
+    console.log('Starting checkScheduledReminders...');
+
+    const now = admin.firestore.Timestamp.now();
+    const remindersSnap = await db.collection('reminders').where('triggerAt', '<=', now).get();
+
+    if (remindersSnap.empty) {
+      console.log('No reminders to send.');
+      return;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
+        pass: nodemailerSmtpPassword.value(),
+      },
+    });
+
+    let emailsSent = 0;
+    const batch = db.batch();
+
+    for (const doc of remindersSnap.docs) {
+      const data = doc.data();
+
+      try {
+        await sendReminderEmail(
+          transporter,
+          data.email,
+          data.title,
+          data.description || '',
+          data.timeString,
+          data.offset,
+          data.type === 'recurring' ? 'Daily Schedule' : 'Weekly Schedule',
+        );
+        emailsSent++;
+        console.log(`Sent ${data.type} reminder to ${data.email} for ${data.title}`);
+      } catch (err) {
+        console.error(`Failed to send reminder to ${data.email}:`, err);
+      }
+
+      // Compute next triggerAt or delete
+      if (data.type === 'recurring') {
+        const nextDate = data.triggerAt.toDate();
+        nextDate.setDate(nextDate.getDate() + 1);
+        batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+      } else if (data.type === 'weekly' && data.repeating) {
+        const nextDate = data.triggerAt.toDate();
+        nextDate.setDate(nextDate.getDate() + 7);
+        batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+      } else {
+        batch.delete(doc.ref);
+      }
+    }
+
+    await batch.commit();
+    console.log(`Completed checkScheduledReminders. Emails sent: ${emailsSent}`);
+  },
+);
+
+/**
+ * Synchronize recurring tasks to the top-level reminders collection
+ */
+export const syncRecurringTaskReminders = onDocumentWritten(
+  'users/{uid}/recurringTasks/{taskId}',
+  async (event) => {
+    const { uid, taskId } = event.params;
+    const after = event.data?.after?.data();
+
+    // Always clear old generic reminders for this task id
+    const oldReminders = await db.collection('reminders').where('taskId', '==', taskId).get();
+    const batch = db.batch();
+    oldReminders.forEach((doc) => batch.delete(doc.ref));
+
+    if (!after || !after.enabled || !after.reminders || after.reminders.length === 0) {
+      await batch.commit();
+      return;
+    }
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    const email = userDoc.data()?.email;
+    if (!email) {
+      await batch.commit();
+      return;
+    }
+
+    const [h, m] = after.time.split(':').map(Number);
+    const now = new Date();
+
+    for (const r of after.reminders) {
+      const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+      t.setMinutes(t.getMinutes() - r);
+      if (t <= now) t.setDate(t.getDate() + 1);
+
+      const newRef = db.collection('reminders').doc();
+      batch.set(newRef, {
+        type: 'recurring',
+        userId: uid,
+        email,
+        taskId,
+        title: after.title,
+        description: after.description || '',
+        timeString: after.time,
+        offset: r,
+        triggerAt: admin.firestore.Timestamp.fromDate(t),
+      });
+    }
+
+    await batch.commit();
+  },
+);
+
+/**
+ * Synchronize weekly blocks to the top-level reminders collection
+ */
+export const syncWeeklyBlockReminders = onDocumentWritten(
+  'users/{uid}/weeklyBlocks/{blockId}',
+  async (event) => {
+    const { uid, blockId } = event.params;
+    const after = event.data?.after?.data();
+
+    // Always clear old generic reminders for this block id
+    const oldReminders = await db.collection('reminders').where('taskId', '==', blockId).get();
+    const batch = db.batch();
+    oldReminders.forEach((doc) => batch.delete(doc.ref));
+
+    if (!after || !after.reminders || after.reminders.length === 0) {
+      await batch.commit();
+      return;
+    }
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    const email = userDoc.data()?.email;
+    if (!email) {
+      await batch.commit();
+      return;
+    }
+
+    const [h, m] = after.startTime.split(':').map(Number);
+    const now = new Date();
+
+    for (const r of after.reminders) {
+      let t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+      t.setMinutes(t.getMinutes() - r);
+
+      if (after.repeating) {
+        while (t.getDay() !== after.dayOfWeek || t <= now) {
+          t.setDate(t.getDate() + 1);
+        }
+      } else {
+        if (after.weekDate) {
+          const [yearStr, monthStr, dayStr] = after.weekDate.split('-');
+          const targetDate = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr));
+
+          let offsetDays = after.dayOfWeek - 1;
+          if (after.dayOfWeek === 0) offsetDays = 6;
+          targetDate.setDate(targetDate.getDate() + offsetDays);
+
+          t = new Date(
+            targetDate.getFullYear(),
+            targetDate.getMonth(),
+            targetDate.getDate(),
+            h,
+            m,
+            0,
+            0,
+          );
+          t.setMinutes(t.getMinutes() - r);
+        }
+        if (t <= now) continue;
+      }
+
+      const newRef = db.collection('reminders').doc();
+      batch.set(newRef, {
+        type: 'weekly',
+        userId: uid,
+        email,
+        taskId: blockId,
+        title: after.title,
+        description: after.description || '',
+        timeString: after.startTime,
+        offset: r,
+        repeating: after.repeating,
+        dayOfWeek: after.dayOfWeek,
+        triggerAt: admin.firestore.Timestamp.fromDate(t),
+      });
+    }
+
+    await batch.commit();
+  },
+);
+
 // =============================================================================
 // Vertex AI - AI-Powered Task Features
 // =============================================================================
