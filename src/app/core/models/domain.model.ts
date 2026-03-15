@@ -179,6 +179,14 @@ export const SCHEDULE_COLORS = [
   '#6366f1', // Indigo
 ] as const;
 
+export const AVAILABLE_REMINDERS = [
+  { value: 0, label: 'At time of event' },
+  { value: 5, label: '5 minutes before' },
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 60, label: '1 hour before' },
+];
+
 /**
  * Cyberpunk theme color constants
  */

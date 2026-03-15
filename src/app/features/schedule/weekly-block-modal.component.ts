@@ -1,7 +1,7 @@
 import { Component, input, output, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { WeeklyBlock, SCHEDULE_COLORS } from '../../core/models/domain.model';
+import { WeeklyBlock, SCHEDULE_COLORS, AVAILABLE_REMINDERS } from '../../core/models/domain.model';
 import { ScheduleService } from '../../core/services/schedule.service';
 
 @Component({
@@ -38,13 +38,7 @@ export class WeeklyBlockModalComponent {
     { short: 'Sat', value: 6 },
   ];
 
-  availableReminders = [
-    { value: 0, label: 'At time of event' },
-    { value: 5, label: '5 minutes before' },
-    { value: 15, label: '15 minutes before' },
-    { value: 30, label: '30 minutes before' },
-    { value: 60, label: '1 hour before' },
-  ];
+  availableReminders = AVAILABLE_REMINDERS;
 
   form = this.fb.group({
     title: ['', Validators.required],
