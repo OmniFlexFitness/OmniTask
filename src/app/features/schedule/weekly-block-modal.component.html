@@ -5,11 +5,11 @@
     >
       <!-- Modal -->
       <div
-        class="bg-[#0f1419] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl shadow-cyan-500/10"
+        class="bg-[#0f1419] border border-white/10 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl shadow-cyan-500/10"
         (click)="$event.stopPropagation()"
       >
         <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
           <h2 class="text-lg font-bold text-white font-['Orbitron',sans-serif]">
             {{ editBlock() ? 'Edit' : 'New' }} Time Block
           </h2>
@@ -33,7 +33,7 @@
         </div>
 
         <!-- Body -->
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6 space-y-5">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="p-6 space-y-5 overflow-y-auto flex-1">
           <!-- Title -->
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider"
@@ -208,7 +208,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="flex justify-between items-center pt-2">
+          <div class="flex justify-between items-center pt-2 shrink-0">
             <div>
               @if (editBlock()) {
                 <button

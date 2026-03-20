@@ -6,7 +6,8 @@
     }
 
     .ofx-modal {
-      @apply w-full max-w-lg rounded-2xl overflow-hidden;
+      @apply w-full max-w-lg rounded-2xl overflow-hidden flex flex-col;
+      max-height: 90vh;
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.95));
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow: 
@@ -17,16 +18,33 @@
     }
 
     .ofx-modal-header {
-      @apply flex items-center justify-between px-6 py-5 border-b border-white/10;
+      @apply shrink-0 flex items-center justify-between px-6 py-5 border-b border-white/10;
       background: linear-gradient(90deg, rgba(56, 189, 248, 0.05), transparent);
     }
 
     .ofx-modal-body {
-      @apply px-6 py-6;
+      @apply px-6 py-6 overflow-y-auto;
+      
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+    }
+
+    .ofx-modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+    .ofx-modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .ofx-modal-body::-webkit-scrollbar-thumb {
+      background-color: rgba(148, 163, 184, 0.2);
+      border-radius: 3px;
+    }
+    .ofx-modal-body::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(148, 163, 184, 0.4);
     }
 
     .ofx-modal-footer {
-      @apply flex justify-end gap-3 px-6 py-4 border-t border-white/10;
+      @apply shrink-0 flex justify-end gap-3 px-6 py-4 border-t border-white/10;
       background: rgba(0, 0, 0, 0.2);
     }
 
