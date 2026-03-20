@@ -318,25 +318,15 @@
         }
       </div>
 
-      <!-- Textarea (always visible) -->
-      <textarea
-        #textareaRef
-        [rows]="rows()"
-        [placeholder]="placeholder()"
-        [ngModel]="value()"
-        (ngModelChange)="onValueChange($event)"
+      <!-- Textarea / Editor (always visible) -->
+      <div
+        #editorRef
+        contenteditable="true"
+        [attr.placeholder]="placeholder()"
+        (input)="onInput()"
         (blur)="blurred.emit()"
         (keydown)="onKeydown($event)"
-        class="md-textarea"
-        [class.md-textarea-minimal]="minimal()"
-      ></textarea>
-
-      <!-- Live Preview (shown when there is content) -->
-      @if (hasContent()) {
-        <div
-          class="md-live-preview"
-          [class.md-live-preview-minimal]="minimal()"
-          [innerHTML]="value() | markdown"
-        ></div>
-      }
+        class="md-live-preview md-wysiwyg-editor"
+        [class.md-live-preview-minimal]="minimal()"
+      ></div>
     </div>

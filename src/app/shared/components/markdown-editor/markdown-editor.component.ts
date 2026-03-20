@@ -7,30 +7,18 @@ import {
   ElementRef,
   viewChild,
   ChangeDetectionStrategy,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
+import TurndownService from 'turndown';
+import { marked } from 'marked';
 
-/**
- * Reusable markdown editor with always-visible formatting toolbar
- * and live rendered preview below the editing area.
- *
- * Supports GitHub Flavored Markdown + Obsidian-style features:
- * - Bold, italic, strikethrough, highlight
- * - Headings (H1–H3), blockquotes, callouts
- * - Bulleted/numbered/task lists
- * - Code (inline + fenced blocks)
- * - Links, images, tables
- * - Horizontal rules
- *
- * Keyboard shortcuts: Ctrl+B (bold), Ctrl+I (italic), Ctrl+K (link),
- * Ctrl+E (inline code), Tab (indent)
- */
 @Component({
   selector: 'app-markdown-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, MarkdownPipe],
+  imports: [CommonModule, FormsModule],
   templateUrl: './markdown-editor.component.html',
   styleUrls: ['./markdown-editor.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,11 +26,11 @@ import { MarkdownPipe } from '../../pipes/markdown.pipe';
 export class MarkdownEditorComponent {
   /** Current markdown content */
   value = input<string>('');
-  /** Textarea row count */
+  /** Textarea row count (Kept for compatibility, though WYSIWYG uses min-height) */
   rows = input<number>(6);
   /** Placeholder text */
-  placeholder = input<string>('Write markdown...');
-  /** Minimal mode — smaller padding, fewer buttons (but toolbar still visible) */
+  placeholder = input<string>('Write text...');
+  /** Minimal mode — smaller padding, fewer buttons */
   minimal = input<boolean>(false);
 
   /** Emitted on every content change */
@@ -50,215 +38,82 @@ export class MarkdownEditorComponent {
   /** Emitted when the textarea loses focus */
   blurred = output<void>();
 
-  /** Reference to the textarea */
-  textareaRef = viewChild<ElementRef<HTMLTextAreaElement>>('textareaRef');
+  /** Reference to the contenteditable div */
+  editorRef = viewChild<ElementRef<HTMLDivElement>>('editorRef');
 
-  /** Label for the code block button — avoids {} in template */
   readonly codeBlockLabel = '{ }';
-
-  /** Whether there is content to preview */
   hasContent = computed(() => (this.value() ?? '').trim().length > 0);
 
-  /**
-   * Undo/redo with VS Code-style segmentation.
-   * New undo boundaries are inserted on:
-   *  1. Word boundaries (space/punctuation typed after alphanumeric, or vice versa)
-   *  2. Newlines (Enter key)
-   *  3. Switching between insertion and deletion (Backspace/Delete)
-   *  4. Cursor jumps (click or arrow-key repositioning)
-   *  5. Idle timeout (300ms pause while typing)
-   *  6. Toolbar actions (immediate discrete steps)
-   */
-  private undoStack: string[] = [];
-  private redoStack: string[] = [];
-  private isUndoRedo = false;
-  private pendingSnapshot: string | null = null;
-  private lastCharType: 'alnum' | 'space' | 'punct' | 'newline' | 'delete' | 'none' = 'none';
-  private lastCursorPos = -1;
-  private idleTimer: ReturnType<typeof setTimeout> | null = null;
-  canUndo = signal(false);
-  canRedo = signal(false);
+  // Use native undo/redo so cursor is preserved automatically.
+  // We'll leave buttons visually enabled or hook into somewhat generic checks,
+  // but to keep it simple, we just allow clicks to call execCommand.
+  canUndo = signal(true);
+  canRedo = signal(true);
 
-  /** Classify a character for word-boundary detection */
-  private classifyChar(ch: string): 'alnum' | 'space' | 'punct' | 'newline' {
-    if (ch === '\n' || ch === '\r') return 'newline';
-    if (/\s/.test(ch)) return 'space';
-    if (/[\w]/.test(ch)) return 'alnum';
-    return 'punct';
-  }
+  private turndownService: TurndownService;
+  private isInternalUpdate = false;
 
-  /** Commit the pending snapshot to the undo stack */
-  private commitSnapshot(): void {
-    if (this.pendingSnapshot !== null) {
-      this.undoStack.push(this.pendingSnapshot);
-      if (this.undoStack.length > 100) this.undoStack.shift();
-      this.pendingSnapshot = null;
-    }
-    this.clearIdleTimer();
-    this.canUndo.set(this.undoStack.length > 0);
-  }
+  constructor() {
+    this.turndownService = new TurndownService({
+      headingStyle: 'atx',
+      bulletListMarker: '-',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+    });
 
-  private clearIdleTimer(): void {
-    if (this.idleTimer) {
-      clearTimeout(this.idleTimer);
-      this.idleTimer = null;
-    }
-  }
+    // Add gfm task list support for turndown
+    this.turndownService.addRule('taskListItems', {
+      filter: function (node: HTMLElement) {
+        return (
+          node.nodeName === 'INPUT' &&
+          (node as HTMLInputElement).type === 'checkbox' &&
+          node.parentNode?.nodeName === 'LI'
+        );
+      },
+      replacement: function (content, node: HTMLElement | any) {
+        return ((node as HTMLInputElement).checked ? '[x]' : '[ ]') + ' ';
+      },
+    });
 
-  private startIdleTimer(): void {
-    this.clearIdleTimer();
-    this.idleTimer = setTimeout(() => {
-      this.commitSnapshot();
-    }, 300);
-  }
-
-  /**
-   * Called on every user keystroke change.
-   * Determines whether to start a new undo group based on multiple heuristics.
-   */
-  private pushHistorySmart(beforeValue: string, newValue: string): void {
-    if (this.isUndoRedo) return;
-
-    const ta = this.textareaRef()?.nativeElement;
-    const cursorPos = ta?.selectionStart ?? -1;
-
-    // Determine what kind of edit this was
-    const lenDiff = newValue.length - beforeValue.length;
-    let currentCharType: 'alnum' | 'space' | 'punct' | 'newline' | 'delete' = 'none' as any;
-
-    if (lenDiff < 0) {
-      // Deletion (backspace or delete)
-      currentCharType = 'delete';
-    } else if (lenDiff > 0) {
-      // Insertion — classify the inserted character(s)
-      const insertedChar = newValue.charAt(Math.max(0, cursorPos - 1));
-      currentCharType = this.classifyChar(insertedChar);
-    } else {
-      // Same length (replace) — treat as new group
-      currentCharType = 'punct';
-    }
-
-    // Determine if we should start a new undo group
-    let shouldBreak = false;
-
-    // 1. First edit ever — just start tracking
-    if (this.pendingSnapshot === null) {
-      this.pendingSnapshot = beforeValue;
-      this.lastCharType = currentCharType;
-      this.lastCursorPos = cursorPos;
-      this.startIdleTimer();
-      this.redoStack.length = 0;
-      this.canRedo.set(false);
-      return;
-    }
-
-    // 2. Newline always starts a new group
-    if (currentCharType === 'newline') {
-      shouldBreak = true;
-    }
-
-    // 3. Switching between insertion and deletion
-    if (
-      (this.lastCharType === 'delete' && currentCharType !== 'delete') ||
-      (this.lastCharType !== 'delete' && currentCharType === 'delete')
-    ) {
-      shouldBreak = true;
-    }
-
-    // 4. Word boundary: transition between alphanumeric and space/punctuation
-    if (!shouldBreak && currentCharType !== 'delete') {
-      const isCurrentWord = currentCharType === 'alnum';
-      const wasWord = this.lastCharType === 'alnum';
-      if (
-        isCurrentWord !== wasWord &&
-        this.lastCharType !== 'none' &&
-        this.lastCharType !== 'delete'
-      ) {
-        shouldBreak = true;
+    effect(() => {
+      const val = this.value() || '';
+      const el = this.editorRef()?.nativeElement;
+      if (el && !this.isInternalUpdate) {
+        // External update (e.g., initial load)
+        const currentMd = this.turndownService.turndown(el.innerHTML);
+        if (currentMd !== val.trim() && currentMd !== val) {
+          this.isInternalUpdate = true;
+          el.innerHTML = marked.parse(val) as string;
+          this.isInternalUpdate = false;
+        }
       }
-    }
-
-    // 5. Cursor jump (non-sequential position change, e.g. click or arrow keys)
-    if (!shouldBreak && this.lastCursorPos >= 0) {
-      const expectedPos = this.lastCursorPos + lenDiff;
-      if (Math.abs(cursorPos - expectedPos) > 1) {
-        shouldBreak = true;
-      }
-    }
-
-    // 6. Large paste (inserted more than 2 chars at once)
-    if (!shouldBreak && lenDiff > 2) {
-      shouldBreak = true;
-    }
-
-    if (shouldBreak) {
-      this.commitSnapshot();
-      this.pendingSnapshot = beforeValue;
-    }
-
-    this.lastCharType = currentCharType;
-    this.lastCursorPos = cursorPos;
-    this.startIdleTimer();
-    this.redoStack.length = 0;
-    this.canRedo.set(false);
+    });
   }
 
-  /**
-   * Immediately push a snapshot (used by toolbar actions like bold, link, etc.)
-   * so each formatting action is a discrete undo step.
-   */
-  pushHistoryImmediate(before: string): void {
-    if (this.isUndoRedo) return;
-    this.commitSnapshot();
-    this.undoStack.push(before);
-    if (this.undoStack.length > 100) this.undoStack.shift();
-    this.redoStack.length = 0;
-    this.canUndo.set(true);
-    this.canRedo.set(false);
-    this.lastCharType = 'none';
+  onInput(): void {
+    const el = this.editorRef()?.nativeElement;
+    if (!el) return;
+
+    this.isInternalUpdate = true;
+    const markdown = this.turndownService.turndown(el.innerHTML);
+    this.valueChange.emit(markdown);
+
+    // Yield to allow effect to ignore this update cycle
+    setTimeout(() => {
+      this.isInternalUpdate = false;
+    }, 0);
   }
 
   undo(): void {
-    if (this.undoStack.length === 0 && this.pendingSnapshot === null) return;
-    this.commitSnapshot();
-    if (this.undoStack.length === 0) return;
-    const current = this.value() ?? '';
-    this.redoStack.push(current);
-    const prev = this.undoStack.pop()!;
-    this.isUndoRedo = true;
-    this.valueChange.emit(prev);
-    this.isUndoRedo = false;
-    this.canUndo.set(this.undoStack.length > 0);
-    this.canRedo.set(this.redoStack.length > 0);
-    this.lastCharType = 'none';
-    this.lastCursorPos = -1;
-    requestAnimationFrame(() => this.textareaRef()?.nativeElement?.focus());
+    document.execCommand('undo', false, '');
+    this.onInput();
   }
 
   redo(): void {
-    if (this.redoStack.length === 0) return;
-    const current = this.value() ?? '';
-    this.undoStack.push(current);
-    const next = this.redoStack.pop()!;
-    this.isUndoRedo = true;
-    this.valueChange.emit(next);
-    this.isUndoRedo = false;
-    this.canUndo.set(this.undoStack.length > 0);
-    this.canRedo.set(this.redoStack.length > 0);
-    this.lastCharType = 'none';
-    this.lastCursorPos = -1;
-    requestAnimationFrame(() => this.textareaRef()?.nativeElement?.focus());
+    document.execCommand('redo', false, '');
+    this.onInput();
   }
 
-  onValueChange(newValue: string): void {
-    const before = this.value() ?? '';
-    this.pushHistorySmart(before, newValue);
-    const ta = this.textareaRef()?.nativeElement;
-    if (ta) ta.value = newValue;
-    this.valueChange.emit(newValue);
-  }
-
-  /** Handle keyboard shortcuts */
   onKeydown(event: KeyboardEvent): void {
     if (event.ctrlKey || event.metaKey) {
       switch (event.key.toLowerCase()) {
@@ -276,11 +131,11 @@ export class MarkdownEditorComponent {
           break;
         case 'b':
           event.preventDefault();
-          this.wrapSelection('**', '**');
+          this.execCmd('bold');
           break;
         case 'i':
           event.preventDefault();
-          this.wrapSelection('*', '*');
+          this.execCmd('italic');
           break;
         case 'k':
           event.preventDefault();
@@ -288,166 +143,78 @@ export class MarkdownEditorComponent {
           break;
         case 'e':
           event.preventDefault();
-          this.wrapSelection('`', '`');
+          this.execCmd('formatBlock', 'PRE');
           break;
       }
     }
-    // Tab to insert spaces
+    // Tab to indent
     if (event.key === 'Tab') {
       event.preventDefault();
-      this.insertText('  ');
+      this.execCmd('insertHTML', '&nbsp;&nbsp;&nbsp;&nbsp;');
     }
   }
 
-  /** Wrap selected text with prefix/suffix */
-  wrapSelection(prefix: string, suffix: string): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = ta.value;
-    const selected = text.substring(start, end);
-
-    const replacement = `${prefix}${selected || 'text'}${suffix}`;
-    const newValue = text.substring(0, start) + replacement + text.substring(end);
-
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      if (selected) {
-        ta.setSelectionRange(start, start + replacement.length);
-      } else {
-        ta.setSelectionRange(start + prefix.length, start + prefix.length + 4);
-      }
-    });
+  private execCmd(command: string, value: string = ''): void {
+    this.editorRef()?.nativeElement.focus();
+    document.execCommand(command, false, value);
+    this.onInput();
   }
 
-  /** Insert prefix at the beginning of the current line */
+  wrapSelection(markdownPrefix: string, markdownSuffix: string): void {
+    // Map previous markdown wrappers to standard execCommand
+    if (markdownPrefix === '**') this.execCmd('bold');
+    else if (markdownPrefix === '*') this.execCmd('italic');
+    else if (markdownPrefix === '~~') this.execCmd('strikeThrough');
+    else if (markdownPrefix === '==')
+      this.execCmd('hiliteColor', 'yellow'); // Highlight equivalent
+    else if (markdownPrefix === '`') this.execCmd('fontName', 'monospace');
+  }
+
   insertPrefix(prefix: string): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const text = ta.value;
-    const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-
-    const newValue = text.substring(0, lineStart) + prefix + text.substring(lineStart);
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + prefix.length, start + prefix.length);
-    });
+    if (prefix === '## ') this.execCmd('formatBlock', 'H2');
+    else if (prefix === '> ') this.execCmd('formatBlock', 'BLOCKQUOTE');
+    else if (prefix === '- ') this.execCmd('insertUnorderedList');
+    else if (prefix === '1. ') this.execCmd('insertOrderedList');
+    else if (prefix === '- [ ] ') {
+      this.execCmd(
+        'insertHTML',
+        '<ul><li style="list-style-type: none;"><input type="checkbox"> Task</li></ul>',
+      );
+    }
   }
 
-  /** Insert raw text at cursor */
-  insertText(content: string): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const text = ta.value;
-    const newValue = text.substring(0, start) + content + text.substring(start);
-
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(start + content.length, start + content.length);
-    });
-  }
-
-  /** Insert a fenced code block */
   insertCodeBlock(): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = ta.value;
-    const selected = text.substring(start, end);
-
-    const block = '\n```\n' + (selected || 'code') + '\n```\n';
-    const newValue = text.substring(0, start) + block + text.substring(end);
-
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      const codeStart = start + 5; // after \n```\n
-      ta.setSelectionRange(codeStart, codeStart + (selected ? selected.length : 4));
-    });
+    this.execCmd('formatBlock', 'PRE');
   }
 
-  /** Insert a markdown link */
   insertLink(): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = ta.value;
-    const selected = text.substring(start, end);
-
-    const link = `[${selected || 'link text'}](url)`;
-    const newValue = text.substring(0, start) + link + text.substring(end);
-
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-      if (selected) {
-        const urlStart = start + selected.length + 3;
-        ta.setSelectionRange(urlStart, urlStart + 3);
-      } else {
-        ta.setSelectionRange(start + 1, start + 10);
-      }
-    });
+    const url = prompt('Enter link URL:');
+    if (url) {
+      this.execCmd('createLink', url);
+    }
   }
 
-  /** Insert a markdown table */
   insertTable(): void {
-    const table =
-      '\n| Column 1 | Column 2 | Column 3 |\n| -------- | -------- | -------- |\n| Cell 1   | Cell 2   | Cell 3   |\n';
-    this.insertText(table);
+    const tableHTML = `
+      <table border="1">
+        <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+        <tr><td>Cell 1</td><td>Cell 2</td><td>Cell 3</td></tr>
+      </table><br>
+    `;
+    this.execCmd('insertHTML', tableHTML);
   }
 
-  /** Insert a horizontal rule */
   insertHorizontalRule(): void {
-    this.insertText('\n---\n');
+    this.execCmd('insertHorizontalRule');
   }
 
-  /** Insert an Obsidian-style callout */
   insertCallout(): void {
-    const ta = this.textareaRef()?.nativeElement;
-    if (!ta) return;
-    this.pushHistoryImmediate(ta.value);
-
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = ta.value;
-    const selected = text.substring(start, end);
-
-    const callout = '\n> [!NOTE] ' + (selected || 'Title') + '\n> Content here\n';
-    const newValue = text.substring(0, start) + callout + text.substring(end);
-
-    ta.value = newValue;
-    this.valueChange.emit(newValue);
-
-    requestAnimationFrame(() => {
-      ta.focus();
-    });
+    const calloutHTML = `
+      <blockquote class="md-callout">
+        <strong>[!NOTE] Title</strong><br>
+        Content here
+      </blockquote><br>
+    `;
+    this.execCmd('insertHTML', calloutHTML);
   }
 }
