@@ -54,3 +54,5 @@ Thumbs.db
 *-credentials.json
 service-account*.json
 test-results.log
+*.txt
+*.log
