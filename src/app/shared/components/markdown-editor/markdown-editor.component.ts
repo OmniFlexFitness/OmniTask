@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 @Component({
   selector: 'app-markdown-editor',
@@ -44,11 +45,14 @@ export class MarkdownEditorComponent {
   readonly codeBlockLabel = '{ }';
   hasContent = computed(() => (this.value() ?? '').trim().length > 0);
 
-  // Use native undo/redo so cursor is preserved automatically.
-  // We'll leave buttons visually enabled or hook into somewhat generic checks,
-  // but to keep it simple, we just allow clicks to call execCommand.
-  canUndo = signal(true);
-  canRedo = signal(true);
+  // Undo/redo checking
+  canUndo = signal(false);
+  canRedo = signal(false);
+
+  // Link Prompt State
+  showLinkPrompt = signal(false);
+  linkUrl = signal('');
+  private savedRange: Range | null = null;
 
   private turndownService: TurndownService;
   private isInternalUpdate = false;
@@ -70,8 +74,8 @@ export class MarkdownEditorComponent {
           node.parentNode?.nodeName === 'LI'
         );
       },
-      replacement: function (content, node: HTMLElement | any) {
-        return ((node as HTMLInputElement).checked ? '[x]' : '[ ]') + ' ';
+      replacement: function (content: string, node: HTMLElement) {
+        return ((node as HTMLInputElement).checked ? '[x]' : '[ ]') + ' ' + content;
       },
     });
 
@@ -83,7 +87,8 @@ export class MarkdownEditorComponent {
         const currentMd = this.turndownService.turndown(el.innerHTML);
         if (currentMd !== val.trim() && currentMd !== val) {
           this.isInternalUpdate = true;
-          el.innerHTML = marked.parse(val) as string;
+          const rawHtml = marked.parse(val, { breaks: true }) as string;
+          el.innerHTML = DOMPurify.sanitize(rawHtml);
           this.isInternalUpdate = false;
         }
       }
@@ -97,6 +102,9 @@ export class MarkdownEditorComponent {
     this.isInternalUpdate = true;
     const markdown = this.turndownService.turndown(el.innerHTML);
     this.valueChange.emit(markdown);
+
+    this.canUndo.set(document.queryCommandEnabled('undo'));
+    this.canRedo.set(document.queryCommandEnabled('redo'));
 
     // Yield to allow effect to ignore this update cycle
     setTimeout(() => {
@@ -167,7 +175,10 @@ export class MarkdownEditorComponent {
     else if (markdownPrefix === '~~') this.execCmd('strikeThrough');
     else if (markdownPrefix === '==')
       this.execCmd('hiliteColor', 'yellow'); // Highlight equivalent
-    else if (markdownPrefix === '`') this.execCmd('fontName', 'monospace');
+    else if (markdownPrefix === '`') {
+      const text = window.getSelection()?.toString() || 'code';
+      this.execCmd('insertHTML', `<code>${text}</code>`);
+    }
   }
 
   insertPrefix(prefix: string): void {
@@ -176,9 +187,10 @@ export class MarkdownEditorComponent {
     else if (prefix === '- ') this.execCmd('insertUnorderedList');
     else if (prefix === '1. ') this.execCmd('insertOrderedList');
     else if (prefix === '- [ ] ') {
+      const text = window.getSelection()?.toString() || 'Task';
       this.execCmd(
         'insertHTML',
-        '<ul><li style="list-style-type: none;"><input type="checkbox"> Task</li></ul>',
+        `<ul><li class="md-task-item"><input type="checkbox"> ${text}</li></ul>`,
       );
     }
   }
@@ -188,18 +200,42 @@ export class MarkdownEditorComponent {
   }
 
   insertLink(): void {
-    const url = prompt('Enter link URL:');
+    // Save selection range
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      this.savedRange = sel.getRangeAt(0);
+    }
+    this.linkUrl.set('');
+    this.showLinkPrompt.set(true);
+  }
+
+  submitLink(event?: Event): void {
+    if (event) event.preventDefault();
+    if (this.savedRange) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(this.savedRange);
+    }
+    const url = this.linkUrl();
     if (url) {
       this.execCmd('createLink', url);
     }
+    this.closeLinkPrompt();
+  }
+
+  closeLinkPrompt(): void {
+    this.showLinkPrompt.set(false);
+    this.linkUrl.set('');
+    this.savedRange = null;
+    this.editorRef()?.nativeElement.focus();
   }
 
   insertTable(): void {
     const tableHTML = `
-      <table border="1">
+      <table>
         <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
         <tr><td>Cell 1</td><td>Cell 2</td><td>Cell 3</td></tr>
-      </table><br>
+      </table>
     `;
     this.execCmd('insertHTML', tableHTML);
   }
@@ -209,11 +245,12 @@ export class MarkdownEditorComponent {
   }
 
   insertCallout(): void {
+    const text = window.getSelection()?.toString() || 'Title';
     const calloutHTML = `
       <blockquote class="md-callout">
-        <strong>[!NOTE] Title</strong><br>
+        [!NOTE] ${text}<br>
         Content here
-      </blockquote><br>
+      </blockquote>
     `;
     this.execCmd('insertHTML', calloutHTML);
   }
