@@ -18,6 +18,26 @@ import { TaskService } from '../../core/services/task.service';
 import { Timeline } from 'vis-timeline/standalone';
 import { DataSet } from 'vis-data';
 
+interface TimelineGroup {
+  id: string;
+  content: string;
+  order?: number;
+  style?: string;
+}
+
+interface TimelineItem {
+  id: string;
+  group?: string;
+  content: string;
+  start: Date;
+  end?: Date;
+  type?: string;
+  className?: string;
+  style?: string;
+}
+
+const DEFAULT_START_HOUR = 9;
+
 @Component({
   selector: 'app-task-timeline-view',
   standalone: true,
@@ -39,8 +59,8 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
   taskClick = output<Task>();
 
   private timeline: Timeline | null = null;
-  private items = new DataSet<any>();
-  private groups = new DataSet<any>();
+  private items = new DataSet<TimelineItem>();
+  private groups = new DataSet<TimelineGroup>();
 
   constructor() {
     effect(() => {
@@ -136,7 +156,7 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
           start = s;
         } else {
            start = new Date();
-           start.setHours(9, 0, 0, 0); 
+           start.setHours(DEFAULT_START_HOUR, 0, 0, 0); 
         }
       }
 
@@ -155,12 +175,13 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
       const borderColor = this.hexToRgba(color, isDone ? 0.4 : 0.8);
       const textColor = isDone ? 'rgba(255,255,255,0.5)' : '#fff';
 
-      const baseItem: any = {
+      const safeTitle = this.escapeHtml(task.title);
+      const baseItem: Partial<TimelineItem> & { id: string, group: string | undefined, content: string } = {
         id: task.id,
         group: task.sectionId || (project.sections.length > 0 ? project.sections[0].id : undefined),
         content: `
-          <div class="timeline-item-content" title="${task.title}">
-            <span class="timeline-title">${task.title}</span>
+          <div class="timeline-item-content" title="${safeTitle}">
+            <span class="timeline-title">${safeTitle}</span>
           </div>
         `,
         style: `background-color: ${bgColor}; border-color: ${borderColor}; color: ${textColor};`
@@ -178,7 +199,7 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
         baseItem.end = end;
       }
 
-      return baseItem;
+      return baseItem as TimelineItem;
     });
 
     const currentItemIds = this.items.getIds();
@@ -192,7 +213,9 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
 
     if (this.timeline && (itemAdds.length > 0 || groupAdds.length > 0)) {
         if (currentItemIds.length === 0) {
-            setTimeout(() => this.timeline!.fit(), 100);
+            requestAnimationFrame(() => {
+                if (this.timeline) this.timeline.fit();
+            });
         }
     }
   }
@@ -204,29 +227,47 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
 
     const t = this.tasks().find(task => task.id === item.id);
     if (t) {
-        let currentStatus = t.status;
-        let newStatus = currentStatus;
-        if (t.sectionId !== sectionId) {
-             const targetSection = this.project().sections.find(s => s.id === sectionId);
-             if (targetSection) {
-                  newStatus = this.getSectionStatus(targetSection);
-             }
-        }
-        
-        const updates: any = {
-            sectionId: sectionId,
-            status: newStatus
-        };
+        try {
+            let currentStatus = t.status;
+            let newStatus = currentStatus;
+            if (t.sectionId !== sectionId) {
+                 const targetSection = this.project().sections.find(s => s.id === sectionId);
+                 if (targetSection) {
+                      newStatus = this.getSectionStatus(targetSection);
+                 }
+            }
+            
+            const updates: any = {
+                sectionId: sectionId,
+                status: newStatus
+            };
 
-        if (item.type === 'box' || !end) {
-            updates.dueDate = start;
-        } else {
-            updates.startDate = start;
-            updates.dueDate = end;
+            if (item.type === 'box' || !end) {
+                updates.dueDate = start;
+            } else {
+                updates.startDate = start;
+                updates.dueDate = end;
+            }
+            
+            await this.taskService.updateTask(t.id, updates);
+        } catch (error) {
+            console.error('Failed to move task:', error);
+            // Revert the item in timeline since it failed
+            this.updateTimelineData(this.tasks(), this.project());
         }
-        
-        await this.taskService.updateTask(t.id, updates);
     }
+  }
+
+  private escapeHtml(unsafe: string): string {
+    return (unsafe || '').replace(/[&<>"']/g, function (m) {
+      switch (m) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        default: return '&#039;';
+      }
+    });
   }
 
   private toDate(dateValue: unknown): Date {
