@@ -1,0 +1,149 @@
+.timeline-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-wrapper {
+  width: 100%;
+  flex: 1;
+  min-height: 400px;
+}
+
+/* Vis-Timeline overrides for cyberpunk dark theme */
+::ng-deep .vis-timeline {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+::ng-deep .vis-panel.vis-background {
+  background-color: transparent;
+}
+
+::ng-deep .vis-panel.vis-bottom,
+::ng-deep .vis-panel.vis-center,
+::ng-deep .vis-panel.vis-left,
+::ng-deep .vis-panel.vis-right,
+::ng-deep .vis-panel.vis-top {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+::ng-deep .vis-time-axis .vis-text {
+  color: #94a3b8; /* slate-400 */
+}
+
+::ng-deep .vis-time-axis .vis-grid.vis-minor {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+::ng-deep .vis-time-axis .vis-grid.vis-major {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+::ng-deep .vis-labelset .vis-label {
+  color: #e2e8f0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+::ng-deep .vis-item {
+  border-radius: 6px;
+  border-width: 1px;
+  border-style: solid;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+::ng-deep .vis-item.vis-selected {
+  border-color: #f8fafc !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+  z-index: 10;
+}
+
+::ng-deep .vis-item .vis-item-content {
+  padding: 6px 10px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+::ng-deep .vis-item .vis-drag-left,
+::ng-deep .vis-item .vis-drag-right {
+  width: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::ng-deep .vis-item .vis-drag-left:hover,
+::ng-deep .vis-item .vis-drag-right:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.timeline-item-content {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.timeline-title {
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(15, 15, 15, 0.8);
+  backdrop-filter: blur(12px);
+  padding: 3rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.empty-state-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  color: #8b5cf6;
+}
+
+.empty-state-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #9ca3af;
+  margin: 0;
+  max-width: 250px;
+}

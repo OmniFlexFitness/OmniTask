@@ -2,10 +2,8 @@
       class="flex flex-col h-full bg-[#0a0f1e]/60 rounded-xl overflow-hidden border border-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.05)]"
     >
       <!-- Filter Bar -->
-      <div
-        class="flex items-center justify-between px-4 py-2 bg-[#0a0f1e]/90 border-b border-cyan-500/10"
-      >
-        <div class="flex items-center gap-3">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-2 gap-3 bg-[#0a0f1e]/90 border-b border-cyan-500/10">
+        <div class="flex flex-wrap items-center gap-3">
           @if (selectionMode()) {
             <!-- Selection mode info -->
             <span class="text-xs text-purple-400 font-medium">
@@ -31,7 +29,7 @@
           }
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <!-- Selection Mode Toggle -->
           <button
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"
@@ -145,9 +143,9 @@
       <!-- Bulk Actions Bar (shown when tasks are selected) -->
       @if (selectionMode() && selectedTaskIds().size > 0) {
         <div
-          class="flex items-center justify-between px-4 py-2 bg-purple-500/10 border-b border-purple-500/20"
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2 bg-purple-500/10 border-b border-purple-500/20"
         >
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all"
               (click)="bulkComplete()"
@@ -200,9 +198,12 @@
         </div>
       }
 
-      <!-- Cyberpunk Header -->
-      <div
-        class="grid gap-4 px-4 py-3 bg-[#0a0f1e]/80 border-b border-fuchsia-500/20 text-xs font-bold uppercase tracking-[0.15em]"
+      <!-- Scrollable Grid Container -->
+      <div class="flex-1 overflow-auto w-full relative">
+        <div class="min-w-[700px] flex flex-col min-h-full">
+          <!-- Cyberpunk Header -->
+          <div
+            class="grid gap-4 px-4 py-3 bg-[#0a0f1e]/95 backdrop-blur-md border-b border-violet-500/20 text-xs font-bold uppercase tracking-[0.15em] sticky top-0 z-20 shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
         [style.grid-template-columns]="gridTemplateCols()"
       >
         @if (selectionMode()) {
@@ -270,7 +271,7 @@
         cdkDropList
         [cdkDropListData]="sortedTasks()"
         (cdkDropListDropped)="onDrop($event)"
-        class="overflow-y-auto flex-1 divide-y divide-cyan-500/5"
+        class="flex-1 divide-y divide-cyan-500/5 pb-8"
       >
         @if (sortedTasks().length === 0) {
           <div class="flex flex-col items-center justify-center p-12 text-slate-500">
@@ -519,3 +520,5 @@
         }
       </div>
     </div>
+  </div>
+</div>

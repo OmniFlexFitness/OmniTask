@@ -1,71 +1,7 @@
 {
   // Comprehensive MCP Server configuration for OmniTask (Angular 21 / Firebase / GCP)
   "mcpServers": {
-    // 1. Angular Framework Server
-    "angular-cli": {
-      "command": "npx",
-      "args": ["-y", "@angular/cli", "mcp"]
-    },
-
-    // 2. Firebase Server
-    "firebase": {
-      "command": "npx",
-      "args": ["-y", "firebase-tools@latest", "mcp"]
-    },
-
-    // 3. Google Cloud (gcloud) Server
-    "google-cloud": {
-      "command": "npx",
-      "args": ["-y", "@google-cloud/gcloud-mcp"]
-    },
-
-    // 4. GitHub Server
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
-      }
-    },
-
-    // 5. Google Drive Workspace Server
-    "google-drive": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-google-drive"]
-    },
-
-    // 6. Google Maps Server
-    "google-maps": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-google-maps"],
-      "env": {
-        "GOOGLE_MAPS_API_KEY": "${input:google_maps_key}"
-      }
-    },
-
-    // 7. Google Cloud BigQuery Server
-    "bigquery": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-bigquery"]
-    },
-
-    // 8. Google Cloud SQL Server
-    "cloud-sql": {
-      "command": "npx",
-      "args": ["-y", "@google-cloud/cloud-sql-mcp"]
-    },
-
-    // 9. Google Cloud AlloyDB Server
-    "alloydb": {
-      "command": "npx",
-      "args": ["-y", "@google-cloud/alloydb-mcp"]
-    },
-
-    // 10. Google Cloud Spanner Server
-    "spanner": {
-      "command": "npx",
-      "args": ["-y", "@google-cloud/spanner-mcp"]
-    }
+    // Cleaned out unused/duplicate workspace servers to avoid 100-tool limit
   },
   "inputs": [
     {

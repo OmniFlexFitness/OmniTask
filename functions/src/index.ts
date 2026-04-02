@@ -839,7 +839,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       port: 465,
       secure: true,
       auth: {
-        user: 'bertin.kenol@omniflexfitness.com', // Primary account email for login
+        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -937,7 +937,7 @@ export const checkScheduledReminders = onSchedule(
       port: 465,
       secure: true,
       auth: {
-        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
+        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -960,21 +960,21 @@ export const checkScheduledReminders = onSchedule(
         );
         emailsSent++;
         console.log(`Sent ${data.type} reminder to ${data.email} for ${data.title}`);
+        
+        // Only compute next triggerAt or delete if send was successful
+        if (data.type === 'recurring') {
+          const nextDate = data.triggerAt.toDate();
+          nextDate.setDate(nextDate.getDate() + 1);
+          batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+        } else if (data.type === 'weekly' && data.repeating) {
+          const nextDate = data.triggerAt.toDate();
+          nextDate.setDate(nextDate.getDate() + 7);
+          batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+        } else {
+          batch.delete(doc.ref);
+        }
       } catch (err) {
-        console.error(`Failed to send reminder to ${data.email}:`, err);
-      }
-
-      // Compute next triggerAt or delete
-      if (data.type === 'recurring') {
-        const nextDate = data.triggerAt.toDate();
-        nextDate.setDate(nextDate.getDate() + 1);
-        batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
-      } else if (data.type === 'weekly' && data.repeating) {
-        const nextDate = data.triggerAt.toDate();
-        nextDate.setDate(nextDate.getDate() + 7);
-        batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
-      } else {
-        batch.delete(doc.ref);
+        console.error(`Failed to send reminder to ${data.email}, leaving in queue for retry:`, err);
       }
     }
 
