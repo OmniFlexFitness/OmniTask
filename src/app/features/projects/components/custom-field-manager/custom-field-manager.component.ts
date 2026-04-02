@@ -41,9 +41,9 @@ export class CustomFieldManagerComponent {
   mode = signal<'list' | 'create' | 'link'>('list');
 
   newFieldType = signal<CustomFieldType>('text');
-  newFieldName = '';
+  newFieldName = signal('');
   newFieldOptions = signal<CustomFieldOption[]>([]);
-  newFieldCurrency = '$';
+  newFieldCurrency = signal('$');
   fieldToDelete = signal<CustomFieldDefinition | null>(null);
   deleting = signal(false);
 
@@ -82,7 +82,7 @@ export class CustomFieldManagerComponent {
   });
 
   isDuplicateFieldName = computed(() => {
-    const name = this.newFieldName.trim().toLowerCase();
+    const name = this.newFieldName().trim().toLowerCase();
     if (!name) return false;
     // Check against global library to prevent duplicate global names makes sense, or just project level.
     // Opting for global level to keep library clean.
@@ -90,7 +90,7 @@ export class CustomFieldManagerComponent {
   });
 
   canCreateField = computed(() => {
-    if (!this.newFieldName.trim() || this.isDuplicateFieldName()) return false;
+    if (!this.newFieldName().trim() || this.isDuplicateFieldName()) return false;
 
     const type = this.newFieldType();
     if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
@@ -104,10 +104,10 @@ export class CustomFieldManagerComponent {
   }
 
   startCreating() {
-    this.newFieldName = '';
+    this.newFieldName.set('');
     this.newFieldType.set('text');
     this.newFieldOptions.set([]);
-    this.newFieldCurrency = '$';
+    this.newFieldCurrency.set('$');
     this.mode.set('create');
   }
 
@@ -130,7 +130,7 @@ export class CustomFieldManagerComponent {
 
     try {
       const fieldData: any = {
-        name: this.newFieldName.trim(),
+        name: this.newFieldName().trim(),
         type: this.newFieldType(),
       };
 
@@ -139,7 +139,7 @@ export class CustomFieldManagerComponent {
         fieldData.options = this.newFieldOptions();
       }
       if (type === 'currency') {
-        fieldData.currencySymbol = this.newFieldCurrency;
+        fieldData.currencySymbol = this.newFieldCurrency();
       }
 
       // 1. Create in global library
@@ -151,7 +151,7 @@ export class CustomFieldManagerComponent {
       }
 
       this.mode.set('list');
-      this.newFieldName = '';
+      this.newFieldName.set('');
       this.newFieldOptions.set([]);
     } catch (err) {
       console.error('Failed to create field', err);

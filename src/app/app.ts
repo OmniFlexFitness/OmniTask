@@ -7,6 +7,7 @@ import { DialogComponent } from './shared/components/dialog.component';
 import { AuthService } from './core/auth/auth.service';
 import { initOmniFlexEffects } from './core/theme/omniflex-effects';
 import { VersionService } from './core/services/version.service';
+import { AutomationService } from './core/services/automation.service';
 import { DEFAULT_VERSION } from './core/constants';
 
 @Component({
@@ -19,6 +20,7 @@ import { DEFAULT_VERSION } from './core/constants';
 export class App implements OnInit {
   auth = inject(AuthService);
   versionService = inject(VersionService);
+  private automationService = inject(AutomationService);
   version = signal<string>(DEFAULT_VERSION);
   private destroyRef = inject(DestroyRef);
 

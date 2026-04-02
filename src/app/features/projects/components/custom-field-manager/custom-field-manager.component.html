@@ -148,7 +148,8 @@
         >
         <input
           type="text"
-          [(ngModel)]="newFieldName"
+          [ngModel]="newFieldName()"
+          (ngModelChange)="newFieldName.set($event)"
           placeholder="e.g., Priority Score, Client Name..."
           class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors placeholder:text-slate-600"
           [class.border-red-500]="isDuplicateFieldName()"
@@ -171,7 +172,8 @@
         >
         <input
           type="text"
-          [(ngModel)]="newFieldCurrency"
+          [ngModel]="newFieldCurrency()"
+          (ngModelChange)="newFieldCurrency.set($event)"
           placeholder="$"
           class="w-24 bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors placeholder:text-slate-600"
         />

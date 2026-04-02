@@ -63,6 +63,42 @@ export interface Tag {
   color: string; // Hex color code
 }
 
+export type TriggerType = 'field_change' | 'task_created' | 'task_completed';
+export type ConditionOperator = 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
+export type ActionType = 'update_field' | 'notify_user';
+
+export interface Trigger {
+  type: TriggerType;
+  /** The field that triggers this rule, if applicable (e.g., 'status', 'priority') */
+  field?: string;
+  /** Optional specific value to watch for, or evaluates any change if undefined */
+  value?: any;
+}
+
+export interface Condition {
+  field: string;
+  operator: ConditionOperator;
+  value: any;
+}
+
+export interface Action {
+  type: ActionType;
+  field?: string;
+  value?: any;
+}
+
+export interface AutomationRule {
+  id: string;
+  projectId: string;
+  name: string;
+  enabled: boolean;
+  trigger: Trigger;
+  conditions?: Condition[];
+  actions: Action[];
+  createdAt: FirestoreDate;
+  updatedAt?: FirestoreDate;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -83,6 +119,8 @@ export interface Project {
   syncEnabled?: boolean; // Whether sync is active for this project
   lastSyncAt?: FirestoreDate; // Last successful sync timestamp
   syncStatus?: 'synced' | 'pending' | 'error'; // Current sync status
+  
+  automationRules?: AutomationRule[]; // Automation rules for this project
 }
 
 export interface Task {

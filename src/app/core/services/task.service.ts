@@ -16,7 +16,7 @@ import {
   Timestamp,
 } from '@angular/fire/firestore';
 import { Task, Section } from '../models/domain.model';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, Subject, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
@@ -37,6 +37,17 @@ export class TaskService {
   // Loading state for UI feedback
   loading = signal(false);
   error = signal<string | null>(null);
+
+  /**
+   * Stream of task mutations (creates, updates) for automation engine.
+   * Emitted after Firestore writes successfully.
+   */
+  public taskMutation$ = new Subject<{
+    taskId: string;
+    projectId: string;
+    changes: Partial<Task>;
+    task: Task;
+  }>();
 
   /**
    * Helper to remove undefined values from an object before Firestore operations.
@@ -409,6 +420,13 @@ export class TaskService {
         void this.autoAddMember(task.projectId, task.assignedToId);
       }
 
+      this.taskMutation$.next({
+        taskId: result.id,
+        projectId: data.projectId as string,
+        changes: data,
+        task: { ...data, id: result.id } as Task,
+      });
+
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create task';
@@ -469,6 +487,15 @@ export class TaskService {
             console.warn('Google Tasks sync failed, task was updated locally:', err);
           }
         }
+      }
+
+      if (taskDoc) {
+        this.taskMutation$.next({
+          taskId: id,
+          projectId: taskDoc.projectId,
+          changes: reconciled,
+          task: { ...taskDoc, ...reconciled, updatedAt: new Date() } as Task,
+        });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';

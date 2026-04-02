@@ -1,0 +1,145 @@
+<div class="space-y-6">
+  <!-- Rules List -->
+  <div *ngIf="!isEditing()" class="space-y-4">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-sm font-semibold text-slate-200">Active Automations</h3>
+      <button 
+        (click)="startNewRule()" 
+        class="ofx-btn-primary py-1 px-3 text-sm">
+        + Create Rule
+      </button>
+    </div>
+
+    <div *ngIf="!project().automationRules?.length" class="text-sm text-slate-400 italic">
+      No automation rules configured.
+    </div>
+
+    <ul class="space-y-3">
+      <li *ngFor="let rule of project().automationRules" class="p-4 bg-slate-800/50 border border-white/10 rounded-lg flex justify-between items-center group">
+        <div class="flex items-center space-x-4">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" [checked]="rule.enabled" (change)="toggleRuleExecution(rule, $event)">
+            <div class="w-9 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+          </label>
+          <div>
+            <div class="font-medium text-slate-200">{{ rule.name }}</div>
+            <div class="text-xs text-slate-400 mt-1">
+              When <span class="text-purple-400">{{ rule.trigger.type }}</span> 
+              <span *ngIf="rule.conditions?.length"> + {{ rule.conditions?.length }} conditions</span>
+              <span class="mx-1">→</span> 
+              {{ rule.actions.length }} action(s)
+            </div>
+          </div>
+        </div>
+        
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
+          <button (click)="editRule(rule)" class="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-700 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.89 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.89l10.652-10.652z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.125L16.875 4.5" /></svg>
+          </button>
+          <button (click)="deleteRule(rule.id)" class="p-1.5 text-rose-400 hover:text-rose-300 rounded-md hover:bg-rose-900/30 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Rule Editor -->
+  <div *ngIf="isEditing() && editingRule()" class="p-5 bg-slate-900 border border-slate-700/60 shadow-xl rounded-lg space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Rule Name</label>
+      <input type="text" [(ngModel)]="editingRule()!.name" class="ofx-input w-full" placeholder="e.g. Auto-complete subtasks">
+    </div>
+
+    <!-- Trigger -->
+    <div class="p-4 bg-slate-800/80 rounded-lg border border-slate-700/50">
+      <h4 class="text-sm font-medium text-slate-200 mb-3 flex items-center">
+        <span class="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center mr-2 text-xs">1</span> 
+        When this happens...
+      </h4>
+      <div class="flex gap-3">
+        <select [(ngModel)]="editingRule()!.trigger.type" class="ofx-input min-w-[200px]">
+          <option *ngFor="let t of availableTriggers" [value]="t.value">{{ t.label }}</option>
+        </select>
+        
+        <input *ngIf="editingRule()!.trigger.type === 'field_change'" 
+               type="text" [(ngModel)]="editingRule()!.trigger.field"
+               placeholder="Field name (e.g., status)"
+               class="ofx-input min-w-[150px]">
+      </div>
+    </div>
+
+    <!-- Conditions -->
+    <div class="p-4 bg-slate-800/80 rounded-lg border border-slate-700/50">
+      <div class="flex justify-between items-center mb-3">
+        <h4 class="text-sm font-medium text-slate-200 flex items-center">
+          <span class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center mr-2 text-xs">2</span> 
+          And these conditions are met
+        </h4>
+        <button (click)="addCondition()" class="text-xs text-cyan-400 hover:text-cyan-300 px-2 py-1 hover:bg-cyan-900/30 rounded transition-colors">+ Add condition</button>
+      </div>
+
+      <div *ngIf="!editingRule()!.conditions?.length" class="text-xs text-slate-500 italic py-2">
+        No conditions. It will run every time the trigger happens.
+      </div>
+
+      <div class="space-y-2">
+        <div *ngFor="let cond of editingRule()!.conditions; let i = index" class="flex gap-2 items-center">
+          <input type="text" [(ngModel)]="cond.field" placeholder="Field" class="ofx-input w-1/3 text-sm py-1.5">
+          <select [(ngModel)]="cond.operator" class="ofx-input w-1/3 text-sm py-1.5">
+            <option value="equals">Equals</option>
+            <option value="not_equals">Does not equal</option>
+            <option value="contains">Contains</option>
+            <option value="greater_than">Greater than</option>
+            <option value="less_than">Less than</option>
+          </select>
+          <input type="text" [(ngModel)]="cond.value" placeholder="Value" class="ofx-input w-1/3 text-sm py-1.5">
+          
+          <button (click)="removeCondition(i)" class="p-1 text-slate-500 hover:text-rose-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="p-4 bg-slate-800/80 rounded-lg border border-slate-700/50">
+      <div class="flex justify-between items-center mb-3">
+        <h4 class="text-sm font-medium text-slate-200 flex items-center">
+          <span class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center mr-2 text-xs">3</span> 
+          Do this...
+        </h4>
+        <button (click)="addAction()" class="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 hover:bg-emerald-900/30 rounded transition-colors">+ Add action</button>
+      </div>
+
+      <div class="space-y-2">
+        <div *ngFor="let act of editingRule()!.actions; let i = index" class="flex gap-2 items-center">
+          <select [(ngModel)]="act.type" class="ofx-input w-1/3 text-sm py-1.5">
+            <option value="update_field">Update Field</option>
+            <option value="notify_user">Notify User</option>
+          </select>
+          
+          <ng-container *ngIf="act.type === 'update_field'">
+            <input type="text" [(ngModel)]="act.field" placeholder="Field" class="ofx-input w-1/3 text-sm py-1.5">
+            <input type="text" [(ngModel)]="act.value" placeholder="Value" class="ofx-input w-1/3 text-sm py-1.5">
+          </ng-container>
+
+          <ng-container *ngIf="act.type === 'notify_user'">
+            <input type="text" [(ngModel)]="act.value" placeholder="User ID" class="ofx-input w-2/3 text-sm py-1.5">
+          </ng-container>
+
+          <button (click)="removeAction(i)" class="p-1 text-slate-500 hover:text-rose-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Footer -->
+    <div class="flex justify-end space-x-3 pt-4">
+      <button (click)="cancelEdit()" class="ofx-btn-secondary">Cancel</button>
+      <button (click)="saveRule()" class="ofx-btn-primary">Save Rule</button>
+    </div>
+  </div>
+
+</div>

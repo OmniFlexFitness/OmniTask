@@ -47,9 +47,21 @@
 
   <hr class="border-white/10" />
 
-  <!-- Google Tasks Integration -->
   <app-project-google-tasks-sync [project]="project()" (projectChanged)="projectChanged.emit()">
   </app-project-google-tasks-sync>
+
+  <hr class="border-white/10" />
+
+  <!-- Automations -->
+  <section class="ofx-settings-section">
+    <h3 class="ofx-section-title">Automations</h3>
+    <div class="mt-4">
+      <app-automation-builder
+        [project]="project()"
+        (rulesChanged)="projectChanged.emit()"
+      ></app-automation-builder>
+    </div>
+  </section>
 
   <hr class="border-white/10" />
 
