@@ -13,7 +13,7 @@
 
       <!-- Simple solid side accents -->
       <div class="absolute left-0 top-0 w-[2px] h-full bg-cyan-500/30"></div>
-      <div class="absolute right-0 top-0 w-[2px] h-full bg-fuchsia-500/30"></div>
+      <div class="absolute right-0 top-0 w-[2px] h-full bg-violet-500/30"></div>
 
       <!-- Bottom neon border - solid color -->
       <div
@@ -29,7 +29,7 @@
               <!-- Logo with enhanced neon ring - KEEPING GRADIENT HERE (logo element) -->
               <div class="relative">
                 <span
-                  class="absolute -inset-2 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 blur-md opacity-50 group-hover:opacity-80 transition-opacity animate-pulse"
+                  class="absolute -inset-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 blur-md opacity-50 group-hover:opacity-80 transition-opacity animate-pulse"
                 ></span>
                 <span class="absolute -inset-1 rounded-full bg-[#251247] opacity-80"></span>
                 <img
@@ -59,7 +59,7 @@
                 class="relative px-3 py-1.5 text-sm font-semibold transition-all group"
                 [class.text-cyan-400]="rlaDashboard.isActive"
                 [class.text-slate-400]="!rlaDashboard.isActive"
-                [class.hover:text-fuchsia-400]="!rlaDashboard.isActive"
+                [class.hover:text-violet-400]="!rlaDashboard.isActive"
               >
                 <!-- Active Background -->
                 <span
@@ -67,7 +67,7 @@
                   [class.bg-cyan-500/10]="rlaDashboard.isActive"
                   [class.opacity-50]="rlaDashboard.isActive"
                   [class.opacity-0]="!rlaDashboard.isActive"
-                  [class.group-hover:bg-fuchsia-500/10]="!rlaDashboard.isActive"
+                  [class.group-hover:bg-violet-500/10]="!rlaDashboard.isActive"
                   [class.group-hover:opacity-100]="!rlaDashboard.isActive"
                 ></span>
                 <!-- Underline -->
@@ -78,7 +78,7 @@
                   [class.w-2/3]="rlaDashboard.isActive"
                   [class.w-0]="!rlaDashboard.isActive"
                   [class.group-hover:w-2/3]="!rlaDashboard.isActive"
-                  [class.group-hover:bg-fuchsia-500]="!rlaDashboard.isActive"
+                  [class.group-hover:bg-violet-500]="!rlaDashboard.isActive"
                   [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
                     !rlaDashboard.isActive
                   "
@@ -93,14 +93,14 @@
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaProjects.isActive"
                 [class.text-slate-400]="!rlaProjects.isActive"
-                [class.hover:text-fuchsia-400]="!rlaProjects.isActive"
+                [class.hover:text-violet-400]="!rlaProjects.isActive"
               >
                 <!-- Active/Hover Background -->
                 <span
                   class="absolute inset-0 rounded-lg transition-all duration-300"
                   [class.bg-cyan-500/10]="rlaProjects.isActive"
-                  [class.bg-fuchsia-500/0]="!rlaProjects.isActive"
-                  [class.group-hover:bg-fuchsia-500/10]="!rlaProjects.isActive"
+                  [class.bg-violet-500/0]="!rlaProjects.isActive"
+                  [class.group-hover:bg-violet-500/10]="!rlaProjects.isActive"
                 ></span>
                 <!-- Underline -->
                 <span
@@ -110,7 +110,7 @@
                   [class.w-2/3]="rlaProjects.isActive"
                   [class.w-0]="!rlaProjects.isActive"
                   [class.group-hover:w-2/3]="!rlaProjects.isActive"
-                  [class.group-hover:bg-fuchsia-500]="!rlaProjects.isActive"
+                  [class.group-hover:bg-violet-500]="!rlaProjects.isActive"
                   [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
                     !rlaProjects.isActive
                   "
@@ -125,14 +125,14 @@
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaTasks.isActive"
                 [class.text-slate-400]="!rlaTasks.isActive"
-                [class.hover:text-fuchsia-400]="!rlaTasks.isActive"
+                [class.hover:text-violet-400]="!rlaTasks.isActive"
               >
                 <!-- Active/Hover Background -->
                 <span
                   class="absolute inset-0 rounded-lg transition-all duration-300"
                   [class.bg-cyan-500/10]="rlaTasks.isActive"
-                  [class.bg-fuchsia-500/0]="!rlaTasks.isActive"
-                  [class.group-hover:bg-fuchsia-500/10]="!rlaTasks.isActive"
+                  [class.bg-violet-500/0]="!rlaTasks.isActive"
+                  [class.group-hover:bg-violet-500/10]="!rlaTasks.isActive"
                 ></span>
                 <!-- Underline -->
                 <span
@@ -142,7 +142,7 @@
                   [class.w-2/3]="rlaTasks.isActive"
                   [class.w-0]="!rlaTasks.isActive"
                   [class.group-hover:w-2/3]="!rlaTasks.isActive"
-                  [class.group-hover:bg-fuchsia-500]="!rlaTasks.isActive"
+                  [class.group-hover:bg-violet-500]="!rlaTasks.isActive"
                   [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="!rlaTasks.isActive"
                 ></span>
                 <span class="relative">My Tasks</span>
@@ -155,14 +155,14 @@
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaSchedule.isActive"
                 [class.text-slate-400]="!rlaSchedule.isActive"
-                [class.hover:text-fuchsia-400]="!rlaSchedule.isActive"
+                [class.hover:text-violet-400]="!rlaSchedule.isActive"
               >
                 <!-- Active/Hover Background -->
                 <span
                   class="absolute inset-0 rounded-lg transition-all duration-300"
                   [class.bg-cyan-500/10]="rlaSchedule.isActive"
-                  [class.bg-fuchsia-500/0]="!rlaSchedule.isActive"
-                  [class.group-hover:bg-fuchsia-500/10]="!rlaSchedule.isActive"
+                  [class.bg-violet-500/0]="!rlaSchedule.isActive"
+                  [class.group-hover:bg-violet-500/10]="!rlaSchedule.isActive"
                 ></span>
                 <!-- Underline -->
                 <span
@@ -172,7 +172,7 @@
                   [class.w-2/3]="rlaSchedule.isActive"
                   [class.w-0]="!rlaSchedule.isActive"
                   [class.group-hover:w-2/3]="!rlaSchedule.isActive"
-                  [class.group-hover:bg-fuchsia-500]="!rlaSchedule.isActive"
+                  [class.group-hover:bg-violet-500]="!rlaSchedule.isActive"
                   [class.group-hover:shadow-[0_0_10px_rgba(232,121,249,0.9)]]="
                     !rlaSchedule.isActive
                   "
@@ -197,7 +197,7 @@
             <!-- Settings link -->
             <a
               routerLink="/settings"
-              class="p-2 text-slate-400 hover:text-fuchsia-400 transition-colors rounded-lg hover:bg-white/5"
+              class="p-2 text-slate-400 hover:text-violet-400 transition-colors rounded-lg hover:bg-white/5"
               title="Settings"
             >
               <svg
@@ -220,17 +220,17 @@
               class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105"
             >
               <!-- Solid border -->
-              <span class="absolute inset-0 rounded-lg border border-fuchsia-500 opacity-80"></span>
+              <span class="absolute inset-0 rounded-lg border border-violet-500 opacity-80"></span>
               <!-- Inner fill -->
               <span
-                class="absolute inset-0 rounded-lg bg-[#0a0f1e] group-hover:bg-fuchsia-500/10 transition-colors"
+                class="absolute inset-0 rounded-lg bg-[#0a0f1e] group-hover:bg-violet-500/10 transition-colors"
               ></span>
               <!-- Glow on hover -->
               <span
-                class="absolute -inset-1 opacity-0 group-hover:opacity-50 transition-opacity blur-lg bg-fuchsia-500/50"
+                class="absolute -inset-1 opacity-0 group-hover:opacity-50 transition-opacity blur-lg bg-violet-500/50"
               ></span>
               <!-- Text -->
-              <span class="relative text-fuchsia-400 group-hover:text-white transition-colors"
+              <span class="relative text-violet-400 group-hover:text-white transition-colors"
                 >Logout</span
               >
             </button>

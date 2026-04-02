@@ -3,10 +3,19 @@
 >
   <!-- Top glow line -->
   <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
-  <div class="px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-4">
+  <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 w-full sm:w-auto">
+      <button 
+        class="lg:hidden p-2 -ml-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
+        (click)="toggleSidebar.emit()"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
       @if (currentProject(); as project) {
-        <div>
+        <div class="flex-1">
           <h1 class="text-xl font-bold text-white flex items-center gap-3">
             <span
               class="w-3 h-3 rounded-sm shadow-[0_0_10px_currentColor]"
@@ -68,15 +77,15 @@
     </div>
 
     <!-- View Toggles & Actions -->
-    <div class="flex items-center gap-4">
+    <div class="flex flex-wrap items-center gap-4 justify-start sm:justify-end">
       <!-- Cyberpunk View Switcher - Purple Glow, No Gradient Fills -->
       <div
-        class="flex bg-[#0a0f1e] p-1 rounded-lg border border-fuchsia-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]"
+        class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_rgba(224,64,251,0.1)]"
       >
         <button
-          class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
-          [class.bg-fuchsia-500/20]="viewMode() === 'list'"
-          [class.text-fuchsia-300]="viewMode() === 'list'"
+          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'list'"
+          [class.text-violet-300]="viewMode() === 'list'"
           [class.ofx-view-switch-active]="viewMode() === 'list'"
           [class.text-slate-500]="viewMode() !== 'list'"
           [class.hover:text-slate-300]="viewMode() !== 'list'"
@@ -85,9 +94,9 @@
           List
         </button>
         <button
-          class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
-          [class.bg-fuchsia-500/20]="viewMode() === 'board'"
-          [class.text-fuchsia-300]="viewMode() === 'board'"
+          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'board'"
+          [class.text-violet-300]="viewMode() === 'board'"
           [class.ofx-view-switch-active]="viewMode() === 'board'"
           [class.text-slate-500]="viewMode() !== 'board'"
           [class.hover:text-slate-300]="viewMode() !== 'board'"
@@ -96,15 +105,26 @@
           Board
         </button>
         <button
-          class="px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
-          [class.bg-fuchsia-500/20]="viewMode() === 'calendar'"
-          [class.text-fuchsia-300]="viewMode() === 'calendar'"
+          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'calendar'"
+          [class.text-violet-300]="viewMode() === 'calendar'"
           [class.ofx-view-switch-active]="viewMode() === 'calendar'"
           [class.text-slate-500]="viewMode() !== 'calendar'"
           [class.hover:text-slate-300]="viewMode() !== 'calendar'"
           (click)="viewModeChange.emit('calendar')"
         >
           Calendar
+        </button>
+        <button
+          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'timeline'"
+          [class.text-violet-300]="viewMode() === 'timeline'"
+          [class.ofx-view-switch-active]="viewMode() === 'timeline'"
+          [class.text-slate-500]="viewMode() !== 'timeline'"
+          [class.hover:text-slate-300]="viewMode() !== 'timeline'"
+          (click)="viewModeChange.emit('timeline')"
+        >
+          Timeline
         </button>
       </div>
 
@@ -174,7 +194,7 @@
         <a
           [routerLink]="['/projects', currentProject()!.id]"
           [queryParams]="{ tab: 'settings' }"
-          class="p-2 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-500/20 transition-colors"
+          class="p-2 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors"
           title="Project Settings"
         >
           <svg

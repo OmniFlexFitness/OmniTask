@@ -26,6 +26,7 @@ import { CustomFieldManagerComponent } from '../projects/components/custom-field
 import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
+import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 import { DashboardHeaderComponent } from './components/dashboard-header';
@@ -41,6 +42,7 @@ import { DashboardHeaderComponent } from './components/dashboard-header';
     TaskListViewComponent,
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
+    TaskTimelineViewComponent,
     TaskDetailModalComponent,
     TaskCreateModalComponent,
     CustomFieldManagerComponent,
@@ -63,6 +65,7 @@ export class DashboardComponent {
   viewMode = signal<TaskViewMode>('list');
   seeding = signal(false);
   syncing = signal(false);
+  mobileSidebarOpen = signal(false);
 
   constructor() {
     // Seed sample data if user has no projects

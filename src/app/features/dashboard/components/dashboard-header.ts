@@ -23,4 +23,5 @@ export class DashboardHeaderComponent {
   viewModeChange = output<TaskViewMode>();
   openCreateTaskModal = output<void>();
   syncGoogleTasks = output<void>();
+  toggleSidebar = output<void>();
 }

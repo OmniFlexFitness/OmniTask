@@ -101,6 +101,7 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'done';
   priority: 'low' | 'medium' | 'high';
   order: number; // Position in list/section for drag-and-drop
+  startDate?: FirestoreDate; // Start date for timeline/gantt views
   dueDate?: FirestoreDate;
   completedAt?: FirestoreDate | null; // When task was marked done (null = cleared)
   tags?: string[];
@@ -208,4 +209,4 @@ export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
 /**
  * View mode for task display
  */
-export type TaskViewMode = 'list' | 'board' | 'calendar';
+export type TaskViewMode = 'list' | 'board' | 'calendar' | 'timeline';

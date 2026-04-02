@@ -618,7 +618,7 @@
 /* Cyberpunk Neon Button */
 .ofx-neon-button {
   @apply relative px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider;
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.1), rgba(165, 100, 255, 0.1));
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.1), rgba(100, 154, 255, 0.1));
   border: 2px solid var(--cyber-blue);
   color: var(--cyber-blue);
   text-shadow: 0 0 10px var(--cyber-blue);
@@ -642,11 +642,11 @@
 }
 
 .ofx-neon-button:hover {
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(165, 100, 255, 0.2));
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(100, 149, 255, 0.363));
   box-shadow: 
     0 0 20px rgba(0, 210, 255, 0.5),
     0 0 40px rgba(0, 210, 255, 0.2),
-    0 0 60px rgba(165, 100, 255, 0.1),
+    0 0 60px rgba(100, 136, 255, 0.1),
     inset 0 0 20px rgba(0, 210, 255, 0.2);
   transform: translateY(-2px);
 }
@@ -661,16 +661,16 @@
   color: var(--cyber-purple);
   text-shadow: 0 0 10px var(--cyber-purple);
   box-shadow: 
-    0 0 10px rgba(165, 100, 255, 0.3),
-    0 0 20px rgba(165, 100, 255, 0.1),
-    inset 0 0 15px rgba(165, 100, 255, 0.1);
+    0 0 10px rgba(100, 144, 255, 0.3),
+    0 0 20px rgba(100, 108, 255, 0.1),
+    inset 0 0 15px rgba(100, 105, 255, 0.1);
 }
 
 .ofx-neon-button-purple:hover {
   box-shadow: 
-    0 0 20px rgba(165, 100, 255, 0.5),
-    0 0 40px rgba(165, 100, 255, 0.2),
-    inset 0 0 20px rgba(165, 100, 255, 0.2);
+    0 0 20px rgba(100, 128, 255, 0.5),
+    0 0 40px rgba(100, 136, 255, 0.2),
+    inset 0 0 20px rgba(100, 141, 255, 0.2);
 }
 
 /* Enhanced Input */
