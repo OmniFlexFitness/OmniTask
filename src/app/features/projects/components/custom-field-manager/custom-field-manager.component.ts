@@ -38,7 +38,7 @@ export class CustomFieldManagerComponent {
   globalFields = signal<CustomFieldDefinition[]>([]);
 
   // UI states
-  mode = signal<'list' | 'create' | 'link'>('list');
+  mode = signal<'list' | 'create' | 'link' | 'edit'>('list');
 
   newFieldType = signal<CustomFieldType>('text');
   newFieldName = '';
@@ -46,6 +46,13 @@ export class CustomFieldManagerComponent {
   newFieldCurrency = '$';
   fieldToDelete = signal<CustomFieldDefinition | null>(null);
   deleting = signal(false);
+
+  // Edit mode state
+  fieldToEdit = signal<CustomFieldDefinition | null>(null);
+  editFieldName = '';
+  editFieldOptions = signal<CustomFieldOption[]>([]);
+  editFieldCurrency = '$';
+  saving = signal(false);
 
   fieldTypes: { value: CustomFieldType; label: string; icon: string }[] = [
     { value: 'text', label: 'Text', icon: 'fas fa-align-left' },
@@ -99,6 +106,24 @@ export class CustomFieldManagerComponent {
     return true;
   });
 
+  isDuplicateEditName = computed(() => {
+    const field = this.fieldToEdit();
+    if (!field) return false;
+    const name = this.editFieldName.trim().toLowerCase();
+    if (!name) return false;
+    return this.globalFields().some((f) => f.name.toLowerCase() === name && f.id !== field.id);
+  });
+
+  canSaveEdit = computed(() => {
+    const field = this.fieldToEdit();
+    if (!field || !this.editFieldName.trim() || this.isDuplicateEditName()) return false;
+    const type = field.type;
+    if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
+      return this.editFieldOptions().length > 0;
+    }
+    return true;
+  });
+
   getFieldIcon(type: CustomFieldType): string {
     return this.fieldTypes.find((t) => t.value === type)?.icon || 'fas fa-circle';
   }
@@ -108,6 +133,7 @@ export class CustomFieldManagerComponent {
     this.newFieldType.set('text');
     this.newFieldOptions.set([]);
     this.newFieldCurrency = '$';
+    this.fieldToEdit.set(null);
     this.mode.set('create');
   }
 
@@ -123,6 +149,80 @@ export class CustomFieldManagerComponent {
 
   removeOption(id: string) {
     this.newFieldOptions.update((opts) => opts.filter((o) => o.id !== id));
+  }
+
+  startEditing(field: CustomFieldDefinition) {
+    this.fieldToEdit.set(field);
+    this.editFieldName = field.name;
+    this.editFieldOptions.set(field.options ? [...field.options] : []);
+    this.editFieldCurrency = field.currencySymbol ?? '$';
+    this.mode.set('edit');
+  }
+
+  addEditOption(label: string) {
+    if (!label.trim()) return;
+    const opt: CustomFieldOption = {
+      id: crypto.randomUUID(),
+      label: label.trim(),
+      color: '#64748b',
+    };
+    this.editFieldOptions.update((opts) => [...opts, opt]);
+  }
+
+  removeEditOption(id: string) {
+    this.editFieldOptions.update((opts) => opts.filter((o) => o.id !== id));
+  }
+
+  async saveEdit() {
+    if (!this.canSaveEdit()) return;
+    const field = this.fieldToEdit();
+    if (!field) return;
+
+    this.saving.set(true);
+    try {
+      const data: Partial<Omit<CustomFieldDefinition, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {
+        name: this.editFieldName.trim(),
+      };
+
+      const type = field.type;
+      if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
+        data.options = this.editFieldOptions();
+      }
+      if (type === 'currency') {
+        data.currencySymbol = this.editFieldCurrency;
+      }
+
+      await this.customFieldService.updateCustomField(field.id, data);
+      this.mode.set('list');
+      this.fieldToEdit.set(null);
+    } catch (err) {
+      console.error('Failed to update field', err);
+      await this.dialogService.alert('Failed to update custom field. Please try again.', 'Error');
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async deleteFromLibrary() {
+    const field = this.fieldToEdit();
+    if (!field) return;
+
+    const confirmed = await this.dialogService.confirm(
+      `Permanently delete "${field.name}" from your library? This cannot be undone. Existing task values for this field will no longer be accessible.`,
+    );
+    if (!confirmed) return;
+
+    this.saving.set(true);
+    try {
+      await this.customFieldService.deleteCustomField(field.id);
+      this.mode.set('list');
+      this.fieldToEdit.set(null);
+    } catch (err) {
+      console.error('Failed to delete field from library', err);
+      await this.dialogService.alert('Failed to delete custom field. Please try again.', 'Error');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   async createField() {

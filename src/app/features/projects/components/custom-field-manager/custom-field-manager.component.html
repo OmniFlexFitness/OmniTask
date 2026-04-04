@@ -26,13 +26,22 @@
         </div>
       </div>
 
-      <button
-        (click)="confirmUnlinkField(field)"
-        class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-2"
-        title="Unlink Field from Project"
-      >
-        <i class="fas fa-times"></i>
-      </button>
+      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+        <button
+          (click)="startEditing(field)"
+          class="text-slate-500 hover:text-amber-400 transition-colors p-2"
+          title="Edit Field"
+        >
+          <i class="fas fa-pencil-alt text-xs"></i>
+        </button>
+        <button
+          (click)="confirmUnlinkField(field)"
+          class="text-slate-500 hover:text-red-400 transition-colors p-2"
+          title="Unlink Field from Project"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
     } @empty {
     <div
@@ -238,6 +247,137 @@
         >
           Create & Add to Project
         </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Edit Field Mode ('edit') -->
+  @if (mode() === 'edit' && fieldToEdit()) {
+  <div
+    class="bg-slate-800 p-4 rounded-lg border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)] relative overflow-hidden"
+  >
+    <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+
+    <div class="space-y-4">
+      <!-- Read-only type badge -->
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-slate-700 flex items-center justify-center text-slate-400">
+          <i [class]="getFieldIcon(fieldToEdit()!.type)"></i>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">{{ fieldToEdit()!.type }}</div>
+          <div class="text-xs text-slate-600 italic">Type cannot be changed</div>
+        </div>
+      </div>
+
+      <!-- Field Name -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1"
+          >Field Name</label
+        >
+        <input
+          type="text"
+          [(ngModel)]="editFieldName"
+          placeholder="Field name..."
+          class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors placeholder:text-slate-600"
+          [class.border-red-500]="isDuplicateEditName()"
+          (keyup.enter)="saveEdit()"
+        />
+        @if (isDuplicateEditName()) {
+        <p class="mt-1 text-xs text-red-400">
+          A custom field with this name already exists in your library.
+        </p>
+        }
+      </div>
+
+      <!-- Currency Symbol (currency type only) -->
+      @if (fieldToEdit()!.type === 'currency') {
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1"
+          >Currency Symbol</label
+        >
+        <input
+          type="text"
+          [(ngModel)]="editFieldCurrency"
+          placeholder="$"
+          class="w-24 bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors placeholder:text-slate-600"
+        />
+      </div>
+      }
+
+      <!-- Options (dropdown / status / multi-select only) -->
+      @if (fieldToEdit()!.type === 'dropdown' || fieldToEdit()!.type === 'status' || fieldToEdit()!.type === 'multi-select') {
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1"
+          >Options</label
+        >
+        <div class="space-y-2">
+          @for (opt of editFieldOptions(); track opt.id) {
+          <div class="flex items-center gap-2">
+            <input
+              type="color"
+              [value]="opt.color"
+              (change)="opt.color = $any($event.target).value"
+              class="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
+              title="Option Color"
+            />
+            <span class="text-sm text-slate-300 flex-1">{{ opt.label }}</span>
+            <button (click)="removeEditOption(opt.id)" class="text-slate-500 hover:text-red-400">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          }
+          <div class="flex gap-2">
+            <input
+              #editOptInput
+              type="text"
+              placeholder="Add option..."
+              class="flex-1 bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-amber-500 placeholder:text-slate-600"
+              (keyup.enter)="addEditOption(editOptInput.value); editOptInput.value = ''"
+            />
+            <button
+              (click)="addEditOption(editOptInput.value); editOptInput.value = ''"
+              class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          @if (editFieldOptions().length === 0) {
+          <p class="mt-1 text-xs text-amber-400">
+            <i class="fas fa-exclamation-triangle mr-1"></i>At least one option is required.
+          </p>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+        <button
+          (click)="deleteFromLibrary()"
+          [disabled]="saving()"
+          class="px-3 py-1.5 text-sm font-medium text-red-400 hover:text-white hover:bg-red-500/20 border border-red-500/30 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+        >
+          <i class="fas fa-trash-alt text-xs"></i>
+          Delete from Library
+        </button>
+
+        <div class="flex gap-2">
+          <button
+            (click)="mode.set('list'); fieldToEdit.set(null)"
+            class="px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            (click)="saveEdit()"
+            [disabled]="!canSaveEdit() || saving()"
+            class="px-3 py-1.5 text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/50 rounded hover:bg-amber-500 hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ saving() ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
