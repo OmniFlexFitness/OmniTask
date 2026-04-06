@@ -49,9 +49,9 @@ export class CustomFieldManagerComponent {
 
   // Edit mode state
   fieldToEdit = signal<CustomFieldDefinition | null>(null);
-  editFieldName = '';
+  editFieldName = signal('');
   editFieldOptions = signal<CustomFieldOption[]>([]);
-  editFieldCurrency = '$';
+  editFieldCurrency = signal('$');
   saving = signal(false);
 
   fieldTypes: { value: CustomFieldType; label: string; icon: string }[] = [
@@ -109,14 +109,14 @@ export class CustomFieldManagerComponent {
   isDuplicateEditName = computed(() => {
     const field = this.fieldToEdit();
     if (!field) return false;
-    const name = this.editFieldName.trim().toLowerCase();
+    const name = this.editFieldName().trim().toLowerCase();
     if (!name) return false;
     return this.globalFields().some((f) => f.name.toLowerCase() === name && f.id !== field.id);
   });
 
   canSaveEdit = computed(() => {
     const field = this.fieldToEdit();
-    if (!field || !this.editFieldName.trim() || this.isDuplicateEditName()) return false;
+    if (!field || !this.editFieldName().trim() || this.isDuplicateEditName()) return false;
     const type = field.type;
     if (type === 'dropdown' || type === 'status' || type === 'multi-select') {
       return this.editFieldOptions().length > 0;
@@ -137,6 +137,10 @@ export class CustomFieldManagerComponent {
     this.mode.set('create');
   }
 
+  updateOptionColor(id: string, color: string): void {
+    this.newFieldOptions.update((opts) => opts.map((o) => (o.id === id ? { ...o, color } : o)));
+  }
+
   addOption(label: string) {
     if (!label.trim()) return;
     const opt: CustomFieldOption = {
@@ -151,12 +155,16 @@ export class CustomFieldManagerComponent {
     this.newFieldOptions.update((opts) => opts.filter((o) => o.id !== id));
   }
 
-  startEditing(field: CustomFieldDefinition) {
+  startEditing(field: CustomFieldDefinition): void {
     this.fieldToEdit.set(field);
-    this.editFieldName = field.name;
+    this.editFieldName.set(field.name);
     this.editFieldOptions.set(field.options ? [...field.options] : []);
-    this.editFieldCurrency = field.currencySymbol ?? '$';
+    this.editFieldCurrency.set(field.currencySymbol ?? '$');
     this.mode.set('edit');
+  }
+
+  updateEditOptionColor(id: string, color: string): void {
+    this.editFieldOptions.update((opts) => opts.map((o) => (o.id === id ? { ...o, color } : o)));
   }
 
   addEditOption(label: string) {
@@ -180,8 +188,9 @@ export class CustomFieldManagerComponent {
 
     this.saving.set(true);
     try {
-      const data: Partial<Omit<CustomFieldDefinition, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {
-        name: this.editFieldName.trim(),
+      const data: Partial<Omit<CustomFieldDefinition,
+        'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {
+        name: this.editFieldName().trim(),
       };
 
       const type = field.type;
@@ -189,7 +198,7 @@ export class CustomFieldManagerComponent {
         data.options = this.editFieldOptions();
       }
       if (type === 'currency') {
-        data.currencySymbol = this.editFieldCurrency;
+        data.currencySymbol = this.editFieldCurrency();
       }
 
       await this.customFieldService.updateCustomField(field.id, data);

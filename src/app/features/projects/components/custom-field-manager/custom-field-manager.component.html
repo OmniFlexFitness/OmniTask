@@ -197,9 +197,10 @@
           @for (opt of newFieldOptions(); track opt.id) {
           <div class="flex items-center gap-2">
             <input
+              #newColorInput
               type="color"
               [value]="opt.color"
-              (change)="opt.color = $any($event.target).value"
+              (change)="updateOptionColor(opt.id, newColorInput.value)"
               class="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
               title="Option Color"
             />
@@ -278,7 +279,8 @@
         >
         <input
           type="text"
-          [(ngModel)]="editFieldName"
+          [ngModel]="editFieldName()"
+          (ngModelChange)="editFieldName.set($event)"
           placeholder="Field name..."
           class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors placeholder:text-slate-600"
           [class.border-red-500]="isDuplicateEditName()"
@@ -299,7 +301,8 @@
         >
         <input
           type="text"
-          [(ngModel)]="editFieldCurrency"
+          [ngModel]="editFieldCurrency()"
+          (ngModelChange)="editFieldCurrency.set($event)"
           placeholder="$"
           class="w-24 bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors placeholder:text-slate-600"
         />
@@ -316,9 +319,10 @@
           @for (opt of editFieldOptions(); track opt.id) {
           <div class="flex items-center gap-2">
             <input
+              #editColorInput
               type="color"
               [value]="opt.color"
-              (change)="opt.color = $any($event.target).value"
+              (change)="updateEditOptionColor(opt.id, editColorInput.value)"
               class="w-6 h-6 rounded cursor-pointer bg-transparent border-none p-0"
               title="Option Color"
             />
