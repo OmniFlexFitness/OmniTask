@@ -202,6 +202,10 @@ export class CustomFieldManagerComponent {
       }
 
       await this.customFieldService.updateCustomField(field.id, data);
+      if (this.customFieldService.error()) {
+        await this.dialogService.alert('Failed to update custom field. Please try again.', 'Error');
+        return;
+      }
       this.mode.set('list');
       this.fieldToEdit.set(null);
     } catch (err) {
@@ -216,14 +220,19 @@ export class CustomFieldManagerComponent {
     const field = this.fieldToEdit();
     if (!field) return;
 
-    const confirmed = await this.dialogService.confirm(
-      `Permanently delete "${field.name}" from your library? This cannot be undone. Existing task values for this field will no longer be accessible.`,
-    );
+    const msg =
+      `Permanently delete "${field.name}" from your library? ` +
+      `This cannot be undone. Existing task values for this field will no longer be accessible.`;
+    const confirmed = await this.dialogService.confirm(msg);
     if (!confirmed) return;
 
     this.saving.set(true);
     try {
       await this.customFieldService.deleteCustomField(field.id);
+      if (this.customFieldService.error()) {
+        await this.dialogService.alert('Failed to delete custom field. Please try again.', 'Error');
+        return;
+      }
       this.mode.set('list');
       this.fieldToEdit.set(null);
     } catch (err) {
