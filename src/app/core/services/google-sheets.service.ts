@@ -1,6 +1,7 @@
 import { Injectable, inject, computed } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 
 export interface SheetTab {
@@ -41,6 +42,29 @@ export interface CreateSpreadsheetResponse {
   spreadsheetUrl: string;
   properties: { title: string };
   sheets: Array<{ properties: { sheetId: number; title: string; index: number } }>;
+}
+
+/** Raw shape of the Sheets v4 spreadsheet GET response (fields-filtered). */
+interface RawSpreadsheetResponse {
+  spreadsheetId: string;
+  spreadsheetUrl?: string;
+  properties?: { title?: string };
+  sheets?: Array<{
+    properties?: { sheetId?: number; title?: string; index?: number };
+  }>;
+}
+
+export interface BatchUpdateValuesData {
+  range: string;
+  values: (string | number | null)[][];
+}
+
+export interface BatchUpdateValuesResponse {
+  spreadsheetId: string;
+  totalUpdatedRanges?: number;
+  totalUpdatedRows?: number;
+  totalUpdatedCells?: number;
+  responses?: UpdateValuesResponse[];
 }
 
 const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -89,25 +113,20 @@ export class GoogleSheetsService {
       return throwError(() => new Error('Google Sheets not authenticated'));
     }
     const url = `${SHEETS_API_BASE}/${encodeURIComponent(spreadsheetId)}?fields=spreadsheetId,spreadsheetUrl,properties.title,sheets.properties`;
-    return new Observable<SpreadsheetMetadata>((observer) => {
-      this.http.get<any>(url, { headers: this.getAuthHeaders() }).subscribe({
-        next: (raw) => {
-          const meta: SpreadsheetMetadata = {
-            spreadsheetId: raw.spreadsheetId,
-            title: raw.properties?.title ?? 'Untitled',
-            spreadsheetUrl: raw.spreadsheetUrl,
-            sheets: (raw.sheets || []).map((s: any) => ({
-              sheetId: s.properties?.sheetId,
-              title: s.properties?.title,
-              index: s.properties?.index,
-            })),
-          };
-          observer.next(meta);
-          observer.complete();
-        },
-        error: (err) => observer.error(err),
-      });
-    });
+    return this.http
+      .get<RawSpreadsheetResponse>(url, { headers: this.getAuthHeaders() })
+      .pipe(
+        map((raw) => ({
+          spreadsheetId: raw.spreadsheetId,
+          title: raw.properties?.title ?? 'Untitled',
+          spreadsheetUrl: raw.spreadsheetUrl,
+          sheets: (raw.sheets ?? []).map((s) => ({
+            sheetId: s.properties?.sheetId ?? 0,
+            title: s.properties?.title ?? '',
+            index: s.properties?.index ?? 0,
+          })),
+        })),
+      );
   }
 
   /**
@@ -174,6 +193,32 @@ export class GoogleSheetsService {
     return this.http.post<AppendValuesResponse>(
       url,
       { values },
+      { headers: this.getAuthHeaders() },
+    );
+  }
+
+  /**
+   * Write multiple disjoint ranges in a single request via values:batchUpdate.
+   * Far cheaper than calling updateValues() in a loop when touching many rows/cells.
+   */
+  batchUpdateValues(
+    spreadsheetId: string,
+    data: BatchUpdateValuesData[],
+  ): Observable<BatchUpdateValuesResponse> {
+    if (!this.isAuthenticated()) {
+      return throwError(() => new Error('Google Sheets not authenticated'));
+    }
+    const url = `${SHEETS_API_BASE}/${encodeURIComponent(spreadsheetId)}/values:batchUpdate`;
+    return this.http.post<BatchUpdateValuesResponse>(
+      url,
+      {
+        valueInputOption: 'USER_ENTERED',
+        data: data.map((d) => ({
+          range: d.range,
+          majorDimension: 'ROWS',
+          values: d.values,
+        })),
+      },
       { headers: this.getAuthHeaders() },
     );
   }

@@ -11,6 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { deleteField } from '@angular/fire/firestore';
 import { ProjectService } from '../../../core/services/project.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -244,13 +245,17 @@ export class ProjectGoogleSheetsSyncComponent implements OnInit {
     );
     if (!confirmed) return;
     try {
-      await this.projectService.updateProject(this.project().id, {
-        googleSheetId: null as unknown as string,
-        googleSheetName: null as unknown as string,
-        googleSheetTabName: null as unknown as string,
+      // Use Firestore's deleteField() sentinel to actually remove the fields.
+      // The cast is required because deleteField() returns a FieldValue that
+      // isn't assignable to the typed string fields on Partial<Project>.
+      const disconnectPayload = {
+        googleSheetId: deleteField(),
+        googleSheetName: deleteField(),
+        googleSheetTabName: deleteField(),
         sheetSyncEnabled: false,
-        sheetSyncStatus: null as unknown as Project['sheetSyncStatus'],
-      });
+        sheetSyncStatus: deleteField(),
+      } as unknown as Partial<Project>;
+      await this.projectService.updateProject(this.project().id, disconnectPayload);
       this.sheetMetadata.set(null);
       this.projectChanged.emit();
     } catch (err) {

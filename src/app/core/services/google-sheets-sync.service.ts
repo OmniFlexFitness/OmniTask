@@ -3,15 +3,15 @@ import {
   Firestore,
   doc,
   updateDoc,
-  addDoc,
   collection,
   query,
   where,
   getDocs,
   getDoc,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { firstValueFrom } from 'rxjs';
-import { GoogleSheetsService } from './google-sheets.service';
+import { GoogleSheetsService, BatchUpdateValuesData } from './google-sheets.service';
 import { Task, Project, Section } from '../models/domain.model';
 
 /**
@@ -119,7 +119,8 @@ export class GoogleSheetsSyncService {
     const row: Record<SheetColumn, string> = {
       ID: task.id ?? '',
       Title: task.title ?? '',
-      Description: (task.description ?? '').replace(/\r?\n/g, '  '),
+      // Preserve newlines — Google Sheets renders multi-line cells natively.
+      Description: task.description ?? '',
       Status: task.status ?? 'todo',
       Priority: task.priority ?? 'medium',
       Assignees: (task.assigneeNames ?? []).join(', '),
@@ -135,6 +136,10 @@ export class GoogleSheetsSyncService {
    * Convert a sheet row back into a partial Task suitable for Firestore.
    * Does not include the Firestore document ID — callers decide whether to
    * create a new doc or merge into an existing one.
+   *
+   * Note: `order` is intentionally omitted. Callers creating new tasks should
+   * set `order` explicitly (typically to the sheet row index), while updates
+   * should leave the existing task's `order` untouched.
    */
   public transformFromSheetRow(
     row: string[],
@@ -165,10 +170,11 @@ export class GoogleSheetsSyncService {
         : [],
       projectId,
       googleSheetId: spreadsheetId,
-      googleSheetRowId: id || undefined,
       isGoogleSheetTask: true,
-      order: 0,
     };
+    // Only include googleSheetRowId when the sheet actually has an ID;
+    // Firestore rejects `undefined` field values.
+    if (id) data.googleSheetRowId = id;
 
     const due = this.parseDate(cell(6));
     if (due) data.dueDate = due;
@@ -189,14 +195,46 @@ export class GoogleSheetsSyncService {
       if (byStatus) data.sectionId = byStatus.id;
     }
 
-    return { id, data };
+    return { id, data: this.stripUndefined(data) };
+  }
+
+  /**
+   * Return a copy of the object with all `undefined` values removed.
+   * Firestore rejects `undefined` field values, so any payload fed to
+   * addDoc/updateDoc/batch.set must go through this.
+   */
+  private stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+    const result: Partial<T> = {};
+    for (const key of Object.keys(obj) as Array<keyof T>) {
+      if (obj[key] !== undefined) result[key] = obj[key];
+    }
+    return result;
+  }
+
+  /**
+   * Escape and quote a sheet tab name for use in A1-notation ranges.
+   * A1 syntax requires tab names with spaces or special chars to be wrapped
+   * in single quotes, with embedded single quotes doubled — e.g.
+   *   "Tasks"            -> "Tasks"
+   *   "Sprint Backlog"   -> "'Sprint Backlog'"
+   *   "Joe's Tasks"      -> "'Joe''s Tasks'"
+   * The simple-alphanumeric shortcut keeps the common case readable.
+   */
+  private quoteTabName(tabName: string): string {
+    if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(tabName)) return tabName;
+    return `'${tabName.replace(/'/g, "''")}'`;
+  }
+
+  /** Build an A1 range string like `'Sprint Backlog'!A1:J` for a given tab. */
+  private range(tabName: string, cells: string): string {
+    return `${this.quoteTabName(tabName)}!${cells}`;
   }
 
   /**
    * Ensure the target tab has our header row in row 1. Idempotent.
    */
   async ensureHeaders(spreadsheetId: string, tabName: string): Promise<void> {
-    const range = `${tabName}!A1:${this.columnLetter(SHEET_HEADERS.length)}1`;
+    const range = this.range(tabName, `A1:${this.columnLetter(SHEET_HEADERS.length)}1`);
     await firstValueFrom(
       this.sheetsService.updateValues(spreadsheetId, range, [Array.from(SHEET_HEADERS)]),
     );
@@ -243,7 +281,7 @@ export class GoogleSheetsSyncService {
     // Clear the existing data region (everything below the header row).
     const lastCol = this.columnLetter(SHEET_HEADERS.length);
     await firstValueFrom(
-      this.sheetsService.clearValues(spreadsheetId, `${tabName}!A2:${lastCol}`),
+      this.sheetsService.clearValues(spreadsheetId, this.range(tabName, `A2:${lastCol}`)),
     );
 
     if (tasks.length === 0) {
@@ -254,24 +292,41 @@ export class GoogleSheetsSyncService {
     await firstValueFrom(
       this.sheetsService.updateValues(
         spreadsheetId,
-        `${tabName}!A2:${lastCol}${1 + rows.length}`,
+        this.range(tabName, `A2:${lastCol}${1 + rows.length}`),
         rows,
       ),
     );
 
-    // Mark each task with its sheet linkage for future syncs.
-    await Promise.all(
-      tasks.map((t) =>
-        updateDoc(doc(this.firestore, `tasks/${t.id}`), {
-          googleSheetId: spreadsheetId,
-          googleSheetRowId: t.id,
-          isGoogleSheetTask: true,
-          updatedAt: new Date(),
-        }),
-      ),
-    );
+    // Mark each task with its sheet linkage for future syncs, in one atomic batch.
+    await this.commitInBatches(tasks, (batch, t) => {
+      batch.update(doc(this.firestore, `tasks/${t.id}`), {
+        googleSheetId: spreadsheetId,
+        googleSheetRowId: t.id,
+        isGoogleSheetTask: true,
+        updatedAt: new Date(),
+      });
+    });
 
     return { pushed: rows.length };
+  }
+
+  /**
+   * Run the given builder against one or more writeBatch()es, respecting
+   * Firestore's 500-op-per-batch hard limit. Each batch is committed independently.
+   */
+  private async commitInBatches<T>(
+    items: T[],
+    build: (batch: ReturnType<typeof writeBatch>, item: T) => void,
+    chunkSize = 450,
+  ): Promise<void> {
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const slice = items.slice(i, i + chunkSize);
+      const batch = writeBatch(this.firestore);
+      for (const item of slice) {
+        build(batch, item);
+      }
+      await batch.commit();
+    }
   }
 
   /**
@@ -297,17 +352,27 @@ export class GoogleSheetsSyncService {
 
     const lastCol = this.columnLetter(SHEET_HEADERS.length);
     const valuesResp = await firstValueFrom(
-      this.sheetsService.getValues(spreadsheetId, `${tabName}!A2:${lastCol}`),
+      this.sheetsService.getValues(spreadsheetId, this.range(tabName, `A2:${lastCol}`)),
     );
     const sheetRows = valuesResp.values ?? [];
 
-    let added = 0;
-    let updated = 0;
-    let pushed = 0;
     const seenTaskIds = new Set<string>();
 
-    // Track rows that need their (newly-created) task ID written back to the sheet.
-    const writebacks: Array<{ rowIndex: number; taskId: string }> = [];
+    // Classify each row before writing anything. Use pre-generated Firestore IDs for
+    // new tasks so we can set() them inside a writeBatch() and batch the sheet
+    // writebacks in a single API call.
+    interface UpdateOp {
+      kind: 'update';
+      id: string;
+      data: Partial<Task>;
+    }
+    interface CreateOp {
+      kind: 'create';
+      id: string;
+      sheetRowIndex: number; // 1-based sheet row (header offset already applied)
+      data: Partial<Task>;
+    }
+    const ops: Array<UpdateOp | CreateOp> = [];
 
     for (let i = 0; i < sheetRows.length; i++) {
       const row = sheetRows[i];
@@ -319,59 +384,84 @@ export class GoogleSheetsSyncService {
 
       if (existing) {
         seenTaskIds.add(existing.id);
-        await updateDoc(doc(this.firestore, `tasks/${existing.id}`), {
-          ...parsed.data,
-          googleSheetRowId: existing.id,
-          updatedAt: new Date(),
+        // Updates deliberately omit `order` — that's owned by OmniTask's UI,
+        // and re-syncing would otherwise clobber user-driven reordering.
+        ops.push({
+          kind: 'update',
+          id: existing.id,
+          data: { ...parsed.data, googleSheetRowId: existing.id },
         });
-        updated++;
       } else {
-        // New task originating from the sheet.
-        const docRef = await addDoc(this.tasksCollection, {
-          ...parsed.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const newRef = doc(this.tasksCollection);
+        seenTaskIds.add(newRef.id);
+        ops.push({
+          kind: 'create',
+          id: newRef.id,
+          sheetRowIndex: i + 2, // +2 = header row + 1-indexed
+          // Seed `order` from the row index so the imported tasks preserve
+          // the sheet's sequence in list/board views on first render.
+          data: { ...parsed.data, googleSheetRowId: newRef.id, order: i },
         });
-        seenTaskIds.add(docRef.id);
-        writebacks.push({ rowIndex: i + 2, taskId: docRef.id }); // +2: header row + 1-indexed
-        // Persist the generated Firestore ID as the row's sheet row id.
-        await updateDoc(docRef, { googleSheetRowId: docRef.id });
-        added++;
       }
     }
 
-    // Write back generated IDs into column A for newly-created rows.
-    for (const wb of writebacks) {
+    // Append any OmniTask tasks that aren't in the sheet yet (pure-push leg).
+    const missingTasks = existingTasks.filter((t) => !seenTaskIds.has(t.id));
+
+    // --- Commit Firestore writes in chunked batches ---
+    const now = new Date();
+    await this.commitInBatches(ops, (batch, op) => {
+      if (op.kind === 'update') {
+        batch.update(doc(this.firestore, `tasks/${op.id}`), {
+          ...op.data,
+          updatedAt: now,
+        });
+      } else {
+        batch.set(doc(this.firestore, `tasks/${op.id}`), {
+          ...op.data,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+    await this.commitInBatches(missingTasks, (batch, t) => {
+      batch.update(doc(this.firestore, `tasks/${t.id}`), {
+        googleSheetId: spreadsheetId,
+        googleSheetRowId: t.id,
+        isGoogleSheetTask: true,
+      });
+    });
+
+    // --- Batch the sheet side-effects into at most two API calls ---
+    // 1. Write back all generated task IDs into column A in a single batchUpdate.
+    const writebacks: BatchUpdateValuesData[] = ops
+      .filter((o): o is CreateOp => o.kind === 'create')
+      .map((o) => ({
+        range: this.range(tabName, `A${o.sheetRowIndex}`),
+        values: [[o.id]],
+      }));
+    if (writebacks.length > 0) {
       await firstValueFrom(
-        this.sheetsService.updateValues(spreadsheetId, `${tabName}!A${wb.rowIndex}`, [
-          [wb.taskId],
-        ]),
+        this.sheetsService.batchUpdateValues(spreadsheetId, writebacks),
       );
     }
 
-    // Append any OmniTask tasks that aren't in the sheet yet.
-    const missingTasks = existingTasks.filter((t) => !seenTaskIds.has(t.id));
+    // 2. Append rows for tasks that weren't yet in the sheet.
+    let pushed = 0;
     if (missingTasks.length > 0) {
       const appendRows = missingTasks.map((t) => this.transformToSheetRow(t));
       await firstValueFrom(
         this.sheetsService.appendValues(
           spreadsheetId,
-          `${tabName}!A1:${lastCol}1`,
+          this.range(tabName, `A1:${lastCol}1`),
           appendRows,
-        ),
-      );
-      await Promise.all(
-        missingTasks.map((t) =>
-          updateDoc(doc(this.firestore, `tasks/${t.id}`), {
-            googleSheetId: spreadsheetId,
-            googleSheetRowId: t.id,
-            isGoogleSheetTask: true,
-          }),
         ),
       );
       pushed = missingTasks.length;
     }
 
+    const added = ops.filter((o) => o.kind === 'create').length;
+    const updated = ops.filter((o) => o.kind === 'update').length;
     return { added, updated, pushed };
   }
 
