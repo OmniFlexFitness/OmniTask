@@ -7,7 +7,12 @@ import {
   query,
   collectionData,
 } from '@angular/fire/firestore';
-import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
+import {
+  DEFAULT_USER_PERMISSIONS,
+  UserPermissions,
+  UserProfile,
+  resolvePermissions,
+} from '../models/user.model';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -85,7 +90,7 @@ export class UserService {
     key: keyof UserPermissions,
     value: boolean,
   ): Promise<void> {
-    const current: UserPermissions = { ...DEFAULT_USER_PERMISSIONS, ...(user.permissions ?? {}) };
+    const current = resolvePermissions(user);
     current[key] = value;
     return this.updateUserPermissions(user.uid, current);
   }

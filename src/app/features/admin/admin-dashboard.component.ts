@@ -326,9 +326,10 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
                 class="flex items-center gap-2 text-xs text-gray-300 bg-black/40 border border-white/10 rounded-lg px-3 py-2 cursor-pointer select-none"
               >
                 <input
+                  #orgOnly
                   type="checkbox"
                   [checked]="orgDomainOnly()"
-                  (change)="orgDomainOnly.set($any($event.target).checked)"
+                  (change)="orgDomainOnly.set(orgOnly.checked)"
                   class="accent-cyan-400"
                 />
                 Only show &#64;{{ orgDomain }}
@@ -398,11 +399,12 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
                   [class.opacity-60]="user.email === superAdminEmail && toggle.key !== 'isSuperAdmin'"
                 >
                   <input
+                    #permToggle
                     type="checkbox"
                     class="mt-1 accent-cyan-400 w-4 h-4"
                     [checked]="effective(user)[toggle.key]"
                     [disabled]="user.email === superAdminEmail"
-                    (change)="togglePermission(user, toggle.key, $any($event.target).checked)"
+                    (change)="togglePermission(user, toggle.key, permToggle.checked)"
                   />
                   <div class="flex flex-col">
                     <span class="text-sm text-white font-medium">{{ toggle.label }}</span>

@@ -47,11 +47,14 @@ service cloud.firestore {
       // Allow reading own profile; admins/super-admins can read any profile.
       allow read: if request.auth.uid == userId || isAdmin() || isSuperAdmin();
 
-      // Prevent privilege escalation on self-create: a user creating their own
-      // profile may not mark themselves admin nor super-admin.
-      allow create: if isAdmin() || isSuperAdmin() || (
-        request.auth.uid == userId &&
-        request.resource.data.get('role', 'user') != 'admin' &&
+      // Prevent privilege escalation on create: only super-admins may create a
+      // user profile with `isSuperAdmin: true`. Regular admins and self-signups
+      // must have `isSuperAdmin` = false on the new document.
+      allow create: if isSuperAdmin() || (
+        (
+          isAdmin() ||
+          (request.auth.uid == userId && request.resource.data.get('role', 'user') != 'admin')
+        ) &&
         request.resource.data.get(['permissions', 'isSuperAdmin'], false) == false
       );
 
