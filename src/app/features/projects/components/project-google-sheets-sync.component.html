@@ -84,7 +84,7 @@
           @if (showFormatHelp()) {
             <div class="px-3 pb-3 pt-1 space-y-3 text-xs text-slate-300">
               <p>
-                OmniTask reads and writes the tab you link using a fixed 10-column layout.
+                OmniTask reads and writes the tab you link using a fixed 11-column layout.
                 <strong class="text-slate-200">Row 1 must contain the header row</strong> (filled in
                 automatically for new sheets); each following row represents one task.
               </p>
@@ -101,7 +101,7 @@
                     @for (col of expectedColumns; track col.name; let i = $index) {
                       <tr class="border-t border-white/5">
                         <td class="px-2 py-1.5 font-mono text-slate-500">
-                          {{ 'ABCDEFGHIJ'.charAt(i) }}
+                          {{ 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.charAt(i) }}
                         </td>
                         <td class="px-2 py-1.5 font-medium text-emerald-300">{{ col.name }}</td>
                         <td class="px-2 py-1.5 text-slate-400">{{ col.detail }}</td>
@@ -112,8 +112,10 @@
               </div>
               <p class="text-slate-500">
                 Tip: leave <span class="font-mono text-slate-300">ID</span> blank when drafting new
-                tasks in the sheet — OmniTask assigns an ID on the first sync and writes it back to
-                column A.
+                tasks — OmniTask assigns an ID and fills in sensible defaults (priority "low",
+                first section, current timestamp) on the next sync. Edit
+                <span class="font-mono text-slate-300">Section</span> or
+                <span class="font-mono text-slate-300">Order</span> to move and reorder tasks.
               </p>
             </div>
           }
@@ -182,7 +184,9 @@
                   [disabled]="creating()"
                 />
                 <p class="text-[11px] text-slate-500 mt-1">
-                  The tab will be pre-populated with the 10-column header row described above.
+                  The tab will be pre-populated with the 11-column header row described above and
+                  formatted as a native Google Sheets Table, so Section, Status, and Priority get
+                  dropdown pickers with this project's values.
                 </p>
               </div>
               <div class="flex items-center gap-2">

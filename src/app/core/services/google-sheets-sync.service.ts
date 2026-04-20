@@ -21,26 +21,43 @@ import { Task, Project, Section } from '../models/domain.model';
 export const DEFAULT_SHEET_TAB_NAME = 'Tasks';
 
 /**
- * Column order written to the spreadsheet. The first row of the sheet is
- * always these headers; subsequent rows correspond to individual tasks.
+ * Column order written to the spreadsheet. Row 1 holds these headers; each
+ * subsequent row is one task.
  *
- * The "ID" column stores the OmniTask task document ID so we can match rows
- * back to tasks across syncs even if the title changes.
+ * Layout goals:
+ *   - Human-readable, user-editable columns come first (Title, Section, Order,
+ *     Status, Priority, Due Date, Assignees, Tags, Description). These are the
+ *     columns a user actually opens the sheet to edit.
+ *   - Bookkeeping columns that OmniTask owns come last (ID, Updated At). ID is
+ *     an opaque Firestore doc ID; Updated At is a machine-managed timestamp.
+ *   - "Section" holds the section's human name (e.g. "To Do"), not its ID, so
+ *     users can reassign a task by typing another section name directly.
+ *   - "Order" is the 0-based position within its section; editing it reorders
+ *     the task in OmniTask's board/list views on the next sync.
+ *
+ * If you change this list, the schema-migration path in syncProjectWithSheet
+ * will detect the mismatch against existing linked sheets and rewrite them.
  */
 export const SHEET_HEADERS = [
-  'ID',
   'Title',
-  'Description',
+  'Section',
+  'Order',
   'Status',
   'Priority',
-  'Assignees',
   'Due Date',
+  'Assignees',
   'Tags',
-  'Section',
+  'Description',
+  'ID',
   'Updated At',
 ] as const;
 
 type SheetColumn = (typeof SHEET_HEADERS)[number];
+
+/** 0-based column index for the given header name. */
+function headerIndex(name: SheetColumn): number {
+  return SHEET_HEADERS.indexOf(name);
+}
 
 export interface SheetSyncResult {
   added: number; // Tasks added to OmniTask from sheet
@@ -116,21 +133,26 @@ export class GoogleSheetsSyncService {
   }
 
   /**
-   * Convert an OmniTask Task into the 10-cell row representation used in Sheets.
+   * Convert an OmniTask Task into the row representation used in Sheets.
    * Missing/undefined fields become empty strings so the row has a stable length.
+   *
+   * @param sections  The project's sections, used to resolve task.sectionId
+   *   into the human-readable section name written to column B.
    */
-  public transformToSheetRow(task: Task): string[] {
+  public transformToSheetRow(task: Task, sections: Section[] = []): string[] {
+    const sectionName = sections.find((s) => s.id === task.sectionId)?.name ?? '';
     const row: Record<SheetColumn, string> = {
-      ID: task.id ?? '',
       Title: task.title ?? '',
+      Section: sectionName,
+      Order: Number.isFinite(task.order) ? String(task.order) : '0',
+      Status: task.status ?? 'todo',
+      Priority: task.priority ?? 'low',
+      'Due Date': this.toISODate(task.dueDate),
+      Assignees: (task.assigneeNames ?? []).join(', '),
+      Tags: (task.tags ?? []).join(', '),
       // Preserve newlines — Google Sheets renders multi-line cells natively.
       Description: task.description ?? '',
-      Status: task.status ?? 'todo',
-      Priority: task.priority ?? 'medium',
-      Assignees: (task.assigneeNames ?? []).join(', '),
-      'Due Date': this.toISODate(task.dueDate),
-      Tags: (task.tags ?? []).join(', '),
-      Section: task.sectionId ?? '',
+      ID: task.id ?? '',
       'Updated At': this.toISODate(task.updatedAt) || new Date().toISOString(),
     };
     return SHEET_HEADERS.map((h) => row[h]);
@@ -141,9 +163,9 @@ export class GoogleSheetsSyncService {
    * Does not include the Firestore document ID — callers decide whether to
    * create a new doc or merge into an existing one.
    *
-   * Note: `order` is intentionally omitted. Callers creating new tasks should
-   * set `order` explicitly (typically to the sheet row index), while updates
-   * should leave the existing task's `order` untouched.
+   * `order` IS included here since users can now explicitly set per-section
+   * ordering in the sheet. Callers that don't want updates to reorder tasks
+   * should strip `order` from the result.
    */
   public transformFromSheetRow(
     row: string[],
@@ -151,23 +173,23 @@ export class GoogleSheetsSyncService {
     spreadsheetId: string,
     sections: Section[],
   ): { id: string; data: Partial<Task> } {
-    const cell = (i: number) => (row[i] ?? '').toString();
+    const cell = (name: SheetColumn) => (row[headerIndex(name)] ?? '').toString();
 
-    const id = cell(0).trim();
-    const status = this.parseStatus(cell(3));
+    const id = cell('ID').trim();
+    const status = this.parseStatus(cell('Status'));
     const data: Partial<Task> = {
-      title: cell(1) || 'Untitled',
-      description: cell(2) || '',
+      title: cell('Title') || 'Untitled',
+      description: cell('Description') || '',
       status,
-      priority: this.parsePriority(cell(4)),
-      assigneeNames: cell(5)
-        ? cell(5)
+      priority: this.parsePriority(cell('Priority')),
+      assigneeNames: cell('Assignees')
+        ? cell('Assignees')
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
         : [],
-      tags: cell(7)
-        ? cell(7)
+      tags: cell('Tags')
+        ? cell('Tags')
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
@@ -180,17 +202,26 @@ export class GoogleSheetsSyncService {
     // Firestore rejects `undefined` field values.
     if (id) data.googleSheetRowId = id;
 
-    const due = this.parseDate(cell(6));
+    const due = this.parseDate(cell('Due Date'));
     if (due) data.dueDate = due;
 
-    // Map Section column (either literal sectionId or section name) to a sectionId.
-    const sectionCell = cell(8).trim();
+    // Parse Order as a non-negative integer. Left undefined when blank so
+    // callers (sync's create path) can assign a row-index-based default.
+    const orderCell = cell('Order').trim();
+    if (orderCell) {
+      const parsed = Number(orderCell);
+      if (Number.isFinite(parsed)) data.order = Math.max(0, Math.trunc(parsed));
+    }
+
+    // Map Section column to a sectionId. Accepts section name (default),
+    // section ID (backward-compat with the old schema), or blank.
+    const sectionCell = cell('Section').trim();
     if (sectionCell) {
-      const byId = sections.find((s) => s.id === sectionCell);
       const byName = sections.find(
         (s) => s.name.toLowerCase() === sectionCell.toLowerCase(),
       );
-      const matched = byId || byName;
+      const byId = sections.find((s) => s.id === sectionCell);
+      const matched = byName || byId;
       if (matched) data.sectionId = matched.id;
     }
     // Fall back to mapping from status if no section specified.
@@ -251,6 +282,34 @@ export class GoogleSheetsSyncService {
   }
 
   /**
+   * Read the tab's current row 1 and compare it against SHEET_HEADERS.
+   * Returns true only when every column matches in order. Used to detect
+   * sheets created under an older column layout so we can rewrite them.
+   */
+  private async headersMatchCurrentSchema(
+    spreadsheetId: string,
+    tabName: string,
+  ): Promise<boolean> {
+    try {
+      const resp = await firstValueFrom(
+        this.sheetsService.getValues(
+          spreadsheetId,
+          this.range(tabName, `A1:${this.columnLetter(SHEET_HEADERS.length)}1`),
+        ),
+      );
+      const row = resp.values?.[0] ?? [];
+      if (row.length !== SHEET_HEADERS.length) return false;
+      for (let i = 0; i < SHEET_HEADERS.length; i++) {
+        if ((row[i] ?? '').toString().trim() !== SHEET_HEADERS[i]) return false;
+      }
+      return true;
+    } catch {
+      // If we can't read the header row, assume mismatch so the caller rewrites.
+      return false;
+    }
+  }
+
+  /**
    * Convert a 1-indexed column number to its A1 letter (1 => "A", 27 => "AA").
    */
   private columnLetter(col: number): string {
@@ -286,6 +345,7 @@ export class GoogleSheetsSyncService {
     tabName: string,
   ): Promise<{ pushed: number }> {
     await this.ensureHeaders(spreadsheetId, tabName);
+    const sections = await this.getProjectSections(projectId);
     const tasks = await this.getProjectTasks(projectId);
 
     // Clear the existing data region (everything below the header row).
@@ -298,7 +358,7 @@ export class GoogleSheetsSyncService {
       return { pushed: 0 };
     }
 
-    const rows = tasks.map((t) => this.transformToSheetRow(t));
+    const rows = tasks.map((t) => this.transformToSheetRow(t, sections));
     await firstValueFrom(
       this.sheetsService.updateValues(
         spreadsheetId,
@@ -354,6 +414,18 @@ export class GoogleSheetsSyncService {
     spreadsheetId: string,
     tabName: string,
   ): Promise<SheetSyncResult> {
+    // Schema migration: if the sheet's row 1 doesn't match the current
+    // SHEET_HEADERS layout, OmniTask's schema has evolved since this sheet
+    // was created. Do a full rewrite (push) so both headers and data end up
+    // in the new format before returning. Tasks currently in the sheet under
+    // the old layout will already have been imported into Firestore on prior
+    // syncs, so rewriting from the Firestore source-of-truth is safe.
+    const schemaCurrent = await this.headersMatchCurrentSchema(spreadsheetId, tabName);
+    if (!schemaCurrent) {
+      const { pushed } = await this.pushProjectToSheet(projectId, spreadsheetId, tabName);
+      return { added: 0, updated: 0, pushed };
+    }
+
     await this.ensureHeaders(spreadsheetId, tabName);
 
     const sections = await this.getProjectSections(projectId);
@@ -389,7 +461,8 @@ export class GoogleSheetsSyncService {
       const row = sheetRows[i];
       // Title is the only required field. Rows without a title are skipped so
       // stray blank lines (or lines with only an ID) don't create empty tasks.
-      const hasTitle = !!(row && row[1] && row[1].toString().trim());
+      const titleIdx = headerIndex('Title');
+      const hasTitle = !!(row && row[titleIdx] && row[titleIdx].toString().trim());
       if (!hasTitle) continue;
 
       const parsed = this.transformFromSheetRow(row, projectId, spreadsheetId, sections);
@@ -448,7 +521,7 @@ export class GoogleSheetsSyncService {
     // --- Batch the sheet side-effects into at most two API calls ---
     // 1. Write back the FULL row for each newly-created task so any defaults
     //    OmniTask filled in (ID, priority=low, first-section fallback, updatedAt)
-    //    are visible in the sheet instead of just the generated ID in column A.
+    //    are visible in the sheet instead of just the generated ID.
     const writebacks: BatchUpdateValuesData[] = ops
       .filter((o): o is CreateOp => o.kind === 'create')
       .map((o) => {
@@ -466,7 +539,7 @@ export class GoogleSheetsSyncService {
         } as Task;
         return {
           range: this.range(tabName, `A${o.sheetRowIndex}:${lastCol}${o.sheetRowIndex}`),
-          values: [this.transformToSheetRow(taskForRow)],
+          values: [this.transformToSheetRow(taskForRow, sections)],
         };
       });
     if (writebacks.length > 0) {
@@ -478,7 +551,7 @@ export class GoogleSheetsSyncService {
     // 2. Append rows for tasks that weren't yet in the sheet.
     let pushed = 0;
     if (missingTasks.length > 0) {
-      const appendRows = missingTasks.map((t) => this.transformToSheetRow(t));
+      const appendRows = missingTasks.map((t) => this.transformToSheetRow(t, sections));
       await firstValueFrom(
         this.sheetsService.appendValues(
           spreadsheetId,
@@ -514,8 +587,27 @@ export class GoogleSheetsSyncService {
     );
     const spreadsheetId = resp.spreadsheetId;
     const tabName = resp.sheets?.[0]?.properties?.title ?? desiredTab;
+    const sheetId = resp.sheets?.[0]?.properties?.sheetId ?? 0;
 
     await this.ensureHeaders(spreadsheetId, tabName);
+
+    // Apply Google Sheets' native Table format on top of the header row.
+    // Tables give the user filter/sort chips out of the box and let us declare
+    // per-column types (text / number / date / dropdown) so the UI validates
+    // inputs like Section, Status, and Priority at edit-time.
+    const sections = await this.getProjectSections(projectId);
+    try {
+      await firstValueFrom(
+        this.sheetsService.batchUpdateSheet(
+          spreadsheetId,
+          this.buildAddTableRequests(sheetId, tabName, sections),
+        ),
+      );
+    } catch (err) {
+      // Non-fatal: if the host account doesn't have Tables enabled we still
+      // have a usable header-row spreadsheet and sync will work. Log and move on.
+      console.warn('Could not apply native Sheets Table format:', err);
+    }
 
     await updateDoc(doc(this.firestore, `projects/${projectId}`), {
       googleSheetId: spreadsheetId,
@@ -529,6 +621,99 @@ export class GoogleSheetsSyncService {
   }
 
   /**
+   * Build the addTable + data-validation requests that turn the bare tab
+   * into a typed Sheets Table. The table covers the header row plus a large
+   * pre-allocated block of data rows so subsequent appends stay inside the
+   * table boundary.
+   *
+   * @param sheetId   Numeric sheet tab ID (distinct from the tab NAME).
+   * @param tabName   Tab name (used only in the table's user-facing name).
+   * @param sections  Project sections — their names become the Section dropdown options.
+   */
+  private buildAddTableRequests(
+    sheetId: number,
+    tabName: string,
+    sections: Section[],
+  ): Array<Record<string, unknown>> {
+    const TABLE_ROW_CAPACITY = 1000; // header + ~999 data rows pre-allocated
+    const endRowIndex = 1 + TABLE_ROW_CAPACITY;
+
+    // Build one columnProperties entry per header. Columns with a
+    // fixed-choice domain get DROPDOWN + a ONE_OF_LIST validation rule so
+    // Sheets renders a proper chip/picker in each cell.
+    const dropdownChoice = (
+      values: string[],
+    ): { type: 'ONE_OF_LIST'; values: Array<{ userEnteredValue: string }> } => ({
+      type: 'ONE_OF_LIST',
+      values: values.map((v) => ({ userEnteredValue: v })),
+    });
+
+    const columnProperties = SHEET_HEADERS.map((name, idx) => {
+      const base = { columnIndex: idx, columnName: name };
+      switch (name) {
+        case 'Section':
+          return {
+            ...base,
+            columnType: 'DROPDOWN',
+            dataValidationRule: {
+              condition: dropdownChoice(
+                sections.length > 0 ? sections.map((s) => s.name) : ['To Do'],
+              ),
+              strict: false,
+              showCustomUi: true,
+            },
+          };
+        case 'Status':
+          return {
+            ...base,
+            columnType: 'DROPDOWN',
+            dataValidationRule: {
+              condition: dropdownChoice(['todo', 'in-progress', 'done']),
+              strict: false,
+              showCustomUi: true,
+            },
+          };
+        case 'Priority':
+          return {
+            ...base,
+            columnType: 'DROPDOWN',
+            dataValidationRule: {
+              condition: dropdownChoice(['low', 'medium', 'high']),
+              strict: false,
+              showCustomUi: true,
+            },
+          };
+        case 'Order':
+          return { ...base, columnType: 'DOUBLE' };
+        case 'Due Date':
+          return { ...base, columnType: 'DATE' };
+        case 'Updated At':
+          return { ...base, columnType: 'DATE_TIME' };
+        default:
+          return { ...base, columnType: 'TEXT' };
+      }
+    });
+
+    return [
+      {
+        addTable: {
+          table: {
+            name: `${tabName} — OmniTask Tasks`,
+            range: {
+              sheetId,
+              startRowIndex: 0,
+              endRowIndex,
+              startColumnIndex: 0,
+              endColumnIndex: SHEET_HEADERS.length,
+            },
+            columnProperties,
+          },
+        },
+      },
+    ];
+  }
+
+  /**
    * Find the 1-based sheet row index for a task ID by scanning column A.
    * Returns null when the ID isn't present (treat as "not in sheet yet").
    */
@@ -537,8 +722,13 @@ export class GoogleSheetsSyncService {
     tabName: string,
     taskId: string,
   ): Promise<number | null> {
+    // ID lives in whichever column SHEET_HEADERS currently places it.
+    const idCol = this.columnLetter(headerIndex('ID') + 1);
     const resp = await firstValueFrom(
-      this.sheetsService.getValues(spreadsheetId, this.range(tabName, 'A2:A')),
+      this.sheetsService.getValues(
+        spreadsheetId,
+        this.range(tabName, `${idCol}2:${idCol}`),
+      ),
     );
     const rows = resp.values ?? [];
     for (let i = 0; i < rows.length; i++) {
@@ -563,7 +753,7 @@ export class GoogleSheetsSyncService {
     const tabName = project.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
     const lastCol = this.columnLetter(SHEET_HEADERS.length);
     try {
-      const rowValues = this.transformToSheetRow(task);
+      const rowValues = this.transformToSheetRow(task, project.sections ?? []);
       const existingRow = await this.findRowIndex(spreadsheetId, tabName, task.id);
       if (existingRow !== null) {
         await firstValueFrom(

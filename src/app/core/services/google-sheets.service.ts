@@ -67,6 +67,20 @@ export interface BatchUpdateValuesResponse {
   responses?: UpdateValuesResponse[];
 }
 
+/**
+ * A single request in a structural batchUpdate (spreadsheets:batchUpdate).
+ * Typed loosely: the Sheets API supports dozens of request shapes and the
+ * service consumer (GoogleSheetsSyncService) knows which shape it's building.
+ */
+export interface SheetBatchRequest {
+  [requestType: string]: unknown;
+}
+
+export interface SheetBatchUpdateResponse {
+  spreadsheetId: string;
+  replies?: Array<Record<string, unknown>>;
+}
+
 const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 /**
@@ -219,6 +233,27 @@ export class GoogleSheetsService {
           values: d.values,
         })),
       },
+      { headers: this.getAuthHeaders() },
+    );
+  }
+
+  /**
+   * Structural batchUpdate (spreadsheets:batchUpdate). Accepts a list of
+   * request objects (e.g. addTable, addSheet, updateCells, setDataValidation)
+   * and applies them atomically. Use this for operations that reshape the
+   * spreadsheet itself rather than just cell values.
+   */
+  batchUpdateSheet(
+    spreadsheetId: string,
+    requests: SheetBatchRequest[],
+  ): Observable<SheetBatchUpdateResponse> {
+    if (!this.isAuthenticated()) {
+      return throwError(() => new Error('Google Sheets not authenticated'));
+    }
+    const url = `${SHEETS_API_BASE}/${encodeURIComponent(spreadsheetId)}:batchUpdate`;
+    return this.http.post<SheetBatchUpdateResponse>(
+      url,
+      { requests },
       { headers: this.getAuthHeaders() },
     );
   }
