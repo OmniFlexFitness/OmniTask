@@ -9,7 +9,8 @@ import {
 } from '@angular/fire/auth';
 import { Firestore, doc, setDoc, getDoc, updateDoc } from '@angular/fire/firestore';
 import { Router } from '@angular/router';
-import { UserProfile } from '../models/user.model';
+import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
+import { SUPER_ADMIN_EMAIL } from '../constants';
 import { DialogService } from '../services/dialog.service';
 import { switchMap, map } from 'rxjs/operators';
 import { of, from, Observable } from 'rxjs';
@@ -211,16 +212,43 @@ export class AuthService {
     // Use pop() to get the last part after splitting by '@' to handle edge cases
     const domain = user.email?.split('@').pop() || 'unknown';
 
-    const data: UserProfile = {
+    const isDesignatedSuperAdmin =
+      user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
+    // Ensure the designated super-admin is always promoted to admin + super-admin
+    // on sign-in, regardless of their prior stored values.
+    const role: 'admin' | 'user' = isDesignatedSuperAdmin
+      ? 'admin'
+      : existingData?.role || 'user';
+
+    // Permissions map: seed defaults only on first creation (or force-refresh for
+    // the designated super-admin). For returning users we leave their stored
+    // permissions untouched so that admin-assigned rights are preserved and so
+    // that the Firestore update rule does not see a permissions-field change.
+    const data: Partial<UserProfile> & { uid: string; email: string } = {
       uid: user.uid,
       email: user.email!,
       displayName: user.displayName || 'User',
       photoURL: user.photoURL || '',
       domain,
-      role: existingData?.role || 'user', // Default to user, preserve if exists
+      role,
       createdAt: existingData?.createdAt || new Date(),
       lastLoginAt: new Date(),
     };
+
+    if (isDesignatedSuperAdmin) {
+      const superPerms: UserPermissions = {
+        canCreateProjects: true,
+        canCreateTasks: true,
+        canDeleteProjects: true,
+        canDeleteTasks: true,
+        canInviteMembers: true,
+        isSuperAdmin: true,
+      };
+      data.permissions = superPerms;
+    } else if (!existingData) {
+      data.permissions = { ...DEFAULT_USER_PERMISSIONS };
+    }
 
     // Create or Update
     return setDoc(userRef, data, { merge: true });

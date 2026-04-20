@@ -7,7 +7,7 @@ import {
   query,
   collectionData,
 } from '@angular/fire/firestore';
-import { UserProfile } from '../models/user.model';
+import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -49,5 +49,44 @@ export class UserService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Replace a user's permissions map. Any field not supplied falls back to
+   * the default permission value so the stored document is always fully
+   * populated and predictable for Firestore rules.
+   */
+  async updateUserPermissions(
+    uid: string,
+    permissions: Partial<UserPermissions>,
+  ): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const merged: UserPermissions = { ...DEFAULT_USER_PERMISSIONS, ...permissions };
+      const userRef = doc(this.firestore, 'users', uid);
+      await updateDoc(userRef, { permissions: merged });
+    } catch (err) {
+      const message = 'Failed to update user permissions';
+      console.error(`${message}:`, err);
+      this.error.set(message);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Toggle a single permission flag on a user document. The rest of the
+   * permission map is preserved.
+   */
+  async setUserPermission(
+    user: UserProfile,
+    key: keyof UserPermissions,
+    value: boolean,
+  ): Promise<void> {
+    const current: UserPermissions = { ...DEFAULT_USER_PERMISSIONS, ...(user.permissions ?? {}) };
+    current[key] = value;
+    return this.updateUserPermissions(user.uid, current);
   }
 }

@@ -6,30 +6,75 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Hard-coded super-admin email. Matches SUPER_ADMIN_EMAIL in src/app/core/constants.ts.
+    function isSuperAdminEmail() {
+      return isAuthenticated() && request.auth.token.email == 'bertin.kenol@omniflexfitness.com';
+    }
+
+    // Load the current user's profile document once per request.
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     // Helper to check if user is an admin
     function isAdmin() {
-      return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && currentUser().role == 'admin';
+    }
+
+    // Super-admins are either the designated email or have permissions.isSuperAdmin == true.
+    function isSuperAdmin() {
+      return isSuperAdminEmail() || (
+        isAuthenticated() && currentUser().get(['permissions', 'isSuperAdmin'], false) == true
+      );
+    }
+
+    // Check a named permission on the signed-in user's profile. Defaults to `true`
+    // when the field is missing so that users created before this feature was
+    // deployed are not locked out of basic functionality.
+    function hasPermission(key) {
+      return isAuthenticated() && currentUser().get(['permissions', key], true) == true;
     }
 
     // Helper to check if user is owner or member of the resource
     function isMember(resourceData) {
       return isAuthenticated() && (
-        request.auth.uid == resourceData.ownerId || 
+        request.auth.uid == resourceData.ownerId ||
         request.auth.uid in resourceData.memberIds
       );
     }
-    
+
     match /users/{userId} {
-      // Allow reading own profile only
-      allow read: if request.auth.uid == userId || isAdmin();
-      
-      // Prevent privilege escalation: only admins can set or update the role to 'admin'
-      allow create: if isAdmin() || (request.auth.uid == userId && request.resource.data.get('role', 'user') != 'admin');
-      allow update: if isAdmin() || (request.auth.uid == userId && request.resource.data.get('role', '') == resource.data.get('role', ''));
-      allow delete: if request.auth.uid == userId || isAdmin();
+      // Allow reading own profile; admins/super-admins can read any profile.
+      allow read: if request.auth.uid == userId || isAdmin() || isSuperAdmin();
+
+      // Prevent privilege escalation on self-create: a user creating their own
+      // profile may not mark themselves admin nor super-admin.
+      allow create: if isAdmin() || isSuperAdmin() || (
+        request.auth.uid == userId &&
+        request.resource.data.get('role', 'user') != 'admin' &&
+        request.resource.data.get(['permissions', 'isSuperAdmin'], false) == false
+      );
+
+      // Users may update their own non-privileged fields (display name, last
+      // login, etc.). They may not change their role or any field of their
+      // permissions map — only admins/super-admins can do that.
+      //
+      // Admins can update anything except the `isSuperAdmin` flag, which is
+      // reserved for super-admins.
+      allow update: if isSuperAdmin() || (
+        isAdmin() &&
+        request.resource.data.get(['permissions', 'isSuperAdmin'], false) ==
+          resource.data.get(['permissions', 'isSuperAdmin'], false)
+      ) || (
+        request.auth.uid == userId &&
+        request.resource.data.get('role', '') == resource.data.get('role', '') &&
+        request.resource.data.get('permissions', null) ==
+          resource.data.get('permissions', null)
+      );
+
+      allow delete: if request.auth.uid == userId || isAdmin() || isSuperAdmin();
     }
-    
+
     // User's personal contacts cache - scoped to individual users
     match /users/{userId}/contacts/{contactId} {
       allow read, write: if request.auth.uid == userId;
@@ -49,38 +94,47 @@ service cloud.firestore {
     match /users/{userId}/customFields/{fieldId} {
       allow read, write: if request.auth.uid == userId;
     }
-    
+
     match /projects/{projectId} {
-      allow create: if isAuthenticated();
-      allow read: if isMember(resource.data) || isAdmin();
-      allow update: if isMember(resource.data) || isAdmin();
-      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.ownerId) || isAdmin();
+      allow create: if isAuthenticated() && hasPermission('canCreateProjects');
+      allow read: if isMember(resource.data) || isAdmin() || isSuperAdmin();
+      allow update: if isMember(resource.data) || isAdmin() || isSuperAdmin();
+      allow delete: if isAdmin() || isSuperAdmin() || (
+        isAuthenticated() &&
+        request.auth.uid == resource.data.ownerId &&
+        hasPermission('canDeleteProjects')
+      );
     }
-    
+
     match /tasks/{taskId} {
       // Helper: Check if user is a member of the task's project (for existing tasks)
       function isProjectMember() {
         let project = get(/databases/$(database)/documents/projects/$(resource.data.projectId));
         return project != null && (
-          request.auth.uid == project.data.ownerId || 
-          request.auth.uid in project.data.memberIds
-        );
-      }
-      
-      // Helper: Check if user can create a task in the specified project (for new tasks)
-      function canCreateInProject() {
-        let project = get(/databases/$(database)/documents/projects/$(request.resource.data.projectId));
-        return project != null && (
-          request.auth.uid == project.data.ownerId || 
+          request.auth.uid == project.data.ownerId ||
           request.auth.uid in project.data.memberIds
         );
       }
 
-      allow create: if (isAuthenticated() && canCreateInProject()) || isAdmin();
-      allow read: if (isAuthenticated() && isProjectMember()) || isAdmin();
-      allow update, delete: if (isAuthenticated() && isProjectMember()) || isAdmin();
+      // Helper: Check if user can create a task in the specified project (for new tasks)
+      function canCreateInProject() {
+        let project = get(/databases/$(database)/documents/projects/$(request.resource.data.projectId));
+        return project != null && (
+          request.auth.uid == project.data.ownerId ||
+          request.auth.uid in project.data.memberIds
+        );
+      }
+
+      allow create: if isAdmin() || isSuperAdmin() || (
+        isAuthenticated() && canCreateInProject() && hasPermission('canCreateTasks')
+      );
+      allow read: if (isAuthenticated() && isProjectMember()) || isAdmin() || isSuperAdmin();
+      allow update: if (isAuthenticated() && isProjectMember()) || isAdmin() || isSuperAdmin();
+      allow delete: if isAdmin() || isSuperAdmin() || (
+        isAuthenticated() && isProjectMember() && hasPermission('canDeleteTasks')
+      );
     }
-    
+
     // Notifications - written by Cloud Functions, readable by recipient
     match /notifications/{notificationId} {
       // Cloud Functions uses admin SDK (bypasses rules)

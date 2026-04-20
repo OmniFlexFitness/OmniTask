@@ -22,6 +22,7 @@ import {
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map } from 'rxjs';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
+import { PermissionsService } from './permissions.service';
 
 @Injectable({
   providedIn: 'root',
@@ -30,6 +31,7 @@ export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private permissions = inject(PermissionsService);
   private injector = inject(Injector);
 
   private projectsCollection = collection(this.firestore, 'projects');
@@ -124,6 +126,7 @@ export class ProjectService {
     try {
       const user = this.auth.currentUserSig();
       if (!user) throw new Error('Not authenticated');
+      this.permissions.requirePermission('canCreateProjects');
 
       // Create default sections with unique IDs
       const sections: Section[] = DEFAULT_SECTIONS.map((s, i) => ({
@@ -185,6 +188,7 @@ export class ProjectService {
     this.error.set(null);
 
     try {
+      this.permissions.requirePermission('canDeleteProjects');
       const project = await this.getProject(id);
       if (!project) throw new Error('Project not found');
 

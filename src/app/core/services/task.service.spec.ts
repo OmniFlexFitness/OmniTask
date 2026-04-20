@@ -6,8 +6,10 @@ import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { ProjectService } from './project.service';
+import { PermissionsService } from './permissions.service';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
+import { DEFAULT_USER_PERMISSIONS } from '../models/user.model';
 
 /**
  * Unit tests for TaskService
@@ -42,6 +44,13 @@ describe('TaskService', () => {
     addMember: (projectId: string, userId: string): Promise<void> => Promise.resolve(),
   };
 
+  const permissionsServiceMock: Partial<PermissionsService> = {
+    currentPermissions: signal({ ...DEFAULT_USER_PERMISSIONS }) as any,
+    isSuperAdmin: signal(false) as any,
+    resolveFor: () => ({ ...DEFAULT_USER_PERMISSIONS }),
+    requirePermission: jasmine.createSpy('requirePermission'),
+  };
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
@@ -51,6 +60,7 @@ describe('TaskService', () => {
         { provide: GoogleTasksService, useValue: googleTasksServiceMock },
         { provide: GoogleTasksSyncService, useValue: googleTasksSyncServiceMock },
         { provide: ProjectService, useValue: projectServiceMock },
+        { provide: PermissionsService, useValue: permissionsServiceMock },
       ],
     });
 

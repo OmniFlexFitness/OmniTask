@@ -1,5 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 
@@ -8,13 +9,61 @@ import { ProjectService } from '../../core/services/project.service';
 import { TaskService } from '../../core/services/task.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { UserProfile } from '../../core/models/user.model';
+import { PermissionsService } from '../../core/services/permissions.service';
+import {
+  DEFAULT_USER_PERMISSIONS,
+  UserPermissions,
+  UserProfile,
+  resolvePermissions,
+} from '../../core/models/user.model';
+import { ORG_DOMAIN, SUPER_ADMIN_EMAIL } from '../../core/constants';
+
+type AdminTab = 'Users' | 'Projects' | 'Tasks' | 'Permissions';
+
+interface PermissionToggle {
+  key: keyof UserPermissions;
+  label: string;
+  description: string;
+}
+
+const PERMISSION_TOGGLES: PermissionToggle[] = [
+  {
+    key: 'canCreateProjects',
+    label: 'Create projects',
+    description: 'Create new projects in the workspace.',
+  },
+  {
+    key: 'canCreateTasks',
+    label: 'Create tasks',
+    description: 'Add tasks to any project they are a member of.',
+  },
+  {
+    key: 'canDeleteProjects',
+    label: 'Delete projects',
+    description: 'Delete projects they own.',
+  },
+  {
+    key: 'canDeleteTasks',
+    label: 'Delete tasks',
+    description: 'Delete tasks within their projects.',
+  },
+  {
+    key: 'canInviteMembers',
+    label: 'Invite members',
+    description: 'Add other users to projects.',
+  },
+  {
+    key: 'isSuperAdmin',
+    label: 'Super admin',
+    description: 'Manage permissions for every user (grant with care).',
+  },
+];
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="h-screen overflow-y-auto bg-[#0a0a0a] text-gray-200">
       <div class="p-8 max-w-7xl mx-auto flex flex-col gap-8">
@@ -70,7 +119,7 @@ import { UserProfile } from '../../core/models/user.model';
         <!-- Navigation Tabs -->
         <div class="flex border-b border-white/10 gap-8">
           <button
-            *ngFor="let tab of tabs"
+            *ngFor="let tab of visibleTabs()"
             (click)="activeTab.set(tab)"
             [class.border-cyan-400]="activeTab() === tab"
             [class.text-cyan-400]="activeTab() === tab"
@@ -258,6 +307,119 @@ import { UserProfile } from '../../core/models/user.model';
             </table>
           </div>
         </div>
+
+        <!-- Permissions Tab (super-admin only) -->
+        <div *ngIf="activeTab() === 'Permissions'" class="flex flex-col gap-4">
+          <div
+            class="rounded-xl p-5 border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-cyan-500/5"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h2 class="text-lg font-semibold text-white">User rights &amp; permissions</h2>
+                <p class="text-sm text-gray-400 mt-1">
+                  Grant granular rights to users &mdash; particularly those in the
+                  <span class="font-mono text-cyan-300">{{ orgDomain }}</span> domain who could not
+                  previously create projects or tasks. Changes apply immediately.
+                </p>
+              </div>
+              <label
+                class="flex items-center gap-2 text-xs text-gray-300 bg-black/40 border border-white/10 rounded-lg px-3 py-2 cursor-pointer select-none"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="orgDomainOnly()"
+                  (change)="orgDomainOnly.set($any($event.target).checked)"
+                  class="accent-cyan-400"
+                />
+                Only show &#64;{{ orgDomain }}
+              </label>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <div
+              *ngFor="let user of filteredUsers(); trackBy: trackByUid"
+              class="bg-black/40 border border-white/10 rounded-xl p-5 backdrop-blur-md"
+              [class.border-purple-500/40]="user.email === superAdminEmail"
+            >
+              <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-200 font-semibold"
+                  >
+                    {{ user.displayName ? user.displayName.charAt(0) : 'U' }}
+                  </div>
+                  <div>
+                    <div class="text-white font-medium">
+                      {{ user.displayName || 'Unknown User' }}
+                      <span
+                        *ngIf="user.email === superAdminEmail"
+                        class="ml-2 text-[10px] uppercase tracking-wider text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full"
+                      >
+                        Super Admin
+                      </span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-0.5">{{ user.email }}</div>
+                    <div class="text-[10px] text-gray-500 font-mono mt-0.5">
+                      domain: {{ user.domain }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    (click)="resetToDefaults(user)"
+                    [disabled]="user.email === superAdminEmail"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-300 hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Reset to defaults
+                  </button>
+                  <button
+                    (click)="grantAll(user)"
+                    [disabled]="user.email === superAdminEmail"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Grant all
+                  </button>
+                  <button
+                    (click)="revokeAll(user)"
+                    [disabled]="user.email === superAdminEmail"
+                    class="text-xs px-3 py-1.5 rounded-lg border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Revoke all
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-5">
+                <label
+                  *ngFor="let toggle of toggles"
+                  class="flex items-start gap-3 p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer transition-colors"
+                  [class.opacity-60]="user.email === superAdminEmail && toggle.key !== 'isSuperAdmin'"
+                >
+                  <input
+                    type="checkbox"
+                    class="mt-1 accent-cyan-400 w-4 h-4"
+                    [checked]="effective(user)[toggle.key]"
+                    [disabled]="user.email === superAdminEmail"
+                    (change)="togglePermission(user, toggle.key, $any($event.target).checked)"
+                  />
+                  <div class="flex flex-col">
+                    <span class="text-sm text-white font-medium">{{ toggle.label }}</span>
+                    <span class="text-xs text-gray-400">{{ toggle.description }}</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div
+              *ngIf="filteredUsers().length === 0"
+              class="text-center text-gray-500 py-12 border border-dashed border-white/10 rounded-xl"
+            >
+              No users match the current filter.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -269,14 +431,112 @@ export class AdminDashboardComponent {
   readonly dialogService = inject(DialogService);
   readonly router = inject(Router);
   readonly authService = inject(AuthService);
-  currentUser = this.authService.currentUserSig;
+  readonly permissionsService = inject(PermissionsService);
 
-  tabs = ['Users', 'Projects', 'Tasks'];
-  activeTab = signal('Users');
+  currentUser = this.authService.currentUserSig;
+  isSuperAdmin = this.permissionsService.isSuperAdmin;
+
+  readonly superAdminEmail = SUPER_ADMIN_EMAIL;
+  readonly orgDomain = ORG_DOMAIN;
+  readonly toggles = PERMISSION_TOGGLES;
+
+  activeTab = signal<AdminTab>('Users');
+  orgDomainOnly = signal(true);
 
   users = toSignal(this.userService.getAllUsers(), { initialValue: [] });
   projects = toSignal(this.projectService.getAllProjects(), { initialValue: [] });
   tasks = toSignal(this.taskService.getAllTasks(), { initialValue: [] });
+
+  visibleTabs = computed<AdminTab[]>(() => {
+    const base: AdminTab[] = ['Users', 'Projects', 'Tasks'];
+    return this.isSuperAdmin() ? [...base, 'Permissions'] : base;
+  });
+
+  filteredUsers = computed(() => {
+    const all = this.users();
+    if (!this.orgDomainOnly()) return all;
+    return all.filter((u) => u.domain?.toLowerCase() === ORG_DOMAIN);
+  });
+
+  trackByUid(_index: number, user: UserProfile) {
+    return user.uid;
+  }
+
+  effective(user: UserProfile): UserPermissions {
+    return resolvePermissions(user);
+  }
+
+  async togglePermission(user: UserProfile, key: keyof UserPermissions, value: boolean) {
+    if (user.email === SUPER_ADMIN_EMAIL) {
+      this.dialogService.alert(
+        'The super-admin account cannot have its permissions modified.',
+        'Action Not Allowed',
+      );
+      return;
+    }
+    try {
+      await this.userService.setUserPermission(user, key, value);
+    } catch (err) {
+      console.error('Failed to update permission:', err);
+      this.dialogService.alert('Failed to update permission. Please try again.', 'Error');
+    }
+  }
+
+  async resetToDefaults(user: UserProfile) {
+    if (user.email === SUPER_ADMIN_EMAIL) return;
+    if (
+      await this.dialogService.confirm(
+        `Reset ${user.displayName || user.email}'s permissions to defaults?`,
+      )
+    ) {
+      try {
+        await this.userService.updateUserPermissions(user.uid, { ...DEFAULT_USER_PERMISSIONS });
+      } catch (err) {
+        console.error('Failed to reset permissions:', err);
+        this.dialogService.alert('Failed to reset permissions. Please try again.', 'Error');
+      }
+    }
+  }
+
+  async grantAll(user: UserProfile) {
+    if (user.email === SUPER_ADMIN_EMAIL) return;
+    try {
+      await this.userService.updateUserPermissions(user.uid, {
+        canCreateProjects: true,
+        canCreateTasks: true,
+        canDeleteProjects: true,
+        canDeleteTasks: true,
+        canInviteMembers: true,
+        isSuperAdmin: false,
+      });
+    } catch (err) {
+      console.error('Failed to grant permissions:', err);
+      this.dialogService.alert('Failed to grant permissions. Please try again.', 'Error');
+    }
+  }
+
+  async revokeAll(user: UserProfile) {
+    if (user.email === SUPER_ADMIN_EMAIL) return;
+    if (
+      await this.dialogService.confirm(
+        `Revoke all permissions from ${user.displayName || user.email}?`,
+      )
+    ) {
+      try {
+        await this.userService.updateUserPermissions(user.uid, {
+          canCreateProjects: false,
+          canCreateTasks: false,
+          canDeleteProjects: false,
+          canDeleteTasks: false,
+          canInviteMembers: false,
+          isSuperAdmin: false,
+        });
+      } catch (err) {
+        console.error('Failed to revoke permissions:', err);
+        this.dialogService.alert('Failed to revoke permissions. Please try again.', 'Error');
+      }
+    }
+  }
 
   async promoteToAdmin(user: UserProfile) {
     if (
@@ -286,7 +546,6 @@ export class AdminDashboardComponent {
     ) {
       try {
         await this.userService.updateUserRole(user.uid, 'admin');
-        // Optionally show a success toast here
       } catch (error) {
         console.error('Failed to promote user:', error);
         this.dialogService.alert('Failed to promote user. Please try again.', 'Error');
@@ -297,6 +556,13 @@ export class AdminDashboardComponent {
   async demoteToUser(user: UserProfile) {
     if (user.uid === this.currentUser()?.uid) {
       this.dialogService.alert('You cannot demote your own account.', 'Action Not Allowed');
+      return;
+    }
+    if (user.email === SUPER_ADMIN_EMAIL) {
+      this.dialogService.alert(
+        'The designated super-admin cannot be demoted.',
+        'Action Not Allowed',
+      );
       return;
     }
 
