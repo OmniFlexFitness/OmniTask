@@ -27,6 +27,12 @@ const GOOGLE_OTHER_CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts.ot
 // Google Workspace Directory API scope for reading domain users
 const GOOGLE_DIRECTORY_SCOPE = 'https://www.googleapis.com/auth/directory.readonly';
 
+// Google Sheets API scope for read/write access to spreadsheets the user opens or creates with OmniTask
+const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+
+// Google Drive file scope (restricted to files created/opened by OmniTask) - needed to create new spreadsheets
+const GOOGLE_DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
 // Google OAuth configuration for refresh token flow
 // These are public client identifiers (safe to expose in frontend code)
 const GOOGLE_CLIENT_ID = '172130002005-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
@@ -54,8 +60,13 @@ export class AuthService {
 
   currentUserSig = signal<UserProfile | null>(null);
 
-  // Google Tasks API access token for authenticated API calls
+  // Google API access token - shared by Tasks, Sheets, Contacts, and Directory APIs
+  // All Google scopes requested at sign-in share a single OAuth access token.
   googleTasksAccessToken = signal<string | null>(null);
+
+  // Alias for clarity at call sites that read/write Google Sheets.
+  // Returns the same underlying access token as googleTasksAccessToken.
+  googleSheetsAccessToken = this.googleTasksAccessToken;
 
   // Flag indicating if user has granted offline access for scheduled sync
   hasOfflineAccess = signal<boolean>(false);
@@ -82,6 +93,9 @@ export class AuthService {
     provider.addScope(GOOGLE_CONTACTS_SCOPE);
     provider.addScope(GOOGLE_OTHER_CONTACTS_SCOPE);
     provider.addScope(GOOGLE_DIRECTORY_SCOPE);
+    // Add Google Sheets API scopes for spreadsheet-based project/task sync
+    provider.addScope(GOOGLE_SHEETS_SCOPE);
+    provider.addScope(GOOGLE_DRIVE_FILE_SCOPE);
 
     try {
       const credential = await signInWithPopup(this.auth, provider);
@@ -136,6 +150,8 @@ export class AuthService {
       provider.addScope(GOOGLE_TASKS_SCOPE);
       provider.addScope(GOOGLE_CONTACTS_SCOPE);
       provider.addScope(GOOGLE_DIRECTORY_SCOPE);
+      provider.addScope(GOOGLE_SHEETS_SCOPE);
+      provider.addScope(GOOGLE_DRIVE_FILE_SCOPE);
 
       const credential = await signInWithPopup(this.auth, provider);
       const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);

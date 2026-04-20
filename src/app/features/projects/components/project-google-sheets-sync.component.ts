@@ -1,0 +1,274 @@
+import {
+  Component,
+  input,
+  output,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  OnInit,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { ProjectService } from '../../../core/services/project.service';
+import { DialogService } from '../../../core/services/dialog.service';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  GoogleSheetsService,
+  SpreadsheetMetadata,
+  SheetTab,
+} from '../../../core/services/google-sheets.service';
+import {
+  GoogleSheetsSyncService,
+  DEFAULT_SHEET_TAB_NAME,
+} from '../../../core/services/google-sheets-sync.service';
+import { Project } from '../../../core/models/domain.model';
+
+/**
+ * UI for linking a project to a designated Google Sheet and running
+ * on-demand sync. Mirrors ProjectGoogleTasksSyncComponent in behavior.
+ */
+@Component({
+  selector: 'app-project-google-sheets-sync',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './project-google-sheets-sync.component.html',
+  styleUrls: ['./project-google-sheets-sync.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class ProjectGoogleSheetsSyncComponent implements OnInit {
+  private readonly projectService = inject(ProjectService);
+  private readonly dialogService = inject(DialogService);
+  private readonly sheetsService = inject(GoogleSheetsService);
+  private readonly sheetsSyncService = inject(GoogleSheetsSyncService);
+  private readonly authService = inject(AuthService);
+
+  project = input.required<Project>();
+  projectChanged = output<void>();
+
+  isAuthenticated = computed(() => this.sheetsService.isAuthenticated());
+
+  // Linked sheet metadata (fetched after the user pastes an ID or creates a new sheet).
+  sheetMetadata = signal<SpreadsheetMetadata | null>(null);
+  loadingMetadata = signal(false);
+
+  // Form state for pasting a URL/ID.
+  sheetUrlInput = signal('');
+  linking = signal(false);
+
+  // Sync activity state.
+  syncing = signal(false);
+  pushing = signal(false);
+  creating = signal(false);
+  lastSyncResult = signal<{ success: boolean; message: string } | null>(null);
+
+  availableTabs = computed<SheetTab[]>(() => this.sheetMetadata()?.sheets ?? []);
+
+  ngOnInit() {
+    const p = this.project();
+    if (p.googleSheetId && this.isAuthenticated()) {
+      this.loadSheetMetadata(p.googleSheetId);
+    }
+  }
+
+  private async loadSheetMetadata(spreadsheetId: string) {
+    this.loadingMetadata.set(true);
+    try {
+      const meta = await firstValueFrom(this.sheetsService.getSpreadsheet(spreadsheetId));
+      this.sheetMetadata.set(meta);
+    } catch (err) {
+      console.error('Failed to load spreadsheet metadata:', err);
+      this.sheetMetadata.set(null);
+    } finally {
+      this.loadingMetadata.set(false);
+    }
+  }
+
+  async linkSheet() {
+    const raw = this.sheetUrlInput().trim();
+    if (!raw) {
+      await this.dialogService.alert(
+        'Paste a Google Sheets URL or spreadsheet ID.',
+        'Sheet Required',
+      );
+      return;
+    }
+    const sheetId = this.sheetsService.extractSpreadsheetId(raw);
+    this.linking.set(true);
+    try {
+      const meta = await firstValueFrom(this.sheetsService.getSpreadsheet(sheetId));
+      const tabName = meta.sheets?.[0]?.title ?? DEFAULT_SHEET_TAB_NAME;
+      await this.projectService.updateProject(this.project().id, {
+        googleSheetId: meta.spreadsheetId,
+        googleSheetName: meta.title,
+        googleSheetTabName: tabName,
+        sheetSyncEnabled: true,
+        sheetSyncStatus: 'pending',
+      });
+      this.sheetMetadata.set(meta);
+      this.sheetUrlInput.set('');
+      this.projectChanged.emit();
+    } catch (err) {
+      console.error('Failed to link sheet:', err);
+      await this.dialogService.alert(
+        'Could not open that spreadsheet. Make sure the URL is correct and that you have access.',
+        'Link Failed',
+      );
+    } finally {
+      this.linking.set(false);
+    }
+  }
+
+  async createNewSheet() {
+    this.creating.set(true);
+    try {
+      const result = await this.sheetsSyncService.createSheetForProject(
+        this.project().id,
+        this.project().name,
+      );
+      const meta = await firstValueFrom(
+        this.sheetsService.getSpreadsheet(result.spreadsheetId),
+      );
+      this.sheetMetadata.set(meta);
+      this.projectChanged.emit();
+      this.lastSyncResult.set({
+        success: true,
+        message: 'Created a new Google Sheet and linked it to this project.',
+      });
+      setTimeout(() => this.lastSyncResult.set(null), 5000);
+    } catch (err) {
+      console.error('Failed to create sheet:', err);
+      await this.dialogService.alert(
+        'Failed to create a new Google Sheet. Please try again.',
+        'Create Failed',
+      );
+    } finally {
+      this.creating.set(false);
+    }
+  }
+
+  async selectTab(tabName: string) {
+    try {
+      await this.projectService.updateProject(this.project().id, {
+        googleSheetTabName: tabName,
+        sheetSyncStatus: 'pending',
+      });
+      this.projectChanged.emit();
+    } catch (err) {
+      console.error('Failed to select tab:', err);
+    }
+  }
+
+  async pushAllToSheet() {
+    const p = this.project();
+    if (!p.googleSheetId) return;
+    const tab = p.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
+    const confirmed = await this.dialogService.confirm(
+      `This will overwrite all rows in "${tab}" with OmniTask's current tasks. Continue?`,
+      'Overwrite Sheet?',
+    );
+    if (!confirmed) return;
+
+    this.pushing.set(true);
+    try {
+      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'pending' });
+      const result = await this.sheetsSyncService.pushProjectToSheet(p.id, p.googleSheetId, tab);
+      await this.projectService.updateProject(p.id, {
+        sheetSyncStatus: 'synced',
+        lastSheetSyncAt: new Date(),
+      });
+      this.projectChanged.emit();
+      this.lastSyncResult.set({
+        success: true,
+        message: `✓ Exported ${result.pushed} task${result.pushed === 1 ? '' : 's'} to Google Sheets.`,
+      });
+      setTimeout(() => this.lastSyncResult.set(null), 5000);
+    } catch (err) {
+      console.error('Push failed:', err);
+      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'error' });
+      this.lastSyncResult.set({
+        success: false,
+        message: 'Export to Google Sheets failed. Check sheet permissions and try again.',
+      });
+    } finally {
+      this.pushing.set(false);
+    }
+  }
+
+  async triggerSync() {
+    const p = this.project();
+    if (!p.googleSheetId) {
+      await this.dialogService.alert(
+        'Please link a Google Sheet first.',
+        'Sheet Required',
+      );
+      return;
+    }
+    const tab = p.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
+
+    this.syncing.set(true);
+    try {
+      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'pending' });
+      const result = await this.sheetsSyncService.syncProjectWithSheet(
+        p.id,
+        p.googleSheetId,
+        tab,
+      );
+      await this.projectService.updateProject(p.id, {
+        sheetSyncStatus: 'synced',
+        lastSheetSyncAt: new Date(),
+      });
+      this.projectChanged.emit();
+      this.lastSyncResult.set({
+        success: true,
+        message: `✓ ${result.added} added, ${result.updated} updated, ${result.pushed} pushed to sheet`,
+      });
+      setTimeout(() => this.lastSyncResult.set(null), 5000);
+    } catch (err) {
+      console.error('Sheet sync failed:', err);
+      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'error' });
+      this.lastSyncResult.set({
+        success: false,
+        message: 'Sync failed. Please check your connection and sheet permissions.',
+      });
+    } finally {
+      this.syncing.set(false);
+    }
+  }
+
+  async disconnectSheet() {
+    const confirmed = await this.dialogService.confirm(
+      'This will unlink the Google Sheet from this project. The sheet itself is not deleted, and your tasks remain in OmniTask.',
+      'Disconnect Sheet?',
+    );
+    if (!confirmed) return;
+    try {
+      await this.projectService.updateProject(this.project().id, {
+        googleSheetId: null as unknown as string,
+        googleSheetName: null as unknown as string,
+        googleSheetTabName: null as unknown as string,
+        sheetSyncEnabled: false,
+        sheetSyncStatus: null as unknown as Project['sheetSyncStatus'],
+      });
+      this.sheetMetadata.set(null);
+      this.projectChanged.emit();
+    } catch (err) {
+      console.error('Failed to disconnect sheet:', err);
+    }
+  }
+
+  async reconnectGoogle() {
+    // Re-sign in picks up the Sheets scope.
+    await this.authService.logout();
+  }
+
+  formatSyncDate(date: Date | { toDate: () => Date } | null | undefined): string {
+    if (!date) return 'Never';
+    const d =
+      date instanceof Date ? date : ((date as { toDate?: () => Date }).toDate?.() ?? new Date());
+    return d.toLocaleString();
+  }
+
+  sheetLink = computed(() => this.sheetMetadata()?.spreadsheetUrl ?? null);
+}
