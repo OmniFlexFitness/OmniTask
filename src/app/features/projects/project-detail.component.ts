@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+  effect,
+  OnDestroy,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -7,6 +15,7 @@ import { switchMap, of } from 'rxjs';
 import { ProjectService } from '../../core/services/project.service';
 import { TaskService } from '../../core/services/task.service';
 import { DialogService } from '../../core/services/dialog.service';
+import { GoogleSheetsAutoSyncService } from '../../core/services/google-sheets-auto-sync.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectStatsCardComponent } from './components/project-stats-card.component';
@@ -36,12 +45,13 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
   styleUrls: ['./project-detail.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectDetailComponent {
+export class ProjectDetailComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly projectService = inject(ProjectService);
   private readonly taskService = inject(TaskService);
   private readonly dialogService = inject(DialogService);
+  private readonly sheetsAutoSync = inject(GoogleSheetsAutoSyncService);
 
   // Tab State
   activeTab = signal<ProjectTab>('overview');
@@ -94,6 +104,23 @@ export class ProjectDetailComponent {
         this.projectService.selectedProjectId.set(id);
       }
     });
+
+    // Persistent Google Sheets sync: whenever this project is open AND has a
+    // sheet linked, run an immediate sync and keep polling while mounted.
+    // Auto-stops when navigating away (ngOnDestroy below) or when the project
+    // has no sheet linked.
+    effect(() => {
+      const p = this.project();
+      if (p?.googleSheetId) {
+        this.sheetsAutoSync.start(p.id);
+      } else {
+        this.sheetsAutoSync.stop();
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.sheetsAutoSync.stop();
   }
 
   goBack() {

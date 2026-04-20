@@ -24,6 +24,7 @@ import {
   GoogleSheetsSyncService,
   DEFAULT_SHEET_TAB_NAME,
 } from '../../../core/services/google-sheets-sync.service';
+import { GoogleSheetsAutoSyncService } from '../../../core/services/google-sheets-auto-sync.service';
 import { Project } from '../../../core/models/domain.model';
 
 /**
@@ -43,7 +44,13 @@ export class ProjectGoogleSheetsSyncComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly sheetsService = inject(GoogleSheetsService);
   private readonly sheetsSyncService = inject(GoogleSheetsSyncService);
+  private readonly autoSync = inject(GoogleSheetsAutoSyncService);
   private readonly authService = inject(AuthService);
+
+  // Expose auto-sync state to the template so the UI reflects background activity.
+  autoSyncing = this.autoSync.syncing;
+  autoSyncLastAt = this.autoSync.lastSyncAt;
+  autoSyncError = this.autoSync.lastError;
 
   project = input.required<Project>();
   projectChanged = output<void>();
@@ -262,38 +269,35 @@ export class ProjectGoogleSheetsSyncComponent implements OnInit {
     }
   }
 
+  /**
+   * Force an immediate sync, bypassing the auto-sync debounce. The project
+   * already auto-syncs on mount and on a 60s interval, so this is effectively
+   * a "refresh" affordance for users who want confirmation right now.
+   */
   async triggerSync() {
     const p = this.project();
     if (!p.googleSheetId) {
-      await this.dialogService.alert(
-        'Please link a Google Sheet first.',
-        'Sheet Required',
-      );
+      await this.dialogService.alert('Please link a Google Sheet first.', 'Sheet Required');
       return;
     }
-    const tab = p.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
-
     this.syncing.set(true);
     try {
-      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'pending' });
-      const result = await this.sheetsSyncService.syncProjectWithSheet(
-        p.id,
-        p.googleSheetId,
-        tab,
-      );
-      await this.projectService.updateProject(p.id, {
-        sheetSyncStatus: 'synced',
-        lastSheetSyncAt: new Date(),
-      });
+      const result = await this.autoSync.syncNow(p.id);
       this.projectChanged.emit();
-      this.lastSyncResult.set({
-        success: true,
-        message: `✓ ${result.added} added, ${result.updated} updated, ${result.pushed} pushed to sheet`,
-      });
+      if (result) {
+        this.lastSyncResult.set({
+          success: true,
+          message: `✓ ${result.added} added, ${result.updated} updated, ${result.pushed} pushed to sheet`,
+        });
+      } else {
+        this.lastSyncResult.set({
+          success: true,
+          message: '✓ Already up to date.',
+        });
+      }
       setTimeout(() => this.lastSyncResult.set(null), 5000);
     } catch (err) {
       console.error('Sheet sync failed:', err);
-      await this.projectService.updateProject(p.id, { sheetSyncStatus: 'error' });
       this.lastSyncResult.set({
         success: false,
         message: 'Sync failed. Please check your connection and sheet permissions.',

@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, effect, DestroyRef } from '@angular/core';
 import {
   Auth,
   GoogleAuthProvider,
@@ -62,7 +62,13 @@ export class AuthService {
 
   // Google API access token - shared by Tasks, Sheets, Contacts, and Directory APIs
   // All Google scopes requested at sign-in share a single OAuth access token.
-  googleTasksAccessToken = signal<string | null>(null);
+  //
+  // Persistence: the token is mirrored into sessionStorage so it survives page
+  // refreshes (clearing when the browser tab/session closes). This is a
+  // deliberate UX tradeoff: it avoids forcing users to re-authorize for every
+  // reload, at the cost of a small XSS exposure window. Anything that clears
+  // the in-memory signal (logout, explicit revoke) also clears storage.
+  googleTasksAccessToken = signal<string | null>(this.readStoredGoogleToken());
 
   // Alias for clarity at call sites that read/write Google Sheets.
   // Returns the same underlying access token as googleTasksAccessToken.
@@ -80,9 +86,39 @@ export class AuthService {
       }
     });
 
-    // Security Note: Access token is kept in-memory only (not sessionStorage) to prevent XSS attacks.
-    // User will need to re-authenticate for Google Tasks after page refresh.
-    // Refresh tokens are stored encrypted in Firestore for scheduled background sync.
+    // Persistence: mirror the in-memory token into sessionStorage whenever it
+    // changes, so refreshing the page does not force re-auth. Refresh tokens
+    // are still stored encrypted in Firestore for background Cloud Function sync.
+    effect(() => {
+      const token = this.googleTasksAccessToken();
+      this.writeStoredGoogleToken(token);
+    });
+  }
+
+  private static readonly GOOGLE_TOKEN_STORAGE_KEY = 'ot.googleAccessToken';
+
+  /** Read a previously-stored Google access token from sessionStorage (null if none). */
+  private readStoredGoogleToken(): string | null {
+    if (typeof window === 'undefined' || !window.sessionStorage) return null;
+    try {
+      return window.sessionStorage.getItem(AuthService.GOOGLE_TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Mirror the access token to sessionStorage (or remove when cleared). */
+  private writeStoredGoogleToken(token: string | null): void {
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
+    try {
+      if (token) {
+        window.sessionStorage.setItem(AuthService.GOOGLE_TOKEN_STORAGE_KEY, token);
+      } else {
+        window.sessionStorage.removeItem(AuthService.GOOGLE_TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // sessionStorage may be disabled (incognito with strict policy); fall through.
+    }
   }
 
   async loginWithGoogle() {

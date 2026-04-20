@@ -41,7 +41,8 @@
         </div>
         <h4 class="text-lg font-semibold text-white mb-2">Connect Google Sheets</h4>
         <p class="text-sm text-slate-400 mb-5 max-w-xs mx-auto">
-          Manage your tasks in a spreadsheet. Changes in either place stay in sync.
+          Manage your tasks in a spreadsheet. Once connected, changes sync
+          automatically — no button-pressing required.
         </p>
         <button class="ofx-neon-button" (click)="reconnectGoogle()">Sign In to Connect</button>
       </div>
@@ -251,6 +252,51 @@
           <p class="text-xs text-slate-500 mb-3">Loading sheet…</p>
         }
 
+        <!-- Persistent auto-sync status -->
+        <div
+          class="mb-4 p-3 rounded-lg border flex items-center justify-between"
+          [class.bg-emerald-500/5]="!autoSyncError()"
+          [class.border-emerald-500/20]="!autoSyncError()"
+          [class.bg-rose-500/10]="autoSyncError()"
+          [class.border-rose-500/20]="autoSyncError()"
+        >
+          <div class="flex items-center gap-2 text-xs">
+            @if (autoSyncing()) {
+              <svg class="animate-spin h-3 w-3 text-emerald-400" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+              <span class="text-emerald-300">Auto-syncing…</span>
+            } @else if (autoSyncError()) {
+              <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+              <span class="text-rose-300">Auto-sync paused — {{ autoSyncError() }}</span>
+            } @else {
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span class="text-emerald-300">Auto-sync on</span>
+              <span class="text-slate-500">
+                · checks every minute, and on every task change
+              </span>
+            }
+          </div>
+          @if (autoSyncLastAt()) {
+            <span class="text-[11px] text-slate-500">
+              last: {{ formatSyncDate(autoSyncLastAt()) }}
+            </span>
+          }
+        </div>
+
         <!-- Status + last sync -->
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div class="p-3 bg-slate-900/50 rounded-lg">
@@ -315,7 +361,7 @@
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span>{{ syncing() ? 'Syncing…' : 'Sync Now' }}</span>
+            <span>{{ syncing() ? 'Syncing…' : 'Refresh Now' }}</span>
           </button>
           <button
             class="px-3 py-2.5 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 text-sm transition-all"

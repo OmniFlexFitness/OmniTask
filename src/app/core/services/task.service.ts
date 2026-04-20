@@ -20,6 +20,7 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
+import { GoogleSheetsSyncService } from './google-sheets-sync.service';
 import { ProjectService } from './project.service';
 
 @Injectable({
@@ -30,6 +31,7 @@ export class TaskService {
   private auth = inject(AuthService);
   private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private googleSheetsSyncService = inject(GoogleSheetsSyncService);
   private projectService = inject(ProjectService);
   private injector = inject(Injector);
   private tasksCollection = collection(this.firestore, 'tasks');
@@ -400,6 +402,9 @@ export class TaskService {
         }
       }
 
+      // Optional Google Sheets push — never blocks the create
+      void this.pushTaskToSheet(result.id);
+
       // Auto-add assignees to project members
       if (task.assigneeIds?.length) {
         for (const uid of task.assigneeIds) {
@@ -470,6 +475,9 @@ export class TaskService {
           }
         }
       }
+
+      // Optional Google Sheets push — never blocks the update
+      void this.pushTaskToSheet(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';
       this.error.set(message);
@@ -524,6 +532,11 @@ export class TaskService {
             console.warn('Google Tasks sync failed for task', task.id, err);
           }
         }
+      }
+
+      // Best-effort Google Sheets cleanup — clear each task's row in its project's sheet
+      for (const task of toDelete) {
+        void this.clearTaskFromSheet(task);
       }
 
       // Batch-delete all collected tasks atomically
@@ -690,6 +703,37 @@ export class TaskService {
       throw err;
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /**
+   * Fire-and-forget push of a task's current state to its project's linked
+   * Google Sheet. No-op when the project has no sheet linked, when the user
+   * isn't authenticated, or when the task doc can't be re-read. Never throws.
+   */
+  private async pushTaskToSheet(taskId: string): Promise<void> {
+    try {
+      const task = await this.getTask(taskId);
+      if (!task) return;
+      const project = await this.projectService.getProject(task.projectId);
+      if (!project?.googleSheetId) return;
+      await this.googleSheetsSyncService.pushTaskUpsert(task, project);
+    } catch (err) {
+      console.warn('Google Sheets push failed for task', taskId, err);
+    }
+  }
+
+  /**
+   * Fire-and-forget clear of a task's row in its project's linked Google Sheet.
+   * Called as part of deleteTask; never throws.
+   */
+  private async clearTaskFromSheet(task: Task): Promise<void> {
+    try {
+      const project = await this.projectService.getProject(task.projectId);
+      if (!project?.googleSheetId) return;
+      await this.googleSheetsSyncService.pushTaskDelete(task, project);
+    } catch (err) {
+      console.warn('Google Sheets clear failed for task', task.id, err);
     }
   }
 }

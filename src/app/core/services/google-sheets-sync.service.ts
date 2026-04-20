@@ -103,12 +103,16 @@ export class GoogleSheetsSyncService {
 
   /**
    * Normalize a priority string from the sheet into OmniTask's priority enum.
+   *
+   * Defaults to 'low' when the cell is blank or unrecognized — rows added by
+   * hand with only a title should get a sensible, low-urgency default that
+   * users can promote later.
    */
   private parsePriority(value: string | undefined): Task['priority'] {
     const v = (value || '').toLowerCase().trim();
     if (v === 'high' || v === 'urgent') return 'high';
-    if (v === 'low') return 'low';
-    return 'medium';
+    if (v === 'medium' || v === 'med') return 'medium';
+    return 'low';
   }
 
   /**
@@ -193,6 +197,12 @@ export class GoogleSheetsSyncService {
     if (!data.sectionId) {
       const byStatus = sections.find((s) => s.status === status);
       if (byStatus) data.sectionId = byStatus.id;
+    }
+    // Final fallback: drop the task into the project's first section (by order),
+    // so hand-entered rows with only a title still land somewhere sensible.
+    if (!data.sectionId && sections.length > 0) {
+      const firstSection = [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
+      if (firstSection) data.sectionId = firstSection.id;
     }
 
     return { id, data: this.stripUndefined(data) };
@@ -374,10 +384,13 @@ export class GoogleSheetsSyncService {
     }
     const ops: Array<UpdateOp | CreateOp> = [];
 
+
     for (let i = 0; i < sheetRows.length; i++) {
       const row = sheetRows[i];
-      // Skip blank rows (no title and no id).
-      if (!row || (!row[0] && !row[1])) continue;
+      // Title is the only required field. Rows without a title are skipped so
+      // stray blank lines (or lines with only an ID) don't create empty tasks.
+      const hasTitle = !!(row && row[1] && row[1].toString().trim());
+      if (!hasTitle) continue;
 
       const parsed = this.transformFromSheetRow(row, projectId, spreadsheetId, sections);
       const existing = parsed.id ? tasksById.get(parsed.id) : undefined;
@@ -433,13 +446,29 @@ export class GoogleSheetsSyncService {
     });
 
     // --- Batch the sheet side-effects into at most two API calls ---
-    // 1. Write back all generated task IDs into column A in a single batchUpdate.
+    // 1. Write back the FULL row for each newly-created task so any defaults
+    //    OmniTask filled in (ID, priority=low, first-section fallback, updatedAt)
+    //    are visible in the sheet instead of just the generated ID in column A.
     const writebacks: BatchUpdateValuesData[] = ops
       .filter((o): o is CreateOp => o.kind === 'create')
-      .map((o) => ({
-        range: this.range(tabName, `A${o.sheetRowIndex}`),
-        values: [[o.id]],
-      }));
+      .map((o) => {
+        const taskForRow: Task = {
+          id: o.id,
+          createdAt: now,
+          updatedAt: now,
+          title: '',
+          description: '',
+          status: 'todo',
+          priority: 'low',
+          order: 0,
+          projectId,
+          ...(o.data as Partial<Task>),
+        } as Task;
+        return {
+          range: this.range(tabName, `A${o.sheetRowIndex}:${lastCol}${o.sheetRowIndex}`),
+          values: [this.transformToSheetRow(taskForRow)],
+        };
+      });
     if (writebacks.length > 0) {
       await firstValueFrom(
         this.sheetsService.batchUpdateValues(spreadsheetId, writebacks),
@@ -497,5 +526,96 @@ export class GoogleSheetsSyncService {
     });
 
     return { spreadsheetId, spreadsheetUrl: resp.spreadsheetUrl, tabName };
+  }
+
+  /**
+   * Find the 1-based sheet row index for a task ID by scanning column A.
+   * Returns null when the ID isn't present (treat as "not in sheet yet").
+   */
+  private async findRowIndex(
+    spreadsheetId: string,
+    tabName: string,
+    taskId: string,
+  ): Promise<number | null> {
+    const resp = await firstValueFrom(
+      this.sheetsService.getValues(spreadsheetId, this.range(tabName, 'A2:A')),
+    );
+    const rows = resp.values ?? [];
+    for (let i = 0; i < rows.length; i++) {
+      const cell = (rows[i]?.[0] ?? '').toString().trim();
+      if (cell === taskId) return i + 2; // +2: header row + 1-indexed
+    }
+    return null;
+  }
+
+  /**
+   * Push a single task to the project's linked sheet. Inserts a new row if
+   * the task isn't already present, or replaces the existing row in place.
+   *
+   * Best-effort: authentication errors and missing-sheet errors are swallowed
+   * so they don't break the calling task-save flow. The caller gets `false`
+   * in that case and a warning is logged.
+   */
+  async pushTaskUpsert(task: Task, project: Project): Promise<boolean> {
+    const spreadsheetId = project.googleSheetId;
+    if (!spreadsheetId) return false;
+    if (!this.sheetsService.isAuthenticated()) return false;
+    const tabName = project.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
+    const lastCol = this.columnLetter(SHEET_HEADERS.length);
+    try {
+      const rowValues = this.transformToSheetRow(task);
+      const existingRow = await this.findRowIndex(spreadsheetId, tabName, task.id);
+      if (existingRow !== null) {
+        await firstValueFrom(
+          this.sheetsService.updateValues(
+            spreadsheetId,
+            this.range(tabName, `A${existingRow}:${lastCol}${existingRow}`),
+            [rowValues],
+          ),
+        );
+      } else {
+        await firstValueFrom(
+          this.sheetsService.appendValues(
+            spreadsheetId,
+            this.range(tabName, `A1:${lastCol}1`),
+            [rowValues],
+          ),
+        );
+      }
+      return true;
+    } catch (err) {
+      console.warn('Google Sheets push failed for task', task.id, err);
+      return false;
+    }
+  }
+
+  /**
+   * Remove a task's row from the project's linked sheet. No-op if the sheet
+   * doesn't contain the task.
+   */
+  async pushTaskDelete(task: Task, project: Project): Promise<boolean> {
+    const spreadsheetId = project.googleSheetId;
+    if (!spreadsheetId) return false;
+    if (!this.sheetsService.isAuthenticated()) return false;
+    const tabName = project.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
+    const lastCol = this.columnLetter(SHEET_HEADERS.length);
+    try {
+      const existingRow = await this.findRowIndex(spreadsheetId, tabName, task.id);
+      if (existingRow === null) return false;
+      // Clear the row's cells rather than physically removing the row, since
+      // shifting rows would require a spreadsheets.batchUpdate with a delete
+      // request and the tab's numeric sheetId. Clearing is atomic from the
+      // user's perspective — the row reappears empty and can be reused.
+      await firstValueFrom(
+        this.sheetsService.clearValues(
+          spreadsheetId,
+          this.range(tabName, `A${existingRow}:${lastCol}${existingRow}`),
+        ),
+      );
+      return true;
+    } catch (err) {
+      console.warn('Google Sheets delete-push failed for task', task.id, err);
+      return false;
+    }
   }
 }
