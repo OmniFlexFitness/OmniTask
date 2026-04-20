@@ -4,9 +4,11 @@ import * as firestore from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
+import { PermissionsService } from './permissions.service';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { Project, DEFAULT_SECTIONS } from '../models/domain.model';
+import { DEFAULT_USER_PERMISSIONS } from '../models/user.model';
 
 describe('ProjectService', () => {
   let service: ProjectService;
@@ -28,6 +30,13 @@ describe('ProjectService', () => {
       .and.returnValue(Promise.resolve()),
   };
 
+  const permissionsServiceMock: Partial<PermissionsService> = {
+    currentPermissions: signal({ ...DEFAULT_USER_PERMISSIONS }) as any,
+    isSuperAdmin: signal(false) as any,
+    resolveFor: () => ({ ...DEFAULT_USER_PERMISSIONS }),
+    requirePermission: jasmine.createSpy('requirePermission'),
+  };
+
   const safeSpy = (obj: any, method: string) =>
     obj[method]?.and ? obj[method] : spyOn(obj, method);
 
@@ -38,6 +47,7 @@ describe('ProjectService', () => {
         { provide: Firestore, useValue: firestoreMock },
         { provide: AuthService, useValue: authServiceMock },
         { provide: GoogleTasksSyncService, useValue: googleTasksSyncServiceMock },
+        { provide: PermissionsService, useValue: permissionsServiceMock },
       ],
     });
 

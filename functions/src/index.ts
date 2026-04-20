@@ -1393,3 +1393,63 @@ Only return the JSON object, no other text or markdown formatting around the JSO
     );
   }
 });
+
+// ---------------------------------------------------------------------------
+// Super-admin enforcement
+// ---------------------------------------------------------------------------
+
+/**
+ * Designated super-admin email. Must match SUPER_ADMIN_EMAIL in
+ * src/app/core/constants.ts. The Cloud Function below guarantees that whenever
+ * this user's document is created or modified it is forced back into an
+ * admin + isSuperAdmin state — so bertin cannot be accidentally demoted and
+ * is promoted immediately on first sign-in regardless of any client races.
+ */
+const SUPER_ADMIN_EMAIL = 'bertin.kenol@omniflexfitness.com';
+
+const SUPER_ADMIN_PERMISSIONS = {
+  canCreateProjects: true,
+  canCreateTasks: true,
+  canDeleteProjects: true,
+  canDeleteTasks: true,
+  canInviteMembers: true,
+  isSuperAdmin: true,
+};
+
+export const enforceSuperAdmin = onDocumentWritten(
+  {
+    document: 'users/{uid}',
+    memory: '256MiB',
+  },
+  async (event) => {
+    const after = event.data?.after?.data();
+    if (!after) return; // user deleted — nothing to do
+
+    const email: string | undefined = after.email;
+    if (email?.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) return;
+
+    const needsRoleFix = after.role !== 'admin';
+    const currentPerms = after.permissions || {};
+    const needsPermsFix = Object.keys(SUPER_ADMIN_PERMISSIONS).some(
+      (k) =>
+        (currentPerms as Record<string, boolean>)[k] !==
+        (SUPER_ADMIN_PERMISSIONS as Record<string, boolean>)[k],
+    );
+
+    if (!needsRoleFix && !needsPermsFix) return;
+
+    console.log(
+      `enforceSuperAdmin: reasserting admin/super-admin on ${email} ` +
+        `(roleFix=${needsRoleFix}, permsFix=${needsPermsFix})`,
+    );
+    await db
+      .doc(`users/${event.params.uid}`)
+      .set(
+        {
+          role: 'admin',
+          permissions: SUPER_ADMIN_PERMISSIONS,
+        },
+        { merge: true },
+      );
+  },
+);

@@ -21,6 +21,7 @@ import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { ProjectService } from './project.service';
+import { PermissionsService } from './permissions.service';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +32,7 @@ export class TaskService {
   private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
   private projectService = inject(ProjectService);
+  private permissions = inject(PermissionsService);
   private injector = inject(Injector);
   private tasksCollection = collection(this.firestore, 'tasks');
 
@@ -370,6 +372,7 @@ export class TaskService {
 
     try {
       const user = this.auth.currentUserSig();
+      this.permissions.requirePermission('canCreateTasks');
 
       // Reconcile derived fields for the new task
       const reconciled = await this.reconcileNewTaskFields(task);
@@ -488,6 +491,7 @@ export class TaskService {
     this.error.set(null);
 
     try {
+      this.permissions.requirePermission('canDeleteTasks');
       // Collect all descendant task IDs using BFS with cycle guard
       const toDelete: Task[] = [];
       const visited = new Set<string>();
