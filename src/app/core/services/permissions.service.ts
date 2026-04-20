@@ -71,8 +71,8 @@ export class PermissionsService {
   requirePermission(key: keyof UserPermissions): void {
     if (!this.currentPermissions()[key]) {
       throw new Error(
-        `You do not have permission to perform this action (missing ${key}). ` +
-          `Please contact an administrator.`,
+        'You do not have permission to perform this action. ' +
+          'Please contact an administrator.',
       );
     }
   }

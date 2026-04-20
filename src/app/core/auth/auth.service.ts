@@ -246,7 +246,9 @@ export class AuthService {
         isSuperAdmin: true,
       };
       data.permissions = superPerms;
-    } else if (!existingData) {
+    } else if (!existingData || !existingData.permissions) {
+      // Seed defaults for brand-new users and for returning users whose
+      // profiles predate this feature (missing permissions field).
       data.permissions = { ...DEFAULT_USER_PERMISSIONS };
     }
 

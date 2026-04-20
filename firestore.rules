@@ -99,9 +99,19 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow create: if isAuthenticated() && hasPermission('canCreateProjects');
+      allow create: if isAdmin() || isSuperAdmin() || (
+        isAuthenticated() && hasPermission('canCreateProjects')
+      );
       allow read: if isMember(resource.data) || isAdmin() || isSuperAdmin();
-      allow update: if isMember(resource.data) || isAdmin() || isSuperAdmin();
+      // Members can update project fields freely, but changing `memberIds`
+      // additionally requires the `canInviteMembers` permission so the invite
+      // flag is actually enforced. Admins/super-admins bypass this.
+      allow update: if isAdmin() || isSuperAdmin() || (
+        isMember(resource.data) && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberIds']) ||
+          hasPermission('canInviteMembers')
+        )
+      );
       allow delete: if isAdmin() || isSuperAdmin() || (
         isAuthenticated() &&
         request.auth.uid == resource.data.ownerId &&

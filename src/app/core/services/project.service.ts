@@ -284,6 +284,7 @@ export class ProjectService {
    * Add a member to a project
    */
   async addMember(projectId: string, userId: string): Promise<void> {
+    this.permissions.requirePermission('canInviteMembers');
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 
@@ -297,6 +298,7 @@ export class ProjectService {
    * Remove a member from a project
    */
   async removeMember(projectId: string, userId: string): Promise<void> {
+    this.permissions.requirePermission('canInviteMembers');
     const project = await this.getProject(projectId);
     if (!project) throw new Error('Project not found');
 

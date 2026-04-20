@@ -5,8 +5,9 @@ import { map, take, tap } from 'rxjs/operators';
 import { SUPER_ADMIN_EMAIL } from '../constants';
 
 /**
- * Guard for the admin dashboard. Admins (role === 'admin') and the
- * designated super-admin can access it.
+ * Guard for the admin dashboard. Admins (role === 'admin'), the designated
+ * super-admin email, and any user granted `permissions.isSuperAdmin` can
+ * access it.
  */
 export const adminGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
@@ -14,12 +15,12 @@ export const adminGuard: CanActivateFn = (route, state) => {
 
   return auth.userProfile$.pipe(
     take(1),
-    map(
-      (profile) =>
-        !!profile &&
-        (profile.role === 'admin' ||
-          profile.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()),
-    ),
+    map((profile) => {
+      if (!profile) return false;
+      if (profile.role === 'admin') return true;
+      if (profile.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+      return profile.permissions?.isSuperAdmin === true;
+    }),
     tap((allowed) => {
       if (!allowed) {
         router.navigate(['/']);
