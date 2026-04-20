@@ -48,35 +48,160 @@
     } @else if (!project().googleSheetId) {
       <!-- No sheet linked yet -->
       <div
-        class="p-5 bg-gradient-to-br from-slate-800/80 to-slate-900/60 rounded-xl border border-emerald-500/20"
+        class="p-5 bg-gradient-to-br from-slate-800/80 to-slate-900/60 rounded-xl border border-emerald-500/20 space-y-4"
       >
-        <p class="text-xs uppercase tracking-wider text-slate-500 mb-3">Link a Spreadsheet</p>
-        <div class="flex flex-col sm:flex-row gap-2 mb-3">
-          <input
-            type="text"
-            class="flex-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
-            placeholder="Paste Google Sheets URL or ID"
-            [ngModel]="sheetUrlInput()"
-            (ngModelChange)="sheetUrlInput.set($event)"
-            [disabled]="linking()"
-          />
+        <!-- Expected sheet format (applies to both link + create flows) -->
+        <div class="rounded-lg border border-white/10 bg-slate-900/40">
           <button
-            class="ofx-neon-button !py-2"
-            [disabled]="linking() || !sheetUrlInput().trim()"
-            (click)="linkSheet()"
+            type="button"
+            class="w-full flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors"
+            (click)="showFormatHelp.set(!showFormatHelp())"
           >
-            {{ linking() ? 'Linking…' : 'Link Sheet' }}
+            <span class="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Expected sheet format
+            </span>
+            <span
+              class="text-slate-500 transition-transform"
+              [class.rotate-180]="showFormatHelp()"
+              >▾</span
+            >
           </button>
+          @if (showFormatHelp()) {
+            <div class="px-3 pb-3 pt-1 space-y-3 text-xs text-slate-300">
+              <p>
+                OmniTask reads and writes the tab you link using a fixed 10-column layout.
+                <strong class="text-slate-200">Row 1 must contain the header row</strong> (filled in
+                automatically for new sheets); each following row represents one task.
+              </p>
+              <div class="overflow-hidden rounded border border-white/10">
+                <table class="w-full text-left text-[11px]">
+                  <thead class="bg-slate-800/70 text-slate-400 uppercase tracking-wider">
+                    <tr>
+                      <th class="px-2 py-1.5 w-8">Col</th>
+                      <th class="px-2 py-1.5 w-24">Header</th>
+                      <th class="px-2 py-1.5">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (col of expectedColumns; track col.name; let i = $index) {
+                      <tr class="border-t border-white/5">
+                        <td class="px-2 py-1.5 font-mono text-slate-500">
+                          {{ 'ABCDEFGHIJ'.charAt(i) }}
+                        </td>
+                        <td class="px-2 py-1.5 font-medium text-emerald-300">{{ col.name }}</td>
+                        <td class="px-2 py-1.5 text-slate-400">{{ col.detail }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-slate-500">
+                Tip: leave <span class="font-mono text-slate-300">ID</span> blank when drafting new
+                tasks in the sheet — OmniTask assigns an ID on the first sync and writes it back to
+                column A.
+              </p>
+            </div>
+          }
         </div>
-        <div class="flex items-center gap-3">
-          <span class="text-xs text-slate-500">or</span>
-          <button
-            class="text-sm text-emerald-400 hover:text-emerald-300"
-            [disabled]="creating()"
-            (click)="createNewSheet()"
-          >
-            {{ creating() ? 'Creating…' : '+ Create a new sheet for this project' }}
-          </button>
+
+        <!-- Link existing sheet -->
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 mb-2">Link an Existing Sheet</p>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              class="flex-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+              placeholder="Paste Google Sheets URL or ID"
+              [ngModel]="sheetUrlInput()"
+              (ngModelChange)="sheetUrlInput.set($event)"
+              [disabled]="linking()"
+            />
+            <button
+              class="ofx-neon-button !py-2"
+              [disabled]="linking() || !sheetUrlInput().trim()"
+              (click)="linkSheet()"
+            >
+              {{ linking() ? 'Linking…' : 'Link Sheet' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Create new sheet -->
+        <div class="border-t border-white/5 pt-4">
+          @if (!showCreateForm()) {
+            <button
+              class="text-sm text-emerald-400 hover:text-emerald-300"
+              [disabled]="creating()"
+              (click)="toggleCreateForm()"
+            >
+              + Create a new sheet for this project
+            </button>
+          } @else {
+            <p class="text-xs uppercase tracking-wider text-slate-500 mb-3">Create a New Sheet</p>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1" for="new-sheet-title">
+                  Spreadsheet file name
+                </label>
+                <input
+                  id="new-sheet-title"
+                  type="text"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  placeholder="e.g. My Project — OmniTask"
+                  [ngModel]="newSheetTitle()"
+                  (ngModelChange)="newSheetTitle.set($event)"
+                  [disabled]="creating()"
+                />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1" for="new-tab-name">
+                  Worksheet (tab) name
+                </label>
+                <input
+                  id="new-tab-name"
+                  type="text"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  placeholder="Tasks"
+                  [ngModel]="newTabName()"
+                  (ngModelChange)="newTabName.set($event)"
+                  [disabled]="creating()"
+                />
+                <p class="text-[11px] text-slate-500 mt-1">
+                  The tab will be pre-populated with the 10-column header row described above.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="ofx-neon-button !py-2"
+                  [disabled]="creating() || !newSheetTitle().trim()"
+                  (click)="createNewSheet()"
+                >
+                  {{ creating() ? 'Creating…' : 'Create Sheet' }}
+                </button>
+                <button
+                  class="px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                  [disabled]="creating()"
+                  (click)="toggleCreateForm()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          }
         </div>
       </div>
     } @else {

@@ -467,17 +467,24 @@ export class GoogleSheetsSyncService {
 
   /**
    * Create a new spreadsheet for the project and link it.
-   * @returns The new spreadsheetId on success.
+   *
+   * @param projectId  OmniTask project to link.
+   * @param projectName  Used to derive a default file title if one is not provided.
+   * @param options  Optional overrides for the new file/worksheet names.
+   * @returns The new spreadsheet's ID, URL, and resolved tab name on success.
    */
   async createSheetForProject(
     projectId: string,
     projectName: string,
+    options: { title?: string; tabName?: string } = {},
   ): Promise<{ spreadsheetId: string; spreadsheetUrl: string; tabName: string }> {
+    const title = (options.title ?? '').trim() || `${projectName} — OmniTask`;
+    const desiredTab = (options.tabName ?? '').trim() || DEFAULT_SHEET_TAB_NAME;
     const resp = await firstValueFrom(
-      this.sheetsService.createSpreadsheet(`${projectName} — OmniTask`, DEFAULT_SHEET_TAB_NAME),
+      this.sheetsService.createSpreadsheet(title, desiredTab),
     );
     const spreadsheetId = resp.spreadsheetId;
-    const tabName = resp.sheets?.[0]?.properties?.title ?? DEFAULT_SHEET_TAB_NAME;
+    const tabName = resp.sheets?.[0]?.properties?.title ?? desiredTab;
 
     await this.ensureHeaders(spreadsheetId, tabName);
 

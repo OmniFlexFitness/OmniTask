@@ -58,11 +58,48 @@ export class ProjectGoogleSheetsSyncComponent implements OnInit {
   sheetUrlInput = signal('');
   linking = signal(false);
 
+  // Form state for creating a new sheet.
+  showCreateForm = signal(false);
+  newSheetTitle = signal('');
+  newTabName = signal(DEFAULT_SHEET_TAB_NAME);
+
+  // Collapsible "Expected sheet format" help panel.
+  showFormatHelp = signal(false);
+
   // Sync activity state.
   syncing = signal(false);
   pushing = signal(false);
   creating = signal(false);
   lastSyncResult = signal<{ success: boolean; message: string } | null>(null);
+
+  // Column reference shown in the "Expected sheet format" help panel.
+  // Keep in sync with SHEET_HEADERS in google-sheets-sync.service.ts.
+  readonly expectedColumns: Array<{ name: string; detail: string }> = [
+    {
+      name: 'ID',
+      detail:
+        'OmniTask task ID. Leave blank for new rows — the next sync will fill it in and use it as the row key.',
+    },
+    { name: 'Title', detail: 'Task title (required — blank rows are skipped).' },
+    { name: 'Description', detail: 'Free text. Multi-line content is preserved.' },
+    {
+      name: 'Status',
+      detail: 'One of "todo", "in-progress", or "done". Also accepts "completed" / "wip" / "doing".',
+    },
+    { name: 'Priority', detail: 'One of "low", "medium", or "high".' },
+    { name: 'Assignees', detail: 'Comma-separated display names.' },
+    { name: 'Due Date', detail: 'Any parseable date (ISO 8601 recommended, e.g. 2026-05-01).' },
+    { name: 'Tags', detail: 'Comma-separated tag names.' },
+    {
+      name: 'Section',
+      detail:
+        'Section name or ID. Optional — status maps automatically to matching sections when blank.',
+    },
+    {
+      name: 'Updated At',
+      detail: 'ISO 8601 timestamp, maintained by OmniTask on each sync.',
+    },
+  ];
 
   availableTabs = computed<SheetTab[]>(() => this.sheetMetadata()?.sheets ?? []);
 
@@ -121,21 +158,49 @@ export class ProjectGoogleSheetsSyncComponent implements OnInit {
     }
   }
 
+  /**
+   * Toggle the "Create new sheet" form, seeding defaults from the current
+   * project name on first open so the user sees a sensible starting value.
+   */
+  toggleCreateForm() {
+    const opening = !this.showCreateForm();
+    this.showCreateForm.set(opening);
+    if (opening) {
+      if (!this.newSheetTitle().trim()) {
+        this.newSheetTitle.set(`${this.project().name} — OmniTask`);
+      }
+      if (!this.newTabName().trim()) {
+        this.newTabName.set(DEFAULT_SHEET_TAB_NAME);
+      }
+    }
+  }
+
   async createNewSheet() {
+    const title = this.newSheetTitle().trim();
+    const tabName = this.newTabName().trim() || DEFAULT_SHEET_TAB_NAME;
+    if (!title) {
+      await this.dialogService.alert(
+        'Please enter a name for the new spreadsheet.',
+        'Title Required',
+      );
+      return;
+    }
     this.creating.set(true);
     try {
       const result = await this.sheetsSyncService.createSheetForProject(
         this.project().id,
         this.project().name,
+        { title, tabName },
       );
       const meta = await firstValueFrom(
         this.sheetsService.getSpreadsheet(result.spreadsheetId),
       );
       this.sheetMetadata.set(meta);
+      this.showCreateForm.set(false);
       this.projectChanged.emit();
       this.lastSyncResult.set({
         success: true,
-        message: 'Created a new Google Sheet and linked it to this project.',
+        message: `Created "${meta.title}" in Google Sheets and linked it to this project.`,
       });
       setTimeout(() => this.lastSyncResult.set(null), 5000);
     } catch (err) {
