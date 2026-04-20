@@ -1,8 +1,9 @@
 import { Component, input, output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Project, TaskViewMode } from '../../../core/models/domain.model';
+import { Project, TaskViewMode, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
 import { AuthService } from '../../../core/auth/auth.service';
+import { getColorWithOpacity } from '../../../core/utils/color.utils';
 
 @Component({
   selector: 'app-dashboard-header',
@@ -13,6 +14,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class DashboardHeaderComponent {
   readonly auth = inject(AuthService);
+  readonly defaultColor = CYBERPUNK_COLORS.TODO;
 
   currentProject = input<Project | null>(null);
   viewMode = input<TaskViewMode>('list');
@@ -24,4 +26,8 @@ export class DashboardHeaderComponent {
   openCreateTaskModal = output<void>();
   syncGoogleTasks = output<void>();
   toggleSidebar = output<void>();
+
+  getColorWithOpacity(color: string | undefined, alpha: number): string {
+    return getColorWithOpacity(color, alpha);
+  }
 }

@@ -9,6 +9,7 @@ import {
 import { Task, Section, Project } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
+import { hexToRgba, getColorWithOpacity } from '../../core/utils/color.utils';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 import {
   ColumnSettingsMenuComponent,
@@ -395,39 +396,13 @@ export class TaskBoardViewComponent {
    * Convert hex color to rgba with alpha
    */
   hexToRgba(hex: string, alpha: number): string {
-    // Remove # if present
-    const cleanHex = hex.replace(/^#/, '');
-
-    // Validate and expand short hex codes (e.g., #fff -> #ffffff)
-    let fullHex = cleanHex;
-    if (cleanHex.length === 3) {
-      fullHex = cleanHex
-        .split('')
-        .map((char) => char + char)
-        .join('');
-    } else if (cleanHex.length !== 6) {
-      // Invalid hex format, return default gray
-      return `rgba(100, 116, 139, ${alpha})`; // #64748b
-    }
-
-    // Parse hex to RGB
-    const r = parseInt(fullHex.substring(0, 2), 16);
-    const g = parseInt(fullHex.substring(2, 4), 16);
-    const b = parseInt(fullHex.substring(4, 6), 16);
-
-    // Validate parsed values
-    if (isNaN(r) || isNaN(g) || isNaN(b)) {
-      return `rgba(100, 116, 139, ${alpha})`; // #64748b fallback
-    }
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    return hexToRgba(hex, alpha);
   }
 
   /**
    * Get color with opacity for dynamic styles
    */
   getColorWithOpacity(color: string | undefined, opacity: number): string {
-    const baseColor = color || '#64748b';
-    return this.hexToRgba(baseColor, opacity);
+    return getColorWithOpacity(color, opacity, '#64748b');
   }
 }

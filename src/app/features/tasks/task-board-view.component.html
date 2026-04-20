@@ -213,14 +213,14 @@
               [class.opacity-75]="getSectionStatus(section) === 'done'"
               [class.cyber-column-done]="getSectionStatus(section) === 'done'"
               [style.border-color]="
-                getSectionStatus(section) !== 'done' ? getColorWithOpacity(section.color, 0.2) : ''
+                getSectionStatus(section) !== 'done' ? getColorWithOpacity(section.color, 0.45) : ''
               "
               [style.box-shadow]="
                 getSectionStatus(section) !== 'done'
-                  ? '0 0 20px ' +
-                    getColorWithOpacity(section.color, 0.1) +
-                    ', inset 0 0 20px ' +
-                    getColorWithOpacity(section.color, 0.05)
+                  ? '0 0 28px ' +
+                    getColorWithOpacity(section.color, 0.28) +
+                    ', inset 0 0 24px ' +
+                    getColorWithOpacity(section.color, 0.1)
                   : ''
               "
               [style.animation]="
@@ -270,11 +270,13 @@
                   ></span>
                   <h3
                     class="font-bold text-sm tracking-wide transition-colors duration-300"
-                    [class.text-slate-200]="getSectionStatus(section) !== 'done'"
                     [class.text-slate-500]="getSectionStatus(section) === 'done'"
+                    [style.color]="
+                      getSectionStatus(section) !== 'done' ? section.color || '#cbd5e1' : ''
+                    "
                     [style.text-shadow]="
                       getSectionStatus(section) !== 'done'
-                        ? '0 0 8px ' + getColorWithOpacity(section.color, 0.6)
+                        ? '0 0 10px ' + getColorWithOpacity(section.color, 0.7)
                         : 'none'
                     "
                   >
