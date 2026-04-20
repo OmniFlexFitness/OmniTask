@@ -409,6 +409,54 @@ export class GoogleSheetsSyncService {
    *      and write its new ID back to the sheet.
    *   4. For any OmniTask tasks not present in the sheet -> append them to the sheet.
    */
+  /**
+   * Pull a JS Date out of a task's `updatedAt` regardless of whether the
+   * value is a Date, a Firestore Timestamp, or an ISO string. Returns null
+   * when the field is missing or unparseable.
+   */
+  private taskUpdatedDate(task: Task): Date | null {
+    const v = task.updatedAt;
+    if (!v) return null;
+    if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+    if (typeof v === 'object' && v !== null && 'toDate' in (v as object)) {
+      const d = (v as { toDate: () => Date }).toDate();
+      return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+    }
+    if (typeof v === 'string') {
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
+
+  /**
+   * Parse the "Updated At" cell from a sheet row. Returns null when blank
+   * or unparseable — callers should treat that as "sheet has no sync-point
+   * timestamp yet" (equivalent to epoch).
+   */
+  private sheetUpdatedDate(row: string[]): Date | null {
+    const raw = (row[headerIndex('Updated At')] ?? '').toString().trim();
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  /**
+   * Compare the data cells of two rows, ignoring the bookkeeping columns
+   * (ID and Updated At). Used to detect "the sheet and the app agree on
+   * everything a user can edit" — in which case a sync is a no-op.
+   */
+  private dataCellsMatch(a: string[], b: string[]): boolean {
+    const skip = new Set([headerIndex('ID'), headerIndex('Updated At')]);
+    for (let i = 0; i < SHEET_HEADERS.length; i++) {
+      if (skip.has(i)) continue;
+      const av = (a[i] ?? '').toString();
+      const bv = (b[i] ?? '').toString();
+      if (av !== bv) return false;
+    }
+    return true;
+  }
+
   async syncProjectWithSheet(
     projectId: string,
     spreadsheetId: string,
@@ -440,27 +488,46 @@ export class GoogleSheetsSyncService {
 
     const seenTaskIds = new Set<string>();
 
-    // Classify each row before writing anything. Use pre-generated Firestore IDs for
-    // new tasks so we can set() them inside a writeBatch() and batch the sheet
-    // writebacks in a single API call.
-    interface UpdateOp {
-      kind: 'update';
+    // Direction-aware classification. For each matched sheet row we decide
+    // whether the app or the sheet has the authoritative state for that task:
+    //
+    //   * Match         — sheet row already reflects the task; skip entirely.
+    //   * AppUpdate     — sheet is stale. Pull nothing; push the task's current
+    //                     state into the sheet row.
+    //   * SheetUpdate   — user edited the sheet cells. Update the Firestore
+    //                     task with what the sheet now says.
+    //   * Create        — sheet has a row OmniTask has never seen; create a
+    //                     task and write back the filled-in row.
+    //
+    // The tiebreaker is `task.updatedAt` versus the sheet's Updated At cell.
+    // OmniTask writes Updated At on every push, and Google does not touch it
+    // on user cell edits — so task.updatedAt > sheet.updatedAt implies the app
+    // has un-pushed changes, and otherwise cell diffs come from the user.
+    interface AppUpdateOp {
+      kind: 'app-update';
       id: string;
       data: Partial<Task>;
+    }
+    interface SheetUpdateOp {
+      kind: 'sheet-update';
+      taskId: string;
+      sheetRowIndex: number;
+      values: string[];
     }
     interface CreateOp {
       kind: 'create';
       id: string;
-      sheetRowIndex: number; // 1-based sheet row (header offset already applied)
+      sheetRowIndex: number;
       data: Partial<Task>;
     }
-    const ops: Array<UpdateOp | CreateOp> = [];
+    const ops: Array<AppUpdateOp | SheetUpdateOp | CreateOp> = [];
 
+    // Small tolerance (ms) for timestamp comparisons, to absorb clock skew
+    // and the second-level rounding the sheet does on DATE_TIME cells.
+    const TS_TOLERANCE_MS = 1500;
 
     for (let i = 0; i < sheetRows.length; i++) {
       const row = sheetRows[i];
-      // Title is the only required field. Rows without a title are skipped so
-      // stray blank lines (or lines with only an ID) don't create empty tasks.
       const titleIdx = headerIndex('Title');
       const hasTitle = !!(row && row[titleIdx] && row[titleIdx].toString().trim());
       if (!hasTitle) continue;
@@ -470,22 +537,45 @@ export class GoogleSheetsSyncService {
 
       if (existing) {
         seenTaskIds.add(existing.id);
-        // Updates deliberately omit `order` — that's owned by OmniTask's UI,
-        // and re-syncing would otherwise clobber user-driven reordering.
-        ops.push({
-          kind: 'update',
-          id: existing.id,
-          data: { ...parsed.data, googleSheetRowId: existing.id },
-        });
+
+        const expected = this.transformToSheetRow(existing, sections);
+        const isMatch = this.dataCellsMatch(row, expected);
+
+        const taskTs = this.taskUpdatedDate(existing);
+        const sheetTs = this.sheetUpdatedDate(row);
+        const taskNewer =
+          taskTs !== null &&
+          (sheetTs === null || taskTs.getTime() - sheetTs.getTime() > TS_TOLERANCE_MS);
+
+        if (isMatch) {
+          // Row already reflects the app — do nothing.
+          continue;
+        }
+
+        if (taskNewer) {
+          // App has changes the sheet hasn't received yet. Overwrite the row
+          // with what the task should look like; Firestore stays untouched.
+          ops.push({
+            kind: 'sheet-update',
+            taskId: existing.id,
+            sheetRowIndex: i + 2,
+            values: expected,
+          });
+        } else {
+          // Sheet has user edits we haven't pulled. Update the Firestore task.
+          ops.push({
+            kind: 'app-update',
+            id: existing.id,
+            data: { ...parsed.data, googleSheetRowId: existing.id },
+          });
+        }
       } else {
         const newRef = doc(this.tasksCollection);
         seenTaskIds.add(newRef.id);
         ops.push({
           kind: 'create',
           id: newRef.id,
-          sheetRowIndex: i + 2, // +2 = header row + 1-indexed
-          // Seed `order` from the row index so the imported tasks preserve
-          // the sheet's sequence in list/board views on first render.
+          sheetRowIndex: i + 2,
           data: { ...parsed.data, googleSheetRowId: newRef.id, order: i },
         });
       }
@@ -496,8 +586,11 @@ export class GoogleSheetsSyncService {
 
     // --- Commit Firestore writes in chunked batches ---
     const now = new Date();
-    await this.commitInBatches(ops, (batch, op) => {
-      if (op.kind === 'update') {
+    const firestoreOps = ops.filter(
+      (o): o is AppUpdateOp | CreateOp => o.kind === 'app-update' || o.kind === 'create',
+    );
+    await this.commitInBatches(firestoreOps, (batch, op) => {
+      if (op.kind === 'app-update') {
         batch.update(doc(this.firestore, `tasks/${op.id}`), {
           ...op.data,
           updatedAt: now,
@@ -518,15 +611,15 @@ export class GoogleSheetsSyncService {
       });
     });
 
-    // --- Batch the sheet side-effects into at most two API calls ---
-    // 1. Write back the FULL row for each newly-created task so any defaults
-    //    OmniTask filled in (ID, priority=low, first-section fallback, updatedAt)
-    //    are visible in the sheet instead of just the generated ID.
-    const writebacks: BatchUpdateValuesData[] = ops
-      .filter((o): o is CreateOp => o.kind === 'create')
-      .map((o) => {
+    // --- Batch sheet-side writes into a single batchUpdate ---
+    // Combines:
+    //   (a) full-row writebacks for newly-created tasks (defaults filled in), and
+    //   (b) row overwrites for tasks whose app state is newer than the sheet.
+    const writebacks: BatchUpdateValuesData[] = [];
+    for (const op of ops) {
+      if (op.kind === 'create') {
         const taskForRow: Task = {
-          id: o.id,
+          id: op.id,
           createdAt: now,
           updatedAt: now,
           title: '',
@@ -535,20 +628,26 @@ export class GoogleSheetsSyncService {
           priority: 'low',
           order: 0,
           projectId,
-          ...(o.data as Partial<Task>),
+          ...(op.data as Partial<Task>),
         } as Task;
-        return {
-          range: this.range(tabName, `A${o.sheetRowIndex}:${lastCol}${o.sheetRowIndex}`),
+        writebacks.push({
+          range: this.range(tabName, `A${op.sheetRowIndex}:${lastCol}${op.sheetRowIndex}`),
           values: [this.transformToSheetRow(taskForRow, sections)],
-        };
-      });
+        });
+      } else if (op.kind === 'sheet-update') {
+        writebacks.push({
+          range: this.range(tabName, `A${op.sheetRowIndex}:${lastCol}${op.sheetRowIndex}`),
+          values: [op.values],
+        });
+      }
+    }
     if (writebacks.length > 0) {
       await firstValueFrom(
         this.sheetsService.batchUpdateValues(spreadsheetId, writebacks),
       );
     }
 
-    // 2. Append rows for tasks that weren't yet in the sheet.
+    // Append rows for tasks that weren't yet in the sheet.
     let pushed = 0;
     if (missingTasks.length > 0) {
       const appendRows = missingTasks.map((t) => this.transformToSheetRow(t, sections));
@@ -563,7 +662,8 @@ export class GoogleSheetsSyncService {
     }
 
     const added = ops.filter((o) => o.kind === 'create').length;
-    const updated = ops.filter((o) => o.kind === 'update').length;
+    const updated = ops.filter((o) => o.kind === 'app-update').length;
+    pushed += ops.filter((o) => o.kind === 'sheet-update').length;
     return { added, updated, pushed };
   }
 
