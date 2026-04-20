@@ -8,6 +8,7 @@ import { ProjectMemberManagerComponent } from './project-member-manager.componen
 import { ProjectBasicInfoComponent } from './project-basic-info.component';
 import { ProjectDangerZoneComponent } from './project-danger-zone.component';
 import { ProjectGoogleTasksSyncComponent } from './project-google-tasks-sync.component';
+import { ProjectGoogleSheetsSyncComponent } from './project-google-sheets-sync.component';
 
 /**
  * Project Settings Panel Component
@@ -25,6 +26,7 @@ import { ProjectGoogleTasksSyncComponent } from './project-google-tasks-sync.com
     ProjectBasicInfoComponent,
     ProjectDangerZoneComponent,
     ProjectGoogleTasksSyncComponent,
+    ProjectGoogleSheetsSyncComponent,
   ],
   templateUrl: './project-settings-panel.component.html',
   styleUrls: ['./project-settings-panel.component.css'],

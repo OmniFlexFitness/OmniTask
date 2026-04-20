@@ -1,0 +1,402 @@
+<section class="ofx-settings-section">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="ofx-section-title flex items-center gap-2">
+      <svg viewBox="0 0 24 24" class="h-5 w-5 text-emerald-400" fill="currentColor">
+        <path
+          d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8 17H5v-4h3v4zm0-6H5V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4z"
+        />
+      </svg>
+      Google Sheets Sync
+    </h3>
+    @if (isAuthenticated()) {
+      <span
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+      >
+        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+        Connected
+      </span>
+    } @else {
+      <span
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30"
+      >
+        <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+        Not Connected
+      </span>
+    }
+  </div>
+
+  <div class="space-y-4">
+    @if (!isAuthenticated()) {
+      <div
+        class="p-6 bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-xl border border-emerald-500/20 text-center"
+      >
+        <div
+          class="w-14 h-14 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center"
+        >
+          <svg viewBox="0 0 24 24" class="h-7 w-7 text-emerald-400" fill="currentColor">
+            <path
+              d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8 17H5v-4h3v4zm0-6H5V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4z"
+            />
+          </svg>
+        </div>
+        <h4 class="text-lg font-semibold text-white mb-2">Connect Google Sheets</h4>
+        <p class="text-sm text-slate-400 mb-5 max-w-xs mx-auto">
+          Manage your tasks in a spreadsheet. Once connected, changes sync
+          automatically — no button-pressing required.
+        </p>
+        <button class="ofx-neon-button" (click)="reconnectGoogle()">Sign In to Connect</button>
+      </div>
+    } @else if (!project().googleSheetId) {
+      <!-- No sheet linked yet -->
+      <div
+        class="p-5 bg-gradient-to-br from-slate-800/80 to-slate-900/60 rounded-xl border border-emerald-500/20 space-y-4"
+      >
+        <!-- Expected sheet format (applies to both link + create flows) -->
+        <div class="rounded-lg border border-white/10 bg-slate-900/40">
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-3 py-2 text-xs uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors"
+            (click)="showFormatHelp.set(!showFormatHelp())"
+          >
+            <span class="flex items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Expected sheet format
+            </span>
+            <span
+              class="text-slate-500 transition-transform"
+              [class.rotate-180]="showFormatHelp()"
+              >▾</span
+            >
+          </button>
+          @if (showFormatHelp()) {
+            <div class="px-3 pb-3 pt-1 space-y-3 text-xs text-slate-300">
+              <p>
+                OmniTask reads and writes the tab you link using a fixed 11-column layout.
+                <strong class="text-slate-200">Row 1 must contain the header row</strong> (filled in
+                automatically for new sheets); each following row represents one task.
+              </p>
+              <div class="overflow-hidden rounded border border-white/10">
+                <table class="w-full text-left text-[11px]">
+                  <thead class="bg-slate-800/70 text-slate-400 uppercase tracking-wider">
+                    <tr>
+                      <th class="px-2 py-1.5 w-8">Col</th>
+                      <th class="px-2 py-1.5 w-24">Header</th>
+                      <th class="px-2 py-1.5">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (col of expectedColumns; track col.name; let i = $index) {
+                      <tr class="border-t border-white/5">
+                        <td class="px-2 py-1.5 font-mono text-slate-500">
+                          {{ 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.charAt(i) }}
+                        </td>
+                        <td class="px-2 py-1.5 font-medium text-emerald-300">{{ col.name }}</td>
+                        <td class="px-2 py-1.5 text-slate-400">{{ col.detail }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-slate-500">
+                Tip: leave <span class="font-mono text-slate-300">ID</span> blank when drafting new
+                tasks — OmniTask assigns an ID and fills in sensible defaults (priority "low",
+                first section, current timestamp) on the next sync. Edit
+                <span class="font-mono text-slate-300">Section</span> or
+                <span class="font-mono text-slate-300">Order</span> to move and reorder tasks.
+              </p>
+            </div>
+          }
+        </div>
+
+        <!-- Link existing sheet -->
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-500 mb-2">Link an Existing Sheet</p>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              class="flex-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+              placeholder="Paste Google Sheets URL or ID"
+              [ngModel]="sheetUrlInput()"
+              (ngModelChange)="sheetUrlInput.set($event)"
+              [disabled]="linking()"
+            />
+            <button
+              class="ofx-neon-button !py-2"
+              [disabled]="linking() || !sheetUrlInput().trim()"
+              (click)="linkSheet()"
+            >
+              {{ linking() ? 'Linking…' : 'Link Sheet' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Create new sheet -->
+        <div class="border-t border-white/5 pt-4">
+          @if (!showCreateForm()) {
+            <button
+              class="text-sm text-emerald-400 hover:text-emerald-300"
+              [disabled]="creating()"
+              (click)="toggleCreateForm()"
+            >
+              + Create a new sheet for this project
+            </button>
+          } @else {
+            <p class="text-xs uppercase tracking-wider text-slate-500 mb-3">Create a New Sheet</p>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1" for="new-sheet-title">
+                  Spreadsheet file name
+                </label>
+                <input
+                  id="new-sheet-title"
+                  type="text"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  placeholder="e.g. My Project — OmniTask"
+                  [ngModel]="newSheetTitle()"
+                  (ngModelChange)="newSheetTitle.set($event)"
+                  [disabled]="creating()"
+                />
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1" for="new-tab-name">
+                  Worksheet (tab) name
+                </label>
+                <input
+                  id="new-tab-name"
+                  type="text"
+                  class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+                  placeholder="Tasks"
+                  [ngModel]="newTabName()"
+                  (ngModelChange)="newTabName.set($event)"
+                  [disabled]="creating()"
+                />
+                <p class="text-[11px] text-slate-500 mt-1">
+                  The tab will be pre-populated with the 11-column header row described above and
+                  formatted as a native Google Sheets Table, so Section, Status, and Priority get
+                  dropdown pickers with this project's values.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  class="ofx-neon-button !py-2"
+                  [disabled]="creating() || !newSheetTitle().trim()"
+                  (click)="createNewSheet()"
+                >
+                  {{ creating() ? 'Creating…' : 'Create Sheet' }}
+                </button>
+                <button
+                  class="px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                  [disabled]="creating()"
+                  (click)="toggleCreateForm()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <!-- Sheet linked -->
+      <div
+        class="p-5 bg-gradient-to-br from-slate-800/80 to-slate-900/60 rounded-xl border border-emerald-500/20"
+      >
+        <div class="flex items-start justify-between mb-3">
+          <div class="min-w-0">
+            <p class="text-xs uppercase tracking-wider text-slate-500 mb-1">Linked Sheet</p>
+            <p class="text-lg font-semibold text-white flex items-center gap-2 truncate">
+              <svg viewBox="0 0 24 24" class="h-5 w-5 text-emerald-400 flex-shrink-0" fill="currentColor">
+                <path
+                  d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM8 17H5v-4h3v4zm0-6H5V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4zm5 6h-3v-4h3v4zm0-6h-3V7h3v4z"
+                />
+              </svg>
+              <span class="truncate">{{ project().googleSheetName || 'Spreadsheet' }}</span>
+            </p>
+            @if (sheetLink()) {
+              <a
+                [href]="sheetLink()"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-block mt-1 text-xs text-emerald-400 hover:text-emerald-300"
+              >
+                Open in Google Sheets ↗
+              </a>
+            }
+          </div>
+        </div>
+
+        <!-- Tab selector -->
+        @if (availableTabs().length > 1) {
+          <div class="mb-3">
+            <label class="text-xs text-slate-500 block mb-1">Sheet Tab</label>
+            <select
+              class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-white/10 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50"
+              [value]="project().googleSheetTabName || ''"
+              (change)="selectTab($any($event.target).value)"
+            >
+              @for (tab of availableTabs(); track tab.sheetId) {
+                <option [value]="tab.title">{{ tab.title }}</option>
+              }
+            </select>
+          </div>
+        } @else if (loadingMetadata()) {
+          <p class="text-xs text-slate-500 mb-3">Loading sheet…</p>
+        }
+
+        <!-- Persistent auto-sync status -->
+        <div
+          class="mb-4 p-3 rounded-lg border flex items-center justify-between"
+          [class.bg-emerald-500/5]="!autoSyncError()"
+          [class.border-emerald-500/20]="!autoSyncError()"
+          [class.bg-rose-500/10]="autoSyncError()"
+          [class.border-rose-500/20]="autoSyncError()"
+        >
+          <div class="flex items-center gap-2 text-xs">
+            @if (autoSyncing()) {
+              <svg class="animate-spin h-3 w-3 text-emerald-400" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+              <span class="text-emerald-300">Auto-syncing…</span>
+            } @else if (autoSyncError()) {
+              <span class="h-2 w-2 rounded-full bg-rose-400"></span>
+              <span class="text-rose-300">Auto-sync paused — {{ autoSyncError() }}</span>
+            } @else {
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span class="text-emerald-300">Auto-sync on</span>
+              <span class="text-slate-500">
+                · checks every minute, and on every task change
+              </span>
+            }
+          </div>
+          @if (autoSyncLastAt()) {
+            <span class="text-[11px] text-slate-500">
+              last: {{ formatSyncDate(autoSyncLastAt()) }}
+            </span>
+          }
+        </div>
+
+        <!-- Status + last sync -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="p-3 bg-slate-900/50 rounded-lg">
+            <p class="text-xs text-slate-500 mb-1">Last Synced</p>
+            <p class="text-sm font-medium text-white">
+              {{ project().lastSheetSyncAt ? formatSyncDate(project().lastSheetSyncAt) : 'Never' }}
+            </p>
+          </div>
+          <div class="p-3 bg-slate-900/50 rounded-lg">
+            <p class="text-xs text-slate-500 mb-1">Status</p>
+            <p
+              class="text-sm font-medium"
+              [class.text-emerald-400]="project().sheetSyncStatus === 'synced'"
+              [class.text-amber-400]="project().sheetSyncStatus === 'pending' || syncing() || pushing()"
+              [class.text-rose-400]="project().sheetSyncStatus === 'error'"
+              [class.text-slate-400]="!project().sheetSyncStatus"
+            >
+              @if (syncing() || pushing()) {
+                Working…
+              } @else if (project().sheetSyncStatus === 'synced') {
+                In Sync
+              } @else if (project().sheetSyncStatus === 'error') {
+                Error
+              } @else {
+                Ready
+              }
+            </p>
+          </div>
+        </div>
+
+        @if (lastSyncResult()) {
+          <div
+            class="mb-4 p-3 rounded-lg text-sm border"
+            [class.bg-emerald-500/10]="lastSyncResult()!.success"
+            [class.text-emerald-400]="lastSyncResult()!.success"
+            [class.border-emerald-500/20]="lastSyncResult()!.success"
+            [class.bg-rose-500/10]="!lastSyncResult()!.success"
+            [class.text-rose-400]="!lastSyncResult()!.success"
+            [class.border-rose-500/20]="!lastSyncResult()!.success"
+          >
+            {{ lastSyncResult()!.message }}
+          </div>
+        }
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="flex-1 min-w-[8rem] ofx-neon-button !py-2.5 flex items-center justify-center gap-2"
+            [disabled]="syncing() || pushing()"
+            (click)="triggerSync()"
+          >
+            <svg
+              class="h-4 w-4"
+              [class.animate-spin]="syncing()"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            <span>{{ syncing() ? 'Syncing…' : 'Refresh Now' }}</span>
+          </button>
+          <button
+            class="px-3 py-2.5 rounded-lg bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white border border-white/10 text-sm transition-all"
+            [disabled]="pushing() || syncing()"
+            title="Overwrite the sheet with current OmniTask tasks"
+            (click)="pushAllToSheet()"
+          >
+            {{ pushing() ? 'Exporting…' : 'Export All' }}
+          </button>
+          <button
+            class="p-2.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg border border-white/10 transition-all"
+            title="Disconnect sheet"
+            (click)="disconnectSheet()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</section>

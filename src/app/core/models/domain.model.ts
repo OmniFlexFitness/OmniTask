@@ -83,6 +83,13 @@ export interface Project {
   syncEnabled?: boolean; // Whether sync is active for this project
   lastSyncAt?: FirestoreDate; // Last successful sync timestamp
   syncStatus?: 'synced' | 'pending' | 'error'; // Current sync status
+  // Google Sheets sync fields (independent of Google Tasks sync)
+  googleSheetId?: string; // Spreadsheet ID
+  googleSheetName?: string; // Spreadsheet display name (cached for UI)
+  googleSheetTabName?: string; // Tab/sheet name within the spreadsheet (e.g. "Tasks")
+  sheetSyncEnabled?: boolean;
+  lastSheetSyncAt?: FirestoreDate;
+  sheetSyncStatus?: 'synced' | 'pending' | 'error';
 }
 
 export interface Task {
@@ -118,6 +125,10 @@ export interface Task {
   googleTaskId?: string;
   googleTaskListId?: string; // Stored for efficient sync operations
   isGoogleTask?: boolean;
+  // Google Sheets sync fields
+  googleSheetId?: string; // Spreadsheet this task is mirrored in
+  googleSheetRowId?: string; // Stable ID written to the sheet row (task.id by default)
+  isGoogleSheetTask?: boolean; // True if the task originated from a Google Sheet
 }
 
 /**

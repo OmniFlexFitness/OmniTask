@@ -53,6 +53,12 @@
 
   <hr class="border-white/10" />
 
+  <!-- Google Sheets Integration -->
+  <app-project-google-sheets-sync [project]="project()" (projectChanged)="projectChanged.emit()">
+  </app-project-google-sheets-sync>
+
+  <hr class="border-white/10" />
+
   <!-- Danger Zone -->
   <app-project-danger-zone
     [project]="project()"
