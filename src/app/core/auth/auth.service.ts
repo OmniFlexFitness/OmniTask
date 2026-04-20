@@ -7,7 +7,17 @@ import {
   User,
   OAuthCredential,
 } from '@angular/fire/auth';
-import { Firestore, doc, setDoc, getDoc, updateDoc } from '@angular/fire/firestore';
+import {
+  Firestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from '@angular/fire/firestore';
 import { Router } from '@angular/router';
 import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
 import { SUPER_ADMIN_EMAIL } from '../constants';
@@ -215,11 +225,18 @@ export class AuthService {
     const isDesignatedSuperAdmin =
       user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
+    // Look up a pending invite for this email (if any) so that the very first
+    // sign-in applies the role + permission grants that the super-admin
+    // pre-configured. Errors here are non-fatal — we don't want a transient
+    // invite-lookup failure to block sign-in.
+    const pendingInvite = await this.findPendingInvite(user.email);
+
     // Ensure the designated super-admin is always promoted to admin + super-admin
-    // on sign-in, regardless of their prior stored values.
+    // on sign-in, regardless of their prior stored values. Otherwise use the
+    // invite's role (if any) > existing role > 'user'.
     const role: 'admin' | 'user' = isDesignatedSuperAdmin
       ? 'admin'
-      : existingData?.role || 'user';
+      : pendingInvite?.role || existingData?.role || 'user';
 
     // Permissions map: seed defaults only on first creation (or force-refresh for
     // the designated super-admin). For returning users we leave their stored
@@ -246,14 +263,54 @@ export class AuthService {
         isSuperAdmin: true,
       };
       data.permissions = superPerms;
+    } else if (pendingInvite) {
+      // Applying an invite: merge its permissions on top of whatever existed
+      // (or defaults for brand-new users).
+      const base = existingData?.permissions ?? { ...DEFAULT_USER_PERMISSIONS };
+      data.permissions = { ...DEFAULT_USER_PERMISSIONS, ...base, ...pendingInvite.permissions };
     } else if (!existingData || !existingData.permissions) {
       // Seed defaults for brand-new users and for returning users whose
       // profiles predate this feature (missing permissions field).
       data.permissions = { ...DEFAULT_USER_PERMISSIONS };
     }
 
-    // Create or Update
-    return setDoc(userRef, data, { merge: true });
+    // Create or Update the user profile
+    await setDoc(userRef, data, { merge: true });
+
+    // Mark the invite as accepted — best-effort, non-fatal if it fails.
+    if (pendingInvite?.id) {
+      updateDoc(doc(this.firestore, `invites/${pendingInvite.id}`), {
+        status: 'accepted',
+        acceptedAt: new Date(),
+        acceptedByUid: user.uid,
+      }).catch((err) => console.warn('Failed to mark invite accepted:', err));
+    }
+  }
+
+  /**
+   * Best-effort lookup of a pending invite for the given email. Returns null
+   * if not found or if the query fails (e.g., rules prevented the read).
+   */
+  private async findPendingInvite(
+    email: string | null,
+  ): Promise<{ id: string; role: 'admin' | 'user'; permissions: UserPermissions } | null> {
+    if (!email) return null;
+    try {
+      const invitesCol = collection(this.firestore, 'invites');
+      const q = query(
+        invitesCol,
+        where('email', '==', email.toLowerCase()),
+        where('status', '==', 'pending'),
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      const first = snap.docs[0];
+      const data = first.data() as { role: 'admin' | 'user'; permissions: UserPermissions };
+      return { id: first.id, role: data.role, permissions: data.permissions };
+    } catch (err) {
+      console.warn('Invite lookup failed (continuing without invite):', err);
+      return null;
+    }
   }
 
   private getUserProfile(uid: string): Observable<UserProfile | null> {

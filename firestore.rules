@@ -148,6 +148,37 @@ service cloud.firestore {
       );
     }
 
+    // Invites - created by super-admins, auto-applied on first sign-in of the
+    // invited email. An invitee must be able to read their own pending invite
+    // (by email match) and mark it accepted.
+    match /invites/{inviteId} {
+      // Super-admins and invitees can read. An invitee is an authenticated
+      // user whose token email matches the invite's email.
+      allow read: if isSuperAdmin() || isAdmin() || (
+        isAuthenticated() && request.auth.token.email == resource.data.email
+      );
+
+      // Only super-admins create or revoke invites.
+      allow create: if isSuperAdmin() &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.invitedByUid == request.auth.uid;
+
+      // Super-admins can update freely. Invitees can only transition a pending
+      // invite addressed to them into 'accepted' (e.g., on sign-in).
+      allow update: if isSuperAdmin() || (
+        isAuthenticated() &&
+        request.auth.token.email == resource.data.email &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.acceptedByUid == request.auth.uid &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.permissions == resource.data.permissions
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
     // Notifications - written by Cloud Functions, readable by recipient
     match /notifications/{notificationId} {
       // Cloud Functions uses admin SDK (bypasses rules)
