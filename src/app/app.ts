@@ -28,5 +28,16 @@ export class App implements OnInit {
       .subscribe(v => {
         this.version.set(v);
       });
+
+    // Toggle a body class while Ctrl/Shift/Cmd is held so components can
+    // reveal "modifier-gated" interactions (e.g. tag removal hint).
+    const updateModKey = (e: KeyboardEvent) => {
+      const held = e.ctrlKey || e.shiftKey || e.metaKey;
+      document.body.classList.toggle('fx-modkey-held', held);
+    };
+    const clearModKey = () => document.body.classList.remove('fx-modkey-held');
+    window.addEventListener('keydown', updateModKey);
+    window.addEventListener('keyup', updateModKey);
+    window.addEventListener('blur', clearModKey);
   }
 }

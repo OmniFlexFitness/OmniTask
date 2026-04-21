@@ -78,7 +78,7 @@ export interface SelectOption {
       <!-- Dropdown Menu -->
       @if (isOpen()) {
         <div
-          class="absolute z-50 w-full mt-2 bg-[#0a0f1e]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2 duration-200"
+          class="absolute z-50 w-full mt-2 bg-[#0a0f1e]/95  border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden origin-top animate-in fade-in slide-in-from-top-2 duration-200"
         >
           <div class="max-h-60 overflow-y-auto p-1.5 custom-scrollbar">
             @for (opt of options(); track opt.value) {

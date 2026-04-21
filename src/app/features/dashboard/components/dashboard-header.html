@@ -1,5 +1,5 @@
 <header
-  class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-20 relative overflow-visible-header"
+  class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/95 z-20 relative overflow-visible-header"
 >
   <!-- Top glow line -->
   <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
@@ -17,7 +17,7 @@
       @if (currentProject(); as project) {
         <app-project-icon [project]="project" [size]="36"></app-project-icon>
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-4">
             <h1
               class="text-xl font-bold flex items-center gap-2 leading-none"
               [style.color]="project.color || defaultColor"
@@ -26,50 +26,54 @@
               {{ project.name }}
             </h1>
 
-            <button
-              class="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
-                     transition-colors self-center flex items-center justify-center"
-              (click)="showFieldManager.emit()"
-              title="Manage Custom Fields"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div class="flex items-center gap-2">
+              <button
+                data-fx-glitch
+                class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
+                       transition-colors flex items-center justify-center"
+                (click)="showFieldManager.emit()"
+                title="Manage Custom Fields"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                  />
+                </svg>
+              </button>
 
-            <!-- Project Actions -->
-            <button
-              class="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
-                     transition-colors self-center flex items-center justify-center"
-              (click)="editProjectModal.emit(project)"
-              title="Edit Project"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <!-- Project Actions -->
+              <button
+                data-fx-glitch
+                class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
+                       transition-colors flex items-center justify-center"
+                (click)="editProjectModal.emit(project)"
+                title="Edit Project"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
-              </svg>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           <p class="text-xs text-slate-400 mt-1 truncate max-w-md">
             {{ project.description }}

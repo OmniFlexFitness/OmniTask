@@ -9,6 +9,7 @@
       @for (tag of project()?.tags; track tag.id) {
         <button
           type="button"
+          data-fx-glitch
           (click)="toggleTag(tag.name)"
           [class.ring-2]="selectedTags().has(tag.name)"
           [style.--tw-ring-color]="
@@ -38,6 +39,7 @@
     />
     <button
       type="button"
+      data-fx-glitch
       (click)="addTag(tagInput.value); tagInput.value = ''"
       class="px-2.5 py-1.5 text-sm bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
     >
@@ -45,28 +47,29 @@
     </button>
   </div>
 
-  <!-- Selected Tags Display with Remove -->
+  <!-- Selected Tags Display (Ctrl/Shift/⌘-click a chip to remove it) -->
   @if (selectedTags().size > 0) {
-    <div class="flex flex-wrap gap-1.5 mt-2">
-      @for (tagName of selectedTagsArray(); track tagName) {
-        <span
-          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
-          [style.background-color]="getTagColor(tagName) + '20'"
-          [style.color]="getTagColor(tagName)"
-          [style.border-color]="getTagColor(tagName) + '40'"
-        >
-          {{ tagName }}
+    <div class="mt-2">
+      <div class="flex flex-wrap gap-1.5">
+        @for (tagName of selectedTagsArray(); track tagName) {
           <button
             type="button"
-            (click)="$event.stopPropagation(); toggleTag(tagName)"
-            class="ml-0.5 hover:brightness-150 transition-all rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-70 hover:opacity-100"
+            class="ofx-tag-chip inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer"
+            [style.background-color]="getTagColor(tagName) + '20'"
             [style.color]="getTagColor(tagName)"
-            title="Remove tag"
+            [style.border-color]="getTagColor(tagName) + '40'"
+            (click)="onSelectedTagClick(tagName, $event)"
+            [title]="'Ctrl/Shift + click to remove'"
           >
-            ×
+            {{ tagName }}
           </button>
-        </span>
-      }
+        }
+      </div>
+      <p class="mt-1.5 text-[10px] text-slate-500 italic">
+        Hold <kbd class="px-1 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px]">Ctrl</kbd>
+        or <kbd class="px-1 py-0.5 rounded bg-slate-800 text-slate-400 text-[9px]">Shift</kbd>
+        and click a tag to remove it.
+      </p>
     </div>
   }
 </div>

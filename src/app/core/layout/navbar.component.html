@@ -5,8 +5,8 @@
     </div>
 
     <nav class="sticky top-0 z-50 relative overflow-hidden">
-      <!-- Dark base with enhanced transparency -->
-      <div class="absolute inset-0 bg-[#050810]/95 backdrop-blur-xl"></div>
+      <!-- Dark base (opaque) -->
+      <div class="absolute inset-0 bg-[#050810]/95"></div>
 
       <!-- Animated grid overlay for cyber effect -->
       <div class="absolute inset-0 opacity-[0.05] pointer-events-none cyber-grid-bg-dense"></div>
@@ -25,17 +25,14 @@
         <div class="flex items-center justify-between h-14">
           <!-- Left: Logo + Nav -->
           <div class="flex items-center gap-6">
-            <div class="flex items-center gap-3 group cursor-pointer">
-              <!-- Logo with enhanced neon ring - KEEPING GRADIENT HERE (logo element) -->
+            <div class="flex items-center gap-3 group cursor-pointer" data-fx-glitch-hover>
+              <!-- Logo with neon ring (solid glow, no blur gradient) -->
               <div class="relative">
-                <span
-                  class="absolute -inset-2 rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 blur-md opacity-50 group-hover:opacity-80 transition-opacity animate-pulse"
-                ></span>
                 <span class="absolute -inset-1 rounded-full bg-[#251247] opacity-80"></span>
                 <img
                   src="assets/images/logo.png"
                   alt="OmniFlex"
-                  class="relative h-8 w-8 rounded-full object-contain ring-2 ring-cyan-500/40"
+                  class="relative h-8 w-8 rounded-full object-contain ring-2 ring-cyan-500/60 shadow-[0_0_12px_rgba(0,210,255,0.5)] group-hover:shadow-[0_0_18px_rgba(0,210,255,0.8)] transition-shadow"
                 />
               </div>
               <div class="flex flex-col">
@@ -240,22 +237,10 @@
             <!-- Cyberpunk logout button - solid border with glow -->
             <button
               (click)="auth.logout()"
-              class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105"
+              data-fx-glitch
+              class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105 border border-violet-500/80 bg-[#0a0f1e] text-violet-400 hover:bg-violet-500/10 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(139,92,246,0.5)]"
             >
-              <!-- Solid border -->
-              <span class="absolute inset-0 rounded-lg border border-violet-500 opacity-80"></span>
-              <!-- Inner fill -->
-              <span
-                class="absolute inset-0 rounded-lg bg-[#0a0f1e] group-hover:bg-violet-500/10 transition-colors"
-              ></span>
-              <!-- Glow on hover -->
-              <span
-                class="absolute -inset-1 opacity-0 group-hover:opacity-50 transition-opacity blur-lg bg-violet-500/50"
-              ></span>
-              <!-- Text -->
-              <span class="relative text-violet-400 group-hover:text-white transition-colors"
-                >Logout</span
-              >
+              Logout
             </button>
           </div>
         </div>

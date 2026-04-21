@@ -53,11 +53,7 @@
     position: fixed;
     inset: 0;
     z-index: 1;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: 
-      linear-gradient(135deg, rgba(0, 115, 255, 0.03) 0%, rgba(165, 100, 255, 0.05) 100%),
-      rgba(5, 8, 16, 0.4);
+    background: rgba(5, 8, 16, 0.4);
     pointer-events: none;
   }
 
@@ -66,7 +62,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background-image: 
+    background-image:
       linear-gradient(var(--cyber-grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--cyber-grid) 1px, transparent 1px);
     background-size: 60px 60px;
@@ -81,11 +77,8 @@
 }
 
 .ofx-panel {
-  @apply relative overflow-hidden bg-slate-950/70 border border-white/10 backdrop-blur-2xl shadow-2xl shadow-cyan-500/10 rounded-2xl;
-  background-image: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(139, 92, 246, 0.1));
-  box-shadow: 0 0 0 1px rgba(0, 210, 255, 0.12), 0 0 0 2px rgba(165, 100, 255, 0.08),
-    0 14px 48px rgba(0, 0, 0, 0.55), 0 0 26px rgba(0, 210, 255, 0.18),
-    0 0 32px rgba(165, 100, 255, 0.14);
+  @apply relative overflow-hidden bg-slate-950/90 border border-white/10 rounded-2xl;
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.55);
 }
 
 .ofx-gradient-button {
@@ -93,32 +86,23 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  background: rgba(224, 64, 251, 0.15);
-  border: 1px solid rgba(224, 64, 251, 0.4);
+  color: var(--cyber-purple);
+  background: rgba(224, 64, 251, 0.08);
+  border: 1px solid rgba(224, 64, 251, 0.5);
   box-shadow:
-    0 0 0 1px rgba(224, 64, 251, 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.4),
-    0 0 16px rgba(224, 64, 251, 0.15);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ofx-gradient-button::after {
-  content: '';
-  @apply absolute inset-[2px] rounded-md bg-slate-950/80 opacity-0 transition-all duration-300;
-  pointer-events: none;
-}
-
-.ofx-gradient-button:hover::before {
-  filter: brightness(1.1);
-}
-
-.ofx-gradient-button:hover::after {
-  opacity: 1;
-  box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.35);
+    0 0 0 1px rgba(224, 64, 251, 0.2),
+    0 0 12px rgba(224, 64, 251, 0.3),
+    0 0 24px rgba(224, 64, 251, 0.15);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ofx-gradient-button:hover {
-  transform: translateY(-2px) scale(1.01);
+  background: rgba(224, 64, 251, 0.16);
+  box-shadow:
+    0 0 0 1px rgba(224, 64, 251, 0.3),
+    0 0 18px rgba(224, 64, 251, 0.5),
+    0 0 36px rgba(224, 64, 251, 0.25);
+  transform: translateY(-1px);
 }
 
 .ofx-input {
@@ -134,17 +118,13 @@
 }
 
 .ofx-section-title {
-  @apply text-xs uppercase tracking-[0.25em] font-bold;
-  background: linear-gradient(90deg, rgba(0, 210, 255, 0.9), rgba(165, 100, 255, 0.9));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  @apply text-xs uppercase tracking-[0.25em] font-bold text-cyan-300;
   text-shadow: none;
 }
 
 .ofx-chip {
-  @apply px-2 py-0.5 inline-flex items-center gap-2 text-xs font-semibold rounded-full border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_10px_30px_rgba(56,189,248,0.15)];
-  background-image: linear-gradient(120deg, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.12));
+  @apply px-2 py-0.5 inline-flex items-center gap-2 text-xs font-semibold rounded-full border border-white/10;
+  background-color: rgba(56, 189, 248, 0.1);
 }
 
 .ofx-ghost-button {
@@ -321,16 +301,11 @@
 .theme-dark .site-body u {
   text-decoration: none;
   color: var(--fg);
-  background-image: linear-gradient(90deg, rgba(var(--cyan_x), 0.95), rgba(var(--magenta_x), 0.95));
-  background-size: 200% 100%;
-  background-repeat: no-repeat;
-  background-position: 0 100%;
   padding-bottom: 2px;
+  border-bottom: 2px solid rgba(var(--cyan_x), 0.7);
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
-  border-bottom: 2px solid transparent;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  animation: omni-gradient-move 6s linear infinite;
 }
 
 .theme-dark .site-body del,
@@ -343,19 +318,16 @@
 
 .theme-dark .site-body strong em,
 .theme-dark .site-body em strong {
-  color: #fff;
-  background: linear-gradient(90deg, var(--magenta), var(--cyan));
-  -webkit-background-clip: text;
-  background-clip: text;
-  text-fill-color: transparent;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 18px rgba(165, 100, 255, 0.55), 0 0 12px rgba(0, 210, 255, 0.45);
+  color: var(--magenta);
+  font-weight: 900;
+  font-style: italic;
+  text-shadow: 0 0 12px rgba(165, 100, 255, 0.5);
 }
 
 .theme-dark .site-body hr {
   border: none;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
   margin: 1.7rem 0;
   position: relative;
 }
@@ -366,24 +338,19 @@
   left: 50%;
   top: -1px;
   transform: translateX(-50%);
-  width: 120px;
+  width: 80px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--magenta), var(--blue), var(--cyan), var(--magenta));
-  background-size: 200% 100%;
-  animation: omni-gradient-move 5s linear infinite;
-  box-shadow: var(--omni-neon-blue), var(--omni-neon-purple);
+  background: var(--cyan);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
 }
 
 .theme-dark .site-body blockquote {
   margin: 1em 0;
   padding: 0.95rem 1.15rem;
   color: var(--fg_dark);
-  background: radial-gradient(400px 200px at 0% 0%, rgba(0, 210, 255, 0.12), transparent 60%),
-    radial-gradient(400px 200px at 100% 100%, rgba(165, 100, 255, 0.12), transparent 60%),
-    rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.04);
   border-left: 4px solid var(--purple);
-  border-right: 1px dashed rgba(165, 100, 255, 0.35);
   border-radius: 0 var(--omni-radius) var(--omni-radius) 0;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
@@ -406,7 +373,7 @@
 }
 
 .theme-dark .site-body thead th {
-  background: linear-gradient(180deg, rgba(165, 100, 255, 0.12), rgba(0, 210, 255, 0.08));
+  background: rgba(165, 100, 255, 0.1);
   color: #fff;
   text-shadow: 0 0 8px rgba(0, 210, 255, 0.35);
 }
@@ -433,7 +400,7 @@
   display: block;
   max-width: 100%;
   border-radius: var(--omni-radius);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5), 0 0 26px rgba(0, 210, 255, 0.28);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5);
 }
 
 .neon-scanlines .omni-neon-scanlines {
@@ -447,14 +414,12 @@
   opacity: 0.22;
   mix-blend-mode: screen;
   background: repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0) 0px,
-      rgba(0, 0, 0, 0) 2px,
-      rgba(0, 210, 255, 0.12) 3px,
-      rgba(0, 0, 0, 0) 4px
-    ),
-    radial-gradient(1200px 700px at 15% 10%, rgba(165, 100, 255, 0.06), transparent 55%),
-    radial-gradient(900px 600px at 85% 15%, rgba(0, 210, 255, 0.06), transparent 60%);
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 210, 255, 0.1) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
   transform: translateZ(0);
   will-change: background-position, opacity;
 }
@@ -590,18 +555,11 @@
 
 /* Cyberpunk Panel - Enhanced */
 .ofx-panel-cyber {
-  @apply relative overflow-hidden bg-slate-950/80 backdrop-blur-2xl rounded-xl;
-  border: 1px solid transparent;
-  background-image: 
-    linear-gradient(var(--cyber-bg), var(--cyber-bg)),
-    linear-gradient(135deg, var(--cyber-blue) 0%, var(--cyber-purple) 50%, var(--cyber-pink) 100%);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  box-shadow: 
-    0 0 20px rgba(0, 210, 255, 0.15),
-    0 0 40px rgba(165, 100, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  animation: border-glow 4s ease-in-out infinite;
+  @apply relative overflow-hidden bg-slate-950/90 rounded-xl;
+  border: 1px solid rgba(0, 210, 255, 0.2);
+  box-shadow:
+    0 0 16px rgba(0, 210, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .ofx-panel-cyber::before {
@@ -611,22 +569,22 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
-  opacity: 0.8;
+  background: var(--cyber-blue);
+  opacity: 0.6;
 }
 
 /* Cyberpunk Neon Button */
 .ofx-neon-button {
   @apply relative px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider;
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.1), rgba(100, 154, 255, 0.1));
+  background: rgba(0, 210, 255, 0.08);
   border: 2px solid var(--cyber-blue);
   color: var(--cyber-blue);
-  text-shadow: 0 0 10px var(--cyber-blue);
-  box-shadow: 
+  text-shadow: 0 0 10px rgba(0, 210, 255, 0.7);
+  box-shadow:
     0 0 10px rgba(0, 210, 255, 0.3),
     0 0 20px rgba(0, 210, 255, 0.1),
-    inset 0 0 15px rgba(0, 210, 255, 0.1);
-  transition: all 0.3s ease;
+    inset 0 0 12px rgba(0, 210, 255, 0.08);
+  transition: all 0.25s ease;
   overflow: hidden;
 }
 
@@ -637,18 +595,17 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.25), transparent);
   transition: left 0.5s ease;
 }
 
 .ofx-neon-button:hover {
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(100, 149, 255, 0.363));
-  box-shadow: 
-    0 0 20px rgba(0, 210, 255, 0.5),
-    0 0 40px rgba(0, 210, 255, 0.2),
-    0 0 60px rgba(100, 136, 255, 0.1),
-    inset 0 0 20px rgba(0, 210, 255, 0.2);
-  transform: translateY(-2px);
+  background: rgba(0, 210, 255, 0.16);
+  box-shadow:
+    0 0 18px rgba(0, 210, 255, 0.6),
+    0 0 34px rgba(0, 210, 255, 0.3),
+    inset 0 0 18px rgba(0, 210, 255, 0.18);
+  transform: translateY(-1px);
 }
 
 .ofx-neon-button:hover::before {
@@ -659,18 +616,24 @@
 .ofx-neon-button-purple {
   border-color: var(--cyber-purple);
   color: var(--cyber-purple);
-  text-shadow: 0 0 10px var(--cyber-purple);
-  box-shadow: 
-    0 0 10px rgba(100, 144, 255, 0.3),
-    0 0 20px rgba(100, 108, 255, 0.1),
-    inset 0 0 15px rgba(100, 105, 255, 0.1);
+  background: rgba(224, 64, 251, 0.08);
+  text-shadow: 0 0 10px rgba(224, 64, 251, 0.7);
+  box-shadow:
+    0 0 10px rgba(224, 64, 251, 0.3),
+    0 0 20px rgba(224, 64, 251, 0.1),
+    inset 0 0 12px rgba(224, 64, 251, 0.08);
+}
+
+.ofx-neon-button-purple::before {
+  background: linear-gradient(90deg, transparent, rgba(224, 64, 251, 0.25), transparent);
 }
 
 .ofx-neon-button-purple:hover {
-  box-shadow: 
-    0 0 20px rgba(100, 128, 255, 0.5),
-    0 0 40px rgba(100, 136, 255, 0.2),
-    inset 0 0 20px rgba(100, 141, 255, 0.2);
+  background: rgba(224, 64, 251, 0.16);
+  box-shadow:
+    0 0 18px rgba(224, 64, 251, 0.6),
+    0 0 34px rgba(224, 64, 251, 0.3),
+    inset 0 0 18px rgba(224, 64, 251, 0.18);
 }
 
 /* Enhanced Input */
@@ -700,14 +663,10 @@
    CYBERPUNK TEXT EFFECTS
    ============================================ */
 
-/* Gradient Text */
+/* Solid neon text - gradient removed */
 .text-cyber-gradient {
-  background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-purple), var(--cyber-pink));
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 3s ease infinite;
+  color: var(--cyber-blue);
+  text-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
 }
 
 /* Neon Text */
@@ -862,22 +821,20 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--cyber-blue), var(--cyber-purple), transparent);
-  opacity: 0.7;
+  background: var(--cyber-blue);
+  opacity: 0.6;
 }
 
 .cyber-card:hover {
   border-color: rgba(0, 210, 255, 0.4);
-  box-shadow: 
-    0 0 20px rgba(0, 210, 255, 0.15),
+  box-shadow:
+    0 0 20px rgba(0, 210, 255, 0.2),
     0 10px 40px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
 
 .cyber-card:hover::before {
   opacity: 1;
-  animation: gradient-shift 2s linear infinite;
-  background-size: 200% 100%;
 }
 
 /* ============================================
@@ -912,12 +869,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--cyber-blue), var(--cyber-purple));
+  background: rgba(0, 210, 255, 0.55);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--cyber-purple), var(--cyber-pink));
+  background: rgba(0, 210, 255, 0.8);
 }
 
 /* ============================================
@@ -948,7 +905,7 @@ select::-webkit-scrollbar-track {
 }
 
 select::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--cyber-blue), var(--cyber-purple));
+  background: rgba(0, 210, 255, 0.55);
   border-radius: 4px;
 }
 
@@ -1043,14 +1000,14 @@ textarea:focus {
 
 .cyber-badge {
   @apply inline-flex items-center px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full;
-  background: linear-gradient(135deg, rgba(0, 210, 255, 0.15), rgba(165, 100, 255, 0.1));
+  background: rgba(0, 210, 255, 0.12);
   border: 1px solid rgba(0, 210, 255, 0.3);
   color: var(--cyber-blue);
   text-shadow: 0 0 5px rgba(0, 210, 255, 0.5);
 }
 
 .cyber-badge-purple {
-  background: linear-gradient(135deg, rgba(165, 100, 255, 0.15), rgba(255, 42, 109, 0.1));
+  background: rgba(165, 100, 255, 0.12);
   border-color: rgba(165, 100, 255, 0.3);
   color: var(--cyber-purple);
   text-shadow: 0 0 5px rgba(165, 100, 255, 0.5);
@@ -1113,9 +1070,9 @@ textarea:focus {
 /* Header overflow utility for dropdowns */
 .overflow-visible-header { overflow: visible; }
 
-/* View Switcher Neon Glow - Active State */
+/* View Switcher Neon Glow - Active State (matches violet fill) */
 .ofx-view-switch-active {
-  box-shadow: 0 0 20px rgba(224, 64, 251, 0.4), inset 0 0 10px rgba(224, 64, 251, 0.1);
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.45), inset 0 0 10px rgba(139, 92, 246, 0.15);
 }
 
 /* Google Tasks Preview styles */
@@ -1322,90 +1279,50 @@ textarea:focus {
 
 /* Neon border effect */
 .cyber-border-glow {
-  border: 1px solid rgba(224, 64, 251, 0.3);
-  box-shadow: 
-    0 0 10px rgba(224, 64, 251, 0.2),
-    inset 0 0 10px rgba(224, 64, 251, 0.1),
-    0 0 20px rgba(0, 210, 255, 0.1);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(224, 64, 251, 0.4);
+  box-shadow:
+    0 0 10px rgba(224, 64, 251, 0.25),
+    inset 0 0 10px rgba(224, 64, 251, 0.08);
+  transition: all 0.25s ease;
 }
 
 .cyber-border-glow:hover {
-  border-color: rgba(224, 64, 251, 0.6);
-  box-shadow: 
-    0 0 20px rgba(224, 64, 251, 0.4),
-    inset 0 0 20px rgba(224, 64, 251, 0.2),
-    0 0 40px rgba(0, 210, 255, 0.2);
+  border-color: rgba(224, 64, 251, 0.7);
+  box-shadow:
+    0 0 18px rgba(224, 64, 251, 0.5),
+    inset 0 0 18px rgba(224, 64, 251, 0.15);
 }
 
-/* Holographic effect */
+/* Holographic (solid) panel */
 .cyber-hologram {
   position: relative;
-  background: linear-gradient(
-    135deg,
-    rgba(224, 64, 251, 0.1) 0%,
-    rgba(0, 210, 255, 0.1) 50%,
-    rgba(255, 20, 147, 0.1) 100%
-  );
-  background-size: 200% 200%;
-  animation: hologram-shift 3s ease infinite;
+  background: rgba(224, 64, 251, 0.06);
 }
 
-@keyframes hologram-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* Chrome aberration effect */
+/* Chrome aberration effect - disabled to avoid blur */
 .cyber-chromatic {
   position: relative;
 }
 
-.cyber-chromatic::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: inherit;
-  filter: blur(2px);
-  opacity: 0.3;
-  z-index: -1;
-  mix-blend-mode: screen;
-}
-
-/* Neon text glow */
+/* Neon text glow - single accent */
 .cyber-text-glow {
-  text-shadow: 
+  color: var(--cyber-purple);
+  text-shadow:
     0 0 8px rgba(224, 64, 251, 0.8),
-    0 0 16px rgba(224, 64, 251, 0.6),
-    0 0 24px rgba(0, 210, 255, 0.4),
-    0 0 32px rgba(0, 210, 255, 0.2);
+    0 0 16px rgba(224, 64, 251, 0.5);
   animation: text-flicker 3s infinite;
 }
 
 @keyframes text-flicker {
   0%, 100% {
-    text-shadow: 
+    text-shadow:
       0 0 8px rgba(224, 64, 251, 0.8),
-      0 0 16px rgba(224, 64, 251, 0.6),
-      0 0 24px rgba(0, 210, 255, 0.4),
-      0 0 32px rgba(0, 210, 255, 0.2);
+      0 0 16px rgba(224, 64, 251, 0.5);
   }
   50% {
-    text-shadow: 
+    text-shadow:
       0 0 12px rgba(224, 64, 251, 1),
-      0 0 24px rgba(224, 64, 251, 0.8),
-      0 0 36px rgba(0, 210, 255, 0.6),
-      0 0 48px rgba(0, 210, 255, 0.4);
+      0 0 22px rgba(224, 64, 251, 0.7);
   }
 }
 
@@ -1427,33 +1344,16 @@ textarea:focus {
   }
 }
 
-/* Gradient border animation */
+/* Solid accent border (replaces animated gradient border) */
 .cyber-gradient-border {
   position: relative;
-  background: linear-gradient(
-    90deg,
-    #e040fb,
-    #00d2ff,
-    #ff1493,
-    #e040fb
-  );
-  background-size: 300% 100%;
-  animation: gradient-border-flow 3s linear infinite;
-  padding: 2px;
+  background: var(--cyber-purple);
+  padding: 1px;
 }
 
 .cyber-gradient-border > * {
   background: rgba(10, 15, 30, 0.95);
   border-radius: inherit;
-}
-
-@keyframes gradient-border-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 300% 50%;
-  }
 }
 
 /* Utility classes for easy application */
@@ -1507,6 +1407,83 @@ textarea:focus {
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 210, 255, 0.5) rgba(5, 8, 16, 0.6);
+  scrollbar-color: rgba(0, 210, 255, 0.55) rgba(5, 8, 16, 0.6);
+}
+
+/* ============================================
+   SELECTED TAG CHIP - "remove" hover hint
+   Only shows dashed danger hint while the user is holding Ctrl/Cmd/Shift
+   (body gets .fx-modkey-held from task-tags-removable directive).
+   ============================================ */
+
+.ofx-tag-chip {
+  position: relative;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ofx-tag-chip:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.fx-modkey-held .ofx-tag-chip {
+  outline: 1px dashed rgba(244, 63, 94, 0.55);
+  outline-offset: 2px;
+}
+
+.fx-modkey-held .ofx-tag-chip:hover {
+  filter: brightness(0.85) saturate(1.1);
+  text-decoration: line-through;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
+  cursor: not-allowed;
+}
+
+/* ============================================
+   GLITCH INTERACTION ANIMATIONS
+   Applied via [data-fx-glitch], [data-fx-glitch-hover], [data-fx-glitch-click]
+   ============================================ */
+
+@keyframes fx-glitch-hover {
+  0% { transform: translate(0, 0); filter: none; }
+  20% { transform: translate(-1px, 1px); filter: hue-rotate(8deg); }
+  40% { transform: translate(1px, -1px); filter: hue-rotate(-6deg); }
+  60% { transform: translate(-1px, -1px); filter: none; }
+  80% { transform: translate(1px, 1px); filter: hue-rotate(4deg); }
+  100% { transform: translate(0, 0); filter: none; }
+}
+
+@keyframes fx-glitch-click {
+  0% { transform: translate(0, 0); filter: none; }
+  15% { transform: translate(-2px, 2px) skewX(-2deg); filter: hue-rotate(20deg) brightness(1.2); }
+  30% { transform: translate(2px, -2px) skewX(2deg); filter: hue-rotate(-20deg) brightness(1.1); }
+  45% { transform: translate(-3px, 0) skewX(-1deg); filter: hue-rotate(10deg); }
+  60% { transform: translate(3px, 0) skewX(1deg); filter: hue-rotate(-10deg); }
+  80% { transform: translate(-1px, 1px); filter: none; }
+  100% { transform: translate(0, 0); filter: none; }
+}
+
+[data-fx-glitch],
+[data-fx-glitch-hover],
+[data-fx-glitch-click] {
+  will-change: transform, filter;
+}
+
+[data-fx-glitch]:hover,
+[data-fx-glitch-hover]:hover {
+  animation: fx-glitch-hover 0.4s steps(5, end);
+}
+
+[data-fx-glitch]:active,
+[data-fx-glitch-click]:active {
+  animation: fx-glitch-click 0.28s steps(6, end);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fx-glitch]:hover,
+  [data-fx-glitch-hover]:hover,
+  [data-fx-glitch]:active,
+  [data-fx-glitch-click]:active {
+    animation: none;
+  }
 }
 

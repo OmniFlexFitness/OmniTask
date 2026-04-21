@@ -2,7 +2,7 @@
       @if (project(); as project) {
         <!-- Header -->
         <header
-          class="flex-shrink-0 bg-slate-900/50 backdrop-blur-md border-b border-white/5 z-20 relative"
+          class="flex-shrink-0 bg-slate-900/80 border-b border-white/5 z-20 relative"
         >
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/30"></div>
@@ -11,6 +11,7 @@
             <!-- Breadcrumbs / Back -->
             <button
               (click)="goBack()"
+              data-fx-glitch-hover
               class="flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
             >
               <svg
@@ -35,15 +36,9 @@
                 <!-- Icon/Color Box -->
                 <div
                   class="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
-                  [style.background]="
-                    'linear-gradient(135deg, ' +
-                    (project.color || '#6366f1') +
-                    '20, ' +
-                    (project.color || '#6366f1') +
-                    '05)'
-                  "
-                  [style.border]="'1px solid ' + (project.color || '#6366f1') + '40'"
-                  [style.box-shadow]="'0 0 20px ' + (project.color || '#6366f1') + '15'"
+                  [style.background-color]="(project.color || '#6366f1') + '18'"
+                  [style.border]="'1px solid ' + (project.color || '#6366f1') + '55'"
+                  [style.box-shadow]="'0 0 14px ' + (project.color || '#6366f1') + '40'"
                 >
                   <span class="text-xl font-bold" [style.color]="project.color || '#6366f1'">
                     {{ project.name.charAt(0).toUpperCase() }}
@@ -74,6 +69,7 @@
               <!-- Overview Tab (Cyan) -->
               <button
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                data-fx-glitch
                 [class.text-cyan-400]="activeTab() === 'overview'"
                 [class.text-slate-400]="activeTab() !== 'overview'"
                 [class.hover:text-cyan-200]="activeTab() !== 'overview'"
@@ -97,6 +93,7 @@
               <!-- Tasks Tab (Emerald) -->
               <button
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                data-fx-glitch
                 [class.text-emerald-400]="activeTab() === 'tasks'"
                 [class.text-slate-400]="activeTab() !== 'tasks'"
                 [class.hover:text-emerald-200]="activeTab() !== 'tasks'"
@@ -120,6 +117,7 @@
               <!-- Settings Tab (Fuchsia) -->
               <button
                 class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                data-fx-glitch
                 [class.text-violet-400]="activeTab() === 'settings'"
                 [class.text-slate-400]="activeTab() !== 'settings'"
                 [class.hover:text-violet-200]="activeTab() !== 'settings'"
@@ -207,6 +205,28 @@
                     </section>
                   </div>
                 </div>
+
+                <!-- Project Tasks (full list) -->
+                <section>
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-white">Tasks</h2>
+                    <button
+                      class="ofx-neon-button text-sm px-4 py-2"
+                      data-fx-glitch
+                      (click)="openCreateTaskModal()"
+                    >
+                      + Add Task
+                    </button>
+                  </div>
+                  <div class="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
+                    <app-task-list-view
+                      [tasks]="tasks()"
+                      [projectId]="project.id"
+                      (taskClick)="openTaskDetail($event)"
+                      (delete)="deleteTask($event)"
+                    ></app-task-list-view>
+                  </div>
+                </section>
               </div>
             }
 
@@ -250,7 +270,7 @@
                     </button>
                   </div>
 
-                  <button class="ofx-neon-button text-sm px-4 py-2" (click)="openCreateTaskModal()">
+                  <button class="ofx-neon-button text-sm px-4 py-2" data-fx-glitch (click)="openCreateTaskModal()">
                     + Add Task
                   </button>
                 </div>
@@ -292,7 +312,7 @@
             @case ('settings') {
               <div class="max-w-4xl mx-auto pb-12 animate-in slide-in-from-right-4 duration-300">
                 <div
-                  class="bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+                  class="bg-slate-900/80 rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
                 >
                   <div class="p-8">
                     <h2 class="text-xl font-bold text-white mb-6">Project Settings</h2>

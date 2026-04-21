@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { Firestore, doc, updateDoc } from '@angular/fire/firestore';
+import { Storage, ref, uploadBytes, getDownloadURL } from '@angular/fire/storage';
 
 const AVATAR_COLORS = [
   { name: 'Purple', value: '#8b5cf6' },
@@ -35,6 +36,7 @@ const AVATAR_COLORS = [
 export class SettingsComponent {
   private authService = inject(AuthService);
   private firestore = inject(Firestore);
+  private storage = inject(Storage);
 
   currentUser = this.authService.currentUserSig;
   avatarColors = AVATAR_COLORS;
@@ -43,6 +45,10 @@ export class SettingsComponent {
   displayName = '';
   saving = signal(false);
   saveSuccess = signal<boolean | null>(null);
+
+  // Profile photo upload state
+  uploadingPhoto = signal(false);
+  photoError = signal<string | null>(null);
 
   userInitials = computed(() => {
     const name = this.currentUser()?.displayName || '';
@@ -74,6 +80,60 @@ export class SettingsComponent {
 
   selectColor(color: string) {
     this.selectedColor.set(color);
+  }
+
+  async onPhotoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.photoError.set(null);
+
+    if (!file.type.startsWith('image/')) {
+      this.photoError.set('Please select an image file.');
+      input.value = '';
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      this.photoError.set('Image must be under 5 MB.');
+      input.value = '';
+      return;
+    }
+
+    const user = this.currentUser();
+    if (!user) return;
+
+    this.uploadingPhoto.set(true);
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `users/${user.uid}/avatar/${Date.now()}.${ext}`;
+      const storageRef = ref(this.storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      const userRef = doc(this.firestore, 'users', user.uid);
+      await updateDoc(userRef, { photoURL: url });
+      this.authService.currentUserSig.set({ ...user, photoURL: url });
+    } catch (err) {
+      console.error('Failed to upload avatar:', err);
+      this.photoError.set('Failed to upload image. Please try again.');
+    } finally {
+      this.uploadingPhoto.set(false);
+      input.value = '';
+    }
+  }
+
+  async removePhoto() {
+    const user = this.currentUser();
+    if (!user) return;
+    try {
+      const userRef = doc(this.firestore, 'users', user.uid);
+      await updateDoc(userRef, { photoURL: '' });
+      this.authService.currentUserSig.set({ ...user, photoURL: '' });
+    } catch (err) {
+      console.error('Failed to clear avatar:', err);
+    }
   }
 
   async saveProfile() {

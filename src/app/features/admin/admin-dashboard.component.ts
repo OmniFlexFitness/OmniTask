@@ -73,7 +73,8 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <div class="flex items-center justify-between">
           <div>
             <h1
-              class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400"
+              class="text-4xl font-bold text-cyan-300"
+              style="text-shadow: 0 0 14px rgba(0, 210, 255, 0.5);"
             >
               Admin Dashboard
             </h1>
@@ -93,7 +94,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             class="bg-black/30 border border-white/10 rounded-xl p-6 relative overflow-hidden group hover:border-purple-500/50 transition-colors"
           >
             <div
-              class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+              class="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
             ></div>
             <h3 class="text-gray-400 font-medium">Total Users</h3>
             <p class="text-4xl font-bold mt-2 text-white">{{ users().length }}</p>
@@ -102,7 +103,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             class="bg-black/30 border border-white/10 rounded-xl p-6 relative overflow-hidden group hover:border-cyan-500/50 transition-colors"
           >
             <div
-              class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+              class="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
             ></div>
             <h3 class="text-gray-400 font-medium">Total Projects</h3>
             <p class="text-4xl font-bold mt-2 text-white">{{ projects().length }}</p>
@@ -111,7 +112,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             class="bg-black/30 border border-white/10 rounded-xl p-6 relative overflow-hidden group hover:border-blue-500/50 transition-colors"
           >
             <div
-              class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+              class="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
             ></div>
             <h3 class="text-gray-400 font-medium">Total Tasks</h3>
             <p class="text-4xl font-bold mt-2 text-white">{{ tasks().length }}</p>
@@ -137,7 +138,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <!-- Users Tab -->
         <div *ngIf="activeTab() === 'Users'" class="flex flex-col gap-4">
           <div
-            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-md"
+            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden "
           >
             <table class="w-full text-left text-sm text-gray-300">
               <thead class="text-xs uppercase bg-black/60 text-gray-400">
@@ -203,7 +204,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <!-- Projects Tab -->
         <div *ngIf="activeTab() === 'Projects'" class="flex flex-col gap-4">
           <div
-            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-md"
+            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden "
           >
             <table class="w-full text-left text-sm text-gray-300">
               <thead class="text-xs uppercase bg-black/60 text-gray-400">
@@ -253,7 +254,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <!-- Tasks Tab -->
         <div *ngIf="activeTab() === 'Tasks'" class="flex flex-col gap-4">
           <div
-            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-md"
+            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden "
           >
             <table class="w-full text-left text-sm text-gray-300">
               <thead class="text-xs uppercase bg-black/60 text-gray-400">
@@ -313,7 +314,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <!-- Permissions Tab (super-admin only) -->
         <div *ngIf="activeTab() === 'Permissions'" class="flex flex-col gap-4">
           <div
-            class="rounded-xl p-5 border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-cyan-500/5"
+            class="rounded-xl p-5 border border-purple-500/30 bg-purple-500/10"
           >
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -342,7 +343,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
           <div class="flex flex-col gap-4">
             <div
               *ngFor="let user of filteredUsers(); trackBy: trackByUid"
-              class="bg-black/40 border border-white/10 rounded-xl p-5 backdrop-blur-md"
+              class="bg-black/40 border border-white/10 rounded-xl p-5 "
               [class.border-purple-500/40]="user.email === superAdminEmail"
             >
               <div class="flex items-start justify-between gap-4 flex-wrap">
@@ -428,7 +429,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <!-- Invites Tab (super-admin only) -->
         <div *ngIf="activeTab() === 'Invites'" class="flex flex-col gap-4">
           <div
-            class="rounded-xl p-5 border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-purple-500/5 flex items-start justify-between gap-4 flex-wrap"
+            class="rounded-xl p-5 border border-cyan-500/30 bg-cyan-500/10 flex items-start justify-between gap-4 flex-wrap"
           >
             <div>
               <h2 class="text-lg font-semibold text-white">Invite users</h2>
@@ -439,14 +440,14 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             </div>
             <button
               (click)="openInviteForm()"
-              class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 text-white text-sm font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(0,210,255,0.5)] transition-all"
+              class="px-4 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-lg hover:bg-cyan-400 hover:shadow-[0_0_18px_rgba(0,210,255,0.5)] transition-all"
             >
               + New invite
             </button>
           </div>
 
           <div
-            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-md"
+            class="bg-black/40 border border-white/10 rounded-xl overflow-hidden"
           >
             <table class="w-full text-left text-sm text-gray-300">
               <thead class="text-xs uppercase bg-black/60 text-gray-400">
@@ -509,14 +510,14 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         class="fixed inset-0 z-[9999] flex items-center justify-center"
       >
         <div
-          class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          class="absolute inset-0 bg-black/70 "
           (click)="closeInviteForm()"
         ></div>
         <div
           class="relative bg-slate-900 border border-white/20 rounded-xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
         >
           <div
-            class="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-600/20 to-purple-600/20"
+            class="px-6 py-4 border-b border-white/10 bg-cyan-600/15"
           >
             <h3 class="text-lg font-semibold text-white">Invite a user</h3>
             <p class="text-xs text-gray-400 mt-1">
@@ -594,7 +595,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
               <button
                 type="submit"
                 [disabled]="inviteSubmitting()"
-                class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold disabled:opacity-50"
+                class="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white font-semibold disabled:opacity-50 shadow-[0_0_14px_rgba(0,210,255,0.4)]"
               >
                 {{ inviteSubmitting() ? 'Sending…' : 'Send invite' }}
               </button>

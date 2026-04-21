@@ -30,6 +30,21 @@ export class TaskTagsComponent {
     });
   }
 
+  /**
+   * Handler for clicks on a selected tag chip. Holding Ctrl/Cmd or Shift
+   * removes the tag; a plain click does nothing (to avoid accidental removal).
+   */
+  onSelectedTagClick(tagName: string, event: MouseEvent) {
+    event.stopPropagation();
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      this.selectedTags.update((tags) => {
+        const newTags = new Set(tags);
+        newTags.delete(tagName);
+        return newTags;
+      });
+    }
+  }
+
   async addTag(tagName: string) {
     const name = tagName.trim();
     if (!name) return;
