@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ProjectService } from '../../core/services/project.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { Project } from '../../core/models/domain.model';
 import { ProjectFormModalComponent } from './project-form-modal.component';
 
@@ -17,7 +18,16 @@ import { ProjectFormModalComponent } from './project-form-modal.component';
 })
 export class ProjectsListComponent {
   private readonly projectService = inject(ProjectService);
+  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+
+  /** Returns true if the current user owns the given project (or is super-admin). */
+  canDeleteProject = (project: Project): boolean => {
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    if (user.permissions?.isSuperAdmin) return true;
+    return project.ownerId === user.uid;
+  };
 
   // State
   searchQuery = signal('');

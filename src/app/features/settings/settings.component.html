@@ -1,8 +1,8 @@
-<div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+<div class="min-h-screen bg-slate-950 p-6">
       <div class="max-w-2xl mx-auto">
         <!-- Header -->
         <header class="mb-8">
-          <h1 class="text-2xl font-bold text-white mb-2">Settings</h1>
+          <h1 data-scramble class="text-2xl font-bold text-white mb-2">Settings</h1>
           <p class="text-slate-400">Manage your profile and preferences</p>
         </header>
 
@@ -21,12 +21,12 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Profile
+            <span data-scramble>Profile</span>
           </h2>
 
-          <!-- Current Avatar Preview -->
+          <!-- Current Avatar Preview + Upload -->
           <div class="flex items-center gap-6 mb-8">
-            <div class="relative">
+            <div class="relative group">
               @if (currentUser()?.photoURL) {
                 <img
                   [src]="currentUser()!.photoURL"
@@ -41,10 +41,50 @@
                   {{ userInitials() }}
                 </div>
               }
+              @if (uploadingPhoto()) {
+                <div class="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center">
+                  <svg class="animate-spin h-6 w-6 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                </div>
+              }
             </div>
-            <div>
+            <div class="flex-1">
               <h3 class="text-lg font-medium text-white">{{ currentUser()?.displayName }}</h3>
-              <p class="text-slate-400 text-sm">{{ currentUser()?.email }}</p>
+              <p class="text-slate-400 text-sm mb-3">{{ currentUser()?.email }}</p>
+              <div class="flex flex-wrap items-center gap-3">
+                <label
+                  class="omni-glitch-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 text-xs font-semibold cursor-pointer hover:bg-cyan-500/20 hover:shadow-[0_0_12px_rgba(0,210,255,0.5)] transition-all"
+                  [class.opacity-60]="uploadingPhoto()"
+                  [class.pointer-events-none]="uploadingPhoto()"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+                  </svg>
+                  {{ currentUser()?.photoURL ? 'Change photo' : 'Upload photo' }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    [disabled]="uploadingPhoto()"
+                    (change)="onPhotoSelected($event)"
+                  />
+                </label>
+                @if (currentUser()?.photoURL) {
+                  <button
+                    type="button"
+                    data-fx-glitch
+                    (click)="removePhoto()"
+                    class="text-xs text-slate-400 hover:text-rose-400 transition-colors"
+                  >
+                    Remove photo
+                  </button>
+                }
+              </div>
+              @if (photoError()) {
+                <p class="mt-2 text-xs text-rose-400">{{ photoError() }}</p>
+              }
             </div>
           </div>
 
@@ -100,7 +140,7 @@
           <button
             (click)="saveProfile()"
             [disabled]="saving()"
-            class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            class="omni-glitch-btn px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-[0_0_14px_rgba(139,92,246,0.5)]"
           >
             @if (saving()) {
               <svg
@@ -166,7 +206,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-            Account Information
+            <span data-scramble>Account Information</span>
           </h2>
           <div class="space-y-3 text-sm">
             <div class="flex justify-between">
@@ -193,7 +233,7 @@
                   </h3>
                   <p class="text-xs text-slate-400">Manage all users, projects, and tasks</p>
                 </div>
-                <a routerLink="/admin" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50">
+                <a routerLink="/admin" class="omni-glitch-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-purple-500/50 shadow-[0_0_12px_rgba(139,92,246,0.5)]">
                   Open Admin
                 </a>
               </div>

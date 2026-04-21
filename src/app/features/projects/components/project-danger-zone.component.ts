@@ -1,7 +1,8 @@
-import { Component, input, output, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../../core/services/project.service';
 import { DialogService } from '../../../core/services/dialog.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { Project } from '../../../core/models/domain.model';
 
 @Component({
@@ -15,10 +16,19 @@ import { Project } from '../../../core/models/domain.model';
 export class ProjectDangerZoneComponent {
   private readonly projectService = inject(ProjectService);
   private readonly dialogService = inject(DialogService);
+  private readonly auth = inject(AuthService);
 
   project = input.required<Project>();
   projectChanged = output<void>();
   projectDeleted = output<void>();
+
+  /** True if the current user is the project owner (or a super-admin). */
+  canDelete = computed(() => {
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    if (user.permissions?.isSuperAdmin) return true;
+    return this.project().ownerId === user.uid;
+  });
 
   async toggleArchive() {
     const project = this.project();

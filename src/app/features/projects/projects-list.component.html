@@ -3,16 +3,16 @@
       <header class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-white mb-2 font-['Orbitron',sans-serif]">
+            <h1 data-scramble class="text-3xl font-bold text-white mb-2 font-['Orbitron',sans-serif]">
               Projects
             </h1>
             <p class="text-slate-400">Manage and organize your projects</p>
           </div>
           <button
             (click)="showCreateModal.set(true)"
-            class="group relative px-4 py-2.5 bg-slate-900/80 text-cyan-400 font-semibold rounded-lg transition-all hover:scale-105 border-2 border-transparent bg-clip-padding relative before:absolute before:inset-0 before:-m-[2px] before:-z-10 before:rounded-lg before:bg-gradient-to-br before:from-[#00d2ff] before:to-[#e040fb] shadow-[0_0_15px_rgba(0,210,255,0.3),_0_0_30px_rgba(224,64,251,0.15)]"
+            class="omni-glitch-btn ofx-neon-button !px-4 !py-2 !text-sm !normal-case !tracking-normal flex items-center gap-2"
           >
-            <span class="flex items-center gap-2 group-hover:text-white transition-colors">
+            <span class="flex items-center gap-2 transition-colors">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -65,7 +65,8 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (project of filteredProjects(); track project.id) {
             <div
-              class="group relative bg-slate-900/70 border border-white/10 rounded-xl p-5 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10 cursor-pointer"
+              data-fx-glitch-hover
+              class="group relative bg-slate-900/80 border border-white/10 rounded-xl p-5 hover:border-cyan-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20 cursor-pointer"
               (click)="openProject(project)"
             >
               <!-- Color Bar -->
@@ -77,6 +78,7 @@
               <!-- Project Info -->
               <div class="mt-2">
                 <h3
+                  data-scramble
                   class="text-lg font-bold text-white mb-1 group-hover:text-cyan-400 transition-colors"
                 >
                   {{ project.name }}
@@ -131,7 +133,7 @@
                 <div class="flex items-center gap-1">
                   <button
                     (click)="editProject(project, $event)"
-                    class="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-white/5 rounded-lg transition-colors"
+                    class="omni-glitch-btn p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-white/5 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <svg
@@ -149,9 +151,10 @@
                       />
                     </svg>
                   </button>
+                  @if (canDeleteProject(project)) {
                   <button
                     (click)="confirmDelete(project, $event)"
-                    class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
+                    class="omni-glitch-btn p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <svg
@@ -169,6 +172,7 @@
                       />
                     </svg>
                   </button>
+                  }
                 </div>
               </div>
 
@@ -208,7 +212,7 @@
           <p class="text-slate-400 mb-6">Create your first project to get started</p>
           <button
             (click)="showCreateModal.set(true)"
-            class="px-4 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/30 transition-colors"
+            class="omni-glitch-btn px-4 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/30 transition-colors"
           >
             Create Project
           </button>
@@ -218,7 +222,7 @@
       <!-- Delete Confirmation Modal -->
       @if (projectToDelete()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80"
           (click)="projectToDelete.set(null)"
         >
           <div
@@ -254,14 +258,14 @@
             <div class="flex justify-end gap-3">
               <button
                 (click)="projectToDelete.set(null)"
-                class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                class="omni-glitch-btn px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 (click)="deleteProject()"
                 [disabled]="deleting()"
-                class="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors disabled:opacity-50"
+                class="omni-glitch-btn px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors disabled:opacity-50 shadow-[0_0_14px_rgba(244,63,94,0.5)]"
               >
                 {{ deleting() ? 'Deleting...' : 'Delete Project' }}
               </button>

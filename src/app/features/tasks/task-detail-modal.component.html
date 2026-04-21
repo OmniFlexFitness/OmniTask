@@ -1,4 +1,4 @@
-<div class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm transition-all" (click)="onExampleClick($event)">
+<div class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/75 transition-all" (click)="onExampleClick($event)">
   <div class="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right" (click)="$event.stopPropagation()">
     
     <!-- Header -->
@@ -160,14 +160,14 @@
     <footer class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-slate-800/20">
       <button
         type="button"
-        class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+        class="omni-glitch-btn px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
         (click)="close.emit()"
       >
         Cancel
       </button>
       <button
         type="button"
-        class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-2"
+        class="omni-glitch-btn px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-2 shadow-[0_0_14px_rgba(6,182,212,0.5)]"
         (click)="autoSave(); close.emit()"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

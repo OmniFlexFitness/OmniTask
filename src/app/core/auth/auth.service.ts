@@ -256,6 +256,18 @@ export class AuthService {
     this.hasOfflineAccess.set(false);
   }
 
+  /**
+   * Apply partial profile updates to both Firestore and the local signal
+   * so components don't mutate `currentUserSig` directly.
+   */
+  async updateProfile(updates: Partial<UserProfile>): Promise<void> {
+    const currentUser = this.currentUserSig();
+    if (!currentUser) return;
+    const userRef = doc(this.firestore, `users/${currentUser.uid}`);
+    await updateDoc(userRef, updates as { [k: string]: unknown });
+    this.currentUserSig.set({ ...currentUser, ...updates });
+  }
+
   async logout() {
     await this.auth.signOut();
     this.currentUserSig.set(null);

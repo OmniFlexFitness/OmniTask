@@ -1,5 +1,5 @@
 <header
-  class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/90 backdrop-blur-xl z-20 relative overflow-visible-header"
+  class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/95 z-20 relative overflow-visible-header"
 >
   <!-- Top glow line -->
   <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
@@ -17,59 +17,69 @@
       @if (currentProject(); as project) {
         <app-project-icon [project]="project" [size]="36"></app-project-icon>
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-4">
             <h1
-              class="text-xl font-bold flex items-center gap-2 leading-none"
+              class="text-xl font-bold flex items-center gap-2 leading-none mt-[0.65em]"
               [style.color]="project.color || defaultColor"
               [style.text-shadow]="'0 0 10px ' + getColorWithOpacity(project.color, 0.5)"
             >
-              {{ project.name }}
+              <span data-scramble>{{ project.name }}</span>
             </h1>
 
-            <button
-              class="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
-                     transition-colors self-center flex items-center justify-center"
-              (click)="showFieldManager.emit()"
-              title="Manage Custom Fields"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div class="flex items-center gap-2">
+              <button
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5
+                       transition-colors flex items-center justify-center"
+                (click)="showFieldManager.emit()"
+                title="Manage Custom Fields"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
-            </button>
+                <!-- HUD / control-panel icon: three horizontal rails with
+                     filled square knobs, matching the cyberpunk aesthetic. -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="square"
+                  stroke-linejoin="miter"
+                  aria-hidden="true"
+                >
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                  <rect x="14" y="4" width="4" height="4" fill="currentColor" stroke="none" />
+                  <rect x="7" y="10" width="4" height="4" fill="currentColor" stroke="none" />
+                  <rect x="16" y="16" width="4" height="4" fill="currentColor" stroke="none" />
+                </svg>
+              </button>
 
-            <!-- Project Actions -->
-            <button
-              class="p-1 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
-                     transition-colors self-center flex items-center justify-center"
-              (click)="editProjectModal.emit(project)"
-              title="Edit Project"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              <!-- Project Actions -->
+              <button
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5
+                       transition-colors flex items-center justify-center"
+                (click)="editProjectModal.emit(project)"
+                title="Edit Project"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
-              </svg>
-            </button>
+                <!-- Angular stylus: same 24x24 frame, same stroke weight
+                     and square/miter joinery so it reads as a matched pair
+                     with the control-panel icon above. -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="square"
+                  stroke-linejoin="miter"
+                  aria-hidden="true"
+                >
+                  <path d="M4 20v-6L14 4l6 6L10 20z" />
+                  <path d="M12 6l6 6" />
+                  <path d="M4 20h6" />
+                </svg>
+              </button>
+            </div>
           </div>
           <p class="text-xs text-slate-400 mt-1 truncate max-w-md">
             {{ project.description }}
@@ -87,7 +97,7 @@
         class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_theme(colors.violet.500/10)]"
       >
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'overview'"
           [class.text-violet-300]="viewMode() === 'overview'"
           [class.ofx-view-switch-active]="viewMode() === 'overview'"
@@ -98,7 +108,7 @@
           Overview
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'list'"
           [class.text-violet-300]="viewMode() === 'list'"
           [class.ofx-view-switch-active]="viewMode() === 'list'"
@@ -109,7 +119,7 @@
           List
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'board'"
           [class.text-violet-300]="viewMode() === 'board'"
           [class.ofx-view-switch-active]="viewMode() === 'board'"
@@ -120,7 +130,7 @@
           Board
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'calendar'"
           [class.text-violet-300]="viewMode() === 'calendar'"
           [class.ofx-view-switch-active]="viewMode() === 'calendar'"
@@ -131,7 +141,7 @@
           Calendar
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'timeline'"
           [class.text-violet-300]="viewMode() === 'timeline'"
           [class.ofx-view-switch-active]="viewMode() === 'timeline'"
@@ -145,7 +155,7 @@
 
       <!-- Cyberpunk Add Task Button -->
       <button
-        class="ofx-neon-button flex items-center gap-2 !py-2"
+        class="omni-glitch-btn ofx-neon-button flex items-center gap-2 !py-2"
         [disabled]="!currentProject()"
         (click)="openCreateTaskModal.emit()"
       >
@@ -169,7 +179,7 @@
       <!-- Google Tasks Sync Button -->
       @if (currentProject()?.syncEnabled && currentProject()?.googleTaskListId) {
         <button
-          class="relative p-2 rounded-lg border transition-all duration-200 group"
+          class="omni-glitch-btn relative p-2 rounded-lg border transition-all duration-200 group"
           [class.border-emerald-500/30]="!syncing()"
           [class.bg-emerald-500/10]="!syncing()"
           [class.text-emerald-400]="!syncing()"
@@ -209,7 +219,7 @@
         <a
           [routerLink]="['/projects', project.id]"
           [queryParams]="{ tab: 'settings' }"
-          class="p-2 rounded-lg border transition-colors"
+          class="omni-glitch-btn p-2 rounded-lg border transition-colors"
           [style.background-color]="getColorWithOpacity(project.color, 0.15)"
           [style.border-color]="getColorWithOpacity(project.color, 0.4)"
           [style.color]="project.color || defaultColor"

@@ -2,7 +2,7 @@
       @if (project(); as project) {
         <!-- Header -->
         <header
-          class="flex-shrink-0 bg-slate-900/50 backdrop-blur-md border-b border-white/5 z-20 relative"
+          class="flex-shrink-0 bg-slate-900/80 border-b border-white/5 z-20 relative"
         >
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/30"></div>
@@ -11,7 +11,7 @@
             <!-- Breadcrumbs / Back -->
             <button
               (click)="goBack()"
-              class="flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
+              class="omni-glitch-btn flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -35,15 +35,9 @@
                 <!-- Icon/Color Box -->
                 <div
                   class="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
-                  [style.background]="
-                    'linear-gradient(135deg, ' +
-                    (project.color || '#6366f1') +
-                    '20, ' +
-                    (project.color || '#6366f1') +
-                    '05)'
-                  "
-                  [style.border]="'1px solid ' + (project.color || '#6366f1') + '40'"
-                  [style.box-shadow]="'0 0 20px ' + (project.color || '#6366f1') + '15'"
+                  [style.background-color]="(project.color || '#6366f1') + '18'"
+                  [style.border]="'1px solid ' + (project.color || '#6366f1') + '55'"
+                  [style.box-shadow]="'0 0 14px ' + (project.color || '#6366f1') + '40'"
                 >
                   <span class="text-xl font-bold" [style.color]="project.color || '#6366f1'">
                     {{ project.name.charAt(0).toUpperCase() }}
@@ -51,7 +45,7 @@
                 </div>
                 <div>
                   <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    {{ project.name }}
+                    <span data-scramble>{{ project.name }}</span>
                     @if (project.status === 'archived') {
                       <span
                         class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
@@ -73,7 +67,7 @@
             <div class="flex items-center gap-1 mt-3 border-b border-white/5 overflow-x-auto hide-scrollbar">
               <!-- Overview Tab (Cyan) -->
               <button
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="activeTab() === 'overview'"
                 [class.text-slate-400]="activeTab() !== 'overview'"
                 [class.hover:text-cyan-200]="activeTab() !== 'overview'"
@@ -96,7 +90,7 @@
 
               <!-- Tasks Tab (Emerald) -->
               <button
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-emerald-400]="activeTab() === 'tasks'"
                 [class.text-slate-400]="activeTab() !== 'tasks'"
                 [class.hover:text-emerald-200]="activeTab() !== 'tasks'"
@@ -119,7 +113,7 @@
 
               <!-- Settings Tab (Fuchsia) -->
               <button
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-violet-400]="activeTab() === 'settings'"
                 [class.text-slate-400]="activeTab() !== 'settings'"
                 [class.hover:text-violet-200]="activeTab() !== 'settings'"
@@ -154,7 +148,7 @@
               >
                 <!-- Stats -->
                 <section>
-                  <h2 class="text-lg font-semibold text-white mb-4">Project Status</h2>
+                  <h2 data-scramble class="text-lg font-semibold text-white mb-4">Project Status</h2>
                   <app-project-stats-card [tasks]="tasks()"></app-project-stats-card>
                 </section>
 
@@ -163,7 +157,7 @@
                   <div class="lg:col-span-2 space-y-6">
                     <!-- Description Card -->
                     <section class="bg-slate-900/50 rounded-xl border border-white/5 p-6">
-                      <h3 class="text-sm font-semibold text-slate-200 mb-3">About this project</h3>
+                      <h3 data-scramble class="text-sm font-semibold text-slate-200 mb-3">About this project</h3>
                       @if (project.description) {
                         <p class="text-slate-400 leading-relaxed">{{ project.description }}</p>
                       } @else {
@@ -188,7 +182,7 @@
                   <div class="space-y-6">
                     <!-- Mini Team Card -->
                     <section class="bg-slate-900/50 rounded-xl border border-white/5 p-6">
-                      <h3 class="text-sm font-semibold text-slate-200 mb-3">Team</h3>
+                      <h3 data-scramble class="text-sm font-semibold text-slate-200 mb-3">Team</h3>
                       <div class="flex -space-x-2 overflow-hidden py-1">
                         <!-- Placeholder since we don't have user profiles yet -->
                         <div
@@ -207,6 +201,27 @@
                     </section>
                   </div>
                 </div>
+
+                <!-- Project Tasks (full list) -->
+                <section>
+                  <div class="flex items-center justify-between mb-4">
+                    <h2 data-scramble class="text-lg font-semibold text-white">Tasks</h2>
+                    <button
+                      class="omni-glitch-btn ofx-neon-button text-sm px-4 py-2"
+                      (click)="openCreateTaskModal()"
+                    >
+                      + Add Task
+                    </button>
+                  </div>
+                  <div class="bg-slate-900/30 rounded-xl border border-white/5 overflow-hidden">
+                    <app-task-list-view
+                      [tasks]="tasks()"
+                      [projectId]="project.id"
+                      (taskClick)="openTaskDetail($event)"
+                      (delete)="deleteTask($event)"
+                    ></app-task-list-view>
+                  </div>
+                </section>
               </div>
             }
 
@@ -216,7 +231,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
                   <div class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]">
                     <button
-                      class="flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                      class="omni-glitch-btn flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                       [class.bg-violet-500/20]="taskViewMode() === 'list'"
                       [class.text-violet-300]="taskViewMode() === 'list'"
                       [class.ofx-view-switch-active]="taskViewMode() === 'list'"
@@ -227,7 +242,7 @@
                       List
                     </button>
                     <button
-                      class="flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                      class="omni-glitch-btn flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                       [class.bg-violet-500/20]="taskViewMode() === 'board'"
                       [class.text-violet-300]="taskViewMode() === 'board'"
                       [class.ofx-view-switch-active]="taskViewMode() === 'board'"
@@ -238,7 +253,7 @@
                       Board
                     </button>
                     <button
-                      class="flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+                      class="omni-glitch-btn flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
                       [class.bg-violet-500/20]="taskViewMode() === 'calendar'"
                       [class.text-violet-300]="taskViewMode() === 'calendar'"
                       [class.ofx-view-switch-active]="taskViewMode() === 'calendar'"
@@ -250,7 +265,7 @@
                     </button>
                   </div>
 
-                  <button class="ofx-neon-button text-sm px-4 py-2" (click)="openCreateTaskModal()">
+                  <button class="omni-glitch-btn ofx-neon-button text-sm px-4 py-2" (click)="openCreateTaskModal()">
                     + Add Task
                   </button>
                 </div>
@@ -292,7 +307,7 @@
             @case ('settings') {
               <div class="max-w-4xl mx-auto pb-12 animate-in slide-in-from-right-4 duration-300">
                 <div
-                  class="bg-slate-900/80 backdrop-blur-sm rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+                  class="bg-slate-900/80 rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
                 >
                   <div class="p-8">
                     <h2 class="text-xl font-bold text-white mb-6">Project Settings</h2>

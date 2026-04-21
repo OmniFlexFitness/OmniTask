@@ -73,7 +73,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
         ]"
       >
         <div
-          class="bg-[#0a0f1e]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 w-[280px] animate-in fade-in zoom-in-95 duration-200 origin-top z-50"
+          class="bg-[#0a0f1e]/95  border border-white/10 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] p-4 w-[280px] animate-in fade-in zoom-in-95 duration-200 origin-top z-50"
         >
           <!-- Calendar Header -->
           <div class="flex items-center justify-between mb-4">
