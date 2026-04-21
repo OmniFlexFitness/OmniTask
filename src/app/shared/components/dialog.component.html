@@ -18,7 +18,7 @@
                 'bg-amber-600/15': dialogService.dialog().type === 'warning',
               }"
             >
-              <h3 class="text-lg font-semibold text-white">
+              <h3 data-scramble class="text-lg font-semibold text-white">
                 {{ dialogService.dialog().title }}
               </h3>
             </div>
@@ -43,8 +43,7 @@
               </button>
             }
             <button
-              data-fx-glitch
-              class="px-4 py-2 rounded-lg font-medium transition-all duration-200 text-white"
+              class="omni-glitch-btn px-4 py-2 rounded-lg font-medium transition-all duration-200 text-white"
               [ngClass]="{
                 'bg-cyan-600 hover:bg-cyan-500 shadow-[0_0_14px_rgba(6,182,212,0.5)]':
                   dialogService.dialog().type === 'info',

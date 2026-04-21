@@ -1439,6 +1439,26 @@ textarea:focus {
 }
 
 /* ============================================
+   TEXT SCRAMBLER TARGETS
+   Swap to monospace only during the scramble animation so the brand
+   heading font is preserved at rest. `word-break: break-word` keeps
+   very long strings from pushing layout during the decode.
+   ============================================ */
+
+[data-scramble] {
+  cursor: default;
+}
+
+[data-scramble].is-scrambling {
+  font-family: 'JetBrains Mono', 'Courier New', 'Consolas', ui-monospace, monospace;
+  word-break: break-word;
+}
+
+[data-scramble].is-scrambling span {
+  font-family: inherit;
+}
+
+/* ============================================
    GLITCH INTERACTION ANIMATIONS
    Digital signal-corruption effect: horizontal slice displacement
    (clip-path), chromatic aberration (offset cyan/magenta text- and

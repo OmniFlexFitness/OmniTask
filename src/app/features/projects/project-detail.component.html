@@ -46,7 +46,7 @@
                 </div>
                 <div>
                   <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    {{ project.name }}
+                    <span data-scramble>{{ project.name }}</span>
                     @if (project.status === 'archived') {
                       <span
                         class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
@@ -152,7 +152,7 @@
               >
                 <!-- Stats -->
                 <section>
-                  <h2 class="text-lg font-semibold text-white mb-4">Project Status</h2>
+                  <h2 data-scramble class="text-lg font-semibold text-white mb-4">Project Status</h2>
                   <app-project-stats-card [tasks]="tasks()"></app-project-stats-card>
                 </section>
 
@@ -161,7 +161,7 @@
                   <div class="lg:col-span-2 space-y-6">
                     <!-- Description Card -->
                     <section class="bg-slate-900/50 rounded-xl border border-white/5 p-6">
-                      <h3 class="text-sm font-semibold text-slate-200 mb-3">About this project</h3>
+                      <h3 data-scramble class="text-sm font-semibold text-slate-200 mb-3">About this project</h3>
                       @if (project.description) {
                         <p class="text-slate-400 leading-relaxed">{{ project.description }}</p>
                       } @else {
@@ -186,7 +186,7 @@
                   <div class="space-y-6">
                     <!-- Mini Team Card -->
                     <section class="bg-slate-900/50 rounded-xl border border-white/5 p-6">
-                      <h3 class="text-sm font-semibold text-slate-200 mb-3">Team</h3>
+                      <h3 data-scramble class="text-sm font-semibold text-slate-200 mb-3">Team</h3>
                       <div class="flex -space-x-2 overflow-hidden py-1">
                         <!-- Placeholder since we don't have user profiles yet -->
                         <div
@@ -209,10 +209,9 @@
                 <!-- Project Tasks (full list) -->
                 <section>
                   <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-white">Tasks</h2>
+                    <h2 data-scramble class="text-lg font-semibold text-white">Tasks</h2>
                     <button
-                      class="ofx-neon-button text-sm px-4 py-2"
-                      data-fx-glitch
+                      class="omni-glitch-btn ofx-neon-button text-sm px-4 py-2"
                       (click)="openCreateTaskModal()"
                     >
                       + Add Task
@@ -270,7 +269,7 @@
                     </button>
                   </div>
 
-                  <button class="ofx-neon-button text-sm px-4 py-2" data-fx-glitch (click)="openCreateTaskModal()">
+                  <button class="omni-glitch-btn ofx-neon-button text-sm px-4 py-2" (click)="openCreateTaskModal()">
                     + Add Task
                   </button>
                 </div>

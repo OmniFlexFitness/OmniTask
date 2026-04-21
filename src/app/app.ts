@@ -6,6 +6,7 @@ import { NavbarComponent } from './core/layout/navbar.component';
 import { DialogComponent } from './shared/components/dialog.component';
 import { AuthService } from './core/auth/auth.service';
 import { initOmniFlexEffects } from './core/theme/omniflex-effects';
+import { initGlitchFx, destroyGlitchFx } from './core/theme/glitch-fx';
 import { VersionService } from './core/services/version.service';
 import { DEFAULT_VERSION } from './core/constants';
 
@@ -42,6 +43,9 @@ export class App implements OnInit, OnDestroy {
     window.addEventListener('keydown', this.updateModKey);
     window.addEventListener('keyup', this.updateModKey);
     window.addEventListener('blur', this.clearModKey);
+
+    // Glitch + scramble hover effects (no-ops under prefers-reduced-motion).
+    initGlitchFx();
   }
 
   ngOnDestroy(): void {
@@ -49,5 +53,6 @@ export class App implements OnInit, OnDestroy {
     window.removeEventListener('keyup', this.updateModKey);
     window.removeEventListener('blur', this.clearModKey);
     document.body.classList.remove('fx-modkey-held');
+    destroyGlitchFx();
   }
 }

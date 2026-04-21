@@ -36,6 +36,7 @@
     "dompurify": "^3.3.1",
     "firebase": "^12.6.0",
     "marked": "^17.0.3",
+    "powerglitch": "2.5.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "turndown": "^7.2.2",

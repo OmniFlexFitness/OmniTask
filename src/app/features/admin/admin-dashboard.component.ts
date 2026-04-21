@@ -73,6 +73,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
         <div class="flex items-center justify-between">
           <div>
             <h1
+              data-scramble
               class="text-4xl font-bold text-cyan-300"
               style="text-shadow: 0 0 14px rgba(0, 210, 255, 0.5);"
             >
@@ -440,7 +441,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             </div>
             <button
               (click)="openInviteForm()"
-              class="px-4 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-lg
+              class="omni-glitch-btn px-4 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-lg
                      hover:bg-cyan-400 hover:shadow-[0_0_18px_rgba(0,210,255,0.5)]
                      transition-all"
             >
@@ -521,7 +522,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
           <div
             class="px-6 py-4 border-b border-white/10 bg-cyan-600/15"
           >
-            <h3 class="text-lg font-semibold text-white">Invite a user</h3>
+            <h3 data-scramble class="text-lg font-semibold text-white">Invite a user</h3>
             <p class="text-xs text-gray-400 mt-1">
               Role and permissions apply on the user's first sign-in.
             </p>
@@ -597,7 +598,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
               <button
                 type="submit"
                 [disabled]="inviteSubmitting()"
-                class="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white font-semibold disabled:opacity-50 shadow-[0_0_14px_rgba(0,210,255,0.4)]"
+                class="omni-glitch-btn px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white font-semibold disabled:opacity-50 shadow-[0_0_14px_rgba(0,210,255,0.4)]"
               >
                 {{ inviteSubmitting() ? 'Sending…' : 'Send invite' }}
               </button>
