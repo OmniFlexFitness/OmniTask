@@ -10,6 +10,7 @@ import {
   query,
   where,
   collectionData,
+  deleteField,
   DocumentReference,
 } from '@angular/fire/firestore';
 import {
@@ -178,6 +179,16 @@ export class ProjectService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Remove the icon from a project by clearing the Firestore field entirely.
+   * Uses deleteField() so the document shape matches "no icon was ever set",
+   * instead of leaving a sentinel null in the stored document.
+   */
+  async clearProjectIcon(id: string): Promise<void> {
+    const docRef = doc(this.firestore, `projects/${id}`);
+    await updateDoc(docRef, { icon: deleteField(), updatedAt: new Date() });
   }
 
   /**

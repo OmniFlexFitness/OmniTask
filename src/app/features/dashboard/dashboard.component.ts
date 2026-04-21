@@ -30,6 +30,7 @@ import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 import { DashboardHeaderComponent } from './components/dashboard-header';
+import { ProjectOverviewComponent } from './components/project-overview.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +48,7 @@ import { DashboardHeaderComponent } from './components/dashboard-header';
     TaskCreateModalComponent,
     CustomFieldManagerComponent,
     DashboardHeaderComponent,
+    ProjectOverviewComponent,
   ],
   templateUrl: './dashboard.component.html',
 })
@@ -62,7 +64,7 @@ export class DashboardComponent {
 
   // State
   selectedProjectId = this.projectService.selectedProjectId;
-  viewMode = signal<TaskViewMode>('list');
+  viewMode = signal<TaskViewMode>('overview');
   seeding = signal(false);
   syncing = signal(false);
   mobileSidebarOpen = signal(false);
@@ -163,6 +165,11 @@ export class DashboardComponent {
 
   addTaskForDate(date: Date) {
     this.openCreateTaskModal(undefined, date);
+  }
+
+  /** Overview-pane handler: create task with optional seed section/date. */
+  createTaskFromOverview(payload: { sectionId?: string; dueDate?: Date }) {
+    this.openCreateTaskModal(payload.sectionId, payload.dueDate);
   }
 
   async addSection() {

@@ -1,88 +1,127 @@
-<div 
-      class="ofx-modal-overlay"
-      (click)="onOverlayClick($event)"
-    >
-      <div class="ofx-modal" (click)="$event.stopPropagation()">
-        <header class="ofx-modal-header">
-          <h2 class="text-xl font-bold text-white">
-            {{ editProject() ? 'Edit Project' : 'New Project' }}
-          </h2>
-          <button class="ofx-icon-button" (click)="close.emit()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </header>
+<div
+  class="ofx-modal-overlay"
+  (click)="onOverlayClick($event)"
+>
+  <div class="ofx-modal" (click)="$event.stopPropagation()">
+    <header class="ofx-modal-header">
+      <h2 class="text-xl font-bold text-white">
+        {{ editProject() ? 'Edit Project' : 'New Project' }}
+      </h2>
+      <button class="ofx-icon-button" (click)="close.emit()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </header>
 
-        <form [formGroup]="form" (ngSubmit)="submit()" class="ofx-modal-body space-y-5">
-          <!-- Project Name -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-200 mb-2">Project Name</label>
-            <input
-              type="text"
-              formControlName="name"
-              placeholder="e.g., Product Launch, Marketing Q1"
-              class="ofx-input"
-              autofocus
-            />
-          </div>
-
-          <!-- Description -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-200 mb-2">Description</label>
-            <textarea
-              formControlName="description"
-              rows="3"
-              placeholder="What is this project about?"
-              class="ofx-input"
-            ></textarea>
-          </div>
-
-          <!-- Color Selection -->
-          <div>
-            <label class="block text-sm font-semibold text-slate-200 mb-3">Project Color</label>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="ofx-modal-body space-y-5">
+      <!-- Icon Upload -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-200 mb-2">Project Icon</label>
+        <div class="flex items-center gap-4">
+          <app-project-icon [project]="previewProject()" [size]="72"></app-project-icon>
+          <div class="flex-1 space-y-2">
             <div class="flex flex-wrap gap-2">
-              @for (color of colors; track color) {
+              <label class="ofx-ghost-button cursor-pointer inline-flex items-center gap-2 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+                </svg>
+                {{ iconPreview() ? 'Replace' : 'Upload Image' }}
+                <input
+                  type="file"
+                  class="hidden"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                  (change)="onIconFileSelected($event)"
+                />
+              </label>
+              @if (iconPreview()) {
                 <button
                   type="button"
-                  class="ofx-color-swatch"
-                  [class.selected]="form.value.color === color"
-                  [style.background]="color"
-                  [style.box-shadow]="form.value.color === color ? '0 0 0 2px rgba(255,255,255,0.9), 0 0 16px ' + color : '0 0 8px ' + color + '60'"
-                  (click)="form.patchValue({ color })"
-                  [title]="color"
-                ></button>
+                  class="ofx-ghost-button text-sm"
+                  (click)="clearIcon()"
+                >
+                  Clear
+                </button>
               }
             </div>
-          </div>
-        </form>
-
-        <footer class="ofx-modal-footer">
-          <button
-            type="button"
-            class="ofx-ghost-button"
-            (click)="close.emit()"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="ofx-gradient-button"
-            [disabled]="form.invalid || saving()"
-            (click)="submit()"
-          >
-            @if (saving()) {
-              <span class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </span>
-            } @else {
-              {{ editProject() ? 'Save Changes' : 'Create Project' }}
+            <p class="text-xs text-slate-500">
+              PNG / JPEG / WEBP / GIF / SVG, up to 4&nbsp;MB. Falls back to a neon monogram if left blank.
+            </p>
+            @if (iconError(); as err) {
+              <p class="text-xs text-rose-400">{{ err }}</p>
             }
-          </button>
-        </footer>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- Project Name -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-200 mb-2">Project Name</label>
+        <input
+          type="text"
+          formControlName="name"
+          placeholder="e.g., Product Launch, Marketing Q1"
+          class="ofx-input"
+          autofocus
+        />
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-200 mb-2">Description</label>
+        <textarea
+          formControlName="description"
+          rows="3"
+          placeholder="What is this project about?"
+          class="ofx-input"
+        ></textarea>
+      </div>
+
+      <!-- Color Selection -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-200 mb-3">Project Color</label>
+        <div class="flex flex-wrap gap-2">
+          @for (color of colors; track color) {
+            <button
+              type="button"
+              class="ofx-color-swatch"
+              [class.selected]="form.value.color === color"
+              [style.background]="color"
+              [style.box-shadow]="form.value.color === color ? '0 0 0 2px rgba(255,255,255,0.9), 0 0 16px ' + color : '0 0 8px ' + color + '60'"
+              (click)="form.patchValue({ color })"
+              [title]="color"
+            ></button>
+          }
+        </div>
+      </div>
+    </form>
+
+    <footer class="ofx-modal-footer">
+      <button
+        type="button"
+        class="ofx-ghost-button"
+        (click)="close.emit()"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="ofx-gradient-button"
+        [disabled]="form.invalid || saving()"
+        (click)="submit()"
+      >
+        @if (saving()) {
+          <span class="flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Saving...
+          </span>
+        } @else {
+          {{ editProject() ? 'Save Changes' : 'Create Project' }}
+        }
+      </button>
+    </footer>
+  </div>
+</div>

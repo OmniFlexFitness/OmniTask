@@ -56,7 +56,11 @@
           (toggleSidebar)="mobileSidebarOpen.set(!mobileSidebarOpen())"
         ></app-dashboard-header>
         <!-- View Content -->
-        <main class="flex-1 overflow-hidden p-6 z-10">
+        <main
+          class="flex-1 p-6 z-10 relative"
+          [class.overflow-hidden]="viewMode() !== 'overview'"
+          [class.overflow-y-auto]="viewMode() === 'overview'"
+        >
           @if (!currentProject()) {
             <div class="h-full flex flex-col items-center justify-center text-slate-500">
               <div
@@ -84,6 +88,16 @@
             </div>
           } @else {
             @switch (viewMode()) {
+              @case ('overview') {
+                <app-project-overview
+                  [project]="currentProject()!"
+                  [tasks]="tasks()"
+                  (taskClick)="openTaskDetail($event)"
+                  (createTask)="createTaskFromOverview($event)"
+                  (editProject)="editProjectModal.set($event)"
+                  (viewModeChange)="viewMode.set($event)"
+                ></app-project-overview>
+              }
               @case ('list') {
                 <app-task-list-view
                   [tasks]="tasks()"

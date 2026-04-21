@@ -1,0 +1,114 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Small KPI tile used in the hero strip. */
+.kpi {
+  @apply flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-white/5 bg-slate-950/60 backdrop-blur;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 210, 255, 0.04),
+    0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.kpi-label {
+  @apply text-[10px] uppercase tracking-[0.18em] font-bold text-slate-400;
+}
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.45rem;
+  line-height: 1;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.gauge-number {
+  font-family: var(--font-display);
+  font-size: 3.25rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+/* Clickable section progress rows */
+.section-row {
+  @apply block w-full px-3 py-2.5 rounded-lg border bg-slate-950/50 transition-all duration-200;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.section-row:hover {
+  transform: translateY(-1px);
+  background: rgba(10, 15, 30, 0.75);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(0, 210, 255, 0.18);
+}
+
+/* Tag chip with neon glow */
+.tag-chip {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border;
+  backdrop-filter: blur(6px);
+}
+
+.tag-count {
+  @apply ml-1 font-mono text-[10px] opacity-70;
+}
+
+/* Task row used in upcoming + activity lists */
+.task-row {
+  @apply flex items-center gap-3 w-full px-3 py-2 rounded-lg border border-transparent bg-slate-950/40 transition-all duration-200;
+}
+
+.task-row:hover {
+  background: rgba(10, 15, 30, 0.75);
+  border-color: rgba(0, 210, 255, 0.25);
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.15);
+}
+
+.priority-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.activity-icon {
+  @apply w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border bg-slate-950/80;
+}
+
+.assignee-avatar {
+  @apply w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border flex-shrink-0;
+  text-shadow: 0 0 6px currentColor;
+}
+
+/* Donut spin-up animation on mount */
+.donut circle {
+  transition: stroke-dasharray 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tabs for the manager surface */
+.manage-tab {
+  @apply px-3 py-1.5 rounded-md text-xs font-semibold border transition-all duration-200;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.6);
+  color: rgb(148, 163, 184);
+}
+
+.manage-tab:hover {
+  color: rgb(226, 232, 240);
+  border-color: rgba(0, 210, 255, 0.35);
+}
+
+.manage-tab.active {
+  color: #e6f8ff;
+  border-color: rgba(224, 64, 251, 0.55);
+  background: rgba(224, 64, 251, 0.14);
+  box-shadow: 0 0 16px rgba(224, 64, 251, 0.25), inset 0 0 10px rgba(224, 64, 251, 0.1);
+}
+
+.manage-surface {
+  @apply rounded-lg p-4 border border-white/5;
+  background: linear-gradient(180deg, rgba(5, 8, 16, 0.55), rgba(10, 15, 30, 0.3));
+  min-height: 8rem;
+}

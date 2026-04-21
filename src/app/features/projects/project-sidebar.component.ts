@@ -12,11 +12,12 @@ import { ProjectService } from '../../core/services/project.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
 import { Project } from '../../core/models/domain.model';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ProjectIconComponent } from './components/project-icon.component';
 
 @Component({
   selector: 'app-project-sidebar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ProjectIconComponent],
   templateUrl: './project-sidebar.component.html',
   styleUrls: ['./project-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
