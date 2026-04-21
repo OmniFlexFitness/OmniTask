@@ -24,24 +24,27 @@ const POWERGLITCH_CONFIG = {
   createContainers: true,
   hideOverflow: false,
   timing: {
-    duration: 800,
+    // ~2x snappier than the demo default.
+    duration: 400,
     iterations: 1,
   },
   glitchTimeSpan: {
     start: 0,
-    end: 0.5,
+    end: 0.6,
   },
   shake: {
-    velocity: 10,
+    velocity: 15,
     amplitudeX: 0.08,
     amplitudeY: 0.08,
   },
   slice: {
     count: 3,
-    velocity: 12,
+    velocity: 18,
     minHeight: 0.05,
     maxHeight: 0.15,
-    hueRotate: true,
+    // Keep the element's native palette — no rainbow hue rotation, so
+    // a rose/amber/cyan button stays rose/amber/cyan while it slices.
+    hueRotate: false,
   },
 };
 

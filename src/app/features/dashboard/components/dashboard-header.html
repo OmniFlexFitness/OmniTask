@@ -28,8 +28,7 @@
 
             <div class="flex items-center gap-2">
               <button
-                data-fx-glitch
-                class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
                        transition-colors flex items-center justify-center"
                 (click)="showFieldManager.emit()"
                 title="Manage Custom Fields"
@@ -52,8 +51,7 @@
 
               <!-- Project Actions -->
               <button
-                data-fx-glitch
-                class="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/5
                        transition-colors flex items-center justify-center"
                 (click)="editProjectModal.emit(project)"
                 title="Edit Project"
@@ -91,7 +89,7 @@
         class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_theme(colors.violet.500/10)]"
       >
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'overview'"
           [class.text-violet-300]="viewMode() === 'overview'"
           [class.ofx-view-switch-active]="viewMode() === 'overview'"
@@ -102,7 +100,7 @@
           Overview
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'list'"
           [class.text-violet-300]="viewMode() === 'list'"
           [class.ofx-view-switch-active]="viewMode() === 'list'"
@@ -113,7 +111,7 @@
           List
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'board'"
           [class.text-violet-300]="viewMode() === 'board'"
           [class.ofx-view-switch-active]="viewMode() === 'board'"
@@ -124,7 +122,7 @@
           Board
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'calendar'"
           [class.text-violet-300]="viewMode() === 'calendar'"
           [class.ofx-view-switch-active]="viewMode() === 'calendar'"
@@ -135,7 +133,7 @@
           Calendar
         </button>
         <button
-          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'timeline'"
           [class.text-violet-300]="viewMode() === 'timeline'"
           [class.ofx-view-switch-active]="viewMode() === 'timeline'"
@@ -173,7 +171,7 @@
       <!-- Google Tasks Sync Button -->
       @if (currentProject()?.syncEnabled && currentProject()?.googleTaskListId) {
         <button
-          class="relative p-2 rounded-lg border transition-all duration-200 group"
+          class="omni-glitch-btn relative p-2 rounded-lg border transition-all duration-200 group"
           [class.border-emerald-500/30]="!syncing()"
           [class.bg-emerald-500/10]="!syncing()"
           [class.text-emerald-400]="!syncing()"
@@ -213,7 +211,7 @@
         <a
           [routerLink]="['/projects', project.id]"
           [queryParams]="{ tab: 'settings' }"
-          class="p-2 rounded-lg border transition-colors"
+          class="omni-glitch-btn p-2 rounded-lg border transition-colors"
           [style.background-color]="getColorWithOpacity(project.color, 0.15)"
           [style.border-color]="getColorWithOpacity(project.color, 0.4)"
           [style.color]="project.color || defaultColor"

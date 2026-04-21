@@ -1440,9 +1440,10 @@ textarea:focus {
 
 /* ============================================
    TEXT SCRAMBLER TARGETS
-   Swap to monospace only during the scramble animation so the brand
-   heading font is preserved at rest. `word-break: break-word` keeps
-   very long strings from pushing layout during the decode.
+   The font is never swapped — the element keeps its own typography
+   during the decode. `white-space: nowrap` keeps a single-line title
+   from wrapping if a few glitch glyphs are momentarily wider than the
+   real letters; width is stabilized in JS via `minWidth`.
    ============================================ */
 
 [data-scramble] {
@@ -1450,8 +1451,7 @@ textarea:focus {
 }
 
 [data-scramble].is-scrambling {
-  font-family: 'JetBrains Mono', 'Courier New', 'Consolas', ui-monospace, monospace;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 [data-scramble].is-scrambling span {

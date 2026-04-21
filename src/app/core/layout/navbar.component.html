@@ -53,7 +53,7 @@
                 routerLinkActive
                 #rlaDashboard="routerLinkActive"
                 [routerLinkActiveOptions]="{ exact: true }"
-                class="relative px-3 py-1.5 text-sm font-semibold transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-semibold transition-all group"
                 [class.text-cyan-400]="rlaDashboard.isActive"
                 [class.text-slate-400]="!rlaDashboard.isActive"
                 [class.hover:text-violet-400]="!rlaDashboard.isActive"
@@ -87,7 +87,7 @@
                 routerLink="/projects"
                 routerLinkActive
                 #rlaProjects="routerLinkActive"
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaProjects.isActive"
                 [class.text-slate-400]="!rlaProjects.isActive"
                 [class.hover:text-violet-400]="!rlaProjects.isActive"
@@ -119,7 +119,7 @@
                 routerLink="/tasks"
                 routerLinkActive
                 #rlaTasks="routerLinkActive"
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaTasks.isActive"
                 [class.text-slate-400]="!rlaTasks.isActive"
                 [class.hover:text-violet-400]="!rlaTasks.isActive"
@@ -149,7 +149,7 @@
                 routerLink="/schedule"
                 routerLinkActive
                 #rlaSchedule="routerLinkActive"
-                class="relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="rlaSchedule.isActive"
                 [class.text-slate-400]="!rlaSchedule.isActive"
                 [class.hover:text-violet-400]="!rlaSchedule.isActive"
@@ -196,7 +196,7 @@
               <a
                 routerLink="/admin"
                 title="Admin Portal"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200 transition-colors text-xs font-semibold uppercase tracking-wider"
+                class="omni-glitch-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200 transition-colors text-xs font-semibold uppercase tracking-wider"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -217,7 +217,7 @@
             <!-- Settings link -->
             <a
               routerLink="/settings"
-              class="p-2 text-slate-400 hover:text-violet-400 transition-colors rounded-lg hover:bg-white/5"
+              class="omni-glitch-btn p-2 text-slate-400 hover:text-violet-400 transition-colors rounded-lg hover:bg-white/5"
               title="Settings"
             >
               <svg
@@ -237,8 +237,7 @@
             <!-- Cyberpunk logout button - solid border with glow -->
             <button
               (click)="auth.logout()"
-              data-fx-glitch
-              class="relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105 border border-violet-500/80 bg-[#0a0f1e] text-violet-400 hover:bg-violet-500/10 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(139,92,246,0.5)]"
+              class="omni-glitch-btn relative px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg overflow-hidden group transition-all duration-300 hover:scale-105 border border-violet-500/80 bg-[#0a0f1e] text-violet-400 hover:bg-violet-500/10 hover:text-violet-200 hover:shadow-[0_0_14px_rgba(139,92,246,0.5)]"
             >
               Logout
             </button>

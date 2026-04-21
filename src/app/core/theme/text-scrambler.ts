@@ -42,8 +42,9 @@ export class TextScrambler {
     for (let i = 0; i < length; i++) {
       const from = oldText[i] || '';
       const to = newText[i] || '';
-      const start = Math.floor(Math.random() * 20);
-      const end = start + Math.floor(Math.random() * 20) + 10;
+      // Frame budgets tuned for ~200-350ms total on a 60fps display.
+      const start = Math.floor(Math.random() * 8);
+      const end = start + Math.floor(Math.random() * 8) + 4;
       this.queue.push({ from, to, start, end });
     }
 
@@ -113,9 +114,25 @@ export function bindScramble(el: HTMLElement): void {
   el.addEventListener('mouseenter', () => {
     if (isScrambling) return;
     isScrambling = true;
+
     // Fresh read: picks up edited task titles without extra plumbing.
     const finalText = el.innerText;
+
+    // Width stabilization: capture the current bounding box so glyph
+    // changes during the scramble (wide block-drawing chars ↔ narrow
+    // ASCII) don't stretch the element or push siblings around. We keep
+    // the element's own font — that stops the visible "size change" the
+    // old monospace swap caused.
+    const rect = el.getBoundingClientRect();
+    const originalMinWidth = el.style.minWidth;
+    const originalDisplay = el.style.display;
+    const computedDisplay = window.getComputedStyle(el).display;
+    if (computedDisplay === 'inline') {
+      el.style.display = 'inline-block';
+    }
+    el.style.minWidth = `${Math.ceil(rect.width)}px`;
     el.classList.add('is-scrambling');
+
     scrambler
       .setText(finalText)
       .then(() => {
@@ -123,6 +140,8 @@ export function bindScramble(el: HTMLElement): void {
       })
       .finally(() => {
         el.classList.remove('is-scrambling');
+        el.style.minWidth = originalMinWidth;
+        el.style.display = originalDisplay;
         isScrambling = false;
       });
   });

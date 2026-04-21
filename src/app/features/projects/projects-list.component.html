@@ -133,8 +133,7 @@
                 <div class="flex items-center gap-1">
                   <button
                     (click)="editProject(project, $event)"
-                    data-fx-glitch
-                    class="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-white/5 rounded-lg transition-colors"
+                    class="omni-glitch-btn p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-white/5 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <svg
@@ -155,8 +154,7 @@
                   @if (canDeleteProject(project)) {
                   <button
                     (click)="confirmDelete(project, $event)"
-                    data-fx-glitch
-                    class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
+                    class="omni-glitch-btn p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <svg
@@ -260,8 +258,7 @@
             <div class="flex justify-end gap-3">
               <button
                 (click)="projectToDelete.set(null)"
-                data-fx-glitch
-                class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                class="omni-glitch-btn px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               >
                 Cancel
               </button>

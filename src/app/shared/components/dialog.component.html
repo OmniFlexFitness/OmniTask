@@ -35,8 +35,7 @@
           <div class="px-6 py-4 bg-slate-950/50 border-t border-white/10 flex justify-end gap-3">
             @if (dialogService.dialog().cancelText) {
               <button
-                data-fx-glitch
-                class="px-4 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
+                class="omni-glitch-btn px-4 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
                 (click)="onCancel()"
               >
                 {{ dialogService.dialog().cancelText }}
