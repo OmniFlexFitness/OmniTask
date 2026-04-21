@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { Project, TaskViewMode, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
 import { AuthService } from '../../../core/auth/auth.service';
 import { getColorWithOpacity } from '../../../core/utils/color.utils';
+import { ProjectIconComponent } from '../../projects/components/project-icon.component';
 
 @Component({
   selector: 'app-dashboard-header',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ProjectIconComponent],
   templateUrl: './dashboard-header.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

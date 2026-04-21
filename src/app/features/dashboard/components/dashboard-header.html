@@ -15,18 +15,14 @@
       </button>
 
       @if (currentProject(); as project) {
+        <app-project-icon [project]="project" [size]="36"></app-project-icon>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3">
             <h1
-              class="text-xl font-bold flex items-center gap-3 leading-none"
+              class="text-xl font-bold flex items-center gap-2 leading-none"
               [style.color]="project.color || defaultColor"
               [style.text-shadow]="'0 0 10px ' + getColorWithOpacity(project.color, 0.5)"
             >
-              <span
-                class="w-3 h-3 rounded-sm shadow-[0_0_10px_currentColor]"
-                [style.background-color]="project.color || defaultColor"
-                [style.color]="project.color || defaultColor"
-              ></span>
               {{ project.name }}
             </h1>
 
@@ -90,6 +86,17 @@
       <div
         class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_theme(colors.violet.500/10)]"
       >
+        <button
+          class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'overview'"
+          [class.text-violet-300]="viewMode() === 'overview'"
+          [class.ofx-view-switch-active]="viewMode() === 'overview'"
+          [class.text-slate-500]="viewMode() !== 'overview'"
+          [class.hover:text-slate-300]="viewMode() !== 'overview'"
+          (click)="viewModeChange.emit('overview')"
+        >
+          Overview
+        </button>
         <button
           class="flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
           [class.bg-violet-500/20]="viewMode() === 'list'"

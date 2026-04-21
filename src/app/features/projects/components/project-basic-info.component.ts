@@ -11,7 +11,9 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
+import { StorageService } from '../../../core/services/storage.service';
 import { Project } from '../../../core/models/domain.model';
+import { ProjectIconComponent } from './project-icon.component';
 
 const PROJECT_COLORS = [
   '#6366f1', // Indigo
@@ -29,13 +31,17 @@ const PROJECT_COLORS = [
 @Component({
   selector: 'app-project-basic-info',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ProjectIconComponent],
   templateUrl: './project-basic-info.component.html',
   styleUrls: ['./project-basic-info.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectBasicInfoComponent implements OnInit, OnChanges {
   private readonly projectService = inject(ProjectService);
+  private readonly storageService = inject(StorageService);
+
+  iconUploading = signal(false);
+  iconError = signal<string | null>(null);
 
   project = input.required<Project>();
   projectChanged = output<void>();
@@ -85,6 +91,48 @@ export class ProjectBasicInfoComponent implements OnInit, OnChanges {
       this.editName !== this.project().name ||
       this.editDescription !== (this.project().description || '');
     this.hasBasicChanges.set(hasChanges);
+  }
+
+  async onIconFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    this.iconError.set(null);
+    this.iconUploading.set(true);
+    const previous = this.project().icon;
+    try {
+      const url = await this.storageService.uploadProjectIcon(this.project().id, file);
+      await this.projectService.updateProject(this.project().id, { icon: url });
+      if (previous && previous !== url) {
+        void this.storageService.deleteByUrl(previous);
+      }
+      this.projectChanged.emit();
+    } catch (err) {
+      console.error('Icon upload failed:', err);
+      this.iconError.set(err instanceof Error ? err.message : 'Icon upload failed.');
+    } finally {
+      this.iconUploading.set(false);
+    }
+  }
+
+  async clearIcon() {
+    const previous = this.project().icon;
+    if (!previous) return;
+    this.iconError.set(null);
+    try {
+      // Setting null removes the icon for our UI (truthy checks) while keeping
+      // Firestore happy (it rejects undefined but accepts null).
+      await this.projectService.updateProject(this.project().id, {
+        icon: null as unknown as string,
+      });
+      void this.storageService.deleteByUrl(previous);
+      this.projectChanged.emit();
+    } catch (err) {
+      console.error('Failed to clear icon:', err);
+      this.iconError.set(err instanceof Error ? err.message : 'Failed to clear icon.');
+    }
   }
 
   async updateColor(color: string) {

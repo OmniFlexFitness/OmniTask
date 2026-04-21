@@ -2,6 +2,46 @@
   <h3 class="ofx-section-title">Basic Information</h3>
 
   <div class="space-y-4 mt-4">
+    <!-- Icon -->
+    <div>
+      <label class="block text-sm font-medium text-slate-300 mb-2">Project Icon</label>
+      <div class="flex items-center gap-4">
+        <app-project-icon [project]="project()" [size]="72"></app-project-icon>
+        <div class="flex-1 space-y-2">
+          <div class="flex flex-wrap gap-2">
+            <label class="ofx-ghost-button cursor-pointer inline-flex items-center gap-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12" />
+              </svg>
+              {{ project().icon ? 'Replace' : 'Upload Image' }}
+              <input
+                type="file"
+                class="hidden"
+                accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
+                [disabled]="iconUploading()"
+                (change)="onIconFileSelected($event)"
+              />
+            </label>
+            @if (project().icon) {
+              <button
+                type="button"
+                class="ofx-ghost-button text-sm"
+                [disabled]="iconUploading()"
+                (click)="clearIcon()"
+              >Clear</button>
+            }
+            @if (iconUploading()) {
+              <span class="text-xs text-slate-400 self-center">Uploading…</span>
+            }
+          </div>
+          <p class="text-xs text-slate-500">PNG / JPEG / WEBP / GIF / SVG, up to 4&nbsp;MB.</p>
+          @if (iconError(); as err) {
+            <p class="text-xs text-rose-400">{{ err }}</p>
+          }
+        </div>
+      </div>
+    </div>
+
     <!-- Project Name -->
     <div>
       <label class="block text-sm font-medium text-slate-300 mb-2">Project Name</label>

@@ -220,4 +220,4 @@ export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
 /**
  * View mode for task display
  */
-export type TaskViewMode = 'list' | 'board' | 'calendar' | 'timeline';
+export type TaskViewMode = 'overview' | 'list' | 'board' | 'calendar' | 'timeline';
