@@ -440,7 +440,9 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
             </div>
             <button
               (click)="openInviteForm()"
-              class="px-4 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-lg hover:bg-cyan-400 hover:shadow-[0_0_18px_rgba(0,210,255,0.5)] transition-all"
+              class="px-4 py-2 bg-cyan-500 text-white text-sm font-semibold rounded-lg
+                     hover:bg-cyan-400 hover:shadow-[0_0_18px_rgba(0,210,255,0.5)]
+                     transition-all"
             >
               + New invite
             </button>

@@ -18,7 +18,7 @@ export class TaskTagsComponent {
 
   selectedTagsArray = computed(() => Array.from(this.selectedTags()));
 
-  toggleTag(tagName: string) {
+  toggleTag(tagName: string): void {
     this.selectedTags.update((tags) => {
       const newTags = new Set(tags);
       if (newTags.has(tagName)) {
@@ -34,7 +34,7 @@ export class TaskTagsComponent {
    * Handler for clicks on a selected tag chip. Holding Ctrl/Cmd or Shift
    * removes the tag; a plain click does nothing (to avoid accidental removal).
    */
-  onSelectedTagClick(tagName: string, event: MouseEvent) {
+  onSelectedTagClick(tagName: string, event: MouseEvent): void {
     event.stopPropagation();
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       this.selectedTags.update((tags) => {
@@ -45,7 +45,7 @@ export class TaskTagsComponent {
     }
   }
 
-  async addTag(tagName: string) {
+  async addTag(tagName: string): Promise<void> {
     const name = tagName.trim();
     if (!name) return;
 
