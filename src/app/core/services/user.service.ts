@@ -3,8 +3,10 @@ import {
   Firestore,
   collection,
   doc,
+  getDoc,
   updateDoc,
   query,
+  where,
   collectionData,
 } from '@angular/fire/firestore';
 import {
@@ -13,7 +15,8 @@ import {
   UserProfile,
   resolvePermissions,
 } from '../models/user.model';
-import { Observable } from 'rxjs';
+import { Observable, from, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -79,6 +82,59 @@ export class UserService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Read a single user profile by UID. Returns null if the document doesn't
+   * exist or the current user lacks read permission (Firestore rules only
+   * permit reading own profile unless the reader is an admin).
+   */
+  async getUserById(uid: string): Promise<UserProfile | null> {
+    if (!uid) return null;
+    try {
+      const ref = doc(this.firestore, `users/${uid}`);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      return { ...(snap.data() as UserProfile), uid };
+    } catch (err) {
+      // Read can fail when the requesting user isn't authorized to read this
+      // profile. That's expected for non-admins fetching arbitrary users; we
+      // surface it as "unknown user" at the UI layer.
+      console.warn('getUserById failed:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve the list of UIDs a user sees as "people I report to". For now
+   * this is just the single `reportsToId` if set, expanded to its profile.
+   */
+  async getReportsTo(user: UserProfile | null): Promise<UserProfile | null> {
+    if (!user?.reportsToId) return null;
+    return this.getUserById(user.reportsToId);
+  }
+
+  /**
+   * Set the user's `reportsToId` link (direct manager). Caches display name
+   * and email on the user's own doc so UI can render the badge without a
+   * second read (and so it still renders when the manager's profile is not
+   * readable to this user due to Firestore rules).
+   */
+  async setReportsTo(uid: string, manager: UserProfile | null): Promise<void> {
+    const userRef = doc(this.firestore, `users/${uid}`);
+    if (!manager) {
+      await updateDoc(userRef, {
+        reportsToId: null,
+        reportsToName: null,
+        reportsToEmail: null,
+      });
+      return;
+    }
+    await updateDoc(userRef, {
+      reportsToId: manager.uid,
+      reportsToName: manager.displayName || manager.email || manager.uid,
+      reportsToEmail: manager.email ?? null,
+    });
   }
 
   /**

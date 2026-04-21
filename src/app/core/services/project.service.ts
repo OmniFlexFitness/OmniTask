@@ -21,7 +21,7 @@ import {
   Tag,
 } from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
-import { Observable, switchMap, of, map } from 'rxjs';
+import { Observable, switchMap, of, map, firstValueFrom } from 'rxjs';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { PermissionsService } from './permissions.service';
 
@@ -52,6 +52,57 @@ export class ProjectService {
     return runInInjectionContext(this.injector, () => {
       return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
     });
+  }
+
+  /**
+   * Marker name used for each user's auto-generated "Personal" project.
+   * Standalone tasks created from the My Tasks dashboard live here.
+   */
+  static readonly PERSONAL_PROJECT_NAME = 'Personal';
+
+  /**
+   * Get all archived projects the current user was a part of.
+   * Used by the My Tasks dashboard's "Projects completed / previously on" panel.
+   */
+  getMyArchivedProjects(): Observable<Project[]> {
+    return this.getMyProjects().pipe(
+      map((projects) => projects.filter((p) => p.status === 'archived')),
+    );
+  }
+
+  /**
+   * Get the user's personal, catch-all project for standalone tasks.
+   * Creates it lazily the first time a user visits My Tasks. The project is
+   * single-member (the user themself) and is intentionally hidden from the
+   * main projects list when rendering the user's project roster.
+   */
+  async getOrCreatePersonalProject(): Promise<Project> {
+    const user = this.auth.currentUserSig();
+    if (!user) throw new Error('Not authenticated');
+    const existing = await firstValueFrom(this.getMyProjects());
+    const personal = existing.find(
+      (p) => p.ownerId === user.uid && p.name === ProjectService.PERSONAL_PROJECT_NAME,
+    );
+    if (personal) return personal;
+
+    // Bypass permission checks — every user needs a personal project.
+    const sections: Section[] = DEFAULT_SECTIONS.map((s) => ({
+      ...s,
+      id: crypto.randomUUID(),
+    }));
+    const project: Omit<Project, 'id'> = {
+      name: ProjectService.PERSONAL_PROJECT_NAME,
+      description: 'Your personal tasks — standalone work that is not part of a project.',
+      color: '#00d2ff',
+      ownerId: user.uid,
+      memberIds: [user.uid],
+      sections,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'active',
+    };
+    const ref = await addDoc(this.projectsCollection, project);
+    return { id: ref.id, ...project } as Project;
   }
 
   /**
