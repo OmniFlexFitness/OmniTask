@@ -138,11 +138,28 @@ service cloud.firestore {
         );
       }
 
+      // Helper: Is the caller an assignee on this task, OR the creator?
+      // Drives the "My Tasks" dashboard: users must be able to read tasks that
+      // reference them even if they haven't been added to the project yet (e.g.
+      // the auto-add-member side effect hasn't landed). The creator can also
+      // always read tasks they authored.
+      function isTaskStakeholder() {
+        return isAuthenticated() && (
+          (resource.data.assigneeIds is list && request.auth.uid in resource.data.assigneeIds) ||
+          resource.data.get('assignedToId', '') == request.auth.uid ||
+          resource.data.get('createdById', '') == request.auth.uid
+        );
+      }
+
       allow create: if isAdmin() || isSuperAdmin() || (
         isAuthenticated() && canCreateInProject() && hasPermission('canCreateTasks')
       );
-      allow read: if (isAuthenticated() && isProjectMember()) || isAdmin() || isSuperAdmin();
-      allow update: if (isAuthenticated() && isProjectMember()) || isAdmin() || isSuperAdmin();
+      allow read: if (isAuthenticated() && isProjectMember()) ||
+        isTaskStakeholder() ||
+        isAdmin() || isSuperAdmin();
+      allow update: if (isAuthenticated() && isProjectMember()) ||
+        isTaskStakeholder() ||
+        isAdmin() || isSuperAdmin();
       allow delete: if isAdmin() || isSuperAdmin() || (
         isAuthenticated() && isProjectMember() && hasPermission('canDeleteTasks')
       );

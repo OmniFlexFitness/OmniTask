@@ -49,6 +49,26 @@ export interface UserProfile {
   hasGoogleTasksOfflineAccess?: boolean;
   googleTasksOfflineAccessGrantedAt?: Date;
   googleTasksRefreshToken?: string | null; // Encrypted refresh token for Cloud Functions
+
+  /**
+   * UID of the user this user reports to (their direct manager).
+   * Used by the "My Tasks" dashboard to surface reporting lines. Optional.
+   */
+  reportsToId?: string;
+  /** Cached display name of the manager for UI (refreshed when the link is set). */
+  reportsToName?: string;
+  /** Cached email of the manager for UI. */
+  reportsToEmail?: string;
+
+  /**
+   * Spreadsheet ID of the user's personal "My Tasks" sheet, written by
+   * MyTasksSheetSyncService. When present, writes to the user's tasks mirror
+   * into this sheet (in addition to any project-level sheet).
+   */
+  myTasksSheetId?: string;
+  myTasksSheetTabName?: string;
+  lastMyTasksSheetSyncAt?: Date;
+  myTasksSheetSyncStatus?: 'synced' | 'pending' | 'error';
 }
 
 /**

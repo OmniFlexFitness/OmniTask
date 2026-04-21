@@ -16,7 +16,8 @@ import {
   Timestamp,
 } from '@angular/fire/firestore';
 import { Task, Section } from '../models/domain.model';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, combineLatest, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
@@ -330,6 +331,128 @@ export class TaskService {
       orderBy('dueDate', 'asc'),
     );
     return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+  }
+
+  /**
+   * Get all tasks assigned to or created by a given user across every project.
+   * Merges two Firestore queries:
+   *   - tasks where `assigneeIds` array-contains the uid  (primary assignees)
+   *   - tasks where `createdById` equals the uid          (tasks the user authored)
+   * Results are deduplicated by task ID and sorted by due date ascending
+   * (tasks without a due date go to the end). This drives the user-centric
+   * "My Tasks" dashboard and operates across project boundaries.
+   */
+  getMyTasks(userId: string): Observable<Task[]> {
+    if (!userId) return of([]);
+    const assignedQ = query(
+      this.tasksCollection,
+      where('assigneeIds', 'array-contains', userId),
+    );
+    const createdQ = query(this.tasksCollection, where('createdById', '==', userId));
+    const legacyQ = query(this.tasksCollection, where('assignedToId', '==', userId));
+
+    return runInInjectionContext(this.injector, () => {
+      const assigned$ = collectionData(assignedQ, { idField: 'id' }) as Observable<Task[]>;
+      const created$ = collectionData(createdQ, { idField: 'id' }) as Observable<Task[]>;
+      const legacy$ = collectionData(legacyQ, { idField: 'id' }) as Observable<Task[]>;
+      return combineLatest([assigned$, created$, legacy$]).pipe(
+        map(([a, c, l]) => {
+          const byId = new Map<string, Task>();
+          for (const t of [...a, ...c, ...l]) {
+            if (t?.id) byId.set(t.id, t);
+          }
+          const list = Array.from(byId.values());
+          list.sort((x, y) => {
+            const xd = x.dueDate ? this.toMillis(x.dueDate) : Number.POSITIVE_INFINITY;
+            const yd = y.dueDate ? this.toMillis(y.dueDate) : Number.POSITIVE_INFINITY;
+            return xd - yd;
+          });
+          return list;
+        }),
+      );
+    });
+  }
+
+  /**
+   * Tasks created by a user (authored), regardless of assignment.
+   * Used for "contribution" metrics.
+   */
+  getTasksCreatedBy(userId: string): Observable<Task[]> {
+    if (!userId) return of([]);
+    const q = query(this.tasksCollection, where('createdById', '==', userId));
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+    });
+  }
+
+  /**
+   * Available tasks the user could pick up — unassigned tasks in projects
+   * they are a member of. Because Firestore cannot directly query
+   * "array is empty" we fetch by project and filter client-side.
+   */
+  getAvailableTasksInProjects(projectIds: string[]): Observable<Task[]> {
+    if (!projectIds?.length) return of([]);
+    // Firestore's `in` operator supports up to 30 values per query.
+    const chunks: string[][] = [];
+    for (let i = 0; i < projectIds.length; i += 30) {
+      chunks.push(projectIds.slice(i, i + 30));
+    }
+    const streams = chunks.map((chunk) => {
+      const q = query(this.tasksCollection, where('projectId', 'in', chunk));
+      return runInInjectionContext(this.injector, () => {
+        return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
+      });
+    });
+    return combineLatest(streams).pipe(
+      map((arr) => {
+        const all = arr.flat();
+        // "Available" = open (not done) and nobody is assigned yet.
+        return all.filter(
+          (t) =>
+            t.status !== 'done' &&
+            !(t.assigneeIds && t.assigneeIds.length > 0) &&
+            !t.assignedToId,
+        );
+      }),
+    );
+  }
+
+  /**
+   * Self-assign a task — add the current user to assigneeIds and auto-add
+   * them as a project member if they aren't already. Optimistic UX for the
+   * "My Tasks" pickup flow.
+   */
+  async claimTask(taskId: string): Promise<void> {
+    const user = this.auth.currentUserSig();
+    if (!user) throw new Error('Not authenticated');
+    const task = await this.getTask(taskId);
+    if (!task) throw new Error('Task not found');
+    const existingIds = task.assigneeIds ?? [];
+    if (existingIds.includes(user.uid)) return;
+    const existingNames = task.assigneeNames ?? [];
+    const displayName = user.displayName || user.email || user.uid;
+    await this.updateTask(taskId, {
+      assigneeIds: [...existingIds, user.uid],
+      assigneeNames: [...existingNames, displayName],
+    });
+  }
+
+  /**
+   * Convert a FirestoreDate-ish value to a millisecond timestamp for sorting.
+   * Accepts Date, Firestore Timestamp, or ISO string.
+   */
+  private toMillis(value: unknown): number {
+    if (!value) return Number.POSITIVE_INFINITY;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === 'object' && value !== null && 'toDate' in (value as object)) {
+      const d = (value as { toDate: () => Date }).toDate();
+      return d instanceof Date ? d.getTime() : Number.POSITIVE_INFINITY;
+    }
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? Number.POSITIVE_INFINITY : d.getTime();
+    }
+    return Number.POSITIVE_INFINITY;
   }
 
   /**

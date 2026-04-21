@@ -1,0 +1,141 @@
+<div class="h-screen flex flex-col overflow-hidden bg-[#050810]">
+  <!-- Background grid overlay, cyberpunk theme matching the project dashboard -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="relative z-10 border-b border-cyan-500/20 bg-[#050810]/80 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3 min-w-0">
+        <span
+          class="inline-flex items-center justify-center w-11 h-11 rounded-xl border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 flex-shrink-0"
+          [style.box-shadow]="'0 0 14px rgba(0,210,255,0.35)'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </span>
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase tracking-[0.25em] text-cyan-400/80 font-semibold">OmniTask // You</div>
+          <h1 class="text-2xl font-black text-white truncate">
+            <span data-scramble>My Tasks</span>
+          </h1>
+          <p class="text-xs text-slate-400 truncate">
+            {{ currentUser()?.displayName || currentUser()?.email || 'Signed-out user' }}
+            <span class="text-slate-600"> · </span>
+            <span class="text-slate-500">{{ myProjects().length }} project{{ myProjects().length === 1 ? '' : 's' }}</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          class="omni-glitch-btn px-3 py-1.5 rounded-lg border border-violet-500/40 text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 hover:text-violet-200 text-xs font-semibold uppercase tracking-wider"
+          (click)="openCreateForProject(null)"
+          title="Create a new task in your personal queue"
+        >
+          + New Task
+        </button>
+        <button
+          class="omni-glitch-btn px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 hover:text-emerald-200 text-xs font-semibold uppercase tracking-wider disabled:opacity-50"
+          [disabled]="syncing()"
+          (click)="syncToGoogleSheet()"
+          title="Push my tasks, projects, and contributions to a personal Google Sheet"
+        >
+          @if (syncing()) {
+            Syncing…
+          } @else {
+            Sync Sheet
+          }
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs: Overview / My Tasks list / Available to Pick Up -->
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 pb-2 text-sm">
+      <button
+        class="mytasks-tab"
+        [class.active]="viewMode() === 'overview'"
+        (click)="viewMode.set('overview')"
+      >
+        Overview
+      </button>
+      <button
+        class="mytasks-tab"
+        [class.active]="viewMode() === 'list'"
+        (click)="viewMode.set('list')"
+      >
+        My Tasks
+        <span class="mytasks-tab-count">{{ listCount() }}</span>
+      </button>
+      <button
+        class="mytasks-tab"
+        [class.active]="viewMode() === 'available'"
+        (click)="viewMode.set('available')"
+      >
+        Available
+        <span class="mytasks-tab-count">{{ availableCount() }}</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Scrollable content -->
+  <main class="flex-1 overflow-y-auto relative z-10 px-4 sm:px-6 lg:px-8 py-6">
+    <div class="max-w-7xl mx-auto">
+      @switch (viewMode()) {
+        @case ('overview') {
+          <app-my-tasks-overview
+            [user]="currentUser()"
+            [myTasks]="myTasks()"
+            [myProjects]="myProjects()"
+            [availableCount]="availableCount()"
+            (taskClick)="openTaskDetail($event)"
+            (createTask)="openCreateForProject($event)"
+            (viewChange)="viewMode.set($event)"
+            (reportsToChange)="saveReportsTo($event)"
+          ></app-my-tasks-overview>
+        }
+        @case ('list') {
+          <app-my-tasks-list
+            [tasks]="myTasks()"
+            [projectsById]="projectsById()"
+            [currentUserId]="currentUser()?.uid || ''"
+            (taskClick)="openTaskDetail($event)"
+            (toggleComplete)="toggleComplete($event)"
+            (createTaskInProject)="openCreateForProject($event)"
+          ></app-my-tasks-list>
+        }
+        @case ('available') {
+          <app-available-tasks
+            [tasks]="availableTasks()"
+            [projectsById]="projectsById()"
+            (taskClick)="openTaskDetail($event)"
+            (claim)="claimTask($event)"
+          ></app-available-tasks>
+        }
+      }
+    </div>
+  </main>
+
+  <!-- Task detail modal — same one the project dashboard uses -->
+  @if (openTask()) {
+    <app-task-detail-modal
+      [task]="openTask()"
+      [projectId]="openTask()?.projectId || null"
+      (close)="openTask.set(null)"
+    ></app-task-detail-modal>
+  }
+
+  <!-- Task create modal — bound to whichever project the user picked -->
+  @if (showCreateModal() && createInitialProjectId()) {
+    <app-task-create-modal
+      [projectId]="createInitialProjectId()!"
+      [initialSectionId]="null"
+      [initialDueDate]="null"
+      (close)="closeCreateModal()"
+      (created)="onTaskCreated($event); closeCreateModal()"
+    ></app-task-create-modal>
+  }
+</div>

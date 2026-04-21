@@ -38,7 +38,7 @@ export const routes: Routes = [
       {
         path: 'tasks',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+          import('./features/my-tasks/my-tasks.component').then((m) => m.MyTasksComponent),
       },
       {
         path: 'schedule',
