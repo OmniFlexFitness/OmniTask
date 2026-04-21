@@ -233,7 +233,8 @@ export class MyTasksSheetSyncService {
       const mine = all.filter(
         (t) => t.assigneeIds?.includes(user.uid) || t.assignedToId === user.uid,
       );
-      return this.projectToRow(p, user.uid, all.length, mine.length, mine.filter((t) => t.status === 'done').length);
+      const completed = mine.filter((t) => t.status === 'done').length;
+      return this.projectToRow(p, user.uid, all.length, mine.length, completed);
     });
     const projectLastCol = this.columnLetter(projectHeader.length);
 

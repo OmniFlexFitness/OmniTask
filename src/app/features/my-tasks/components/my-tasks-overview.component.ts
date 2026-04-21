@@ -10,6 +10,7 @@ import {
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { Project, Task, ASSIGNEE_PALETTE, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
 import { UserProfile } from '../../../core/models/user.model';
@@ -318,15 +319,7 @@ export class MyTasksOverviewComponent {
     // getAllUsers is only callable by admins (per Firestore rules). Non-admins
     // fall through to null, at which point we save the plain email instead.
     try {
-      const users = await new Promise<UserProfile[]>((resolve, reject) => {
-        const sub = this.userService.getAllUsers().subscribe({
-          next: (v) => {
-            resolve(v);
-            sub.unsubscribe();
-          },
-          error: (e) => reject(e),
-        });
-      });
+      const users = await firstValueFrom(this.userService.getAllUsers());
       return users.find((u) => u.email?.toLowerCase() === email) ?? null;
     } catch {
       return null;
