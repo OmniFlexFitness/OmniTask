@@ -9,7 +9,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ProjectService } from '../../core/services/project.service';
-import { StorageService } from '../../core/services/storage.service';
+import {
+  StorageService,
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+} from '../../core/services/storage.service';
 import { Project } from '../../core/models/domain.model';
 import { ProjectIconComponent } from './components/project-icon.component';
 
@@ -98,12 +102,12 @@ export class ProjectFormModalComponent {
 
     // Quick client-side validation mirroring StorageService rules so we fail
     // fast and show a preview without uploading.
-    if (!file.type.startsWith('image/')) {
-      this.iconError.set('File must be an image.');
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      this.iconError.set('Unsupported image type. Use PNG, JPEG, WEBP, GIF, or SVG.');
       input.value = '';
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
+    if (file.size > MAX_IMAGE_BYTES) {
       this.iconError.set('Image is too large (max 4 MB).');
       input.value = '';
       return;

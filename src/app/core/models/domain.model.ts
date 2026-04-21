@@ -178,6 +178,22 @@ export interface WeeklyBlock {
 }
 
 /**
+ * Cyberpunk-friendly palette used to deterministically color user avatars
+ * (assignees, members) across the app. Picking by hash keeps the same user
+ * the same hue wherever they appear.
+ */
+export const ASSIGNEE_PALETTE = [
+  '#00d2ff',
+  '#e040fb',
+  '#ff1493',
+  '#a564ff',
+  '#10b981',
+  '#f59e0b',
+  '#ec4899',
+  '#0ea5e9',
+] as const;
+
+/**
  * Curated color palette for schedule items
  */
 export const SCHEDULE_COLORS = [

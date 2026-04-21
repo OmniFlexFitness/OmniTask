@@ -13,7 +13,11 @@ import {
   Task,
   TaskViewMode,
   CYBERPUNK_COLORS,
+  ASSIGNEE_PALETTE,
 } from '../../../core/models/domain.model';
+
+/** How far in the future a due date counts as "due soon" in the dashboard KPIs. */
+const DUE_SOON_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 import { getColorWithOpacity } from '../../../core/utils/color.utils';
 import { ProjectIconComponent } from '../../projects/components/project-icon.component';
 import { SectionManagerComponent } from '../../projects/components/section-manager.component';
@@ -110,9 +114,9 @@ export class ProjectOverviewComponent {
   });
 
   dueSoonTasks = computed(() => {
-    // Open tasks due within the next 7 days, not already overdue.
+    // Open tasks due within the DUE_SOON_WINDOW_MS window, not already overdue.
     const now = new Date();
-    const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const soon = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
     return this.tasks().filter((t) => {
       if (t.status === 'done' || !t.dueDate) return false;
       const d = this.toDate(t.dueDate);
@@ -362,23 +366,13 @@ export class ProjectOverviewComponent {
   }
 
   /**
-   * Hash an arbitrary string (user id/email) to a stable color from the
-   * cyberpunk palette so the same assignee always reads the same hue.
+   * Hash an arbitrary string (user id/email) to a stable color from the shared
+   * ASSIGNEE_PALETTE so the same assignee always reads the same hue.
    */
   hashColor(key: string): string {
-    const palette = [
-      '#00d2ff',
-      '#e040fb',
-      '#ff1493',
-      '#a564ff',
-      '#10b981',
-      '#f59e0b',
-      '#ec4899',
-      '#0ea5e9',
-    ];
     let h = 0;
     for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-    return palette[h % palette.length];
+    return ASSIGNEE_PALETTE[h % ASSIGNEE_PALETTE.length];
   }
 
   /** Convert a Firestore Timestamp, Date, or ISO-ish value into a Date. */

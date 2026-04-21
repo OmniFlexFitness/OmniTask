@@ -20,10 +20,12 @@ export const ALLOWED_IMAGE_TYPES = [
 /**
  * Thin wrapper around Firebase Storage for uploading project-scoped images.
  *
- * Paths are timestamped per upload so each new icon produces a fresh download
- * URL — this bypasses browser/CDN caching that would otherwise show stale
- * images when overwriting a fixed path. Callers are expected to delete the
- * previous object via `deleteByUrl` to avoid storage bloat.
+ * Paths are deterministic (`projects/{projectId}/icon.{ext}`) so each new
+ * upload for the same extension overwrites the previous object. Firebase
+ * Storage download URLs include a per-upload token, so freshness is already
+ * handled by the URL itself rather than by path uniqueness. Callers should
+ * still `deleteByUrl` the previous icon when switching extensions, otherwise
+ * the old file (e.g. `icon.png` after uploading `icon.jpg`) will linger.
  */
 @Injectable({ providedIn: 'root' })
 export class StorageService {
@@ -40,7 +42,7 @@ export class StorageService {
     if (!user) throw new Error('Must be signed in to upload');
 
     const ext = this.extensionFor(file);
-    const path = `projects/${projectId}/icon-${Date.now()}.${ext}`;
+    const path = `projects/${projectId}/icon.${ext}`;
     const objectRef = ref(this.storage, path);
     await uploadBytes(objectRef, file, { contentType: file.type });
     return await getDownloadURL(objectRef);
