@@ -160,17 +160,18 @@ export class MyTasksComponent {
   }
 
   async onTaskCreated(task: Task) {
-    // When the user creates a personal task from this dashboard we default
-    // them as the assignee so it shows up in their task list immediately.
+    // "Add to my queue" intent: only auto-claim tasks the creator left
+    // entirely unassigned. If the creator explicitly picked assignees
+    // (even if they're not on the list), respect that choice — silently
+    // adding the creator would distort workload and notifications.
     const user = this.currentUser();
     if (!user) return;
-    const alreadyAssigned = task.assigneeIds?.includes(user.uid);
-    if (!alreadyAssigned) {
-      try {
-        await this.taskService.claimTask(task.id);
-      } catch (err) {
-        console.warn('Auto-claim of newly created task failed:', err);
-      }
+    const hasAssignees = (task.assigneeIds?.length ?? 0) > 0 || !!task.assignedToId;
+    if (hasAssignees) return;
+    try {
+      await this.taskService.claimTask(task.id);
+    } catch (err) {
+      console.warn('Auto-claim of newly created task failed:', err);
     }
   }
 
