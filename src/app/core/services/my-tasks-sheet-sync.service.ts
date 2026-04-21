@@ -96,7 +96,13 @@ export class MyTasksSheetSyncService {
   private toISO(value: unknown): string {
     if (!value) return '';
     if (value instanceof Date) return value.toISOString();
-    if (typeof value === 'object' && value !== null && 'toDate' in (value as object)) {
+    // Guard that toDate is actually callable — a plain object carrying a
+    // `toDate` string field would otherwise throw at call-time.
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as { toDate?: unknown }).toDate === 'function'
+    ) {
       const d = (value as { toDate: () => Date }).toDate();
       return d instanceof Date ? d.toISOString() : '';
     }

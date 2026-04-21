@@ -130,7 +130,12 @@ export class MyTasksListComponent {
 
   isOverdue(task: Task): boolean {
     if (task.status === 'done' || !task.dueDate) return false;
-    return this.toMillis(task.dueDate) < Date.now();
+    // Compare against the start of today, not `now` — a task due today
+    // (00:00) should stay "due today" until the day rolls over, giving
+    // the user until end-of-day to finish it.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return this.toMillis(task.dueDate) < startOfToday.getTime();
   }
 
   /**

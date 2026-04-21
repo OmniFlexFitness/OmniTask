@@ -8,6 +8,7 @@ import {
   deleteDoc,
   query,
   where,
+  or,
   collectionData,
   orderBy,
   writeBatch,
@@ -335,39 +336,35 @@ export class TaskService {
 
   /**
    * Get all tasks assigned to or created by a given user across every project.
-   * Merges two Firestore queries:
-   *   - tasks where `assigneeIds` array-contains the uid  (primary assignees)
-   *   - tasks where `createdById` equals the uid          (tasks the user authored)
-   * Results are deduplicated by task ID and sorted by due date ascending
-   * (tasks without a due date go to the end). This drives the user-centric
-   * "My Tasks" dashboard and operates across project boundaries.
+   * Issued as a single Firestore `or` query combining three disjuncts:
+   *   - `assigneeIds` array-contains the uid  (primary assignees)
+   *   - `createdById` equals the uid          (tasks the user authored)
+   *   - `assignedToId` equals the uid         (legacy single-assignee link)
+   * Using `or` means one round-trip + one realtime listener instead of
+   * three, and Firestore dedupes server-side. Results are sorted client-
+   * side by due date ascending (tasks without a due date go to the end).
    */
   getMyTasks(userId: string): Observable<Task[]> {
     if (!userId) return of([]);
-    const assignedQ = query(
+    const q = query(
       this.tasksCollection,
-      where('assigneeIds', 'array-contains', userId),
+      or(
+        where('assigneeIds', 'array-contains', userId),
+        where('createdById', '==', userId),
+        where('assignedToId', '==', userId),
+      ),
     );
-    const createdQ = query(this.tasksCollection, where('createdById', '==', userId));
-    const legacyQ = query(this.tasksCollection, where('assignedToId', '==', userId));
 
     return runInInjectionContext(this.injector, () => {
-      const assigned$ = collectionData(assignedQ, { idField: 'id' }) as Observable<Task[]>;
-      const created$ = collectionData(createdQ, { idField: 'id' }) as Observable<Task[]>;
-      const legacy$ = collectionData(legacyQ, { idField: 'id' }) as Observable<Task[]>;
-      return combineLatest([assigned$, created$, legacy$]).pipe(
-        map(([a, c, l]) => {
-          const byId = new Map<string, Task>();
-          for (const t of [...a, ...c, ...l]) {
-            if (t?.id) byId.set(t.id, t);
-          }
-          const list = Array.from(byId.values());
-          list.sort((x, y) => {
+      return (collectionData(q, { idField: 'id' }) as Observable<Task[]>).pipe(
+        map((tasks) => {
+          const sorted = [...tasks];
+          sorted.sort((x, y) => {
             const xd = x.dueDate ? this.toMillis(x.dueDate) : Number.POSITIVE_INFINITY;
             const yd = y.dueDate ? this.toMillis(y.dueDate) : Number.POSITIVE_INFINITY;
             return xd - yd;
           });
-          return list;
+          return sorted;
         }),
       );
     });
@@ -387,8 +384,9 @@ export class TaskService {
 
   /**
    * Available tasks the user could pick up — unassigned tasks in projects
-   * they are a member of. Because Firestore cannot directly query
-   * "array is empty" we fetch by project and filter client-side.
+   * they are a member of. The Firestore query excludes done tasks server-
+   * side so we don't stream completed work to the client; "no assignees"
+   * is enforced client-side (Firestore can't query "array is empty").
    */
   getAvailableTasksInProjects(projectIds: string[]): Observable<Task[]> {
     if (!projectIds?.length) return of([]);
@@ -398,7 +396,11 @@ export class TaskService {
       chunks.push(projectIds.slice(i, i + 30));
     }
     const streams = chunks.map((chunk) => {
-      const q = query(this.tasksCollection, where('projectId', 'in', chunk));
+      const q = query(
+        this.tasksCollection,
+        where('projectId', 'in', chunk),
+        where('status', '!=', 'done'),
+      );
       return runInInjectionContext(this.injector, () => {
         return collectionData(q, { idField: 'id' }) as Observable<Task[]>;
       });
@@ -406,12 +408,9 @@ export class TaskService {
     return combineLatest(streams).pipe(
       map((arr) => {
         const all = arr.flat();
-        // "Available" = open (not done) and nobody is assigned yet.
+        // Server already filtered out `done`; enforce "no assignees" here.
         return all.filter(
-          (t) =>
-            t.status !== 'done' &&
-            !(t.assigneeIds && t.assigneeIds.length > 0) &&
-            !t.assignedToId,
+          (t) => !(t.assigneeIds && t.assigneeIds.length > 0) && !t.assignedToId,
         );
       }),
     );

@@ -85,10 +85,14 @@ export class MyTasksOverviewComponent {
   todoTasks = computed(() => this.myTasks().filter((t) => t.status === 'todo').length);
 
   overdueTasks = computed(() => {
-    const now = Date.now();
+    // "Overdue" means strictly before today, so a task due at 00:00 today
+    // still counts as due today (not yet overdue) until the clock rolls over.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const threshold = startOfToday.getTime();
     return this.myTasks().filter((t) => {
       if (t.status === 'done' || !t.dueDate) return false;
-      return this.toMillis(t.dueDate) < now;
+      return this.toMillis(t.dueDate) < threshold;
     }).length;
   });
 
@@ -373,7 +377,9 @@ export class MyTasksOverviewComponent {
 
   isOverdue(task: Task): boolean {
     if (task.status === 'done' || !task.dueDate) return false;
-    return this.toMillis(task.dueDate) < Date.now();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return this.toMillis(task.dueDate) < startOfToday.getTime();
   }
 
   private toDate(value: unknown): Date {
