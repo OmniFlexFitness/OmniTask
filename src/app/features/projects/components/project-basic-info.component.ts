@@ -111,7 +111,7 @@ export class ProjectBasicInfoComponent implements OnInit, OnChanges {
       this.projectChanged.emit();
     } catch (err) {
       console.error('Icon upload failed:', err);
-      this.iconError.set(err instanceof Error ? err.message : 'Icon upload failed.');
+      this.iconError.set('Failed to upload project icon. Please try again.');
     } finally {
       this.iconUploading.set(false);
     }
@@ -122,16 +122,12 @@ export class ProjectBasicInfoComponent implements OnInit, OnChanges {
     if (!previous) return;
     this.iconError.set(null);
     try {
-      // Setting null removes the icon for our UI (truthy checks) while keeping
-      // Firestore happy (it rejects undefined but accepts null).
-      await this.projectService.updateProject(this.project().id, {
-        icon: null as unknown as string,
-      });
+      await this.projectService.clearProjectIcon(this.project().id);
       void this.storageService.deleteByUrl(previous);
       this.projectChanged.emit();
     } catch (err) {
       console.error('Failed to clear icon:', err);
-      this.iconError.set(err instanceof Error ? err.message : 'Failed to clear icon.');
+      this.iconError.set('Failed to clear project icon. Please try again.');
     }
   }
 

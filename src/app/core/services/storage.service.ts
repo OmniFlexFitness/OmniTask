@@ -19,8 +19,11 @@ export const ALLOWED_IMAGE_TYPES = [
 
 /**
  * Thin wrapper around Firebase Storage for uploading project-scoped images.
- * Paths are deterministic so updates overwrite the same object, and callers
- * can optionally clean up prior URLs.
+ *
+ * Paths are timestamped per upload so each new icon produces a fresh download
+ * URL — this bypasses browser/CDN caching that would otherwise show stale
+ * images when overwriting a fixed path. Callers are expected to delete the
+ * previous object via `deleteByUrl` to avoid storage bloat.
  */
 @Injectable({ providedIn: 'root' })
 export class StorageService {

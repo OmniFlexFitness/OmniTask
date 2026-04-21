@@ -121,10 +121,7 @@ export class ProjectOverviewComponent {
   });
 
   unassignedTasks = computed(
-    () =>
-      this.tasks().filter(
-        (t) => !(t.assigneeIds?.length) && !t.assignedToId,
-      ).length,
+    () => this.tasks().filter((t) => !(t.assigneeIds?.length)).length,
   );
 
   completionPercentage = computed(() => {
@@ -236,16 +233,8 @@ export class ProjectOverviewComponent {
   assigneeStats = computed<AssigneeStat[]>(() => {
     const map = new Map<string, AssigneeStat>();
     for (const t of this.tasks()) {
-      const ids = t.assigneeIds?.length
-        ? t.assigneeIds
-        : t.assignedToId
-          ? [t.assignedToId]
-          : [];
-      const names = t.assigneeNames?.length
-        ? t.assigneeNames
-        : t.assigneeName
-          ? [t.assigneeName]
-          : [];
+      const ids = t.assigneeIds ?? [];
+      const names = t.assigneeNames ?? [];
       ids.forEach((id, i) => {
         const existing = map.get(id) ?? {
           id,
@@ -301,17 +290,18 @@ export class ProjectOverviewComponent {
   recentActivity = computed<ActivityItem[]>(() => {
     const events: ActivityItem[] = [];
     for (const t of this.tasks()) {
-      if (t.createdAt) {
-        events.push({ task: t, kind: 'created', when: this.toDate(t.createdAt) });
+      // Convert each timestamp at most once per task.
+      const createdAt = t.createdAt ? this.toDate(t.createdAt) : null;
+      if (createdAt) {
+        events.push({ task: t, kind: 'created', when: createdAt });
       }
       if (t.status === 'done' && t.completedAt) {
         events.push({ task: t, kind: 'completed', when: this.toDate(t.completedAt) });
-      } else if (
-        t.updatedAt &&
-        t.createdAt &&
-        this.toDate(t.updatedAt).getTime() !== this.toDate(t.createdAt).getTime()
-      ) {
-        events.push({ task: t, kind: 'updated', when: this.toDate(t.updatedAt) });
+      } else if (t.updatedAt && createdAt) {
+        const updatedAt = this.toDate(t.updatedAt);
+        if (updatedAt.getTime() !== createdAt.getTime()) {
+          events.push({ task: t, kind: 'updated', when: updatedAt });
+        }
       }
     }
     return events.sort((a, b) => b.when.getTime() - a.when.getTime()).slice(0, 6);

@@ -169,15 +169,14 @@ export class ProjectFormModalComponent {
         }
 
         const updates: Partial<Project> = { name, description, color };
-        // Firestore rejects undefined; send null-equivalent via dedicated path
-        // by only including icon when it has a concrete state change.
         if (pending) {
           updates.icon = iconUrl;
-        } else if (this.iconCleared()) {
-          // @ts-expect-error – intentional clear, Firestore treats null as removal for our UI
-          updates.icon = null;
         }
         await this.projectService.updateProject(editingProject.id, updates);
+        if (!pending && this.iconCleared()) {
+          // Remove the icon field entirely rather than persisting a sentinel.
+          await this.projectService.clearProjectIcon(editingProject.id);
+        }
         this.saved.emit({ ...editingProject, ...updates, icon: iconUrl } as Project);
       } else {
         // Create project first so we have an ID to scope the storage path,
@@ -190,9 +189,7 @@ export class ProjectFormModalComponent {
             await this.projectService.updateProject(docRef.id, { icon: iconUrl });
           } catch (err) {
             console.error('Icon upload failed (project was created):', err);
-            this.iconError.set(
-              err instanceof Error ? err.message : 'Icon upload failed.',
-            );
+            this.iconError.set('Failed to upload project icon. Please try again.');
           }
         }
         const newProject = await this.projectService.getProject(docRef.id);
@@ -204,9 +201,7 @@ export class ProjectFormModalComponent {
       this.close.emit();
     } catch (error) {
       console.error('Failed to save project:', error);
-      this.iconError.set(
-        error instanceof Error ? error.message : 'Failed to save project.',
-      );
+      this.iconError.set('Failed to save project. Please try again.');
     } finally {
       this.saving.set(false);
     }
