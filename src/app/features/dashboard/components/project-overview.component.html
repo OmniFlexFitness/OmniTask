@@ -20,7 +20,7 @@
             [style.color]="proj.color || defaultColor"
             [style.text-shadow]="'0 0 12px ' + accent(0.55)"
           >
-            {{ proj.name }}
+            <span data-scramble>{{ proj.name }}</span>
           </h2>
           @if (proj.status === 'archived') {
             <span class="ofx-chip bg-gray-700/50 text-gray-300">Archived</span>
@@ -82,17 +82,17 @@
       </div>
 
       <div class="flex flex-col gap-2 items-stretch md:items-end">
-        <button class="ofx-neon-button !py-2 text-xs" (click)="editProject.emit(proj)">
+        <button class="omni-glitch-btn ofx-neon-button !py-2 text-xs" (click)="editProject.emit(proj)">
           Edit project
         </button>
         <button
-          class="ofx-ghost-button text-xs"
+          class="omni-glitch-btn ofx-ghost-button text-xs"
           (click)="createTask.emit({})"
         >
           + New task
         </button>
         <button
-          class="ofx-ghost-button text-xs"
+          class="omni-glitch-btn ofx-ghost-button text-xs"
           (click)="viewModeChange.emit('board')"
         >
           Open board →
@@ -135,7 +135,7 @@
   <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <!-- Status donut -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Status Breakdown</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Status Breakdown</h3>
       @if (total === 0) {
         <p class="text-slate-500 text-sm py-6 text-center">No tasks yet.</p>
       } @else {
@@ -175,7 +175,7 @@
 
     <!-- Completion gauge -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Completion</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Completion</h3>
       <div class="flex flex-col items-center justify-center py-2">
         <div class="gauge-number text-cyber-gradient">{{ pct }}<span class="text-2xl">%</span></div>
         <div class="w-full mt-4 h-3 rounded-full overflow-hidden border border-white/10 bg-slate-900/60">
@@ -197,7 +197,7 @@
 
     <!-- Priority bars -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Priority Distribution</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Priority Distribution</h3>
       @if (total === 0) {
         <p class="text-slate-500 text-sm py-6 text-center">No tasks yet.</p>
       } @else {
@@ -231,9 +231,9 @@
     <!-- Sections progress -->
     <div class="ofx-panel p-5 lg:col-span-2">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="ofx-section-title">Sections</h3>
+        <h3 data-scramble class="ofx-section-title">Sections</h3>
         <button
-          class="text-xs text-cyan-400 hover:text-cyan-300"
+          class="omni-glitch-btn text-xs text-cyan-400 hover:text-cyan-300"
           (click)="viewModeChange.emit('board')"
         >
           Open board →
@@ -281,7 +281,7 @@
 
     <!-- Tag cloud -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Tags in use</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Tags in use</h3>
       @if (!tagStats().length) {
         <p class="text-slate-500 text-sm py-6 text-center">No tags defined yet.</p>
       } @else {
@@ -308,7 +308,7 @@
   <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
     <!-- Upcoming deadlines -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Upcoming deadlines</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Upcoming deadlines</h3>
       @if (!upcomingTasks().length) {
         <p class="text-slate-500 text-sm py-6 text-center">Nothing scheduled.</p>
       } @else {
@@ -342,7 +342,7 @@
 
     <!-- Recent activity -->
     <div class="ofx-panel p-5">
-      <h3 class="ofx-section-title mb-4">Recent activity</h3>
+      <h3 data-scramble class="ofx-section-title mb-4">Recent activity</h3>
       @if (!recentActivity().length) {
         <p class="text-slate-500 text-sm py-6 text-center">No activity yet.</p>
       } @else {
@@ -380,9 +380,9 @@
     <!-- Top assignees -->
     <div class="ofx-panel p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="ofx-section-title">Top assignees</h3>
+        <h3 data-scramble class="ofx-section-title">Top assignees</h3>
         <button
-          class="text-xs text-cyan-400 hover:text-cyan-300"
+          class="omni-glitch-btn text-xs text-cyan-400 hover:text-cyan-300"
           (click)="togglePanel('members')"
         >
           Manage
@@ -429,25 +429,25 @@
   <!-- Management: tabbed managers -->
   <section class="ofx-panel p-5 mb-6">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-      <h3 class="ofx-section-title">Manage project structure</h3>
+      <h3 data-scramble class="ofx-section-title">Manage project structure</h3>
       <div class="flex flex-wrap gap-2">
         <button
-          class="manage-tab"
+          class="omni-glitch-btn manage-tab"
           [class.active]="activePanel() === 'sections'"
           (click)="togglePanel('sections')"
         >Sections</button>
         <button
-          class="manage-tab"
+          class="omni-glitch-btn manage-tab"
           [class.active]="activePanel() === 'tags'"
           (click)="togglePanel('tags')"
         >Tags</button>
         <button
-          class="manage-tab"
+          class="omni-glitch-btn manage-tab"
           [class.active]="activePanel() === 'members'"
           (click)="togglePanel('members')"
         >Members</button>
         <button
-          class="manage-tab"
+          class="omni-glitch-btn manage-tab"
           [class.active]="activePanel() === 'fields'"
           (click)="togglePanel('fields')"
         >Custom fields</button>
