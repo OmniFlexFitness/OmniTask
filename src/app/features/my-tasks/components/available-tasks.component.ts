@@ -7,8 +7,10 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { Project, Task, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
+import { applyPreferredOrder, mergeOrders } from '../../../core/utils/order.utils';
 
 interface AvailableGroup {
   projectId: string;
@@ -16,6 +18,8 @@ interface AvailableGroup {
   projectColor: string;
   tasks: Task[];
 }
+
+const GROUP_ORDER_STORAGE_KEY = 'omnitask:available:projectGroupOrder';
 
 /**
  * "Pick-up queue" for the My Tasks dashboard. Shows unassigned tasks across
@@ -25,7 +29,7 @@ interface AvailableGroup {
 @Component({
   selector: 'app-available-tasks',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, DragDropModule],
   templateUrl: './available-tasks.component.html',
   styleUrls: ['./available-tasks.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +47,13 @@ export class AvailableTasksComponent {
    * fast so this is really just to prevent double-clicks.
    */
   claiming = signal<Set<string>>(new Set());
+
+  /**
+   * User-preferred drag-and-drop order for the project-grouped sections.
+   * Persisted in localStorage; absent project IDs fall back to the
+   * tasks-count-descending default.
+   */
+  groupOrder = signal<string[]>(this.loadGroupOrder());
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
 
@@ -69,8 +80,38 @@ export class AvailableTasksComponent {
         return this.toMillis(a.dueDate) - this.toMillis(b.dueDate);
       });
     }
-    return Array.from(groups.values()).sort((a, b) => b.tasks.length - a.tasks.length);
+    const ordered = applyPreferredOrder(Array.from(groups.values()), this.groupOrder());
+    return ordered;
   });
+
+  onGroupDrop(event: CdkDragDrop<AvailableGroup[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const groups = [...this.groupedTasks()];
+    moveItemInArray(groups, event.previousIndex, event.currentIndex);
+    const visibleIds = groups.map((g) => g.projectId);
+    const next = mergeOrders(visibleIds, this.groupOrder());
+    this.groupOrder.set(next);
+    this.saveGroupOrder(next);
+  }
+
+  private loadGroupOrder(): string[] {
+    try {
+      const raw = globalThis.localStorage?.getItem(GROUP_ORDER_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveGroupOrder(order: string[]): void {
+    try {
+      globalThis.localStorage?.setItem(GROUP_ORDER_STORAGE_KEY, JSON.stringify(order));
+    } catch {
+      // Drag still works for the current session — persistence is a bonus.
+    }
+  }
 
   async onClaim(task: Task) {
     // Optimistically mark as claiming so the button disables immediately.

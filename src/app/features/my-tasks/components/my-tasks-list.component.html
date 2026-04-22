@@ -39,10 +39,35 @@
       </button>
     </div>
   } @else {
+    <div
+      cdkDropList
+      [cdkDropListData]="groupedTasks()"
+      (cdkDropListDropped)="onGroupDrop($event)"
+      class="space-y-4"
+    >
     @for (g of groupedTasks(); track g.projectId) {
-      <section class="ofx-panel p-4">
-        <header class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+      <section cdkDrag [cdkDragData]="g" class="ofx-panel p-4 mytasks-group">
+        <div
+          *cdkDragPlaceholder
+          class="ofx-panel p-4 border border-dashed border-violet-500/40 bg-violet-500/5 h-24"
+        ></div>
+        <header
+          cdkDragHandle
+          class="flex items-center justify-between gap-2 mb-3 flex-wrap select-none
+                 cursor-grab active:cursor-grabbing"
+          title="Drag to reorder"
+        >
           <div class="flex items-center gap-2 min-w-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 text-slate-500 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
             <span
               class="w-2.5 h-2.5 rounded-sm flex-shrink-0"
               [style.background]="g.projectColor"
@@ -53,7 +78,7 @@
           </div>
           <button
             class="text-[11px] text-violet-400 hover:text-violet-300"
-            (click)="createTaskInProject.emit(g.projectId)"
+            (click)="createTaskInProject.emit(g.projectId); $event.stopPropagation()"
           >
             + Task
           </button>
@@ -114,5 +139,6 @@
         </ul>
       </section>
     }
+    </div>
   }
 </div>

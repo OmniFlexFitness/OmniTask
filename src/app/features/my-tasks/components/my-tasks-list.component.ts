@@ -7,8 +7,10 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { Project, Task, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
+import { applyPreferredOrder, mergeOrders } from '../../../core/utils/order.utils';
 
 type StatusFilter = 'all' | 'open' | 'todo' | 'in-progress' | 'done';
 
@@ -19,16 +21,18 @@ interface TaskGroup {
   tasks: Task[];
 }
 
+const GROUP_ORDER_STORAGE_KEY = 'omnitask:myTasks:projectGroupOrder';
+
 /**
  * Compact, cross-project list of the user's tasks. Grouped by project so the
- * user can see at a glance where their workload sits. Unlike the project
- * dashboard's list view, we don't drag/drop here — the focus is on triage
- * (mark done, open detail).
+ * user can see at a glance where their workload sits. Groups ("sections")
+ * are reorderable via drag-and-drop on the header, and the preferred order
+ * is persisted per-browser so the layout sticks across sessions.
  */
 @Component({
   selector: 'app-my-tasks-list',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, DragDropModule],
   templateUrl: './my-tasks-list.component.html',
   styleUrls: ['./my-tasks-list.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +51,13 @@ export class MyTasksListComponent {
 
   /** Text filter applied across title + project name. Empty means no filter. */
   search = signal('');
+
+  /**
+   * User-preferred order for the project-grouped "sections". Persisted in
+   * localStorage and consulted when computing `groupedTasks`. Project IDs
+   * not present here fall to the natural order (tasks-count descending).
+   */
+  groupOrder = signal<string[]>(this.loadGroupOrder());
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
 
@@ -82,7 +93,9 @@ export class MyTasksListComponent {
   /**
    * Group filtered tasks by project. Projects with no matching tasks are
    * dropped from the view entirely so the list doesn't show empty sections.
-   * Order: most tasks first so the user's busy projects surface at the top.
+   * Order: the user's saved drag-and-drop preference first (for IDs we
+   * recognise), then remaining groups by tasks-count descending so busy
+   * projects bubble up until the user drags them somewhere else.
    */
   groupedTasks = computed<TaskGroup[]>(() => {
     const projects = this.projectsById();
@@ -98,8 +111,44 @@ export class MyTasksListComponent {
       existing.tasks.push(t);
       groups.set(t.projectId, existing);
     }
-    return Array.from(groups.values()).sort((a, b) => b.tasks.length - a.tasks.length);
+    return applyPreferredOrder(Array.from(groups.values()), this.groupOrder());
   });
+
+  /**
+   * Persist a new project-group ordering after the user drops a section
+   * into a new slot. We record the IDs of the currently-visible groups
+   * in their new order — unseen projects stay where their old preference
+   * (if any) put them so the user's memory of the layout stays stable.
+   */
+  onGroupDrop(event: CdkDragDrop<TaskGroup[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const groups = [...this.groupedTasks()];
+    moveItemInArray(groups, event.previousIndex, event.currentIndex);
+    const visibleIds = groups.map((g) => g.projectId);
+    const next = mergeOrders(visibleIds, this.groupOrder());
+    this.groupOrder.set(next);
+    this.saveGroupOrder(next);
+  }
+
+  private loadGroupOrder(): string[] {
+    try {
+      const raw = globalThis.localStorage?.getItem(GROUP_ORDER_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveGroupOrder(order: string[]): void {
+    try {
+      globalThis.localStorage?.setItem(GROUP_ORDER_STORAGE_KEY, JSON.stringify(order));
+    } catch {
+      // localStorage may be unavailable (private mode, quota, SSR). Drag
+      // still works for the current session — persistence is a bonus.
+    }
+  }
 
   setFilter(f: StatusFilter) {
     this.statusFilter.set(f);

@@ -5,8 +5,10 @@
  *
  * Usage: add `data-scramble` to any text element; call `bindScramble(el)`
  * once per element (guarded by a `data-scramble-bound` sentinel). The
- * element's `innerText` is captured fresh on each mouseenter, so edits
- * to task titles are picked up automatically on the next hover.
+ * element's original text is preserved across scrambles — the animation
+ * plays inside a sibling `<span class="scramble-overlay">` that sits on
+ * top of the original content, so Angular-managed text nodes keep their
+ * framework bindings and still update when inputs change after a hover.
  */
 
 const GLITCH_CHARS = '▓▒░█▄▀■□◆◇▲▼►◄!@#$%^&*()_+={}[]|\\:;"<>?,./`~';
@@ -100,6 +102,21 @@ export class TextScrambler {
 }
 
 /**
+ * Read the element's text while ignoring the dedicated scramble overlay.
+ * This matters for elements where Angular's text interpolation is the
+ * "real" content: we must not include the overlay's own characters when
+ * capturing the target text for the next scramble pass.
+ */
+function textExcludingOverlay(el: HTMLElement, overlay: HTMLElement): string {
+  let text = '';
+  el.childNodes.forEach((node) => {
+    if (node === overlay) return;
+    text += node.textContent ?? '';
+  });
+  return text;
+}
+
+/**
  * Wire a single element for scramble-on-hover. Idempotent — the
  * `data-scramble-bound` sentinel prevents double-binding when the
  * MutationObserver re-scans.
@@ -108,15 +125,25 @@ export function bindScramble(el: HTMLElement): void {
   if (el.dataset['scrambleBound'] === 'true') return;
   el.dataset['scrambleBound'] = 'true';
 
-  const scrambler = new TextScrambler(el);
+  // The overlay is what the scrambler mutates. Keeping our DOM writes
+  // inside a child element preserves the Angular-managed text node (or
+  // any other framework-managed content) inside `el` so bindings still
+  // update after the animation finishes.
+  const overlay = document.createElement('span');
+  overlay.className = 'scramble-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  el.appendChild(overlay);
+
+  const scrambler = new TextScrambler(overlay);
   let isScrambling = false;
 
   el.addEventListener('mouseenter', () => {
     if (isScrambling) return;
     isScrambling = true;
 
-    // Fresh read: picks up edited task titles without extra plumbing.
-    const finalText = el.innerText;
+    // Fresh read: picks up edited text without extra plumbing, and
+    // deliberately excludes the (empty) overlay.
+    const finalText = textExcludingOverlay(el, overlay);
 
     // Width stabilization: capture the current bounding box so glyph
     // changes during the scramble (wide block-drawing chars ↔ narrow
@@ -126,19 +153,36 @@ export function bindScramble(el: HTMLElement): void {
     const rect = el.getBoundingClientRect();
     const originalMinWidth = el.style.minWidth;
     const originalDisplay = el.style.display;
-    const computedDisplay = window.getComputedStyle(el).display;
-    if (computedDisplay === 'inline') {
+    const computed = window.getComputedStyle(el);
+    if (computed.display === 'inline') {
       el.style.display = 'inline-block';
     }
     el.style.minWidth = `${Math.ceil(rect.width)}px`;
+
+    // Copy the element's resolved text styles onto the overlay before the
+    // parent's text is hidden via `.is-scrambling`. Without this, non-
+    // scrambled glyphs would inherit `color: transparent` from the parent
+    // and disappear mid-animation.
+    overlay.style.color = computed.color;
+    overlay.style.textShadow = computed.textShadow;
+
+    // Seed the overlay with the current text so the scrambler reads it as
+    // the "from" state. Without this, the queue's from-chars default to
+    // an empty string and glyphs pop in from nothing during the pre-start
+    // frames instead of flickering in place.
+    overlay.textContent = finalText;
+
     el.classList.add('is-scrambling');
 
     scrambler
       .setText(finalText)
-      .then(() => {
-        el.innerText = finalText;
-      })
       .finally(() => {
+        // Clear the overlay so the underlying Angular/static text shows
+        // through cleanly again, and let the CSS hook (`.is-scrambling`)
+        // restore the element to its normal state.
+        overlay.textContent = '';
+        overlay.style.color = '';
+        overlay.style.textShadow = '';
         el.classList.remove('is-scrambling');
         el.style.minWidth = originalMinWidth;
         el.style.display = originalDisplay;
