@@ -26,6 +26,7 @@
         (assigneeSelected)="onAssigneeSelected($event)"
         (assigneeRemoved)="removeAssignee($event)"
         (notifyAssigneesChange)="notifyAssignees.set($event)"
+        (applyGroup)="applyGroupToAssignees($event)"
       >
         <!-- Projected Priority AI Action -->
         <app-task-ai-suggestions

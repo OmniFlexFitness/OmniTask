@@ -76,9 +76,16 @@
 
   <!-- Assignees -->
   <div>
-    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">
-      Assignees
-    </label>
+    <div class="flex items-center justify-between mb-1">
+      <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+        Assignees
+      </label>
+      <app-group-picker
+        [label]="'Add group'"
+        [compact]="true"
+        (applyGroup)="applyGroup.emit($event)"
+      ></app-group-picker>
+    </div>
     <!-- Selected Assignee Chips -->
     @if (selectedAssignees().length > 0) {
       <div class="flex flex-wrap gap-1.5 mb-2">

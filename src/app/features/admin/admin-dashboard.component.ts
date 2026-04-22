@@ -19,8 +19,9 @@ import {
   resolvePermissions,
 } from '../../core/models/user.model';
 import { ORG_DOMAIN, SUPER_ADMIN_EMAIL } from '../../core/constants';
+import { UserGroupManagerComponent } from '../user-groups/user-group-manager.component';
 
-type AdminTab = 'Users' | 'Projects' | 'Tasks' | 'Permissions' | 'Invites';
+type AdminTab = 'Users' | 'Projects' | 'Tasks' | 'Groups' | 'Permissions' | 'Invites';
 
 interface PermissionToggle {
   key: keyof UserPermissions;
@@ -65,7 +66,7 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UserGroupManagerComponent],
   template: `
     <div class="h-screen overflow-y-auto bg-[#0a0a0a] text-gray-200">
       <div class="p-8 max-w-7xl mx-auto flex flex-col gap-8">
@@ -309,6 +310,13 @@ const PERMISSION_TOGGLES: PermissionToggle[] = [
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Groups Tab -->
+        <div *ngIf="activeTab() === 'Groups'" class="flex flex-col gap-4">
+          <div class="bg-black/40 border border-white/10 rounded-xl p-6">
+            <app-user-group-manager></app-user-group-manager>
           </div>
         </div>
 
@@ -646,7 +654,7 @@ export class AdminDashboardComponent {
   invitePermissions = signal<UserPermissions>({ ...DEFAULT_USER_PERMISSIONS });
 
   visibleTabs = computed<AdminTab[]>(() => {
-    const base: AdminTab[] = ['Users', 'Projects', 'Tasks'];
+    const base: AdminTab[] = ['Users', 'Projects', 'Tasks', 'Groups'];
     return this.isSuperAdmin() ? [...base, 'Permissions', 'Invites'] : base;
   });
 

@@ -11,6 +11,8 @@ import {
 } from '../../../shared/components/custom-select/custom-select.component';
 import { CustomDatePickerComponent } from '../../../shared/components/custom-date-picker/custom-date-picker.component';
 import { MarkdownEditorComponent } from '../../../shared/components/markdown-editor/markdown-editor.component';
+import { GroupPickerComponent } from '../../../shared/components/group-picker/group-picker.component';
+import { UserGroupMember } from '../../../core/models/user-group.model';
 
 @Component({
   selector: 'app-task-form-fields',
@@ -22,6 +24,7 @@ import { MarkdownEditorComponent } from '../../../shared/components/markdown-edi
     CustomSelectComponent,
     CustomDatePickerComponent,
     MarkdownEditorComponent,
+    GroupPickerComponent,
   ],
   templateUrl: './task-form-fields.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +41,7 @@ export class TaskFormFieldsComponent {
   assigneeSelected = output<AutocompleteOption | string>();
   assigneeRemoved = output<string>();
   notifyAssigneesChange = output<boolean>();
+  applyGroup = output<UserGroupMember[]>();
 
   onNotifyAssigneesChange(event: Event) {
     const isChecked = (event.target as HTMLInputElement).checked;
