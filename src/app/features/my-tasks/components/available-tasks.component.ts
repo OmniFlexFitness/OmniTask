@@ -10,6 +10,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { Project, Task, CYBERPUNK_COLORS } from '../../../core/models/domain.model';
+import { applyPreferredOrder, mergeOrders } from '../../../core/utils/order.utils';
 
 interface AvailableGroup {
   projectId: string;
@@ -83,7 +84,7 @@ export class AvailableTasksComponent {
     return ordered;
   });
 
-  onGroupDrop(event: CdkDragDrop<AvailableGroup[]>) {
+  onGroupDrop(event: CdkDragDrop<AvailableGroup[]>): void {
     if (event.previousIndex === event.currentIndex) return;
     const groups = [...this.groupedTasks()];
     moveItemInArray(groups, event.previousIndex, event.currentIndex);
@@ -157,32 +158,4 @@ export class AvailableTasksComponent {
     const d = this.asDate(value);
     return d ? d.getTime() : Number.POSITIVE_INFINITY;
   }
-}
-
-function applyPreferredOrder<T extends { projectId: string; tasks: readonly unknown[] }>(
-  groups: T[],
-  preferred: string[],
-  fallback: (a: T, b: T) => number = (a, b) => b.tasks.length - a.tasks.length,
-): T[] {
-  if (preferred.length === 0) {
-    return groups.slice().sort(fallback);
-  }
-  const byId = new Map(groups.map((g) => [g.projectId, g] as const));
-  const ordered: T[] = [];
-  const seen = new Set<string>();
-  for (const id of preferred) {
-    const g = byId.get(id);
-    if (g) {
-      ordered.push(g);
-      seen.add(id);
-    }
-  }
-  const leftovers = groups.filter((g) => !seen.has(g.projectId)).sort(fallback);
-  return ordered.concat(leftovers);
-}
-
-function mergeOrders(visible: string[], previous: string[]): string[] {
-  const visibleSet = new Set(visible);
-  const tail = previous.filter((id) => !visibleSet.has(id));
-  return visible.concat(tail);
 }

@@ -166,6 +166,12 @@ export function bindScramble(el: HTMLElement): void {
     overlay.style.color = computed.color;
     overlay.style.textShadow = computed.textShadow;
 
+    // Seed the overlay with the current text so the scrambler reads it as
+    // the "from" state. Without this, the queue's from-chars default to
+    // an empty string and glyphs pop in from nothing during the pre-start
+    // frames instead of flickering in place.
+    overlay.textContent = finalText;
+
     el.classList.add('is-scrambling');
 
     scrambler
@@ -174,7 +180,7 @@ export function bindScramble(el: HTMLElement): void {
         // Clear the overlay so the underlying Angular/static text shows
         // through cleanly again, and let the CSS hook (`.is-scrambling`)
         // restore the element to its normal state.
-        overlay.innerHTML = '';
+        overlay.textContent = '';
         overlay.style.color = '';
         overlay.style.textShadow = '';
         el.classList.remove('is-scrambling');
