@@ -65,20 +65,18 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (project of filteredProjects(); track project.id) {
             <div
-              class="group relative bg-slate-900/80 border border-white/10 rounded-xl p-5 hover:border-cyan-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20 cursor-pointer"
+              class="project-card group relative bg-slate-900/80 border border-white/10 rounded-xl p-5 cursor-pointer"
+              [style.--project-color]="project.color || '#6366f1'"
               (click)="openProject(project)"
             >
               <!-- Color Bar -->
               <div
                 class="absolute top-0 left-0 right-0 h-1 rounded-t-xl bg-[var(--project-color)]"
-                [style.--project-color]="project.color || '#6366f1'"
               ></div>
 
               <!-- Project Info -->
               <div class="mt-2">
-                <h3
-                  class="text-lg font-bold text-white mb-1 group-hover:text-cyan-400 transition-colors"
-                >
+                <h3 class="project-card-title text-lg font-bold mb-1">
                   {{ project.name }}
                 </h3>
                 <p class="text-sm text-slate-400 line-clamp-2 mb-4">

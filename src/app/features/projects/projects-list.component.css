@@ -4,3 +4,26 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
+
+.project-card {
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+.project-card:hover {
+  border-color: color-mix(in srgb, var(--project-color) 50%, transparent);
+  box-shadow:
+    0 10px 24px -6px color-mix(in srgb, var(--project-color) 35%, transparent),
+    0 0 28px -4px color-mix(in srgb, var(--project-color) 28%, transparent);
+}
+
+.project-card-title {
+  color: color-mix(in oklab, var(--project-color) 55%, white);
+  transition: color 300ms ease;
+}
+
+.project-card:hover .project-card-title {
+  color: color-mix(in oklab, var(--project-color) 30%, white);
+}
