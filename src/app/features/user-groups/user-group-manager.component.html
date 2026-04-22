@@ -1,0 +1,357 @@
+<div class="space-y-5">
+  <!-- Header row -->
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h2 class="text-lg font-semibold text-white">User groups</h2>
+      <p class="text-xs text-slate-400 mt-1">
+        Bundle people together once, then assign the whole group anywhere you would assign a
+        single user — projects, tasks, and permissions.
+      </p>
+    </div>
+    @if (!showCreate()) {
+      <button
+        (click)="openCreate()"
+        class="omni-glitch-btn px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold transition-all"
+      >
+        + New group
+      </button>
+    }
+  </div>
+
+  <!-- Create form -->
+  @if (showCreate()) {
+    <div class="bg-black/40 border border-cyan-500/30 rounded-xl p-4 space-y-4">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+          [style.background-color]="newColor()"
+        >
+          {{ newName().charAt(0).toUpperCase() || 'G' }}
+        </div>
+        <div class="flex-1">
+          <input
+            type="text"
+            [ngModel]="newName()"
+            (ngModelChange)="newName.set($event)"
+            placeholder="Group name (e.g. 'Design Leads')"
+            class="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
+          />
+        </div>
+      </div>
+
+      <textarea
+        [ngModel]="newDescription()"
+        (ngModelChange)="newDescription.set($event)"
+        rows="2"
+        placeholder="What is this group for? (optional)"
+        class="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 resize-none"
+      ></textarea>
+
+      <div class="flex flex-wrap gap-2 items-center">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400 mr-1">Color</span>
+        @for (c of palette; track c) {
+          <button
+            type="button"
+            class="w-6 h-6 rounded-full border-2 transition-transform"
+            [class.border-white]="newColor() === c"
+            [class.border-transparent]="newColor() !== c"
+            [class.scale-110]="newColor() === c"
+            [style.background-color]="c"
+            (click)="newColor.set(c)"
+          ></button>
+        }
+      </div>
+
+      <label class="flex items-center gap-2 text-xs text-slate-300 select-none">
+        <input
+          type="checkbox"
+          [checked]="newShared()"
+          (change)="newShared.set($any($event.target).checked)"
+          class="accent-cyan-400"
+        />
+        Share with everyone (otherwise only you can apply this group)
+      </label>
+
+      <!-- Member picker -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Members</div>
+        @if (newMembers().length) {
+          <div class="flex flex-wrap gap-2 mb-3">
+            @for (m of newMembers(); track trackMember($index, m)) {
+              <div
+                class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-white/10 bg-white/5"
+              >
+                @if (m.photoURL) {
+                  <img [src]="m.photoURL" class="w-6 h-6 rounded-full object-cover" alt="" />
+                } @else {
+                  <div
+                    class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    [style.background-color]="avatarColor(m.email || m.id)"
+                  >
+                    {{ getInitials(m.displayName, m.email) }}
+                  </div>
+                }
+                <span class="text-xs text-white">{{ m.displayName }}</span>
+                <button
+                  type="button"
+                  class="text-slate-400 hover:text-rose-400 text-xs leading-none"
+                  (click)="removeMemberFromNew(m.id)"
+                  aria-label="Remove member"
+                >
+                  ×
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="text-xs text-slate-500 italic mb-3">No members yet.</p>
+        }
+
+        <div class="relative">
+          <input
+            type="text"
+            [formControl]="searchControl"
+            placeholder="Search users to add…"
+            class="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
+            (focus)="showSearchResults.set(true)"
+            (blur)="showSearchResults.set(false)"
+          />
+          @if (showSearchResults() && searchResults().length) {
+            <div
+              class="absolute top-full left-0 right-0 mt-1 bg-[#0f172a] border border-white/10 rounded-lg shadow-xl z-40 max-h-60 overflow-y-auto"
+            >
+              @for (c of searchResults(); track c.id) {
+                <button
+                  type="button"
+                  class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors"
+                  (mousedown)="addMemberToNew(c)"
+                >
+                  <div
+                    class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    [style.background-color]="avatarColor(c.email || c.id)"
+                  >
+                    {{ getInitials(c.displayName, c.email) }}
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-sm text-white">{{ c.displayName }}</span>
+                    <span class="text-[11px] text-slate-400">{{ c.email }}</span>
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          (click)="cancelCreate()"
+          class="px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 text-xs font-semibold"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="saveNewGroup()"
+          [disabled]="saving() || !newName().trim()"
+          class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_14px_rgba(0,210,255,0.4)]"
+        >
+          {{ saving() ? 'Saving…' : 'Save group' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Groups list -->
+  @if (groups().length === 0) {
+    <div class="text-center py-10 border border-dashed border-white/10 rounded-xl">
+      <p class="text-sm text-slate-500">
+        No groups yet. Create one to apply a set of users with a single click.
+      </p>
+    </div>
+  } @else {
+    <div class="space-y-3">
+      @for (g of groups(); track trackById($index, g)) {
+        <div
+          class="bg-black/30 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-colors"
+        >
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="flex items-start gap-3 min-w-0">
+              <div
+                class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold shrink-0"
+                [style.background-color]="g.color || '#8b5cf6'"
+              >
+                {{ g.name.charAt(0).toUpperCase() }}
+              </div>
+              <div class="min-w-0">
+                @if (editingId() === g.id) {
+                  <input
+                    type="text"
+                    [value]="g.name"
+                    (change)="renameGroup(g, $any($event.target).value)"
+                    class="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-cyan-500/60 w-full"
+                  />
+                } @else {
+                  <h3 class="text-base font-semibold text-white truncate">{{ g.name }}</h3>
+                }
+                <p class="text-xs text-slate-400 mt-0.5">
+                  {{ g.memberIds.length }} member{{ g.memberIds.length === 1 ? '' : 's' }}
+                  @if (g.shared) {
+                    <span class="ml-2 text-[10px] uppercase tracking-wider text-emerald-400"
+                      >Shared</span
+                    >
+                  } @else {
+                    <span class="ml-2 text-[10px] uppercase tracking-wider text-slate-500"
+                      >Private</span
+                    >
+                  }
+                </p>
+                @if (editingId() === g.id) {
+                  <textarea
+                    rows="2"
+                    [value]="g.description || ''"
+                    (change)="updateGroupDescription(g, $any($event.target).value)"
+                    placeholder="Description"
+                    class="mt-2 w-full bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/60 resize-none"
+                  ></textarea>
+                } @else if (g.description) {
+                  <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ g.description }}</p>
+                }
+              </div>
+            </div>
+
+            @if (canEdit(g)) {
+              <div class="flex items-center gap-1 shrink-0">
+                @if (editingId() === g.id) {
+                  <button
+                    type="button"
+                    (click)="cancelEdit()"
+                    class="px-2 py-1 rounded-lg text-xs text-slate-300 hover:bg-white/5"
+                  >
+                    Done
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    (click)="startEdit(g)"
+                    class="px-2 py-1 rounded-lg text-xs text-cyan-400 hover:bg-cyan-500/10"
+                  >
+                    Edit
+                  </button>
+                }
+                <button
+                  type="button"
+                  (click)="deleteGroup(g)"
+                  class="px-2 py-1 rounded-lg text-xs text-rose-400 hover:bg-rose-500/10"
+                >
+                  Delete
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Member chips -->
+          @if (g.members.length) {
+            <div class="flex flex-wrap gap-2 mt-4">
+              @for (m of g.members; track trackMember($index, m)) {
+                <div
+                  class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-white/10 bg-white/5"
+                  [title]="m.email"
+                >
+                  @if (m.photoURL) {
+                    <img [src]="m.photoURL" class="w-6 h-6 rounded-full object-cover" alt="" />
+                  } @else {
+                    <div
+                      class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      [style.background-color]="avatarColor(m.email || m.id)"
+                    >
+                      {{ getInitials(m.displayName, m.email) }}
+                    </div>
+                  }
+                  <span class="text-xs text-white">{{ m.displayName }}</span>
+                  @if (canEdit(g) && editingId() === g.id) {
+                    <button
+                      type="button"
+                      class="text-slate-400 hover:text-rose-400 text-xs leading-none"
+                      (click)="removeMemberFromGroup(g, m.id)"
+                      aria-label="Remove member"
+                    >
+                      ×
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="text-xs text-slate-500 italic mt-3">No members yet.</p>
+          }
+
+          <!-- Member picker (shown while editing) -->
+          @if (canEdit(g) && editingId() === g.id) {
+            <div class="relative mt-4">
+              <input
+                type="text"
+                [formControl]="searchControl"
+                placeholder="Search users to add to this group…"
+                class="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
+                (focus)="showSearchResults.set(true)"
+                (blur)="showSearchResults.set(false)"
+              />
+              @if (showSearchResults() && searchResults().length) {
+                <div
+                  class="absolute top-full left-0 right-0 mt-1 bg-[#0f172a] border border-white/10 rounded-lg shadow-xl z-40 max-h-60 overflow-y-auto"
+                >
+                  @for (c of searchResults(); track c.id) {
+                    <button
+                      type="button"
+                      class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-white/5 transition-colors"
+                      (mousedown)="addMemberToGroup(g, c)"
+                    >
+                      <div
+                        class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                        [style.background-color]="avatarColor(c.email || c.id)"
+                      >
+                        {{ getInitials(c.displayName, c.email) }}
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-sm text-white">{{ c.displayName }}</span>
+                        <span class="text-[11px] text-slate-400">{{ c.email }}</span>
+                      </div>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="flex items-center justify-between gap-2 mt-3 flex-wrap">
+              <label class="flex items-center gap-2 text-xs text-slate-300 select-none">
+                <input
+                  type="checkbox"
+                  [checked]="g.shared"
+                  (change)="toggleShared(g)"
+                  class="accent-cyan-400"
+                />
+                Shared with everyone
+              </label>
+              <div class="flex gap-1 items-center">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 mr-1">Color</span>
+                @for (c of palette; track c) {
+                  <button
+                    type="button"
+                    class="w-5 h-5 rounded-full border-2 transition-transform"
+                    [class.border-white]="g.color === c"
+                    [class.border-transparent]="g.color !== c"
+                    [class.scale-110]="g.color === c"
+                    [style.background-color]="c"
+                    (click)="updateGroupColor(g, c)"
+                  ></button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

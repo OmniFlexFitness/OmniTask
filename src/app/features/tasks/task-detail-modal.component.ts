@@ -19,6 +19,7 @@ import { Contact } from '../../core/models/contact.model';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { TaskDependencyService } from '../../core/services/task-dependency.service';
 import { Task, Project, CustomFieldDefinition } from '../../core/models/domain.model';
+import { UserGroupMember } from '../../core/models/user-group.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, BehaviorSubject, debounceTime, firstValueFrom } from 'rxjs';
 import {
@@ -352,6 +353,33 @@ export class TaskDetailModalComponent {
     this.selectedAssignees.update((list) => list.filter((a) => a.id !== id));
     this.form.markAsDirty();
     this.autoSave();
+  }
+
+  /**
+   * Apply every member of a user group to the assignee list, then auto-save.
+   * Skips anyone already assigned so re-applying a group is idempotent.
+   */
+  applyGroupToAssignees(members: UserGroupMember[]): void {
+    if (!members?.length) return;
+    const current = this.selectedAssignees();
+    const seen = new Set(current.map((a) => a.id));
+    const additions: AutocompleteOption[] = [];
+    for (const m of members) {
+      if (!m?.id || seen.has(m.id)) continue;
+      seen.add(m.id);
+      additions.push({
+        id: m.id,
+        label: m.displayName || m.email || m.id,
+        sublabel: m.email,
+        avatar: m.photoURL,
+        color: m.photoURL ? undefined : this.generateAvatarColor(m.email || m.id),
+      });
+    }
+    if (additions.length) {
+      this.selectedAssignees.set([...current, ...additions]);
+      this.form.markAsDirty();
+      this.autoSave();
+    }
   }
 
   /**

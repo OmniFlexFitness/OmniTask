@@ -180,24 +180,48 @@
                   </div>
 
                   <div class="space-y-6">
-                    <!-- Mini Team Card -->
+                    <!-- Team Card (with inline member manager) -->
                     <section class="bg-slate-900/50 rounded-xl border border-white/5 p-6">
-                      <h3 class="text-sm font-semibold text-slate-200 mb-3">Team</h3>
-                      <div class="flex -space-x-2 overflow-hidden py-1">
-                        <!-- Placeholder since we don't have user profiles yet -->
-                        <div
-                          class="inline-block h-8 w-8 rounded-full ring-2 ring-slate-900 bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-400"
+                      <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-slate-200">
+                          Team
+                          <span class="ml-2 text-xs font-normal text-slate-500">
+                            ({{ project.memberIds.length || 0 }} member{{ (project.memberIds.length || 0) === 1 ? '' : 's' }})
+                          </span>
+                        </h3>
+                        <button
+                          type="button"
+                          class="omni-glitch-btn text-xs px-2.5 py-1 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition-colors"
+                          (click)="toggleMemberManager()"
                         >
-                          {{ project.ownerId.charAt(0).toUpperCase() || 'U' }}
-                        </div>
-                        @if ((project.memberIds.length || 0) > 1) {
-                          <div
-                            class="inline-block h-8 w-8 rounded-full ring-2 ring-slate-900 bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300"
-                          >
-                            +{{ (project.memberIds.length || 1) - 1 }}
-                          </div>
-                        }
+                          {{ showMemberManager() ? 'Hide' : 'Manage' }}
+                        </button>
                       </div>
+
+                      @if (!showMemberManager()) {
+                        <div class="flex -space-x-2 overflow-hidden py-1">
+                          <div
+                            class="inline-block h-8 w-8 rounded-full ring-2 ring-slate-900 bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-400"
+                          >
+                            {{ project.ownerId.charAt(0).toUpperCase() || 'U' }}
+                          </div>
+                          @if ((project.memberIds.length || 0) > 1) {
+                            <div
+                              class="inline-block h-8 w-8 rounded-full ring-2 ring-slate-900 bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300"
+                            >
+                              +{{ (project.memberIds.length || 1) - 1 }}
+                            </div>
+                          }
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">
+                          Click <span class="text-cyan-400 font-semibold">Manage</span> to add or
+                          remove people — or apply a saved user group.
+                        </p>
+                      } @else {
+                        <app-project-member-manager
+                          [project]="project"
+                        ></app-project-member-manager>
+                      }
                     </section>
                   </div>
                 </div>
