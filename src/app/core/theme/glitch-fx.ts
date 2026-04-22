@@ -29,6 +29,7 @@ const POWERGLITCH_CONFIG = {
   createContainers: true,
   hideOverflow: false,
   timing: {
+    // ~2x snappier than the demo default.
     duration: 400,
     iterations: 1,
   },
@@ -42,6 +43,8 @@ const POWERGLITCH_CONFIG = {
     velocity: 18,
     minHeight: 0.05,
     maxHeight: 0.15,
+    // Keep the element's native palette — no rainbow hue rotation, so
+    // a rose/amber/cyan button stays rose/amber/cyan while it slices.
     hueRotate: false,
   },
 };
