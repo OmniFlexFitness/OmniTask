@@ -19,12 +19,16 @@
 import { PowerGlitch } from 'powerglitch';
 import { bindScramble } from './text-scrambler';
 
+// `shake: false` disables the whole-element translate animation that
+// read as an "earthquake" on hover. The slice (chromatic-aberration
+// band displacement) is what actually sells the glitch look, so we
+// keep that. `iterations: 1` + `playMode: 'hover'` means one run per
+// mouseenter — it does not loop while the cursor sits on the element.
 const POWERGLITCH_CONFIG = {
   playMode: 'hover' as const,
   createContainers: true,
   hideOverflow: false,
   timing: {
-    // ~2x snappier than the demo default.
     duration: 400,
     iterations: 1,
   },
@@ -32,18 +36,12 @@ const POWERGLITCH_CONFIG = {
     start: 0,
     end: 0.6,
   },
-  shake: {
-    velocity: 15,
-    amplitudeX: 0.08,
-    amplitudeY: 0.08,
-  },
+  shake: false as const,
   slice: {
     count: 3,
     velocity: 18,
     minHeight: 0.05,
     maxHeight: 0.15,
-    // Keep the element's native palette — no rainbow hue rotation, so
-    // a rose/amber/cyan button stays rose/amber/cyan while it slices.
     hueRotate: false,
   },
 };

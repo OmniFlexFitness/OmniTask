@@ -24,7 +24,7 @@
       <div class="flex-1 min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="text-2xl font-black text-white truncate">
-            <span data-scramble>{{ u?.displayName || u?.email || 'My workspace' }}</span>
+            <span>{{ u?.displayName || u?.email || 'My workspace' }}</span>
           </h2>
           <span class="cyber-badge">You</span>
           @if (u?.role === 'admin') {
@@ -115,7 +115,7 @@
   <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Status breakdown -->
     <div class="ofx-panel p-5">
-      <h3 data-scramble class="ofx-section-title mb-4">My Status Breakdown</h3>
+      <h3 class="ofx-section-title mb-4">My Status Breakdown</h3>
       @if (counts.total === 0) {
         <p class="text-slate-500 text-sm py-6 text-center">
           No tasks yet. Click "+ Add task to my queue" to get going.
@@ -157,7 +157,7 @@
 
     <!-- Completion gauge -->
     <div class="ofx-panel p-5">
-      <h3 data-scramble class="ofx-section-title mb-4">My Completion</h3>
+      <h3 class="ofx-section-title mb-4">My Completion</h3>
       <div class="flex flex-col items-center justify-center py-2">
         <div class="mt-gauge-number text-cyber-gradient">{{ completionPct() }}<span class="text-2xl">%</span></div>
         <div class="w-full mt-4 h-3 rounded-full overflow-hidden border border-white/10 bg-slate-900/60">
@@ -177,7 +177,7 @@
     <!-- Who I report to -->
     <div class="ofx-panel p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 data-scramble class="ofx-section-title">Who I report to</h3>
+        <h3 class="ofx-section-title">Who I report to</h3>
         @if (!editingReportsTo()) {
           <button class="text-xs text-cyan-400 hover:text-cyan-300" (click)="startEditReportsTo()">
             {{ u?.reportsToId ? 'Edit' : 'Set' }}
@@ -249,7 +249,7 @@
   <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="ofx-panel p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 data-scramble class="ofx-section-title">Upcoming deadlines</h3>
+        <h3 class="ofx-section-title">Upcoming deadlines</h3>
         <button class="text-xs text-cyan-400 hover:text-cyan-300" (click)="viewChange.emit('list')">View all →</button>
       </div>
       @if (!upcomingTasks().length) {
@@ -279,7 +279,7 @@
     </div>
 
     <div class="ofx-panel p-5">
-      <h3 data-scramble class="ofx-section-title mb-4">Recently completed</h3>
+      <h3 class="ofx-section-title mb-4">Recently completed</h3>
       @if (!recentlyCompleted().length) {
         <p class="text-slate-500 text-sm py-6 text-center">Nothing completed yet — stay hungry.</p>
       } @else {
@@ -303,7 +303,7 @@
   <!-- Row: projects I'm part of -->
   <section class="ofx-panel p-5">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <h3 data-scramble class="ofx-section-title">My Projects &amp; Contributions</h3>
+      <h3 class="ofx-section-title">My Projects &amp; Contributions</h3>
       <span class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
         {{ activeProjects().length }} active · {{ archivedProjects().length }} archived
       </span>
