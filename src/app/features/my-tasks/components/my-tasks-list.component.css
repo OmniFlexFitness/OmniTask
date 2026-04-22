@@ -93,3 +93,16 @@
 .mytasks-title-btn:focus {
   outline: none;
 }
+
+/* Drag-and-drop affordances for reordering the project-group "sections". */
+.mytasks-group.cdk-drag-preview {
+  box-shadow: 0 12px 40px rgba(0, 210, 255, 0.35), 0 0 20px rgba(224, 64, 251, 0.25);
+}
+
+.mytasks-group.cdk-drag-placeholder {
+  opacity: 0;
+}
+
+.cdk-drop-list-dragging .mytasks-group:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}

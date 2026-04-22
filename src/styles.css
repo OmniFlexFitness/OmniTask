@@ -1448,6 +1448,7 @@ textarea:focus {
 
 [data-scramble] {
   cursor: default;
+  position: relative;
 }
 
 [data-scramble].is-scrambling {
@@ -1456,6 +1457,32 @@ textarea:focus {
 
 [data-scramble].is-scrambling span {
   font-family: inherit;
+}
+
+/* Overlay the scrambler mutates so the element's real (framework-managed)
+   text node stays intact and keeps receiving updates across hovers. */
+[data-scramble] > .scramble-overlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-shadow: inherit;
+  white-space: inherit;
+}
+
+[data-scramble] > .scramble-overlay:empty {
+  display: none;
+}
+
+/* Hide the original text only while the overlay is actively animating.
+   Using color: transparent (rather than visibility) keeps the element's
+   layout box identical before/during/after the scramble. */
+[data-scramble].is-scrambling {
+  color: transparent !important;
+  text-shadow: none !important;
 }
 
 /* ============================================
