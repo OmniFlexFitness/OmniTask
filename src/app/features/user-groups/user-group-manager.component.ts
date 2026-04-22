@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormControl, ReactiveFormsModule } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, debounceTime, switchMap } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
@@ -78,7 +78,9 @@ export class UserGroupManagerComponent {
   );
 
   constructor() {
-    this.searchControl.valueChanges.subscribe((v) => this.searchSubject.next(v || ''));
+    this.searchControl.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((v) => this.searchSubject.next(v || ''));
   }
 
   currentUid = computed(() => this.auth.currentUserSig()?.uid || '');
@@ -125,7 +127,7 @@ export class UserGroupManagerComponent {
     } catch (err) {
       console.error('Failed to create group', err);
       await this.dialogService.alert(
-        err instanceof Error ? err.message : 'Failed to create group.',
+        'Failed to create group. Please try again.',
         'Error',
       );
     } finally {

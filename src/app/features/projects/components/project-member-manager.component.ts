@@ -92,7 +92,7 @@ export class ProjectMemberManagerComponent {
     } catch (err) {
       console.error('Failed to apply group to project', err);
       await this.dialogService.alert(
-        err instanceof Error ? err.message : 'Failed to apply group.',
+        'Failed to apply group to project. Please try again.',
         'Error',
       );
     } finally {

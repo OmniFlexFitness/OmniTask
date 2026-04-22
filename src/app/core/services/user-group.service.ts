@@ -93,9 +93,8 @@ export class UserGroupService {
       const ref = await addDoc(this.groupsCollection, payload);
       return ref.id;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create group';
-      console.error(message, err);
-      this.error.set(message);
+      console.error('Failed to create group:', err);
+      this.error.set('Failed to create group. Please try again.');
       throw err;
     } finally {
       this.loading.set(false);
