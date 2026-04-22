@@ -86,11 +86,12 @@ export class UserGroupManagerComponent {
   currentUid = computed(() => this.auth.currentUserSig()?.uid || '');
 
   canEdit(group: UserGroup): boolean {
-    const uid = this.currentUid();
-    if (!uid) return false;
-    if (group.ownerId === uid) return true;
-    const perms = this.auth.currentUserSig()?.permissions;
-    return !!perms?.isSuperAdmin;
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    if (group.ownerId === user.uid) return true;
+    // Admins and super-admins can mutate any group (matches Firestore rules).
+    if (user.role === 'admin') return true;
+    return !!user.permissions?.isSuperAdmin;
   }
 
   // ---- Create flow ----
@@ -169,6 +170,10 @@ export class UserGroupManagerComponent {
       this.searchControl.setValue('');
     } catch (err) {
       console.error('Failed to add member to group', err);
+      await this.dialogService.alert(
+        'Failed to add member to the group. Please try again.',
+        'Error',
+      );
     }
   }
 
@@ -178,27 +183,63 @@ export class UserGroupManagerComponent {
       await this.groupService.removeMember(group.id, memberId);
     } catch (err) {
       console.error('Failed to remove member from group', err);
+      await this.dialogService.alert(
+        'Failed to remove member from the group. Please try again.',
+        'Error',
+      );
     }
   }
 
   async renameGroup(group: UserGroup, name: string): Promise<void> {
     const trimmed = name.trim();
     if (!trimmed || trimmed === group.name) return;
-    await this.groupService.updateGroup(group.id, { name: trimmed });
+    try {
+      await this.groupService.updateGroup(group.id, { name: trimmed });
+    } catch (err) {
+      console.error('Failed to rename group', err);
+      await this.dialogService.alert(
+        'Failed to rename the group. Please try again.',
+        'Error',
+      );
+    }
   }
 
   async updateGroupDescription(group: UserGroup, description: string): Promise<void> {
     if ((description || '') === (group.description || '')) return;
-    await this.groupService.updateGroup(group.id, { description });
+    try {
+      await this.groupService.updateGroup(group.id, { description });
+    } catch (err) {
+      console.error('Failed to update group description', err);
+      await this.dialogService.alert(
+        'Failed to update the group description. Please try again.',
+        'Error',
+      );
+    }
   }
 
   async updateGroupColor(group: UserGroup, color: string): Promise<void> {
     if (color === group.color) return;
-    await this.groupService.updateGroup(group.id, { color });
+    try {
+      await this.groupService.updateGroup(group.id, { color });
+    } catch (err) {
+      console.error('Failed to update group color', err);
+      await this.dialogService.alert(
+        'Failed to update the group color. Please try again.',
+        'Error',
+      );
+    }
   }
 
   async toggleShared(group: UserGroup): Promise<void> {
-    await this.groupService.updateGroup(group.id, { shared: !group.shared });
+    try {
+      await this.groupService.updateGroup(group.id, { shared: !group.shared });
+    } catch (err) {
+      console.error('Failed to toggle group sharing', err);
+      await this.dialogService.alert(
+        'Failed to update sharing for the group. Please try again.',
+        'Error',
+      );
+    }
   }
 
   async deleteGroup(group: UserGroup): Promise<void> {
@@ -213,6 +254,10 @@ export class UserGroupManagerComponent {
       if (this.editingId() === group.id) this.editingId.set(null);
     } catch (err) {
       console.error('Failed to delete group', err);
+      await this.dialogService.alert(
+        'Failed to delete the group. Please try again.',
+        'Error',
+      );
     }
   }
 

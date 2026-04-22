@@ -209,8 +209,9 @@ service cloud.firestore {
         isAdmin() || isSuperAdmin()
       );
 
-      // The creator must be the signed-in user. Admin/super-admin bypass is
-      // intentional for seed scripts and support tooling.
+      // The creator must be the signed-in user — groups are always self-owned
+      // at creation time. Admins that need to reassign ownership can do so via
+      // the update path, which permits admins/super-admins to rewrite any field.
       allow create: if isAuthenticated() &&
         request.resource.data.ownerId == request.auth.uid;
 

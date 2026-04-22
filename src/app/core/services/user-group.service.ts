@@ -24,11 +24,11 @@ import { UserGroup, UserGroupMember } from '../models/user-group.model';
  */
 @Injectable({ providedIn: 'root' })
 export class UserGroupService {
-  private firestore = inject(Firestore);
-  private auth = inject(AuthService);
-  private injector = inject(Injector);
+  private readonly firestore = inject(Firestore);
+  private readonly auth = inject(AuthService);
+  private readonly injector = inject(Injector);
 
-  private groupsCollection = collection(this.firestore, 'userGroups');
+  private readonly groupsCollection = collection(this.firestore, 'userGroups');
 
   loading = signal(false);
   error = signal<string | null>(null);
@@ -153,7 +153,7 @@ export class UserGroupService {
       if (!m?.id) continue;
       if (!seen.has(m.id)) seen.set(m.id, m);
     }
-    return Array.from(seen.values()).sort((a, b) =>
+    return [...seen.values()].sort((a, b) =>
       (a.displayName || a.email || '').localeCompare(b.displayName || b.email || ''),
     );
   }
