@@ -38,6 +38,7 @@
         (assigneeSearch)="onAssigneeSearch($event)"
         (assigneeSelected)="onAssigneeSelected($event)"
         (assigneeRemoved)="removeAssignee($event)"
+        (applyGroup)="applyGroupToAssignees($event)"
         (notifyAssigneesChange)="notifyAssigneesSig.set($event); form.markAsDirty(); autoSave()"
         (customFieldUpdated)="updateCustomField($event.fieldId, $event.value)"
         (autoSave)="autoSave()"

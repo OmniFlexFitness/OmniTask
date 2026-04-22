@@ -198,6 +198,30 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // User groups - reusable collections of users that can be applied to
+    // projects, tasks, and other assignment targets.
+    match /userGroups/{groupId} {
+      // Any authenticated user can read shared groups or groups they own.
+      // Admins/super-admins can read everything.
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.get('shared', true) == true ||
+        isAdmin() || isSuperAdmin()
+      );
+
+      // The creator must be the signed-in user — groups are always self-owned
+      // at creation time. Admins that need to reassign ownership can do so via
+      // the update path, which permits admins/super-admins to rewrite any field.
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerId == request.auth.uid;
+
+      // Only the owner (or admins/super-admins) can mutate a group.
+      allow update, delete: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid ||
+        isAdmin() || isSuperAdmin()
+      );
+    }
+
     // Notifications - written by Cloud Functions, readable by recipient
     match /notifications/{notificationId} {
       // Cloud Functions uses admin SDK (bypasses rules)

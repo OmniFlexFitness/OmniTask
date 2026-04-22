@@ -11,6 +11,8 @@ import {
 } from '../../../shared/components/custom-select/custom-select.component';
 import { CustomDatePickerComponent } from '../../../shared/components/custom-date-picker/custom-date-picker.component';
 import { Task, CustomFieldDefinition } from '../../../core/models/domain.model';
+import { GroupPickerComponent } from '../../../shared/components/group-picker/group-picker.component';
+import { UserGroupMember } from '../../../core/models/user-group.model';
 
 @Component({
   selector: 'app-task-fields-sidebar',
@@ -21,6 +23,7 @@ import { Task, CustomFieldDefinition } from '../../../core/models/domain.model';
     AutocompleteInputComponent,
     CustomSelectComponent,
     CustomDatePickerComponent,
+    GroupPickerComponent,
   ],
   templateUrl: './task-fields-sidebar.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,6 +46,7 @@ export class TaskFieldsSidebarComponent {
   assigneeSelected = output<AutocompleteOption | string>();
   assigneeRemoved = output<string>();
   notifyAssigneesChange = output<boolean>();
+  applyGroup = output<UserGroupMember[]>();
 
   customFieldUpdated = output<{ fieldId: string; value: any }>();
 

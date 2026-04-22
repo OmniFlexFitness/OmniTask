@@ -36,6 +36,7 @@ import {
 } from '../../shared/components/custom-select/custom-select.component';
 import { CustomDatePickerComponent } from '../../shared/components/custom-date-picker/custom-date-picker.component';
 import { BehaviorSubject } from 'rxjs';
+import { UserGroupMember } from '../../core/models/user-group.model';
 
 import { TaskFormFieldsComponent } from './components/task-form-fields';
 import { TaskAiSuggestionsComponent } from './components/task-ai-suggestions';
@@ -307,6 +308,31 @@ export class TaskCreateModalComponent {
    */
   removeAssignee(id: string): void {
     this.selectedAssignees.update((list) => list.filter((a) => a.id !== id));
+  }
+
+  /**
+   * Merge every member of a selected user group into the current assignee
+   * list, skipping anyone already assigned.
+   */
+  applyGroupToAssignees(members: UserGroupMember[]): void {
+    if (!members?.length) return;
+    const current = this.selectedAssignees();
+    const seen = new Set(current.map((a) => a.id));
+    const additions: AutocompleteOption[] = [];
+    for (const m of members) {
+      if (!m?.id || seen.has(m.id)) continue;
+      seen.add(m.id);
+      additions.push({
+        id: m.id,
+        label: m.displayName || m.email || m.id,
+        sublabel: m.email,
+        avatar: m.photoURL,
+        color: m.photoURL ? undefined : this.generateAvatarColor(m.email || m.id),
+      });
+    }
+    if (additions.length) {
+      this.selectedAssignees.set([...current, ...additions]);
+    }
   }
 
   async onSubmit() {

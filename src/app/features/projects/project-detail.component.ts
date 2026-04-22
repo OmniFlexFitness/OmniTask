@@ -20,6 +20,7 @@ import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectStatsCardComponent } from './components/project-stats-card.component';
 import { ProjectSettingsPanelComponent } from './components/project-settings-panel.component';
+import { ProjectMemberManagerComponent } from './components/project-member-manager.component';
 import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
@@ -35,6 +36,7 @@ type ProjectTab = 'overview' | 'tasks' | 'settings';
     CommonModule,
     ProjectStatsCardComponent,
     ProjectSettingsPanelComponent,
+    ProjectMemberManagerComponent,
     TaskListViewComponent,
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
@@ -83,6 +85,13 @@ export class ProjectDetailComponent implements OnDestroy {
   showCreateModal = signal(false);
   createModalSectionId = signal<string | null>(null);
   createModalDueDate = signal<Date | null>(null);
+
+  // Overview inline member management
+  showMemberManager = signal(false);
+
+  toggleMemberManager() {
+    this.showMemberManager.update((v) => !v);
+  }
 
   // Reactive query params
   queryParams = toSignal(this.route.queryParamMap);
