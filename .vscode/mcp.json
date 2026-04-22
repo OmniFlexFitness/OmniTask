@@ -1,8 +1,5 @@
 {
-  // Comprehensive MCP Server configuration for OmniTask (Angular 21 / Firebase / GCP)
-  "mcpServers": {
-    // Cleaned out unused/duplicate workspace servers to avoid 100-tool limit
-  },
+  "mcpServers": {},
   "inputs": [
     {
       "id": "github_token",

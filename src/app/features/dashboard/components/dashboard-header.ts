@@ -11,6 +11,7 @@ import { ProjectIconComponent } from '../../projects/components/project-icon.com
   standalone: true,
   imports: [CommonModule, RouterLink, ProjectIconComponent],
   templateUrl: './dashboard-header.html',
+  styleUrl: './dashboard-header.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardHeaderComponent {
