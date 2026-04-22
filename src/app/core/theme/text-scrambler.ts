@@ -119,7 +119,9 @@ function textExcludingOverlay(el: HTMLElement, overlay: HTMLElement): string {
 /**
  * Wire a single element for scramble-on-hover. Idempotent — the
  * `data-scramble-bound` sentinel prevents double-binding when the
- * MutationObserver re-scans.
+ * MutationObserver re-scans. The scramble only fires once per page
+ * load per element: on the first hover, the mouseenter listener
+ * unbinds itself so the decode does not repeat.
  */
 export function bindScramble(el: HTMLElement): void {
   if (el.dataset['scrambleBound'] === 'true') return;
@@ -135,11 +137,9 @@ export function bindScramble(el: HTMLElement): void {
   el.appendChild(overlay);
 
   const scrambler = new TextScrambler(overlay);
-  let isScrambling = false;
 
-  el.addEventListener('mouseenter', () => {
-    if (isScrambling) return;
-    isScrambling = true;
+  const onEnter = (): void => {
+    el.removeEventListener('mouseenter', onEnter);
 
     // Fresh read: picks up edited text without extra plumbing, and
     // deliberately excludes the (empty) overlay.
@@ -186,7 +186,8 @@ export function bindScramble(el: HTMLElement): void {
         el.classList.remove('is-scrambling');
         el.style.minWidth = originalMinWidth;
         el.style.display = originalDisplay;
-        isScrambling = false;
       });
-  });
+  };
+
+  el.addEventListener('mouseenter', onEnter);
 }
