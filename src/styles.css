@@ -214,31 +214,32 @@
   margin-top: 1.2em;
   margin-bottom: 0.55em;
   position: relative;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25), 0 0 10px rgba(138, 92, 255, 0.25);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25),
+    0 0 10px color-mix(in srgb, currentColor 25%, transparent);
 }
 
 .theme-dark .site-body h1 {
-  color: var(--magenta);
+  color: var(--h1-color, var(--magenta));
   font-size: 2.15rem;
 }
 .theme-dark .site-body h2 {
-  color: var(--blue);
+  color: var(--h2-color, var(--blue));
   font-size: 1.8rem;
 }
 .theme-dark .site-body h3 {
-  color: var(--green);
+  color: var(--h3-color, var(--green));
   font-size: 1.42rem;
 }
 .theme-dark .site-body h4 {
-  color: var(--cyan);
+  color: var(--h4-color, var(--cyan));
   font-size: 1.2rem;
 }
 .theme-dark .site-body h5 {
-  color: var(--yellow);
+  color: var(--h5-color, var(--yellow));
   font-size: 1.05rem;
 }
 .theme-dark .site-body h6 {
-  color: var(--orange);
+  color: var(--h6-color, var(--orange));
   font-size: 0.96rem;
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -262,7 +263,8 @@
 .theme-dark .site-body h1,
 .theme-dark .site-body h2,
 .theme-dark .site-body h3 {
-  text-shadow: 0 0 14px rgba(0, 210, 255, 0.35), 0 0 18px rgba(165, 100, 255, 0.25),
+  text-shadow: 0 0 14px color-mix(in srgb, currentColor 35%, transparent),
+    0 0 18px color-mix(in srgb, currentColor 25%, transparent),
     0 1px 0 rgba(0, 0, 0, 0.35);
 }
 
