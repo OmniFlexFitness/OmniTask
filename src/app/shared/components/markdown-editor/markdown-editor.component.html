@@ -79,19 +79,20 @@
       <span class="md-icon-strike">S</span>
     </button>
 
-    <!-- Highlight -->
+    <!-- Highlight (click opens the highlight color picker) -->
     <button
+      #highlightBtn
       type="button"
       tabindex="-1"
       class="md-btn"
       [class.md-btn-active]="formatting().highlight"
       title="Highlight"
-      (click)="toggleHighlight()"
+      (click)="openHighlightPicker(highlightBtn)"
     >
       <span class="md-icon-highlight">H</span>
     </button>
 
-    <!-- Text color -->
+    <!-- Text color — applies to all inline formatting (bold/italic/strike/etc) -->
     <button
       #textColorBtn
       type="button"
@@ -104,20 +105,6 @@
         A
         <span class="md-icon-color-swatch"></span>
       </span>
-    </button>
-
-    <!-- Highlight color -->
-    <button
-      #highlightColorBtn
-      type="button"
-      tabindex="-1"
-      class="md-btn"
-      title="Highlight color"
-      (click)="openHighlightPicker(highlightColorBtn)"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-      </svg>
     </button>
 
     <span class="md-divider"></span>
@@ -340,15 +327,25 @@
   >
     <div class="md-popup-label">Highlight</div>
     <div class="md-swatch-grid">
-      @for (c of highlightColors; track c) {
-        <button
-          type="button"
-          class="md-swatch"
-          [class.md-swatch-none]="c === 'transparent'"
-          [style.background]="c"
-          [title]="c === 'transparent' ? 'None' : c"
-          (click)="applyHighlight(c)"
-        ></button>
+      @for (c of highlightColors; track $index) {
+        @if (c === null) {
+          <button
+            type="button"
+            class="md-swatch md-swatch-highlight md-swatch-none"
+            title="Clear highlight"
+            (click)="applyHighlight(null)"
+          ></button>
+        } @else {
+          <button
+            type="button"
+            class="md-swatch md-swatch-highlight"
+            [style.background-image]="'linear-gradient(' + c + ', ' + c + ')'"
+            [title]="c"
+            (click)="applyHighlight(c)"
+          >
+            <span class="md-swatch-sample">Aa</span>
+          </button>
+        }
       }
     </div>
   </div>

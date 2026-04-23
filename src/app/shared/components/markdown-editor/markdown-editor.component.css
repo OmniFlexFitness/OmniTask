@@ -521,3 +521,27 @@
     linear-gradient(45deg, transparent 45%, rgb(239, 68, 68) 45%, rgb(239, 68, 68) 55%, transparent 55%);
   background-color: rgb(30, 41, 59) !important;
 }
+
+/* Highlight swatches preview the translucent ink on a paper-coloured base so
+   users see what the highlight will actually look like over text. */
+.md-swatch-highlight {
+  background-color: #f8fafc;
+  background-repeat: no-repeat;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.md-swatch-sample {
+  pointer-events: none;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.md-swatch-highlight.md-swatch-none {
+  /* "Clear" override — keep the diagonal slash but use the paper backdrop */
+  background-color: #f8fafc !important;
+}

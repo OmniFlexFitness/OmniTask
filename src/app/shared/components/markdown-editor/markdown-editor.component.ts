@@ -53,9 +53,20 @@ const TEXT_COLORS = [
   '#a3e635', '#34d399', '#94a3b8', '#475569', '#0f172a',
 ];
 
-const HIGHLIGHT_COLORS = [
-  'transparent', '#fde68a', '#fca5a5', '#fdba74', '#86efac',
-  '#67e8f9', '#a5b4fc', '#f9a8d4',
+// Traditional highlighter look — translucent so the underlying text colour
+// stays readable through the fill. ``null`` means "clear highlight".
+const HIGHLIGHT_COLORS: (string | null)[] = [
+  null, // clear
+  'rgba(250, 204, 21, 0.4)',  // yellow
+  'rgba(251, 146, 60, 0.4)',  // orange
+  'rgba(248, 113, 113, 0.4)', // red
+  'rgba(244, 114, 182, 0.4)', // pink
+  'rgba(192, 132, 252, 0.4)', // purple
+  'rgba(129, 140, 248, 0.4)', // indigo
+  'rgba(56, 189, 248, 0.4)',  // sky
+  'rgba(34, 211, 238, 0.4)',  // cyan
+  'rgba(52, 211, 153, 0.4)',  // green
+  'rgba(163, 230, 53, 0.4)',  // lime
 ];
 
 @Component({
@@ -88,8 +99,8 @@ export class MarkdownEditorComponent {
   editorRef = viewChild<ElementRef<HTMLDivElement>>('editorRef');
 
   readonly codeBlockLabel = '{ }';
-  readonly textColors = TEXT_COLORS;
-  readonly highlightColors = HIGHLIGHT_COLORS;
+  readonly textColors: readonly string[] = TEXT_COLORS;
+  readonly highlightColors: readonly (string | null)[] = HIGHLIGHT_COLORS;
   hasContent = computed(() => (this.value() ?? '').trim().length > 0);
 
   // Undo/redo checking
@@ -226,7 +237,11 @@ export class MarkdownEditorComponent {
         if (tag === 'H2') insideH2 = true;
         if (tag === 'UL') insideUL = true;
         if (tag === 'OL') insideOL = true;
+        // Highlight is any span with a non-transparent background-color, or a
+        // legacy <mark> element from earlier editor versions.
         if (tag === 'MARK') insideHighlight = true;
+        const bg = e.style?.backgroundColor;
+        if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') insideHighlight = true;
         if (tag === 'CODE' || tag === 'PRE') insideCode = true;
         if (tag === 'A') insideLink = true;
       }
@@ -362,40 +377,6 @@ export class MarkdownEditorComponent {
   toggleUnderline(): void { this.execCmd('underline'); }
   toggleStrike(): void { this.execCmd('strikeThrough'); }
 
-  toggleHighlight(): void {
-    // If selection is already inside a <mark>, unwrap it. Otherwise wrap it.
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const markEl = this.findAncestor(container, 'MARK');
-    if (markEl) {
-      // Unwrap
-      const parent = markEl.parentNode;
-      if (parent) {
-        while (markEl.firstChild) parent.insertBefore(markEl.firstChild, markEl);
-        parent.removeChild(markEl);
-      }
-      this.onInput();
-      return;
-    }
-    if (range.collapsed) return;
-    const mark = document.createElement('mark');
-    try {
-      mark.appendChild(range.extractContents());
-      range.insertNode(mark);
-      // Reselect the wrapped content
-      const newRange = document.createRange();
-      newRange.selectNodeContents(mark);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      this.onInput();
-    } catch {
-      // Fallback to execCommand if extractContents can't handle the selection
-      this.execCmd('hiliteColor', '#fde68a');
-    }
-  }
-
   private findAncestor(node: Node | null, tag: string): HTMLElement | null {
     while (node) {
       if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === tag) {
@@ -521,17 +502,63 @@ export class MarkdownEditorComponent {
     this.colorPickerPos.set(null);
   }
 
-  applyHighlight(color: string): void {
+  applyHighlight(color: string | null): void {
     this.restoreSelection();
     try { document.execCommand('styleWithCSS', false, 'true'); } catch { /* noop */ }
-    if (color === 'transparent') {
-      // Remove any existing background by wrapping with no-bg span
-      this.execCmd('hiliteColor', 'transparent');
+    if (color === null) {
+      // Clear highlight — unwrap any <mark> ancestor on the selection and
+      // remove background-color from enclosing spans. execCommand doesn't
+      // have a dedicated "remove highlight", so we do it by hand.
+      this.clearHighlightAtSelection();
     } else {
       this.execCmd('hiliteColor', color);
     }
     this.showHighlightPicker.set(false);
     this.highlightPickerPos.set(null);
+  }
+
+  private clearHighlightAtSelection(): void {
+    const el = this.editorRef()?.nativeElement;
+    const sel = window.getSelection();
+    if (!el || !sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // Walk the selection; for every enclosing MARK or SPAN w/ background-color,
+    // null out the background. Simpler than trying to unwrap mid-selection.
+    const markAncestor = this.findAncestor(range.startContainer, 'MARK');
+    if (markAncestor) {
+      const parent = markAncestor.parentNode;
+      if (parent) {
+        while (markAncestor.firstChild) parent.insertBefore(markAncestor.firstChild, markAncestor);
+        parent.removeChild(markAncestor);
+      }
+    }
+
+    // Clear background-color on every span under the selection
+    const container: Node = range.commonAncestorContainer;
+    const scope: HTMLElement =
+      container.nodeType === Node.ELEMENT_NODE
+        ? (container as HTMLElement)
+        : (container.parentElement ?? el);
+    const spans = scope.querySelectorAll<HTMLElement>('span[style*="background"]');
+    spans.forEach((s) => {
+      if (range.intersectsNode(s) && s.style.backgroundColor) {
+        s.style.backgroundColor = '';
+        if (!s.getAttribute('style')?.trim()) s.removeAttribute('style');
+      }
+    });
+    // Also check the ancestor chain directly in case the caret is inside a
+    // span that's not a descendant of commonAncestorContainer.
+    let walk: HTMLElement | null = scope;
+    while (walk && walk !== el) {
+      if (walk.tagName === 'SPAN' && walk.style.backgroundColor) {
+        walk.style.backgroundColor = '';
+        if (!walk.getAttribute('style')?.trim()) walk.removeAttribute('style');
+      }
+      walk = walk.parentElement;
+    }
+
+    this.onInput();
   }
 
   private restoreSelection(): void {
