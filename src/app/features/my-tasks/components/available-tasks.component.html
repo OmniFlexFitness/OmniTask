@@ -1,0 +1,115 @@
+<div class="w-full space-y-4">
+  <header class="ofx-panel p-4 flex items-start justify-between gap-3 flex-wrap">
+    <div>
+      <h3 class="text-sm font-bold text-slate-100">
+        <span>Available to pick up</span>
+      </h3>
+      <p class="text-xs text-slate-400 mt-1 max-w-prose">
+        Unassigned tasks across projects you're part of. Claim one to add it to your queue.
+      </p>
+    </div>
+    <span class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+      {{ tasks().length }} task{{ tasks().length === 1 ? '' : 's' }}
+    </span>
+  </header>
+
+  @if (!groupedTasks().length) {
+    <div class="ofx-panel p-8 text-center">
+      <p class="text-slate-400 text-sm">
+        Nothing unassigned right now. When teammates create work, it will appear here for you to claim.
+      </p>
+    </div>
+  } @else {
+    <div
+      cdkDropList
+      [cdkDropListData]="groupedTasks()"
+      (cdkDropListDropped)="onGroupDrop($event)"
+      class="space-y-4"
+    >
+    @for (g of groupedTasks(); track g.projectId) {
+      <section cdkDrag [cdkDragData]="g" class="ofx-panel p-4 mytasks-group">
+        <div
+          *cdkDragPlaceholder
+          class="ofx-panel p-4 border border-dashed border-violet-500/40 bg-violet-500/5 h-24"
+        ></div>
+        <header
+          cdkDragHandle
+          class="flex items-center justify-between gap-2 mb-3 flex-wrap select-none
+                 cursor-grab active:cursor-grabbing"
+          title="Drag to reorder"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 text-slate-500 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span
+              class="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+              [style.background]="g.projectColor"
+              [style.box-shadow]="'0 0 8px ' + g.projectColor"
+            ></span>
+            <h4 class="text-sm font-bold text-slate-100 truncate">{{ g.projectName }}</h4>
+            <span class="text-[11px] text-slate-500 font-mono">· {{ g.tasks.length }}</span>
+          </div>
+        </header>
+
+        <ul class="space-y-2">
+          @for (task of g.tasks; track task.id) {
+            <li class="avail-row">
+              <button
+                class="flex-1 min-w-0 text-left"
+                (click)="taskClick.emit(task)"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="avail-priority" [style.background]="priorityColor(task.priority)"></span>
+                  <span class="truncate text-sm text-slate-100">{{ task.title }}</span>
+                  <span
+                    class="ofx-chip text-[9px]"
+                    [style.color]="priorityColor(task.priority)"
+                    [style.border-color]="priorityColor(task.priority) + '66'"
+                    [style.background]="priorityColor(task.priority) + '1a'"
+                  >
+                    {{ priorityLabel(task.priority) }}
+                  </span>
+                </div>
+                @if (task.description) {
+                  <p class="text-[11px] text-slate-500 line-clamp-1 mt-1">{{ task.description }}</p>
+                }
+                <div class="text-[10px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  @if (task.dueDate) {
+                    @let d = asDate(task.dueDate);
+                    @if (d) {
+                      <span>Due {{ d | date: 'MMM d' }}</span>
+                    }
+                  }
+                  @if (task.tags && task.tags.length) {
+                    <span>#{{ task.tags[0] }}{{ task.tags.length > 1 ? ' +' + (task.tags.length - 1) : '' }}</span>
+                  }
+                </div>
+              </button>
+
+              <button
+                class="avail-claim"
+                [disabled]="claiming().has(task.id)"
+                (click)="onClaim(task); $event.stopPropagation()"
+              >
+                @if (claiming().has(task.id)) {
+                  Claiming…
+                } @else {
+                  Claim
+                }
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+    </div>
+  }
+</div>

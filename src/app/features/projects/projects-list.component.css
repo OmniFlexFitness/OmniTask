@@ -1,0 +1,27 @@
+.line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+.project-card {
+  --h3-color: color-mix(in oklab, var(--project-color) 90%, white);
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+.project-card:hover {
+  --h3-color: color-mix(in oklab, var(--project-color) 25%, white);
+  border-color: color-mix(in srgb, var(--project-color) 50%, transparent);
+  box-shadow:
+    0 10px 24px -6px color-mix(in srgb, var(--project-color) 35%, transparent),
+    0 0 28px -4px color-mix(in srgb, var(--project-color) 28%, transparent);
+  transform: translateY(-2px);
+}
+
+.project-card-title {
+  transition: color 300ms ease;
+}

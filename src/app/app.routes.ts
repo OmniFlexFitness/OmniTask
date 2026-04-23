@@ -1,23 +1,64 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './core/auth/login.component';
 import { authGuard } from './core/auth/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
-    loadComponent: () => import('./core/auth/login.component').then(m => m.LoginComponent)
+    loadComponent: () => import('./core/auth/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'demo/board',
+    loadComponent: () =>
+      import('./features/demo/board-demo.component').then((m) => m.BoardDemoComponent),
   },
   {
     path: '',
     canActivate: [authGuard],
     children: [
-        // TODO: Add Dashboard and Project routes here
-        // For now just a placeholder for the verified connection
-        { 
-            path: '', 
-            loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) // We will create this
-        }
-    ]
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'projects',
+        loadComponent: () =>
+          import('./features/projects/projects-list.component').then(
+            (m) => m.ProjectsListComponent,
+          ),
+      },
+      {
+        path: 'projects/:id',
+        loadComponent: () =>
+          import('./features/projects/project-detail.component').then(
+            (m) => m.ProjectDetailComponent,
+          ),
+      },
+      {
+        path: 'tasks',
+        loadComponent: () =>
+          import('./features/my-tasks/my-tasks.component').then((m) => m.MyTasksComponent),
+      },
+      {
+        path: 'schedule',
+        loadComponent: () =>
+          import('./features/schedule/schedule.component').then((m) => m.ScheduleComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
+        path: 'admin',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/admin-dashboard.component').then(
+            (m) => m.AdminDashboardComponent,
+          ),
+      },
+    ],
   },
-  { path: '**', redirectTo: '' }
+  { path: '**', redirectTo: '' },
 ];

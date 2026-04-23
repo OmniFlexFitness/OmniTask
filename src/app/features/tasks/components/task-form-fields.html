@@ -1,0 +1,141 @@
+<div [formGroup]="form()" class="space-y-3">
+  <!-- Title -->
+  <div>
+    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">
+      Task Name *
+    </label>
+    <input
+      type="text"
+      formControlName="title"
+      placeholder="What needs to be done?"
+      class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+      autofocus
+    />
+    @if (form().controls['title'].touched && form().controls['title'].invalid) {
+      <p class="text-xs text-rose-400 mt-1">Task name is required</p>
+    }
+  </div>
+
+  <!-- Description -->
+  <div>
+    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">
+      Description
+    </label>
+    <app-markdown-editor
+      [value]="form().value.description || ''"
+      [rows]="2"
+      [minimal]="true"
+      placeholder="Add more details... (Markdown supported)"
+      (valueChange)="form().patchValue({ description: $event })"
+    />
+  </div>
+
+  <!-- Two Column Grid with AI Buttons -->
+  <div class="grid grid-cols-2 gap-3">
+    <!-- Priority -->
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+          Priority
+        </label>
+        <ng-content select="[priority-actions]"></ng-content>
+      </div>
+      <app-custom-select
+        formControlName="priority"
+        [options]="priorityOptions()"
+        placeholder="Select priority"
+      ></app-custom-select>
+    </div>
+
+    <!-- Due Date -->
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+          Due Date
+        </label>
+        <ng-content select="[due-date-actions]"></ng-content>
+      </div>
+      <app-custom-date-picker
+        formControlName="dueDate"
+        placeholder="mm/dd/yyyy"
+      ></app-custom-date-picker>
+    </div>
+  </div>
+
+  <!-- Section (for Board view) -->
+  <div [class.hidden]="sectionOptions().length <= 1">
+    <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">
+      Section
+    </label>
+    <app-custom-select
+      formControlName="sectionId"
+      [options]="sectionOptions()"
+      placeholder="Select a section"
+    ></app-custom-select>
+  </div>
+
+  <!-- Assignees -->
+  <div>
+    <div class="flex items-center justify-between mb-1">
+      <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+        Assignees
+      </label>
+      <app-group-picker
+        [label]="'Add group'"
+        [compact]="true"
+        (applyGroup)="applyGroup.emit($event)"
+      ></app-group-picker>
+    </div>
+    <!-- Selected Assignee Chips -->
+    @if (selectedAssignees().length > 0) {
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        @for (assignee of selectedAssignees(); track assignee.id) {
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-300"
+          >
+            @if (assignee.avatar) {
+              <img [src]="assignee.avatar" class="w-3.5 h-3.5 rounded-full" referrerpolicy="no-referrer" />
+            } @else {
+              <span
+                class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white font-bold"
+                [style.background-color]="assignee.color || '#8b5cf6'"
+              >
+                {{ assignee.label.charAt(0).toUpperCase() }}
+              </span>
+            }
+            {{ assignee.label }}
+            <button
+              type="button"
+              (click)="assigneeRemoved.emit(assignee.id)"
+              class="ml-0.5 text-slate-400 hover:text-rose-400 transition-colors"
+            >
+              ×
+            </button>
+          </span>
+        }
+      </div>
+    }
+    <app-autocomplete-input
+      [options]="availableAssigneeOptions()"
+      [value]="''"
+      [allowCustom]="false"
+      placeholder="Search contacts to add..."
+      (search)="assigneeSearch.emit($event)"
+      (optionSelected)="assigneeSelected.emit($event)"
+    ></app-autocomplete-input>
+  </div>
+
+  <!-- Notify Assignees Checkbox -->
+  <div class="flex items-center gap-2">
+    <input
+      type="checkbox"
+      id="notifyAssignees"
+      [checked]="notifyAssignees()"
+      (change)="onNotifyAssigneesChange($event)"
+      class="w-4 h-4 rounded border-white/20 bg-slate-950 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+    />
+    <label for="notifyAssignees" class="text-xs text-slate-400 cursor-pointer select-none">
+      📧 Notify assignees via email (assignment & status updates)
+    </label>
+  </div>
+</div>

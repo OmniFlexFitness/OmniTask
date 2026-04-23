@@ -1,0 +1,110 @@
+
+> omni-task@0.0.0 test
+> ng test --include src/app/core/services/task.service.spec.ts --watch=false
+
+- Generating browser application bundles (phase: setup)...
+[32m✔[39m Browser application bundle generation complete.
+[32m04 03 2026 22:41:23.776:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:10200/
+[32m04 03 2026 22:41:23.777:INFO [launcher]: [39mLaunching browsers Chrome with concurrency unlimited
+[32m04 03 2026 22:41:23.783:INFO [launcher]: [39mStarting browser Chrome
+[32m04 03 2026 22:41:24.565:INFO [Chrome 145.0.0.0 (Windows 10)]: [39mConnected on socket iB62mRw1nb3Jdm9kAAAB with id 63962292
+Chrome 145.0.0.0 (Windows 10): Executed 0 of 39[32m SUCCESS[39m (0 secs / 0 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 1 of 39[32m SUCCESS[39m (0 secs / 0.009 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 2 of 39[32m SUCCESS[39m (0 secs / 0.01 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 3 of 39[32m SUCCESS[39m (0 secs / 0.012 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 4 of 39[32m SUCCESS[39m (0 secs / 0.013 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 5 of 39[32m SUCCESS[39m (0 secs / 0.014 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 6 of 39[32m SUCCESS[39m (0 secs / 0.015 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 7 of 39[32m SUCCESS[39m (0 secs / 0.016 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 8 of 39[32m SUCCESS[39m (0 secs / 0.017 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 9 of 39[32m SUCCESS[39m (0 secs / 0.017 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 10 of 39[32m SUCCESS[39m (0 secs / 0.017 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 11 of 39[32m SUCCESS[39m (0 secs / 0.017 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 12 of 39[32m SUCCESS[39m (0 secs / 0.018 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 13 of 39[32m SUCCESS[39m (0 secs / 0.018 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 14 of 39[32m SUCCESS[39m (0 secs / 0.018 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 15 of 39[32m SUCCESS[39m (0 secs / 0.018 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 16 of 39[32m SUCCESS[39m (0 secs / 0.019 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 17 of 39[32m SUCCESS[39m (0 secs / 0.02 secs)
+[1A[2KWARN: [36m'Google Tasks sync failed, task was updated locally:', TypeError: source.subscribe is not a function
+TypeError: source.subscribe is not a function
+    at executor (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:10200/_karma_webpack_/webpack:/src/app/core/services/task.service.ts:437:33
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 17 of 39[32m SUCCESS[39m (0 secs / 0.02 secs)
+WARN: 'Google Tasks sync failed, task was updated locally:', TypeError: source.subscribe is not a function
+TypeError: source.subscribe is not a function
+    at executor (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:10200/_karma_webpack_/webpack:/src/app/core/services/task.service.ts:437:33
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 18 of 39[32m SUCCESS[39m (0 secs / 0.022 secs)
+[1A[2KWARN: [36m'Google Tasks sync failed, task was created locally:', TypeError: source.subscribe is not a function
+TypeError: source.subscribe is not a function
+    at executor (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:10200/_karma_webpack_/webpack:/src/app/core/services/task.service.ts:365:50
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)[39m
+Chrome 145.0.0.0 (Windows 10): Executed 18 of 39[32m SUCCESS[39m (0 secs / 0.022 secs)
+WARN: 'Google Tasks sync failed, task was created locally:', TypeError: source.subscribe is not a function
+TypeError: source.subscribe is not a function
+    at executor (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:21:16)
+    at new ZoneAwarePromise (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:2221:23)
+    at firstValueFrom (http://localhost:10200/_karma_webpack_/webpack:/node_modules/rxjs/dist/esm/internal/firstValueFrom.js:5:12)
+    at http://localhost:10200/_karma_webpack_/webpack:/src/app/core/services/task.service.ts:365:50
+    at Generator.next (<anonymous>)
+    at asyncGeneratorStep (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+    at apply (http://localhost:10200/_karma_webpack_/webpack:/node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:158)
+    at _ProxyZoneSpec.onInvoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone-testing.js:956:33)
+    at _ZoneDelegate.invoke (http://localhost:10200/_karma_webpack_/webpack:/node_modules/zone.js/fesm2015/zone.js:360:46)
+[1A[2K[31mChrome 145.0.0.0 (Windows 10) TaskService CRUD operations should create a task and sync to google tasks if list id is provided FAILED[39m
+	Expected spy updateDoc to have been called.
+	    at <Jasmine>
+	    at UserContext.<anonymous> (src/app/core/services/task.service.spec.ts:299:28)
+	    at Generator.next (<anonymous>)
+	    at asyncGeneratorStep (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:3:1)
+	    at _next (node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js:17:1)
+Chrome 145.0.0.0 (Windows 10): Executed 19 of 39[31m (1 FAILED)[39m (0 secs / 0.024 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 20 of 39[31m (1 FAILED)[39m (0 secs / 0.025 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 21 of 39[31m (1 FAILED)[39m (0 secs / 0.025 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 22 of 39[31m (1 FAILED)[39m (0 secs / 0.026 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 23 of 39[31m (1 FAILED)[39m (0 secs / 0.027 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 24 of 39[31m (1 FAILED)[39m (0 secs / 0.028 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 25 of 39[31m (1 FAILED)[39m (0 secs / 0.029 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 26 of 39[31m (1 FAILED)[39m (0 secs / 0.03 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 27 of 39[31m (1 FAILED)[39m (0 secs / 0.031 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 28 of 39[31m (1 FAILED)[39m (0 secs / 0.032 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 29 of 39[31m (1 FAILED)[39m (0 secs / 0.033 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 30 of 39[31m (1 FAILED)[39m (0 secs / 0.034 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 31 of 39[31m (1 FAILED)[39m (0 secs / 0.035 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 32 of 39[31m (1 FAILED)[39m (0 secs / 0.035 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 33 of 39[31m (1 FAILED)[39m (0 secs / 0.035 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 34 of 39[31m (1 FAILED)[39m (0 secs / 0.036 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 35 of 39[31m (1 FAILED)[39m (0 secs / 0.036 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 36 of 39[31m (1 FAILED)[39m (0 secs / 0.036 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 37 of 39[31m (1 FAILED)[39m (0 secs / 0.036 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 38 of 39[31m (1 FAILED)[39m (0 secs / 0.037 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 39 of 39[31m (1 FAILED)[39m (0 secs / 0.038 secs)
+[1A[2KChrome 145.0.0.0 (Windows 10): Executed 39 of 39[31m (1 FAILED)[39m (0.062 secs / 0.038 secs)
+[31mTOTAL: 1 FAILED, 38 SUCCESS[39m
+[32m✔[39m Browser application bundle generation complete.

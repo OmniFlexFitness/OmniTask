@@ -1,0 +1,280 @@
+<header
+  class="flex-shrink-0 border-b border-cyan-500/10 bg-[#0a0f1e]/95 z-20 relative overflow-visible-header"
+>
+  <!-- Top glow line -->
+  <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/40"></div>
+  <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 w-full sm:w-auto">
+      <button 
+        class="lg:hidden p-2 -ml-2 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded-lg transition-colors"
+        (click)="toggleSidebar.emit()"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      @if (currentProject(); as project) {
+        <app-project-icon [project]="project" [size]="36"></app-project-icon>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-4">
+            <h1
+              class="text-xl font-bold flex items-center gap-2 leading-none dashboard-project-title"
+              [style.color]="project.color || defaultColor"
+              [style.text-shadow]="'0 0 10px ' + getColorWithOpacity(project.color, 0.5)"
+            >
+              <span>{{ project.name }}</span>
+            </h1>
+
+            <div class="flex items-center gap-2">
+              <button
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5
+                       transition-colors flex items-center justify-center"
+                (click)="showFieldManager.emit()"
+                title="Manage Custom Fields"
+              >
+                <!-- HUD / control-panel icon: three horizontal rails with
+                     filled square knobs, matching the cyberpunk aesthetic. -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="square"
+                  stroke-linejoin="miter"
+                  aria-hidden="true"
+                >
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                  <rect x="14" y="4" width="4" height="4" fill="currentColor" stroke="none" />
+                  <rect x="7" y="10" width="4" height="4" fill="currentColor" stroke="none" />
+                  <rect x="16" y="16" width="4" height="4" fill="currentColor" stroke="none" />
+                </svg>
+              </button>
+
+              <!-- Project Actions -->
+              <button
+                class="omni-glitch-btn p-1.5 rounded-lg text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5
+                       transition-colors flex items-center justify-center"
+                (click)="editProjectModal.emit(project)"
+                title="Edit Project"
+              >
+                <!-- Angular stylus: same 24x24 frame, same stroke weight
+                     and square/miter joinery so it reads as a matched pair
+                     with the control-panel icon above. -->
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="square"
+                  stroke-linejoin="miter"
+                  aria-hidden="true"
+                >
+                  <path d="M4 20v-6L14 4l6 6L10 20z" />
+                  <path d="M12 6l6 6" />
+                  <path d="M4 20h6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mt-1 truncate max-w-md">
+            {{ project.description }}
+          </p>
+        </div>
+      } @else {
+        <h1 class="text-xl font-bold text-slate-400">Select a project</h1>
+      }
+    </div>
+
+    <!-- View Toggles & Actions -->
+    <div class="flex flex-wrap items-center gap-4 justify-start sm:justify-end">
+      <!-- Cyberpunk View Switcher - Purple Glow, No Gradient Fills -->
+      <div
+        class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_theme(colors.violet.500/10)]"
+      >
+        <button
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'overview'"
+          [class.text-violet-300]="viewMode() === 'overview'"
+          [class.ofx-view-switch-active]="viewMode() === 'overview'"
+          [class.text-slate-500]="viewMode() !== 'overview'"
+          [class.hover:text-slate-300]="viewMode() !== 'overview'"
+          (click)="viewModeChange.emit('overview')"
+        >
+          Overview
+        </button>
+        <button
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'list'"
+          [class.text-violet-300]="viewMode() === 'list'"
+          [class.ofx-view-switch-active]="viewMode() === 'list'"
+          [class.text-slate-500]="viewMode() !== 'list'"
+          [class.hover:text-slate-300]="viewMode() !== 'list'"
+          (click)="viewModeChange.emit('list')"
+        >
+          List
+        </button>
+        <button
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'board'"
+          [class.text-violet-300]="viewMode() === 'board'"
+          [class.ofx-view-switch-active]="viewMode() === 'board'"
+          [class.text-slate-500]="viewMode() !== 'board'"
+          [class.hover:text-slate-300]="viewMode() !== 'board'"
+          (click)="viewModeChange.emit('board')"
+        >
+          Board
+        </button>
+        <button
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'calendar'"
+          [class.text-violet-300]="viewMode() === 'calendar'"
+          [class.ofx-view-switch-active]="viewMode() === 'calendar'"
+          [class.text-slate-500]="viewMode() !== 'calendar'"
+          [class.hover:text-slate-300]="viewMode() !== 'calendar'"
+          (click)="viewModeChange.emit('calendar')"
+        >
+          Calendar
+        </button>
+        <button
+          class="omni-glitch-btn flex-1 px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
+          [class.bg-violet-500/20]="viewMode() === 'timeline'"
+          [class.text-violet-300]="viewMode() === 'timeline'"
+          [class.ofx-view-switch-active]="viewMode() === 'timeline'"
+          [class.text-slate-500]="viewMode() !== 'timeline'"
+          [class.hover:text-slate-300]="viewMode() !== 'timeline'"
+          (click)="viewModeChange.emit('timeline')"
+        >
+          Timeline
+        </button>
+      </div>
+
+      <!-- Cyberpunk Add Task Button -->
+      <button
+        class="omni-glitch-btn ofx-neon-button flex items-center gap-2 !py-2"
+        [disabled]="!currentProject()"
+        (click)="openCreateTaskModal.emit()"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Add Task
+      </button>
+
+      <!-- Google Tasks Sync Button -->
+      @if (currentProject()?.syncEnabled && currentProject()?.googleTaskListId) {
+        <button
+          class="omni-glitch-btn relative p-2 rounded-lg border transition-all duration-200 group"
+          [class.border-emerald-500/30]="!syncing()"
+          [class.bg-emerald-500/10]="!syncing()"
+          [class.text-emerald-400]="!syncing()"
+          [class.hover:bg-emerald-500/20]="!syncing()"
+          [class.border-amber-500/30]="syncing()"
+          [class.bg-amber-500/10]="syncing()"
+          [class.text-amber-400]="syncing()"
+          [disabled]="syncing()"
+          (click)="syncGoogleTasks.emit()"
+          title="Sync with Google Tasks"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            [class.animate-spin]="syncing()"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          @if (!syncing()) {
+            <span
+              class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-400 animate-pulse"
+            ></span>
+          }
+        </button>
+      }
+
+      <!-- Project Settings Link -->
+      @if (currentProject(); as project) {
+        <a
+          [routerLink]="['/projects', project.id]"
+          [queryParams]="{ tab: 'settings' }"
+          class="omni-glitch-btn p-2 rounded-lg border transition-colors"
+          [style.background-color]="getColorWithOpacity(project.color, 0.15)"
+          [style.border-color]="getColorWithOpacity(project.color, 0.4)"
+          [style.color]="project.color || defaultColor"
+          [style.box-shadow]="'0 0 12px ' + getColorWithOpacity(project.color, 0.25)"
+          title="Project Settings"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        </a>
+      }
+
+      <!-- User Profile -->
+      <div class="relative group">
+        <button
+          class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold"
+        >
+          {{ auth.currentUserSig()?.displayName?.charAt(0) }}
+        </button>
+        <div
+          class="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-xl py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all z-50"
+        >
+          <div class="px-4 py-2 border-b border-white/5 mb-2">
+            <p class="text-sm font-medium text-white">
+              {{ auth.currentUserSig()?.displayName }}
+            </p>
+            <p class="text-xs text-slate-500 truncate">
+              {{ auth.currentUserSig()?.email }}
+            </p>
+          </div>
+          <button
+            class="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            (click)="auth.logout()"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

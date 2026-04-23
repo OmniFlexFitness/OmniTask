@@ -1,0 +1,68 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.avail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(10, 15, 30, 0.4);
+  transition: all 0.15s ease;
+}
+
+.avail-row:hover {
+  background: rgba(10, 15, 30, 0.7);
+  border-color: rgba(0, 210, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.14);
+}
+
+.avail-priority {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.avail-claim {
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.375rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(167, 243, 208);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  flex-shrink: 0;
+  align-self: center;
+  transition: all 0.15s ease;
+}
+
+.avail-claim:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.22);
+  color: rgb(220, 252, 231);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+.avail-claim:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Drag-and-drop affordances for reordering the project-group "sections". */
+.mytasks-group.cdk-drag-preview {
+  box-shadow: 0 12px 40px rgba(0, 210, 255, 0.35), 0 0 20px rgba(224, 64, 251, 0.25);
+}
+
+.mytasks-group.cdk-drag-placeholder {
+  opacity: 0;
+}
+
+.cdk-drop-list-dragging .mytasks-group:not(.cdk-drag-placeholder) {
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}

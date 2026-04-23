@@ -1,0 +1,63 @@
+@if (dialogService.dialog().isOpen) {
+      <div class="fixed inset-0 z-[9999] flex items-center justify-center">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/70" (click)="onCancel()"></div>
+
+        <!-- Dialog Card -->
+        <div
+          class="relative bg-slate-900/95 border border-white/20 rounded-lg shadow-[0_0_32px_rgba(139,92,246,0.35)] max-w-md w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]"
+        >
+          <!-- Header accent -->
+          @if (dialogService.dialog().title) {
+            <div
+              class="px-6 py-4 border-b border-white/10"
+              [ngClass]="{
+                'bg-cyan-600/15': dialogService.dialog().type === 'info',
+                'bg-violet-600/15': dialogService.dialog().type === 'confirm',
+                'bg-red-600/15': dialogService.dialog().type === 'error',
+                'bg-amber-600/15': dialogService.dialog().type === 'warning',
+              }"
+            >
+              <h3 class="text-lg font-semibold text-white">
+                {{ dialogService.dialog().title }}
+              </h3>
+            </div>
+          }
+
+          <!-- Message Body -->
+          <div class="px-6 py-6 flex-1 overflow-y-auto">
+            <p class="text-slate-200 whitespace-pre-wrap leading-relaxed">
+              {{ dialogService.dialog().message }}
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="px-6 py-4 bg-slate-950/50 border-t border-white/10 flex justify-end gap-3">
+            @if (dialogService.dialog().cancelText) {
+              <button
+                class="omni-glitch-btn px-4 py-2 rounded-lg border border-white/20 text-slate-300 hover:bg-white/5 hover:text-white transition-all duration-200"
+                (click)="onCancel()"
+              >
+                {{ dialogService.dialog().cancelText }}
+              </button>
+            }
+            <button
+              class="omni-glitch-btn px-4 py-2 rounded-lg font-medium transition-all duration-200 text-white"
+              [ngClass]="{
+                'bg-cyan-600 hover:bg-cyan-500 shadow-[0_0_14px_rgba(6,182,212,0.5)]':
+                  dialogService.dialog().type === 'info',
+                'bg-violet-600 hover:bg-violet-500 shadow-[0_0_14px_rgba(139,92,246,0.5)]':
+                  dialogService.dialog().type === 'confirm',
+                'bg-red-600 hover:bg-red-500 shadow-[0_0_14px_rgba(244,63,94,0.5)]':
+                  dialogService.dialog().type === 'error',
+                'bg-amber-600 hover:bg-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.5)]':
+                  dialogService.dialog().type === 'warning',
+              }"
+              (click)="onConfirm()"
+            >
+              {{ dialogService.dialog().confirmText }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }

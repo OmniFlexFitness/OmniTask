@@ -1,0 +1,67 @@
+title:	Refactor: Expand unit test coverage for components and services
+state:	OPEN
+author:	bkenol
+labels:	enhancement, refactoring
+comments:	0
+assignees:	
+projects:	
+milestone:	
+number:	83
+--
+## Parent Issue
+Part of #75 — Codebase Refactoring Epic
+
+## Problem
+The codebase has only **4 spec files** for **48 source files** (~8% coverage). This makes refactoring risky and regressions hard to catch. The GEMINI.md conventions require error handling and proper testing.
+
+## Current Test Files
+- `app.spec.ts`
+- `google-tasks-sync.service.spec.ts`
+- `project.service.spec.ts`
+- `task.service.spec.ts`
+
+## Missing Tests
+
+### Feature Components (0% covered)
+| Component | Priority | Reason |
+|-----------|----------|--------|
+| `dashboard.component` | High | Core landing page, complex logic |
+| `task-detail-modal.component` | High | CRUD operations, AI integration |
+| `task-create-modal.component` | High | Form validation, AI suggestions |
+| `task-board-view.component` | High | Drag-and-drop, sections |
+| `task-list-view.component` | Medium | Sorting, filtering |
+| `task-calendar-view.component` | Medium | Date calculations |
+| `project-detail.component` | High | Task management per project |
+| `projects-list.component` | Medium | CRUD, filtering |
+| `project-settings-panel.component` | High | Complex settings, sync logic |
+| `settings.component` | Medium | Profile updates |
+
+### Core Services (partially covered)
+| Service | Priority | Reason |
+|---------|----------|--------|
+| `auth.service` | High | Authentication flow |
+| `contacts.service` | Medium | Google People API |
+| `google-tasks.service` | Medium | API integration |
+| `vertex-ai.service` | Medium | AI features |
+| `dialog.service` | Low | Simple state management |
+| `version.service` | Low | Simple utility |
+
+### Shared Components (0% covered)
+| Component | Priority |
+|-----------|----------|
+| `dialog.component` | Medium |
+| `autocomplete-input.component` | Medium |
+| `tag-input.component` | Medium |
+| `image-upload.component` | Low |
+
+## Solution
+1. Create spec files for all feature components with basic render/interaction tests
+2. Add integration tests for critical user flows (task CRUD, project management)
+3. Mock Firebase services consistently using a shared test utility
+4. Target minimum 60% code coverage for services, 40% for components
+
+## Acceptance Criteria
+- [ ] Every component and service has a corresponding `.spec.ts` file
+- [ ] Critical user flows have integration tests
+- [ ] `ng test` passes with no failures
+- [ ] Code coverage report shows ≥50% overall coverage

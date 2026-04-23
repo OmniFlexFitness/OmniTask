@@ -1,0 +1,181 @@
+<div class="fixed inset-0 z-50 flex items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/75 transition-all" (click)="onExampleClick($event)">
+  <div class="w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[90vh] bg-slate-900 border-l sm:border border-white/10 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slide-in-right" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <app-task-detail-header
+      [task]="task()"
+      (toggleComplete)="toggleComplete()"
+      (deleteTask)="deleteTask()"
+      (closeDialog)="close.emit()"
+    ></app-task-detail-header>
+
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-6" [formGroup]="form">
+      <!-- Title -->
+      <div class="mb-6">
+        <textarea
+          formControlName="title"
+          rows="1"
+          placeholder="Task title"
+          class="w-full bg-transparent border-none text-2xl font-bold text-white placeholder-slate-600 focus:ring-0 resize-none overflow-hidden"
+          (input)="autoResize($event.target)"
+          (blur)="autoSave()"
+          (keydown.enter)="$event.preventDefault()"
+        ></textarea>
+      </div>
+
+      <!-- Sidebar (Metadata + Custom Fields) -->
+      <app-task-fields-sidebar
+        [form]="$any(form)"
+        [selectedAssignees]="selectedAssignees()"
+        [availableAssigneeOptions]="availableAssigneeOptions()"
+        [notifyAssigneesSig]="notifyAssigneesSig()"
+        [statusOptions]="statusOptions"
+        [priorityOptions]="priorityOptions"
+        [sectionOptions]="sectionOptions()"
+        [projectCustomFields]="projectCustomFields()"
+        [customFieldValues]="customFieldValues()"
+        (assigneeSearch)="onAssigneeSearch($event)"
+        (assigneeSelected)="onAssigneeSelected($event)"
+        (assigneeRemoved)="removeAssignee($event)"
+        (applyGroup)="applyGroupToAssignees($event)"
+        (notifyAssigneesChange)="notifyAssigneesSig.set($event); form.markAsDirty(); autoSave()"
+        (customFieldUpdated)="updateCustomField($event.fieldId, $event.value)"
+        (autoSave)="autoSave()"
+      ></app-task-fields-sidebar>
+
+      <!-- Description -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-widest">Description</label>
+          <app-task-ai-actions
+            type="enhanceDescription"
+            [task]="task()"
+            [currentDescription]="form.value.description || ''"
+            [disabled]="!form.value.description?.trim()"
+            (descriptionEnhanced)="form.patchValue({ description: $event }); form.markAsDirty(); autoSave()"
+          ></app-task-ai-actions>
+        </div>
+        <app-markdown-editor
+          [value]="form.value.description || ''"
+          [rows]="4"
+          placeholder="Add more details to this task... (Markdown supported)"
+          (valueChange)="form.patchValue({ description: $event }); form.markAsDirty()"
+          (blurred)="autoSave()"
+        />
+      </div>
+
+      <!-- Subtasks -->
+      <!-- Subtasks -->
+      <app-task-subtasks
+        [task]="task()"
+        [project]="project() || null"
+        [(subtasks)]="subtasks"
+        [assigneeOptions]="assigneeOptions()"
+        [generateAvatarColor]="generateAvatarColor"
+        (autoSave)="autoSave()"
+      >
+        <app-task-ai-actions
+          actions
+          type="generateSubtasks"
+          [task]="task()"
+          [project]="project() || null"
+          [currentDescription]="form.value.description || ''"
+          [subtaskCount]="subtasks().length"
+          (subtasksGenerated)="task()?.id && task()?.projectId ? loadRelatedTasks(task()!.id, task()!.projectId) : null"
+        ></app-task-ai-actions>
+      </app-task-subtasks>
+
+      <!-- Dependencies -->
+      <div class="mb-6">
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Dependencies</label>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+          <!-- Blocked By (waiting on) -->
+          <div>
+            <div class="flex items-center gap-2 mb-2 text-rose-400 text-sm font-medium">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              Blocked By
+            </div>
+            <div class="text-xs text-slate-500 mb-2">Tasks that must be completed before this one.</div>
+            
+            @if (blockedByTasks().length) {
+              <ul class="space-y-1 mt-2 mb-3">
+                @for (b of blockedByTasks(); track b.id) {
+                  <li class="flex items-center justify-between text-sm bg-rose-500/10 border border-rose-500/20 px-2 py-1.5 rounded-lg text-rose-300">
+                    <span class="truncate pr-2" [class.line-through]="b.status === 'done'" [class.opacity-50]="b.status === 'done'">{{ b.title }}</span>
+                    <button type="button" class="text-rose-400 hover:text-rose-200" (click)="removeDependency('isBlockedBy', b.id)" title="Remove dependency">×</button>
+                  </li>
+                }
+              </ul>
+            }
+            
+            <app-autocomplete-input
+              [options]="dependencyOptions()"
+              [value]="''"
+              [allowCustom]="false"
+              placeholder="Select task that blocks this..."
+              (optionSelected)="onAddDependency('isBlockedBy', $event)"
+            ></app-autocomplete-input>
+          </div>
+
+          <!-- Blocks (others waiting on this) -->
+          <div>
+            <div class="flex items-center gap-2 mb-2 text-amber-400 text-sm font-medium">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              Blocks
+            </div>
+            <div class="text-xs text-slate-500 mb-2">Tasks that cannot be completed until this is done.</div>
+            
+            @if (blockingTasks().length) {
+              <ul class="space-y-1 mt-2 mb-3">
+                @for (b of blockingTasks(); track b.id) {
+                  <li class="flex items-center justify-between text-sm bg-amber-500/10 border border-amber-500/20 px-2 py-1.5 rounded-lg text-amber-300">
+                    <span class="truncate pr-2" [class.line-through]="b.status === 'done'" [class.opacity-50]="b.status === 'done'">{{ b.title }}</span>
+                    <button type="button" class="text-amber-400 hover:text-amber-200" (click)="removeDependency('blocks', b.id)" title="Remove dependency">×</button>
+                  </li>
+                }
+              </ul>
+            }
+
+            <app-autocomplete-input
+              [options]="dependencyOptions()"
+              [value]="''"
+              [allowCustom]="false"
+              placeholder="Select task this blocks..."
+              (optionSelected)="onAddDependency('blocks', $event)"
+            ></app-autocomplete-input>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <app-task-tags
+        [project]="project() || null"
+        [(selectedTags)]="selectedTags"
+      ></app-task-tags>
+
+    </div>
+
+    <!-- Footer Actions -->
+    <footer class="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-slate-800/20">
+      <button
+        type="button"
+        class="omni-glitch-btn px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+        (click)="close.emit()"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="omni-glitch-btn px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors flex items-center gap-2 shadow-[0_0_14px_rgba(6,182,212,0.5)]"
+        (click)="autoSave(); close.emit()"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+        </svg>
+        Done
+      </button>
+    </footer>
+  </div>
+</div>

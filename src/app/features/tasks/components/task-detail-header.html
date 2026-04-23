@@ -1,0 +1,97 @@
+<header
+  class="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-slate-800/20"
+>
+  <div class="flex items-center gap-3">
+    <button
+      class="p-1 rounded-md border text-xs font-bold uppercase tracking-wide transition-colors"
+      [ngClass]="{
+        'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20':
+          task()?.status === 'done',
+        'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10':
+          task()?.status !== 'done',
+      }"
+      (click)="toggleComplete.emit()"
+    >
+      @if (task()?.status === 'done') {
+        <span class="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          Completed
+        </span>
+      } @else {
+        <span class="flex items-center gap-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          Mark Complete
+        </span>
+      }
+    </button>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <!-- Delete -->
+    <button
+      class="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+      title="Delete Task"
+      (click)="deleteTask.emit()"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+        />
+      </svg>
+    </button>
+
+    <!-- Close -->
+    <button
+      class="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+      (click)="closeDialog.emit()"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-6 w-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    </button>
+  </div>
+</header>

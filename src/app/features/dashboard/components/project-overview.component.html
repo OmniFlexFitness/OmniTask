@@ -1,0 +1,485 @@
+<div class="project-overview w-full h-full overflow-y-auto pb-10">
+  @let proj = project();
+  @let total = totalTasks();
+  @let pct = completionPercentage();
+  @let donut = statusBreakdown();
+
+  <!-- Hero card: identity, description, KPIs -->
+  <section
+    class="ofx-panel relative p-6 mb-6"
+    [style.border-color]="accent(0.35)"
+  >
+    <div class="absolute inset-x-0 top-0 h-px" [style.background]="accent(0.6)"></div>
+    <div class="flex flex-col md:flex-row gap-6 md:items-center">
+      <app-project-icon [project]="proj" [size]="96"></app-project-icon>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-3 flex-wrap">
+          <h2
+            class="!m-0 text-2xl font-black !leading-none truncate"
+            [style.color]="proj.color || defaultColor"
+            [style.text-shadow]="'0 0 12px ' + accent(0.55)"
+          >
+            <span>{{ proj.name }}</span>
+          </h2>
+          @if (proj.status === 'archived') {
+            <span class="ofx-chip bg-gray-700/50 text-gray-300">Archived</span>
+          } @else {
+            <span class="cyber-badge">Active</span>
+          }
+          @if (isOwner()) {
+            <span class="cyber-badge-purple cyber-badge">Owner</span>
+          }
+        </div>
+        @if (proj.description) {
+          <p class="mt-2 text-sm text-slate-300/90 max-w-2xl">
+            {{ proj.description }}
+          </p>
+        }
+        <div class="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
+          <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Created {{ asDate(proj.createdAt) | date: 'mediumDate' }}
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-9a4 4 0 11-8 0 4 4 0 018 0zm6 3a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {{ proj.memberIds.length }} member{{ proj.memberIds.length === 1 ? '' : 's' }}
+          </span>
+          @if (proj.sections.length) {
+            <span class="inline-flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              {{ proj.sections.length }} section{{ proj.sections.length === 1 ? '' : 's' }}
+            </span>
+          }
+          @let tagList = proj.tags || [];
+          @if (tagList.length) {
+            <span class="inline-flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              {{ tagList.length }} tag{{ tagList.length === 1 ? '' : 's' }}
+            </span>
+          }
+          @if (proj.syncEnabled) {
+            <span class="inline-flex items-center gap-1 text-emerald-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Google Tasks linked
+            </span>
+          }
+          @if (proj.googleSheetId) {
+            <span class="inline-flex items-center gap-1 text-sky-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+              Google Sheets linked
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 items-stretch md:items-end">
+        <button class="omni-glitch-btn ofx-neon-button !py-2 text-xs" (click)="editProject.emit(proj)">
+          Edit project
+        </button>
+        <button
+          class="omni-glitch-btn ofx-ghost-button text-xs"
+          (click)="createTask.emit({})"
+        >
+          + New task
+        </button>
+        <button
+          class="omni-glitch-btn ofx-ghost-button text-xs"
+          (click)="viewModeChange.emit('board')"
+        >
+          Open board →
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="kpi">
+        <span class="kpi-label">Total</span>
+        <span class="kpi-value" [style.color]="'#00d2ff'">{{ total }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Done</span>
+        <span class="kpi-value" [style.color]="'#10b981'">{{ completedTasks() }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">In Progress</span>
+        <span class="kpi-value" [style.color]="'#00d2ff'">{{ inProgressTasks() }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">To Do</span>
+        <span class="kpi-value" [style.color]="'#e040fb'">{{ todoTasks() }}</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Overdue</span>
+        <span class="kpi-value" [style.color]="overdueTasks() > 0 ? '#ff1493' : '#64748b'">
+          {{ overdueTasks() }}
+        </span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Due Soon</span>
+        <span class="kpi-value" [style.color]="'#f59e0b'">{{ dueSoonTasks() }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Visualizations row: donut + progress gauge + priority bars -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Status donut -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Status Breakdown</h3>
+      @if (total === 0) {
+        <p class="text-slate-500 text-sm py-6 text-center">No tasks yet.</p>
+      } @else {
+        <div class="flex items-center gap-5">
+          <svg viewBox="0 0 100 100" class="w-36 h-36 -rotate-90 flex-shrink-0 donut">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" />
+            @for (arc of donut.arcs; track arc.key) {
+              @if (arc.count > 0) {
+                <circle
+                  cx="50" cy="50" r="45" fill="none"
+                  [attr.stroke]="arc.color"
+                  stroke-width="10"
+                  stroke-linecap="butt"
+                  [attr.stroke-dasharray]="arc.length + ' ' + arc.gap"
+                  [attr.stroke-dashoffset]="-arc.offset"
+                  [style.filter]="'drop-shadow(0 0 4px ' + arc.color + ')'"
+                ></circle>
+              }
+            }
+          </svg>
+          <div class="flex-1 space-y-2 text-sm">
+            @for (arc of donut.arcs; track arc.key) {
+              <div class="flex items-center justify-between gap-3">
+                <span class="inline-flex items-center gap-2 text-slate-300">
+                  <span class="w-2.5 h-2.5 rounded-sm" [style.background]="arc.color" [style.box-shadow]="'0 0 8px ' + arc.color"></span>
+                  {{ arc.label }}
+                </span>
+                <span class="font-mono text-slate-400">
+                  {{ arc.count }} <span class="text-slate-600">/ {{ arc.percent }}%</span>
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Completion gauge -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Completion</h3>
+      <div class="flex flex-col items-center justify-center py-2">
+        <div class="gauge-number text-cyber-gradient">{{ pct }}<span class="text-2xl">%</span></div>
+        <div class="w-full mt-4 h-3 rounded-full overflow-hidden border border-white/10 bg-slate-900/60">
+          <div
+            class="h-full transition-all duration-500"
+            [style.width.%]="pct"
+            [style.background]="'linear-gradient(90deg, #00d2ff, #e040fb, #ff1493)'"
+            [style.box-shadow]="'0 0 12px rgba(224,64,251,0.65)'"
+          ></div>
+        </div>
+        <div class="mt-3 text-xs text-slate-400 text-center">
+          {{ completedTasks() }} of {{ total }} task{{ total === 1 ? '' : 's' }} complete
+        </div>
+        <div class="mt-2 text-xs text-slate-500 text-center">
+          {{ unassignedTasks() }} unassigned
+        </div>
+      </div>
+    </div>
+
+    <!-- Priority bars -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Priority Distribution</h3>
+      @if (total === 0) {
+        <p class="text-slate-500 text-sm py-6 text-center">No tasks yet.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (p of priorityBreakdown(); track p.key) {
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full" [style.background]="p.color" [style.box-shadow]="'0 0 6px ' + p.color"></span>
+                  {{ p.label }}
+                </span>
+                <span class="font-mono text-slate-400">{{ p.count }} · {{ p.percent }}%</span>
+              </div>
+              <div class="h-2 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
+                <div
+                  class="h-full transition-all duration-500"
+                  [style.width.%]="p.percent"
+                  [style.background]="'linear-gradient(90deg, ' + p.color + ', ' + p.color + '88)'"
+                  [style.box-shadow]="'0 0 8px ' + p.color"
+                ></div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Sections progress + Tag cloud -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Sections progress -->
+    <div class="ofx-panel p-5 lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="ofx-section-title">Sections</h3>
+        <button
+          class="omni-glitch-btn text-xs text-cyan-400 hover:text-cyan-300"
+          (click)="viewModeChange.emit('board')"
+        >
+          Open board →
+        </button>
+      </div>
+      @if (!sectionStats().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">No sections defined.</p>
+      } @else {
+        <div class="space-y-3">
+          @for (s of sectionStats(); track s.id) {
+            <button
+              class="section-row w-full text-left"
+              (click)="createTask.emit({ sectionId: s.id })"
+              [style.border-color]="s.color + '55'"
+              [title]="'Add task to ' + s.name"
+            >
+              <div class="flex items-center justify-between gap-3 mb-1.5">
+                <span class="inline-flex items-center gap-2 font-semibold text-slate-100">
+                  <span class="w-2 h-2 rounded-sm" [style.background]="s.color" [style.box-shadow]="'0 0 8px ' + s.color"></span>
+                  {{ s.name }}
+                </span>
+                <span class="font-mono text-xs text-slate-400">
+                  {{ s.completed }} / {{ s.count }}
+                  @if (s.wipLimit != null && s.wipLimit > 0) {
+                    <span
+                      class="ml-2"
+                      [class.text-rose-400]="s.count > s.wipLimit!"
+                    >· WIP {{ s.wipLimit }}</span>
+                  }
+                </span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
+                <div
+                  class="h-full"
+                  [style.width.%]="s.progress"
+                  [style.background]="'linear-gradient(90deg, ' + s.color + ', ' + s.color + '88)'"
+                  [style.box-shadow]="'0 0 10px ' + s.color"
+                ></div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Tag cloud -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Tags in use</h3>
+      @if (!tagStats().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">No tags defined yet.</p>
+      } @else {
+        <div class="flex flex-wrap gap-2">
+          @for (tag of tagStats(); track tag.id) {
+            <span
+              class="tag-chip"
+              [style.background]="tag.color + '22'"
+              [style.border-color]="tag.color + '88'"
+              [style.color]="tag.color"
+              [style.box-shadow]="'0 0 8px ' + tag.color + '55'"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" [style.background]="tag.color"></span>
+              {{ tag.name }}
+              <span class="tag-count">{{ tag.count }}</span>
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Upcoming + recent activity + assignees -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Upcoming deadlines -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Upcoming deadlines</h3>
+      @if (!upcomingTasks().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">Nothing scheduled.</p>
+      } @else {
+        <ul class="space-y-2">
+          @for (item of upcomingTasks(); track item.task.id) {
+            <li>
+              <button
+                class="task-row w-full text-left"
+                (click)="taskClick.emit(item.task)"
+              >
+                <span class="priority-dot" [style.background]="priorityDot(item.task.priority)"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="truncate text-sm text-slate-100">{{ item.task.title }}</div>
+                  <div class="text-[11px] text-slate-500 truncate">
+                    {{ statusLabel(item.task.status) }}
+                  </div>
+                </div>
+                <span
+                  class="text-[11px] font-mono whitespace-nowrap"
+                  [class.text-rose-400]="isOverdue(item.task)"
+                  [class.text-slate-400]="!isOverdue(item.task)"
+                >
+                  {{ item.due | date: 'MMM d' }}
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Recent activity -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Recent activity</h3>
+      @if (!recentActivity().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">No activity yet.</p>
+      } @else {
+        <ul class="space-y-2">
+          @for (a of recentActivity(); track a.task.id + a.kind + a.when.getTime()) {
+            <li>
+              <button
+                class="task-row w-full text-left"
+                (click)="taskClick.emit(a.task)"
+              >
+                <span
+                  class="activity-icon"
+                  [style.color]="activityColor(a.kind)"
+                  [style.border-color]="activityColor(a.kind) + '88'"
+                  [style.box-shadow]="'0 0 8px ' + activityColor(a.kind) + '55'"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" [attr.d]="activityIcon(a.kind)" />
+                  </svg>
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="truncate text-sm text-slate-100">{{ a.task.title }}</div>
+                  <div class="text-[11px] text-slate-500 capitalize">{{ a.kind }}</div>
+                </div>
+                <span class="text-[11px] font-mono text-slate-500 whitespace-nowrap">
+                  {{ a.when | date: 'MMM d, h:mm a' }}
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Top assignees -->
+    <div class="ofx-panel p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="ofx-section-title">Top assignees</h3>
+        <button
+          class="omni-glitch-btn text-xs text-cyan-400 hover:text-cyan-300"
+          (click)="togglePanel('members')"
+        >
+          Manage
+        </button>
+      </div>
+      @if (!assigneeStats().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">No one is assigned yet.</p>
+      } @else {
+        <ul class="space-y-3">
+          @for (a of assigneeStats(); track a.id) {
+            <li>
+              <div class="flex items-center gap-3">
+                <span
+                  class="assignee-avatar"
+                  [style.background]="'linear-gradient(135deg, ' + a.color + '55, ' + a.color + '22)'"
+                  [style.border-color]="a.color + 'aa'"
+                  [style.box-shadow]="'0 0 8px ' + a.color + '66'"
+                  [style.color]="a.color"
+                >
+                  {{ getInitials(a.name) }}
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="truncate text-slate-100">{{ a.name }}</span>
+                    <span class="font-mono text-xs text-slate-400">{{ a.completed }} / {{ a.total }}</span>
+                  </div>
+                  <div class="h-1.5 mt-1 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
+                    <div
+                      class="h-full"
+                      [style.width.%]="a.progress"
+                      [style.background]="'linear-gradient(90deg, ' + a.color + ', ' + a.color + '88)'"
+                      [style.box-shadow]="'0 0 8px ' + a.color"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <!-- Management: tabbed managers -->
+  <section class="ofx-panel p-5 mb-6">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <h3 class="ofx-section-title">Manage project structure</h3>
+      <div class="flex flex-wrap gap-2">
+        <button
+          class="omni-glitch-btn manage-tab"
+          [class.active]="activePanel() === 'sections'"
+          (click)="togglePanel('sections')"
+        >Sections</button>
+        <button
+          class="omni-glitch-btn manage-tab"
+          [class.active]="activePanel() === 'tags'"
+          (click)="togglePanel('tags')"
+        >Tags</button>
+        <button
+          class="omni-glitch-btn manage-tab"
+          [class.active]="activePanel() === 'members'"
+          (click)="togglePanel('members')"
+        >Members</button>
+        <button
+          class="omni-glitch-btn manage-tab"
+          [class.active]="activePanel() === 'fields'"
+          (click)="togglePanel('fields')"
+        >Custom fields</button>
+      </div>
+    </div>
+
+    <div class="manage-surface">
+      @switch (activePanel()) {
+        @case ('sections') {
+          <app-section-manager
+            [projectId]="proj.id"
+            [sections]="proj.sections || []"
+          ></app-section-manager>
+        }
+        @case ('tags') {
+          <app-tag-manager
+            [projectId]="proj.id"
+            [tags]="proj.tags || []"
+          ></app-tag-manager>
+        }
+        @case ('members') {
+          <app-project-member-manager [project]="proj"></app-project-member-manager>
+        }
+        @case ('fields') {
+          <app-custom-field-manager [project]="proj"></app-custom-field-manager>
+        }
+        @default {
+          <p class="text-slate-500 text-sm py-6 text-center">
+            Choose a panel above to edit project structure.
+          </p>
+        }
+      }
+    </div>
+  </section>
+</div>

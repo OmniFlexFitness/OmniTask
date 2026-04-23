@@ -1,0 +1,98 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80" (click)="onBackdropClick($event)">
+  <div class="w-full max-w-lg max-h-[90vh] flex flex-col bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-scale-in" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <header class="px-5 py-2.5 border-b border-violet-500/20 bg-[#0a0f1e]/90">
+      <h2 class="text-base font-bold text-white flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        New Task
+      </h2>
+    </header>
+
+    <!-- Body -->
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex-1 overflow-y-auto p-4 space-y-3">
+      
+      <!-- Base Form Fields -->
+      <app-task-form-fields
+        [form]="form"
+        [priorityOptions]="priorityOptions"
+        [sectionOptions]="sectionOptions()"
+        [availableAssigneeOptions]="availableAssigneeOptions()"
+        [selectedAssignees]="selectedAssignees()"
+        [notifyAssignees]="notifyAssignees()"
+        (assigneeSearch)="onAssigneeSearch($event)"
+        (assigneeSelected)="onAssigneeSelected($event)"
+        (assigneeRemoved)="removeAssignee($event)"
+        (notifyAssigneesChange)="notifyAssignees.set($event)"
+        (applyGroup)="applyGroupToAssignees($event)"
+      >
+        <!-- Projected Priority AI Action -->
+        <app-task-ai-suggestions
+          priority-actions
+          type="priority"
+          [disabled]="!form.value.title?.trim()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          [currentDueDate]="form.value.dueDate || ''"
+          (suggestedPriority)="form.patchValue({ priority: $event })"
+        ></app-task-ai-suggestions>
+
+        <!-- Projected Due Date AI Action -->
+        <app-task-ai-suggestions
+          due-date-actions
+          type="dueDate"
+          [disabled]="!form.value.title?.trim()"
+          [title]="form.value.title || ''"
+          [description]="form.value.description || ''"
+          (suggestedDueDate)="form.patchValue({ dueDate: $event })"
+        ></app-task-ai-suggestions>
+      </app-task-form-fields>
+
+      <!-- AI Subtasks Section -->
+      <app-task-ai-suggestions
+        type="subtasks"
+        [disabled]="!form.value.title?.trim()"
+        [title]="form.value.title || ''"
+        [description]="form.value.description || ''"
+        [projectName]="project()?.name || ''"
+        [(subtasks)]="aiSubtasks"
+      ></app-task-ai-suggestions>
+
+      <!-- Custom Fields -->
+      <app-task-custom-fields-form
+        [customFields]="projectCustomFields()"
+        [customFieldErrors]="customFieldErrors()"
+        (fieldUpdated)="updateCustomField($event.fieldId, $event.value)"
+      ></app-task-custom-fields-form>
+
+      <!-- Tags -->
+      <div>
+        <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Tags</label>
+        <app-task-tags
+          [project]="project() || null"
+          [(selectedTags)]="selectedTags"
+        ></app-task-tags>
+      </div>
+
+      <!-- Error Message -->
+      @if (errorMessage()) {
+        <div class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-3 pt-4 border-t border-white/5">
+        <button type="button" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors" (click)="close.emit()">
+          Cancel
+        </button>
+        <button type="submit" class="omni-glitch-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-[0_0_14px_rgba(37,99,235,0.5)]" [disabled]="form.invalid || saving() || hasCustomFieldErrors()">
+          Create Task
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

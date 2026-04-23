@@ -9,7 +9,9 @@
 # Node
 /node_modules
 npm-debug.log
+npm_output.log
 yarn-error.log
+/package-lock.json
 
 # IDEs and editors
 .idea/
@@ -26,6 +28,7 @@ yarn-error.log
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/mcp.json
 .history/*
 
 # Miscellaneous
@@ -41,3 +44,15 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Firebase logs
+.firebase/logs/
+
+# Service account keys and env variables (sensitive - never commit)
+.env*
+*-key.json
+*-credentials.json
+service-account*.json
+test-results.log
+*.txt
+*.log

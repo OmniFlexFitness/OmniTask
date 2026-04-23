@@ -1,0 +1,17 @@
+{
+  "mcpServers": {},
+  "inputs": [
+    {
+      "id": "github_token",
+      "type": "promptString",
+      "description": "GitHub Personal Access Token (PAT) for MCP GitHub server",
+      "password": true
+    },
+    {
+      "id": "google_maps_key",
+      "type": "promptString",
+      "description": "Google Maps API Key",
+      "password": true
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+<div class="w-full space-y-6">
+  @let u = user();
+  @let counts = { total: totalTasks(), done: doneTasks(), ip: inProgressTasks(), td: todoTasks() };
+
+  <!-- Hero: identity, KPIs, and call-to-actions -->
+  <section class="ofx-panel relative p-6" [style.border-color]="'rgba(0,210,255,0.35)'">
+    <div class="absolute inset-x-0 top-0 h-px" [style.background]="'rgba(0,210,255,0.5)'"></div>
+    <div class="flex flex-col md:flex-row gap-6 md:items-center">
+      <!-- Avatar -->
+      <div
+        class="w-24 h-24 rounded-2xl flex items-center justify-center font-black text-3xl flex-shrink-0 border"
+        [style.color]="u ? personColor(u.uid) : '#00d2ff'"
+        [style.border-color]="(u ? personColor(u.uid) : '#00d2ff') + 'aa'"
+        [style.background]="'linear-gradient(135deg, ' + (u ? personColor(u.uid) : '#00d2ff') + '33, ' + (u ? personColor(u.uid) : '#00d2ff') + '11)'"
+        [style.box-shadow]="'0 0 18px ' + (u ? personColor(u.uid) : '#00d2ff') + '55'"
+      >
+        @if (u?.photoURL) {
+          <img [src]="u?.photoURL" [alt]="u?.displayName || ''" class="w-full h-full rounded-2xl object-cover" />
+        } @else {
+          {{ initials(u?.displayName || u?.email || 'Me') }}
+        }
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-2xl font-black text-white truncate">
+            <span>{{ u?.displayName || u?.email || 'My workspace' }}</span>
+          </h2>
+          <span class="cyber-badge">You</span>
+          @if (u?.role === 'admin') {
+            <span class="cyber-badge-purple cyber-badge">Admin</span>
+          }
+        </div>
+        @if (u?.email) {
+          <p class="mt-1 text-sm text-slate-400">{{ u?.email }}</p>
+        }
+        <div class="mt-3 flex flex-wrap gap-4 text-xs text-slate-400">
+          <span class="inline-flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18" />
+            </svg>
+            {{ activeProjects().length }} active project{{ activeProjects().length === 1 ? '' : 's' }}
+          </span>
+          @if (archivedProjects().length > 0) {
+            <span class="inline-flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 012-2h10a2 2 0 012 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8" />
+              </svg>
+              {{ archivedProjects().length }} completed / archived
+            </span>
+          }
+          <span class="inline-flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            {{ availableCount() }} available to pick up
+          </span>
+        </div>
+      </div>
+
+      <!-- Call-to-actions -->
+      <div class="flex flex-col gap-2 w-full md:w-auto">
+        <button class="omni-glitch-btn ofx-neon-button !py-2 text-xs" (click)="createTask.emit(null)">
+          + Add task to my queue
+        </button>
+        <button
+          class="omni-glitch-btn ofx-ghost-button text-xs"
+          (click)="viewChange.emit('list')"
+        >
+          View all my tasks →
+        </button>
+        @if (availableCount() > 0) {
+          <button
+            class="omni-glitch-btn ofx-ghost-button text-xs"
+            (click)="viewChange.emit('available')"
+          >
+            Pick up work ({{ availableCount() }}) →
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">Total</span>
+        <span class="mt-kpi-value" [style.color]="'#00d2ff'">{{ counts.total }}</span>
+      </div>
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">Done</span>
+        <span class="mt-kpi-value" [style.color]="'#10b981'">{{ counts.done }}</span>
+      </div>
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">In Progress</span>
+        <span class="mt-kpi-value" [style.color]="'#00d2ff'">{{ counts.ip }}</span>
+      </div>
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">To Do</span>
+        <span class="mt-kpi-value" [style.color]="'#e040fb'">{{ counts.td }}</span>
+      </div>
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">Overdue</span>
+        <span class="mt-kpi-value" [style.color]="overdueTasks() > 0 ? '#ff1493' : '#64748b'">
+          {{ overdueTasks() }}
+        </span>
+      </div>
+      <div class="mt-kpi">
+        <span class="mt-kpi-label">Due Soon</span>
+        <span class="mt-kpi-value" [style.color]="'#f59e0b'">{{ dueSoonTasks() }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Row: status donut, completion gauge, reports-to -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Status breakdown -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">My Status Breakdown</h3>
+      @if (counts.total === 0) {
+        <p class="text-slate-500 text-sm py-6 text-center">
+          No tasks yet. Click "+ Add task to my queue" to get going.
+        </p>
+      } @else {
+        @let donut = statusBreakdown();
+        <div class="flex items-center gap-5">
+          <svg viewBox="0 0 100 100" class="w-36 h-36 -rotate-90 flex-shrink-0">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" />
+            @for (arc of donut.arcs; track arc.key) {
+              @if (arc.count > 0) {
+                <circle
+                  cx="50" cy="50" r="45" fill="none"
+                  [attr.stroke]="arc.color"
+                  stroke-width="10"
+                  [attr.stroke-dasharray]="arc.length + ' ' + arc.gap"
+                  [attr.stroke-dashoffset]="-arc.offset"
+                  [style.filter]="'drop-shadow(0 0 4px ' + arc.color + ')'"
+                ></circle>
+              }
+            }
+          </svg>
+          <div class="flex-1 space-y-2 text-sm">
+            @for (arc of donut.arcs; track arc.key) {
+              <div class="flex items-center justify-between gap-3">
+                <span class="inline-flex items-center gap-2 text-slate-300">
+                  <span class="w-2.5 h-2.5 rounded-sm" [style.background]="arc.color" [style.box-shadow]="'0 0 8px ' + arc.color"></span>
+                  {{ arc.label }}
+                </span>
+                <span class="font-mono text-slate-400">
+                  {{ arc.count }} <span class="text-slate-600">/ {{ arc.percent }}%</span>
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Completion gauge -->
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">My Completion</h3>
+      <div class="flex flex-col items-center justify-center py-2">
+        <div class="mt-gauge-number text-cyber-gradient">{{ completionPct() }}<span class="text-2xl">%</span></div>
+        <div class="w-full mt-4 h-3 rounded-full overflow-hidden border border-white/10 bg-slate-900/60">
+          <div
+            class="h-full transition-all duration-500"
+            [style.width.%]="completionPct()"
+            [style.background]="'linear-gradient(90deg, #00d2ff, #e040fb, #ff1493)'"
+            [style.box-shadow]="'0 0 12px rgba(224,64,251,0.65)'"
+          ></div>
+        </div>
+        <div class="mt-3 text-xs text-slate-400 text-center">
+          {{ counts.done }} of {{ counts.total }} task{{ counts.total === 1 ? '' : 's' }} complete
+        </div>
+      </div>
+    </div>
+
+    <!-- Who I report to -->
+    <div class="ofx-panel p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="ofx-section-title">Who I report to</h3>
+        @if (!editingReportsTo()) {
+          <button class="text-xs text-cyan-400 hover:text-cyan-300" (click)="startEditReportsTo()">
+            {{ u?.reportsToId ? 'Edit' : 'Set' }}
+          </button>
+        }
+      </div>
+
+      @if (editingReportsTo()) {
+        <div class="space-y-2">
+          <input
+            type="email"
+            placeholder="manager@company.com"
+            [ngModel]="managerEmailInput()"
+            (ngModelChange)="managerEmailInput.set($event)"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950/60 border border-white/10 text-sm text-white focus:outline-none focus:border-cyan-500/60"
+          />
+          @if (managerLookupError()) {
+            <p class="text-xs text-rose-400">{{ managerLookupError() }}</p>
+          }
+          <div class="flex flex-wrap gap-2">
+            <button
+              class="omni-glitch-btn ofx-neon-button text-xs disabled:opacity-60"
+              [disabled]="managerLookupBusy()"
+              (click)="saveReportsTo()"
+            >
+              Save
+            </button>
+            <button class="omni-glitch-btn ofx-ghost-button text-xs" (click)="cancelEditReportsTo()">
+              Cancel
+            </button>
+            @if (u?.reportsToId) {
+              <button class="omni-glitch-btn text-xs text-rose-400 hover:text-rose-300 px-2" (click)="clearReportsTo()">
+                Clear
+              </button>
+            }
+          </div>
+        </div>
+      } @else if (reportsToPeople().length === 0) {
+        <p class="text-slate-500 text-sm py-4 text-center">
+          No manager set. Click "Set" above, or join a project to start reporting up.
+        </p>
+      } @else {
+        <ul class="space-y-3">
+          @for (p of reportsToPeople(); track p.uid) {
+            <li class="flex items-center gap-3">
+              <span
+                class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border flex-shrink-0"
+                [style.color]="personColor(p.uid)"
+                [style.border-color]="personColor(p.uid) + 'aa'"
+                [style.background]="'linear-gradient(135deg, ' + personColor(p.uid) + '55, ' + personColor(p.uid) + '22)'"
+                [style.box-shadow]="'0 0 8px ' + personColor(p.uid) + '55'"
+              >
+                {{ initials(p.name) }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-slate-100 truncate">{{ p.name }}</div>
+                <div class="text-[11px] text-slate-500 truncate">
+                  {{ p.role }}{{ p.email ? ' · ' + p.email : '' }}
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <!-- Row: upcoming deadlines + recently completed -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="ofx-panel p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="ofx-section-title">Upcoming deadlines</h3>
+        <button class="text-xs text-cyan-400 hover:text-cyan-300" (click)="viewChange.emit('list')">View all →</button>
+      </div>
+      @if (!upcomingTasks().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">Nothing due soon.</p>
+      } @else {
+        <ul class="space-y-2">
+          @for (item of upcomingTasks(); track item.task.id) {
+            <li>
+              <button class="mt-task-row w-full text-left" (click)="taskClick.emit(item.task)">
+                <span class="mt-priority-dot" [style.background]="priorityDot(item.task.priority)"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="truncate text-sm text-slate-100">{{ item.task.title }}</div>
+                  <div class="text-[11px] text-slate-500 truncate">{{ statusLabel(item.task.status) }}</div>
+                </div>
+                <span
+                  class="text-[11px] font-mono whitespace-nowrap"
+                  [class.text-rose-400]="isOverdue(item.task)"
+                  [class.text-slate-400]="!isOverdue(item.task)"
+                >
+                  {{ item.due | date: 'MMM d' }}
+                </span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="ofx-panel p-5">
+      <h3 class="ofx-section-title mb-4">Recently completed</h3>
+      @if (!recentlyCompleted().length) {
+        <p class="text-slate-500 text-sm py-6 text-center">Nothing completed yet — stay hungry.</p>
+      } @else {
+        <ul class="space-y-2">
+          @for (item of recentlyCompleted(); track item.task.id) {
+            <li>
+              <button class="mt-task-row w-full text-left" (click)="taskClick.emit(item.task)">
+                <span class="mt-activity-dot" [style.background]="'#10b981'" [style.box-shadow]="'0 0 8px #10b981'"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="truncate text-sm text-slate-100">{{ item.task.title }}</div>
+                  <div class="text-[11px] text-slate-500 truncate">Done {{ item.at | date: 'MMM d, h:mm a' }}</div>
+                </div>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </section>
+
+  <!-- Row: projects I'm part of -->
+  <section class="ofx-panel p-5">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <h3 class="ofx-section-title">My Projects &amp; Contributions</h3>
+      <span class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+        {{ activeProjects().length }} active · {{ archivedProjects().length }} archived
+      </span>
+    </div>
+    @if (!contributions().length) {
+      <p class="text-slate-500 text-sm py-6 text-center">
+        You aren't part of any projects yet. Ask to be added to one, or create your own.
+      </p>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        @for (c of contributions(); track c.project.id) {
+          <div
+            class="mt-project-card"
+            [style.border-color]="projectColor(c.project) + '55'"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs border flex-shrink-0"
+                [style.color]="projectColor(c.project)"
+                [style.border-color]="projectColor(c.project) + 'aa'"
+                [style.background]="projectColor(c.project) + '22'"
+                [style.box-shadow]="'0 0 10px ' + projectColor(c.project) + '55'"
+              >
+                {{ projectAvatar(c.project) }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="truncate text-sm font-semibold text-slate-100">{{ c.project.name }}</span>
+                  @if (c.project.status === 'archived') {
+                    <span class="ofx-chip bg-slate-700/50 text-slate-300 text-[10px]">Archived</span>
+                  }
+                </div>
+                <div class="text-[11px] text-slate-500 truncate">
+                  {{ c.role }}{{ c.lastActivity ? ' · active ' + (c.lastActivity | date: 'MMM d') : '' }}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
+              <div class="mt-mini-stat">
+                <div class="text-slate-400">My tasks</div>
+                <div class="text-slate-100 font-mono">{{ c.totalMyTasks }}</div>
+              </div>
+              <div class="mt-mini-stat">
+                <div class="text-slate-400">Done</div>
+                <div class="font-mono" [style.color]="'#10b981'">{{ c.completed }}</div>
+              </div>
+              <div class="mt-mini-stat">
+                <div class="text-slate-400">In Prog</div>
+                <div class="font-mono" [style.color]="'#00d2ff'">{{ c.inProgress }}</div>
+              </div>
+              <div class="mt-mini-stat">
+                <div class="text-slate-400">Created</div>
+                <div class="font-mono text-slate-200">{{ c.created }}</div>
+              </div>
+            </div>
+
+            <div class="mt-3 h-1.5 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
+              <div
+                class="h-full"
+                [style.width.%]="c.progress"
+                [style.background]="'linear-gradient(90deg, ' + projectColor(c.project) + ', ' + projectColor(c.project) + '88)'"
+                [style.box-shadow]="'0 0 8px ' + projectColor(c.project)"
+              ></div>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between">
+              <a
+                class="text-[11px] text-cyan-400 hover:text-cyan-300"
+                [routerLink]="'/projects/' + c.project.id"
+              >
+                Open project →
+              </a>
+              <button
+                class="text-[11px] text-violet-400 hover:text-violet-300"
+                (click)="createTask.emit(c.project.id)"
+              >
+                + Task
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</div>

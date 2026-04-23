@@ -1,49 +1,439 @@
-import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, addDoc, doc, updateDoc, deleteDoc, query, where, collectionData } from '@angular/fire/firestore';
-import { Project } from '../models/domain.model';
+import { Injectable, inject, signal, Injector, runInInjectionContext } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  getDoc,
+  query,
+  where,
+  collectionData,
+  deleteField,
+  DocumentReference,
+} from '@angular/fire/firestore';
+import {
+  Project,
+  Section,
+  DEFAULT_SECTIONS,
+  CustomFieldDefinition,
+  Tag,
+} from '../models/domain.model';
 import { AuthService } from '../auth/auth.service';
-import { Observable, switchMap, of } from 'rxjs';
+import { Observable, switchMap, of, map, firstValueFrom } from 'rxjs';
+import { GoogleTasksSyncService } from './google-tasks-sync.service';
+import { PermissionsService } from './permissions.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProjectService {
   private firestore = inject(Firestore);
   private auth = inject(AuthService);
-  
+  private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private permissions = inject(PermissionsService);
+  private injector = inject(Injector);
+
   private projectsCollection = collection(this.firestore, 'projects');
 
-  getMyProjects(): Observable<Project[]> {
-    return this.auth.user$.pipe(
-      switchMap(user => {
-        if (!user) return of([]);
-        // Query projects where user is owner or member
-        // Firestore "array-contains" limitation allows only one array check. 
-        // We'll check memberIds which should include owner.
-        const q = query(this.projectsCollection, where('memberIds', 'array-contains', user.uid));
-        return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
-      })
+  // Loading state for UI feedback
+  loading = signal(false);
+  error = signal<string | null>(null);
+
+  // Currently selected project
+  selectedProjectId = signal<string | null>(null);
+
+  /**
+   * Get all projects globally (for Admin view)
+   */
+  getAllProjects(): Observable<Project[]> {
+    const q = query(this.projectsCollection);
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+    });
+  }
+
+  /**
+   * Marker name used for each user's auto-generated "Personal" project.
+   * Standalone tasks created from the My Tasks dashboard live here.
+   */
+  static readonly PERSONAL_PROJECT_NAME = 'Personal';
+
+  /**
+   * Get all archived projects the current user was a part of.
+   * Used by the My Tasks dashboard's "Projects completed / previously on" panel.
+   */
+  getMyArchivedProjects(): Observable<Project[]> {
+    return this.getMyProjects().pipe(
+      map((projects) => projects.filter((p) => p.status === 'archived')),
     );
   }
 
-  async createProject(name: string, description: string) {
+  /**
+   * Get the user's personal, catch-all project for standalone tasks.
+   * Creates it lazily the first time a user visits My Tasks. The project is
+   * single-member (the user themself) and is intentionally hidden from the
+   * main projects list when rendering the user's project roster.
+   */
+  async getOrCreatePersonalProject(): Promise<Project> {
     const user = this.auth.currentUserSig();
     if (!user) throw new Error('Not authenticated');
+    const existing = await firstValueFrom(this.getMyProjects());
+    const personal = existing.find(
+      (p) => p.ownerId === user.uid && p.name === ProjectService.PERSONAL_PROJECT_NAME,
+    );
+    if (personal) return personal;
 
+    // Bypass permission checks — every user needs a personal project.
+    const sections: Section[] = DEFAULT_SECTIONS.map((s) => ({
+      ...s,
+      id: crypto.randomUUID(),
+    }));
     const project: Omit<Project, 'id'> = {
-      name,
-      description,
+      name: ProjectService.PERSONAL_PROJECT_NAME,
+      description: 'Your personal tasks — standalone work that is not part of a project.',
+      color: '#00d2ff',
       ownerId: user.uid,
       memberIds: [user.uid],
-      createdAt: new Date() as any, // Firestore converts JS Date to Timestamp on write
-      status: 'active'
+      sections,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'active',
     };
-
-    return addDoc(this.projectsCollection, project);
+    const ref = await addDoc(this.projectsCollection, project);
+    return { id: ref.id, ...project } as Project;
   }
 
-  async updateProject(id: string, data: Partial<Project>) {
-     const docRef = doc(this.firestore, `projects/${id}`);
-     return updateDoc(docRef, data);
+  /**
+   * Get all projects for the current user
+   */
+  getMyProjects(): Observable<Project[]> {
+    return this.auth.user$.pipe(
+      switchMap((user) => {
+        if (!user) return of([]);
+        // Query projects where user is owner or member
+        const q = query(this.projectsCollection, where('memberIds', 'array-contains', user.uid));
+        return runInInjectionContext(this.injector, () => {
+          return collectionData(q, { idField: 'id' }) as Observable<Project[]>;
+        });
+      }),
+      map((projects) => projects.sort((a, b) => a.name.localeCompare(b.name))),
+    );
+  }
+  /**
+   * Get all unique tags from all user's projects
+   */
+  getAllTags(): Observable<Tag[]> {
+    return this.getMyProjects().pipe(
+      map((projects) => {
+        const tags = projects.flatMap((p) => p.tags || []);
+        // Deduplicate by ID
+        const uniqueTags = new Map<string, Tag>();
+        tags.forEach((t) => uniqueTags.set(t.id, t));
+        return Array.from(uniqueTags.values()).sort((a, b) => a.name.localeCompare(b.name));
+      }),
+    );
+  }
+
+  /**
+   * Get a single project by ID
+   */
+  async getProject(id: string): Promise<Project | null> {
+    try {
+      const docRef = doc(this.firestore, `projects/${id}`);
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() } as Project;
+    } catch (err) {
+      console.error('Failed to fetch project:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Get project as observable (for real-time updates)
+   */
+  getProject$(id: string): Observable<Project | null> {
+    const docRef = doc(this.firestore, `projects/${id}`);
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(
+        query(collection(this.firestore, 'projects'), where('__name__', '==', id)),
+        { idField: 'id' },
+      ).pipe(map((docs) => (docs[0] as Project) || null));
+    });
+  }
+
+  /**
+   * Create a new project with default sections
+   */
+  async createProject(
+    name: string,
+    description: string = '',
+    color: string = '#6366f1',
+  ): Promise<DocumentReference> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      const user = this.auth.currentUserSig();
+      if (!user) throw new Error('Not authenticated');
+      this.permissions.requirePermission('canCreateProjects');
+
+      // Create default sections with unique IDs
+      const sections: Section[] = DEFAULT_SECTIONS.map((s, i) => ({
+        ...s,
+        id: crypto.randomUUID(),
+      }));
+
+      const project: Omit<Project, 'id'> = {
+        name,
+        description,
+        color,
+        ownerId: user.uid,
+        memberIds: [user.uid],
+        sections,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: 'active',
+      };
+
+      const result = await addDoc(this.projectsCollection, project);
+
+      // Also create a corresponding task list in Google Tasks
+      await this.googleTasksSyncService.createTaskListForProject(result.id, name);
+
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create project';
+      this.error.set(message);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Update a project
+   */
+  async updateProject(id: string, data: Partial<Project>): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      const docRef = doc(this.firestore, `projects/${id}`);
+      await updateDoc(docRef, { ...data, updatedAt: new Date() });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update project';
+      this.error.set(message);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Remove the icon from a project by clearing the Firestore field entirely.
+   * Uses deleteField() so the document shape matches "no icon was ever set",
+   * instead of leaving a sentinel null in the stored document.
+   */
+  async clearProjectIcon(id: string): Promise<void> {
+    const docRef = doc(this.firestore, `projects/${id}`);
+    await updateDoc(docRef, { icon: deleteField(), updatedAt: new Date() });
+  }
+
+  /**
+   * Delete a project (and optionally its tasks)
+   */
+  async deleteProject(id: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      this.permissions.requirePermission('canDeleteProjects');
+      const project = await this.getProject(id);
+      if (!project) throw new Error('Project not found');
+
+      // First delete the corresponding Google Tasks list (if any)
+      if (project.googleTaskListId) {
+        await this.googleTasksSyncService.deleteTaskListForProject(project.googleTaskListId);
+      }
+
+      // Then delete the project from Firestore
+      const docRef = doc(this.firestore, `projects/${id}`);
+      await deleteDoc(docRef);
+
+      // Note: Tasks should be deleted separately or via Cloud Function
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete project';
+      this.error.set(message);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Archive a project
+   */
+  async archiveProject(id: string): Promise<void> {
+    return this.updateProject(id, { status: 'archived' });
+  }
+
+  /**
+   * Restore an archived project
+   */
+  async restoreProject(id: string): Promise<void> {
+    return this.updateProject(id, { status: 'active' });
+  }
+
+  /**
+   * Add a section to a project
+   */
+  async addSection(projectId: string, name: string, color?: string): Promise<Section> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const newSection: Section = {
+      id: crypto.randomUUID(),
+      name,
+      order: project.sections.length,
+      color,
+    };
+
+    const updatedSections = [...project.sections, newSection];
+    await this.updateProject(projectId, { sections: updatedSections });
+
+    return newSection;
+  }
+
+  /**
+   * Update a section
+   */
+  async updateSection(projectId: string, sectionId: string, data: Partial<Section>): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const updatedSections = project.sections.map((s) =>
+      s.id === sectionId ? { ...s, ...data } : s,
+    );
+
+    await this.updateProject(projectId, { sections: updatedSections });
+  }
+
+  /**
+   * Remove a section from a project
+   */
+  async removeSection(projectId: string, sectionId: string): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const updatedSections = project.sections
+      .filter((s) => s.id !== sectionId)
+      .map((s, i) => ({ ...s, order: i })); // Re-index orders
+
+    await this.updateProject(projectId, { sections: updatedSections });
+  }
+
+  /**
+   * Reorder sections
+   */
+  async reorderSections(projectId: string, sections: Section[]): Promise<void> {
+    await this.updateProject(projectId, { sections });
+  }
+
+  /**
+   * Add a member to a project
+   */
+  async addMember(projectId: string, userId: string): Promise<void> {
+    this.permissions.requirePermission('canInviteMembers');
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    if (!project.memberIds?.includes(userId)) {
+      const updatedMemberIds = [...(project.memberIds || []), userId];
+      await this.updateProject(projectId, { memberIds: updatedMemberIds });
+    }
+  }
+
+  /**
+   * Remove a member from a project
+   */
+  async removeMember(projectId: string, userId: string): Promise<void> {
+    this.permissions.requirePermission('canInviteMembers');
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    // Prevent removing the owner
+    if (project.ownerId === userId) {
+      throw new Error('Cannot remove project owner');
+    }
+
+    const updatedMemberIds = (project.memberIds || []).filter((id) => id !== userId);
+    await this.updateProject(projectId, { memberIds: updatedMemberIds });
+  }
+
+  /**
+   * Links a global custom field to a project
+   */
+  async linkCustomField(projectId: string, fieldId: string): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const currentIds = project.customFieldIds || [];
+    if (currentIds.includes(fieldId)) return; // Already linked
+
+    await this.updateProject(projectId, {
+      customFieldIds: [...currentIds, fieldId],
+    });
+  }
+
+  /**
+   * Unlinks a global custom field from a project
+   */
+  async unlinkCustomField(projectId: string, fieldId: string): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const updatedIds = (project.customFieldIds || []).filter((id) => id !== fieldId);
+    await this.updateProject(projectId, { customFieldIds: updatedIds });
+  }
+
+  /**
+   * Add a tag to a project
+   */
+  async addTag(projectId: string, tag: Omit<Tag, 'id'>): Promise<Tag> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    // Validate tag name
+    const trimmedName = tag.name.trim();
+    if (!trimmedName) throw new Error('Tag name cannot be empty');
+
+    // Check if tag with name already exists
+    const existing = project.tags?.find((t) => t.name.toLowerCase() === trimmedName.toLowerCase());
+    if (existing) return existing;
+
+    const newTag: Tag = {
+      ...tag,
+      name: trimmedName,
+      id: crypto.randomUUID(),
+    };
+
+    const updatedTags = [...(project.tags || []), newTag];
+    await this.updateProject(projectId, { tags: updatedTags });
+
+    return newTag;
+  }
+
+  /**
+   * Remove a tag from a project
+   */
+  async removeTag(projectId: string, tagId: string): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const updatedTags = (project.tags || []).filter((t) => t.id !== tagId);
+    await this.updateProject(projectId, { tags: updatedTags });
   }
 }

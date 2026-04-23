@@ -11,6 +11,26 @@
                 "source": "**",
                 "destination": "/index.html"
             }
+        ],
+        "headers": [
+            {
+                "source": "**/index.html",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "no-cache, no-store, must-revalidate"
+                    }
+                ]
+            },
+            {
+                "source": "**/*.@(jpg|jpeg|gif|png|ico|svg|webp|js|css)",
+                "headers": [
+                    {
+                        "key": "Cache-Control",
+                        "value": "max-age=31536000"
+                    }
+                ]
+            }
         ]
     },
     "firestore": {
@@ -28,5 +48,13 @@
                 "firebase-debug.log.*"
             ]
         }
-    ]
+    ],
+    "extensions": {
+        "firestore-send-email": "firebase/firestore-send-email@0.2.4",
+        "delete-user-data": "firebase/delete-user-data@0.1.25",
+        "storage-resize-images": "firebase/storage-resize-images@0.3.0",
+        "speech-to-text": "googlecloud/speech-to-text@0.1.8",
+        "firestore-multimodal-genai": "googlecloud/firestore-multimodal-genai@1.0.5",
+        "firestore-vector-search": "googlecloud/firestore-vector-search@0.1.1"
+    }
 }

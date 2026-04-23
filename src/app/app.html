@@ -1,6 +1,13 @@
-<div class="min-h-screen bg-gray-100">
+<div class="blur-overlay"></div>
+<div class="min-h-screen flex flex-col relative z-10">
   <app-navbar *ngIf="auth.currentUserSig()"></app-navbar>
-  <main>
+  <main class="flex-grow">
     <router-outlet></router-outlet>
   </main>
+  <footer class="py-2 px-4">
+    <div class="max-w-7xl mx-auto text-center">
+      <span class="text-xs text-slate-500">v{{ version() }}</span>
+    </div>
+  </footer>
 </div>
+<app-dialog></app-dialog>

@@ -1,0 +1,547 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.md-editor {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.3);
+  transition: border-color 0.15s;
+  /* overflow: visible so link/color popups are not clipped.
+     Internal content scrolls on .md-wysiwyg-editor, not the wrapper. */
+  overflow: visible;
+}
+
+.md-editor:focus-within {
+  border-color: rgb(6, 182, 212);
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+.md-editor-minimal {
+  border-radius: 8px;
+}
+
+/* ── Toolbar ── */
+.md-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(15, 23, 42, 0.5);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.md-toolbar-minimal {
+  padding: 2px 4px;
+}
+
+.md-btn {
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: rgb(148, 163, 184);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  min-width: 26px;
+  min-height: 26px;
+}
+
+.md-btn:hover:not(.md-btn-disabled) {
+  color: rgb(34, 211, 238);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Active formatting state — highlighted so users can see what's applied */
+.md-btn-active {
+  color: rgb(34, 211, 238);
+  background-color: rgba(6, 182, 212, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(6, 182, 212, 0.45);
+}
+
+.md-btn-active:hover:not(.md-btn-disabled) {
+  background-color: rgba(6, 182, 212, 0.28);
+}
+
+.md-btn-disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+.md-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.md-icon-bold {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.md-icon-italic {
+  font-style: italic;
+  font-size: 12px;
+}
+
+.md-icon-underline {
+  text-decoration: underline;
+  font-size: 12px;
+}
+
+.md-icon-strike {
+  text-decoration: line-through;
+  font-size: 12px;
+}
+
+.md-icon-highlight {
+  font-size: 11px;
+  background: rgba(250, 204, 21, 0.3);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.md-icon-mono {
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.md-icon-hr {
+  font-size: 12px;
+}
+
+.md-icon-callout {
+  font-size: 10px;
+}
+
+.md-icon-color {
+  position: relative;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 1px 4px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.md-icon-color-swatch {
+  display: block;
+  width: 12px;
+  height: 3px;
+  margin-top: 1px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #22d3ee, #818cf8, #f472b6, #facc15);
+}
+
+.md-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0 3px;
+}
+
+/* ── WYSIWYG Editor ── */
+.md-wysiwyg-editor {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  min-height: 120px;
+  cursor: text;
+  border-top: none;
+  /* Scroll internally so popups remain visible outside the editor */
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgb(203, 213, 225);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.md-wysiwyg-editor[placeholder]:empty:before {
+  content: attr(placeholder);
+  color: rgb(71, 85, 105);
+  pointer-events: none;
+  display: block;
+}
+
+.md-live-preview-minimal {
+  padding: 8px 10px;
+  font-size: 12px;
+  max-height: 150px;
+}
+
+/* ── Rendered Content Styles ──
+   These target both the live editor (.md-wysiwyg-editor) and any external
+   read-only render (.md-live-preview). We use a broad selector so the same
+   styles apply in task board / list views that pipe markdown through.       */
+:host ::ng-deep .md-wysiwyg-editor h1,
+:host ::ng-deep .md-live-preview h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+  margin-top: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor h1:first-child,
+:host ::ng-deep .md-live-preview h1:first-child {
+  margin-top: 0;
+}
+
+:host ::ng-deep .md-wysiwyg-editor h2,
+:host ::ng-deep .md-live-preview h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor h2:first-child,
+:host ::ng-deep .md-live-preview h2:first-child {
+  margin-top: 0;
+}
+
+:host ::ng-deep .md-wysiwyg-editor h3,
+:host ::ng-deep .md-live-preview h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor h4,
+:host ::ng-deep .md-live-preview h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(226, 232, 240);
+  margin-bottom: 4px;
+  margin-top: 12px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor p,
+:host ::ng-deep .md-live-preview p {
+  margin-bottom: 12px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor p:last-child,
+:host ::ng-deep .md-live-preview p:last-child {
+  margin-bottom: 0;
+}
+
+/* Bold/italic/strike keep their weight/decoration but inherit color.
+   This lets user-selected text colors apply through inline styles. */
+:host ::ng-deep .md-wysiwyg-editor strong,
+:host ::ng-deep .md-live-preview strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+:host ::ng-deep .md-wysiwyg-editor em,
+:host ::ng-deep .md-live-preview em {
+  font-style: italic;
+  color: inherit;
+}
+
+:host ::ng-deep .md-wysiwyg-editor del,
+:host ::ng-deep .md-wysiwyg-editor s,
+:host ::ng-deep .md-live-preview del,
+:host ::ng-deep .md-live-preview s {
+  text-decoration: line-through;
+  color: inherit;
+  opacity: 0.85;
+}
+
+:host ::ng-deep .md-wysiwyg-editor u,
+:host ::ng-deep .md-live-preview u {
+  text-decoration: underline;
+  color: inherit;
+}
+
+:host ::ng-deep .md-wysiwyg-editor a,
+:host ::ng-deep .md-live-preview a {
+  color: rgb(34, 211, 238);
+  text-decoration: underline;
+  transition: color 0.15s;
+  cursor: pointer;
+}
+
+:host ::ng-deep .md-wysiwyg-editor a:hover,
+:host ::ng-deep .md-live-preview a:hover {
+  color: rgb(103, 232, 249);
+}
+
+:host ::ng-deep .md-wysiwyg-editor ul,
+:host ::ng-deep .md-live-preview ul {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor ol,
+:host ::ng-deep .md-live-preview ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor li,
+:host ::ng-deep .md-live-preview li {
+  color: inherit;
+  margin-bottom: 4px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor blockquote,
+:host ::ng-deep .md-live-preview blockquote {
+  border-left: 4px solid rgba(100, 116, 139, 0.4);
+  padding-left: 16px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin: 12px 0;
+  color: rgb(148, 163, 184);
+  font-style: italic;
+}
+
+:host ::ng-deep .md-wysiwyg-editor code,
+:host ::ng-deep .md-live-preview code {
+  background: rgba(30, 41, 59, 0.8);
+  color: rgb(34, 211, 238);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+
+:host ::ng-deep .md-wysiwyg-editor pre,
+:host ::ng-deep .md-live-preview pre {
+  background: rgba(2, 6, 23, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+:host ::ng-deep .md-wysiwyg-editor pre code,
+:host ::ng-deep .md-live-preview pre code {
+  background: transparent;
+  padding: 0;
+  color: rgb(203, 213, 225);
+}
+
+:host ::ng-deep .md-wysiwyg-editor table,
+:host ::ng-deep .md-live-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+:host ::ng-deep .md-wysiwyg-editor th,
+:host ::ng-deep .md-live-preview th {
+  background: rgba(30, 41, 59, 0.5);
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(203, 213, 225);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:host ::ng-deep .md-wysiwyg-editor td,
+:host ::ng-deep .md-live-preview td {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:host ::ng-deep .md-wysiwyg-editor tr:hover td,
+:host ::ng-deep .md-live-preview tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+:host ::ng-deep .md-wysiwyg-editor hr,
+:host ::ng-deep .md-live-preview hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
+}
+
+:host ::ng-deep .md-wysiwyg-editor img,
+:host ::ng-deep .md-live-preview img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+/* Task lists */
+:host ::ng-deep .md-wysiwyg-editor .md-task-item,
+:host ::ng-deep .md-live-preview .md-task-item {
+  list-style-type: none;
+}
+
+:host ::ng-deep .md-wysiwyg-editor input[type='checkbox'],
+:host ::ng-deep .md-live-preview input[type='checkbox'] {
+  margin-right: 8px;
+  accent-color: rgb(6, 182, 212);
+}
+
+/* Highlight */
+:host ::ng-deep .md-wysiwyg-editor mark,
+:host ::ng-deep .md-live-preview mark,
+:host ::ng-deep .md-wysiwyg-editor .md-highlight,
+:host ::ng-deep .md-live-preview .md-highlight {
+  background: rgba(250, 204, 21, 0.25);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+:host ::ng-deep .md-wysiwyg-editor .md-callout,
+:host ::ng-deep .md-live-preview .md-callout {
+  color: rgb(203, 213, 225);
+}
+
+/* ── Floating popups (link + color pickers) ──
+   Rendered in-place but fixed to viewport coordinates, so nothing clips them
+   regardless of modal / scroll container overflow settings.                   */
+.md-popup {
+  position: fixed;
+  z-index: 9999;
+  background-color: rgb(15, 23, 42);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.md-link-popup {
+  min-width: 260px;
+}
+
+.md-link-input {
+  flex: 1;
+  padding: 6px 10px;
+  background-color: rgb(2, 6, 23);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  font-size: 13px;
+  color: rgb(226, 232, 240);
+  outline: none;
+  min-width: 0;
+}
+
+.md-link-input:focus {
+  border-color: rgb(6, 182, 212);
+  box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+.md-popup-btn {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: rgb(203, 213, 225);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.md-popup-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.md-popup-btn-primary {
+  background: rgb(8, 145, 178);
+  color: white;
+}
+
+.md-popup-btn-primary:hover {
+  background: rgb(14, 116, 144);
+}
+
+.md-color-popup {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 10px;
+  min-width: 200px;
+}
+
+.md-popup-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(148, 163, 184);
+}
+
+.md-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.md-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.md-swatch:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.45);
+}
+
+.md-swatch-none {
+  background-image:
+    linear-gradient(45deg, transparent 45%, rgb(239, 68, 68) 45%, rgb(239, 68, 68) 55%, transparent 55%);
+  background-color: rgb(30, 41, 59) !important;
+}
+
+/* Highlight swatches preview the translucent ink on a paper-coloured base so
+   users see what the highlight will actually look like over text. */
+.md-swatch-highlight {
+  background-color: #f8fafc;
+  background-repeat: no-repeat;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.md-swatch-sample {
+  pointer-events: none;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.md-swatch-highlight.md-swatch-none {
+  /* "Clear" override — keep the diagonal slash but use the paper backdrop */
+  background-color: #f8fafc !important;
+}
