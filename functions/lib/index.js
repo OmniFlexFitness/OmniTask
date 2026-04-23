@@ -15,15 +15,29 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
+exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -35,6 +49,8 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const vertexai_1 = require("@google-cloud/vertexai");
 const nodemailer = __importStar(require("nodemailer"));
+const marked_1 = require("marked");
+const sanitize_html_1 = __importDefault(require("sanitize-html"));
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = (0, firestore_2.getFirestore)();
@@ -65,6 +81,96 @@ function escapeHtml(text) {
     return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char]);
 }
 /**
+ * Render markdown task description as sanitized HTML with inline styles
+ * suitable for email clients (which typically strip <style> blocks and class
+ * attributes). Returns a string of HTML — empty string for missing/blank input.
+ */
+function renderDescriptionForEmail(markdown) {
+    if (!markdown || !markdown.trim())
+        return '';
+    // Obsidian-style highlights: ==text== → <mark>text</mark>
+    const preprocessed = markdown.replace(/==([^=]+?)==/g, '<mark>$1</mark>');
+    // Parse with GFM + line breaks so user formatting survives the round-trip.
+    const rawHtml = marked_1.marked.parse(preprocessed, { gfm: true, breaks: true });
+    // Sanitize — the description is user-provided and flows through an HTML email,
+    // so we strip scripts/handlers but keep all the formatting tags the editor
+    // can emit (bold, headings, lists, links, tables, blockquotes, images, code).
+    const cleanHtml = (0, sanitize_html_1.default)(rawHtml, {
+        allowedTags: [
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'p', 'br', 'hr', 'div', 'span',
+            'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark',
+            'ul', 'ol', 'li',
+            'a', 'img',
+            'blockquote',
+            'code', 'pre',
+            'table', 'thead', 'tbody', 'tr', 'th', 'td',
+            'input',
+        ],
+        allowedAttributes: {
+            a: ['href', 'name', 'target', 'rel', 'title'],
+            img: ['src', 'alt', 'title', 'width', 'height'],
+            input: ['type', 'checked', 'disabled'],
+            '*': ['style'],
+        },
+        allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+        transformTags: {
+            // Force links to open externally and be safe
+            a: sanitize_html_1.default.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }),
+        },
+    });
+    // Inject inline styles — email clients (Gmail, Outlook) strip <style> blocks,
+    // so each formatting tag needs its CSS inlined. We rewrite well-known tags
+    // to carry a style="" attribute, preserving any style the user already set.
+    const inline = {
+        h1: 'font-size:20px;font-weight:700;color:#f1f5f9;margin:16px 0 8px;line-height:1.3;',
+        h2: 'font-size:18px;font-weight:700;color:#f1f5f9;margin:14px 0 8px;line-height:1.3;',
+        h3: 'font-size:16px;font-weight:600;color:#f1f5f9;margin:12px 0 6px;line-height:1.3;',
+        h4: 'font-size:14px;font-weight:600;color:#e2e8f0;margin:10px 0 6px;line-height:1.3;',
+        h5: 'font-size:13px;font-weight:600;color:#e2e8f0;margin:8px 0 4px;line-height:1.3;',
+        h6: 'font-size:12px;font-weight:600;color:#cbd5e1;margin:8px 0 4px;line-height:1.3;',
+        p: 'margin:0 0 10px;line-height:1.6;color:#cbd5e1;',
+        strong: 'font-weight:700;color:#f8fafc;',
+        b: 'font-weight:700;color:#f8fafc;',
+        em: 'font-style:italic;',
+        i: 'font-style:italic;',
+        del: 'text-decoration:line-through;color:#94a3b8;',
+        s: 'text-decoration:line-through;color:#94a3b8;',
+        u: 'text-decoration:underline;',
+        mark: 'background:#fde68a;color:#78350f;padding:0 3px;border-radius:2px;',
+        a: 'color:#22d3ee;text-decoration:underline;',
+        ul: 'margin:0 0 10px;padding-left:22px;color:#cbd5e1;',
+        ol: 'margin:0 0 10px;padding-left:22px;color:#cbd5e1;',
+        li: 'margin-bottom:4px;line-height:1.5;',
+        blockquote: 'border-left:3px solid #64748b;margin:10px 0;padding:4px 0 4px 12px;color:#94a3b8;font-style:italic;',
+        code: 'background:#1e293b;color:#22d3ee;padding:1px 5px;border-radius:3px;font-family:Consolas,Monaco,monospace;font-size:13px;',
+        pre: 'background:#0f172a;border:1px solid #334155;border-radius:6px;padding:12px;margin:10px 0;overflow-x:auto;font-family:Consolas,Monaco,monospace;font-size:13px;color:#cbd5e1;',
+        table: 'border-collapse:collapse;margin:10px 0;width:100%;',
+        th: 'background:#1e293b;text-align:left;padding:6px 10px;font-weight:600;color:#e2e8f0;border:1px solid #334155;font-size:13px;',
+        td: 'padding:6px 10px;border:1px solid #334155;color:#cbd5e1;font-size:14px;',
+        hr: 'border:none;border-top:1px solid #334155;margin:14px 0;',
+        img: 'max-width:100%;border-radius:6px;',
+    };
+    // Rewrite open-tags to carry inline styles. We preserve any existing style
+    // attribute by appending — the user's own colors should win.
+    const styled = cleanHtml.replace(/<(\/?)(h[1-6]|p|strong|b|em|i|u|s|del|mark|a|ul|ol|li|blockquote|code|pre|table|th|td|hr|img)([^>]*)>/gi, (match, slash, tag, rest) => {
+        if (slash)
+            return match; // closing tag
+        const tagLower = tag.toLowerCase();
+        const baseStyle = inline[tagLower];
+        if (!baseStyle)
+            return match;
+        const styleMatch = rest.match(/\sstyle\s*=\s*"([^"]*)"/i);
+        if (styleMatch) {
+            const existing = styleMatch[1].trim().replace(/;?$/, ';');
+            const newAttrs = rest.replace(/\sstyle\s*=\s*"[^"]*"/i, ` style="${baseStyle}${existing}"`);
+            return `<${tag}${newAttrs}>`;
+        }
+        return `<${tag}${rest} style="${baseStyle}">`;
+    });
+    return styled;
+}
+/**
  * Load email template from file (cached for performance)
  */
 function loadEmailTemplate() {
@@ -81,14 +187,14 @@ function loadEmailTemplate() {
         return `
 <!DOCTYPE html>
 <html>
-<body style="font-family: sans-serif; padding: 20px;">
-  <h1>New Task Assigned</h1>
-  <p>Project: {{PROJECT_NAME}}</p>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:20px;color:#1f2937;">
+  <h1 style="color:#8b5cf6;">New Task Assigned</h1>
+  <p style="color:#6b7280;">Project: {{PROJECT_NAME}}</p>
   <h2>{{TASK_TITLE}}</h2>
   {{TASK_DESCRIPTION}}
-  <p>Priority: {{TASK_PRIORITY}}</p>
+  <p><strong>Priority:</strong> {{TASK_PRIORITY}}</p>
   {{DUE_DATE_HTML}}
-  <p><a href="{{TASK_URL}}">View Task</a></p>
+  <p><a href="{{TASK_URL}}" style="color:#8b5cf6;">View Task</a></p>
 </body>
 </html>
     `.trim();
@@ -102,16 +208,19 @@ function populateEmailTemplate(data) {
     // Escape all user-provided content to prevent XSS
     html = html.replace(/{{PROJECT_NAME}}/g, escapeHtml(data.projectName));
     html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
-    const descriptionHtml = data.taskDescription
-        ? `<p class="description">${escapeHtml(data.taskDescription)}</p>`
+    // Render markdown description to sanitized, inline-styled HTML so email
+    // clients (Gmail, Outlook) display formatted text instead of raw markdown.
+    const descriptionBody = renderDescriptionForEmail(data.taskDescription);
+    const descriptionHtml = descriptionBody
+        ? `<div class="description" style="margin-top:12px;color:#cbd5e1;font-size:14px;line-height:1.6;">${descriptionBody}</div>`
         : '';
     html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
     html = html.replace(/{{TASK_PRIORITY}}/g, escapeHtml(data.taskPriority.toUpperCase()));
     const dueDateHtml = data.dueDateStr
         ? `
-      <span class="meta-item">
-        <span class="meta-label">Due:</span>
-        <span class="meta-value">${escapeHtml(data.dueDateStr)}</span>
+      <span style="display:inline-block;background:#1e293b;padding:8px 12px;border-radius:6px;font-size:13px;">
+        <span style="color:#64748b;">Due:</span>
+        <span style="color:#e2e8f0;">${escapeHtml(data.dueDateStr)}</span>
       </span>
       `
         : '';
@@ -141,7 +250,6 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -663,7 +771,7 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
         port: 465,
         secure: true,
         auth: {
-            user: 'bertin.kenol@omniflexfitness.com', // Primary account email for login
+            user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
             pass: nodemailerSmtpPassword.value(),
         },
     });
@@ -702,10 +810,14 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
 });
 // Helper to send reminder emails
 async function sendReminderEmail(transporter, email, title, description, timeString, offset, typeStr) {
+    const renderedDescription = renderDescriptionForEmail(description);
+    const descriptionBlock = renderedDescription
+        ? `<div class="description" style="margin-top:12px;color:#cbd5e1;font-size:14px;line-height:1.6;">${renderedDescription}</div>`
+        : '';
     const emailHtml = loadEmailTemplate()
         .replace(/{{PROJECT_NAME}}/g, escapeHtml(typeStr))
         .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${title}`))
-        .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(description))
+        .replace(/{{TASK_DESCRIPTION}}/g, descriptionBlock)
         .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
         .replace(/{{DUE_DATE_HTML}}/g, `<p>Starts in ${offset === 0 ? 'now' : offset + ' minutes'} (at ${timeString})</p>`)
         .replace(/{{TASK_URL}}/g, 'https://omnitask.omniflexfitness.com/schedule');
@@ -738,7 +850,7 @@ exports.checkScheduledReminders = (0, scheduler_1.onSchedule)({
         port: 465,
         secure: true,
         auth: {
-            user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
+            user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
             pass: nodemailerSmtpPassword.value(),
         },
     });
@@ -750,23 +862,23 @@ exports.checkScheduledReminders = (0, scheduler_1.onSchedule)({
             await sendReminderEmail(transporter, data.email, data.title, data.description || '', data.timeString, data.offset, data.type === 'recurring' ? 'Daily Schedule' : 'Weekly Schedule');
             emailsSent++;
             console.log(`Sent ${data.type} reminder to ${data.email} for ${data.title}`);
+            // Only compute next triggerAt or delete if send was successful
+            if (data.type === 'recurring') {
+                const nextDate = data.triggerAt.toDate();
+                nextDate.setDate(nextDate.getDate() + 1);
+                batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+            }
+            else if (data.type === 'weekly' && data.repeating) {
+                const nextDate = data.triggerAt.toDate();
+                nextDate.setDate(nextDate.getDate() + 7);
+                batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
+            }
+            else {
+                batch.delete(doc.ref);
+            }
         }
         catch (err) {
-            console.error(`Failed to send reminder to ${data.email}:`, err);
-        }
-        // Compute next triggerAt or delete
-        if (data.type === 'recurring') {
-            const nextDate = data.triggerAt.toDate();
-            nextDate.setDate(nextDate.getDate() + 1);
-            batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
-        }
-        else if (data.type === 'weekly' && data.repeating) {
-            const nextDate = data.triggerAt.toDate();
-            nextDate.setDate(nextDate.getDate() + 7);
-            batch.update(doc.ref, { triggerAt: admin.firestore.Timestamp.fromDate(nextDate) });
-        }
-        else {
-            batch.delete(doc.ref);
+            console.error(`Failed to send reminder to ${data.email}, leaving in queue for retry:`, err);
         }
     }
     await batch.commit();
@@ -1083,5 +1195,49 @@ Only return the JSON object, no other text or markdown formatting around the JSO
         console.error('Failed to enhance description:', error);
         throw new https_1.HttpsError('internal', error instanceof Error ? error.message : 'Failed to enhance description');
     }
+});
+// ---------------------------------------------------------------------------
+// Super-admin enforcement
+// ---------------------------------------------------------------------------
+/**
+ * Designated super-admin email. Must match SUPER_ADMIN_EMAIL in
+ * src/app/core/constants.ts. The Cloud Function below guarantees that whenever
+ * this user's document is created or modified it is forced back into an
+ * admin + isSuperAdmin state — so bertin cannot be accidentally demoted and
+ * is promoted immediately on first sign-in regardless of any client races.
+ */
+const SUPER_ADMIN_EMAIL = 'bertin.kenol@omniflexfitness.com';
+const SUPER_ADMIN_PERMISSIONS = {
+    canCreateProjects: true,
+    canCreateTasks: true,
+    canDeleteProjects: true,
+    canDeleteTasks: true,
+    canInviteMembers: true,
+    isSuperAdmin: true,
+};
+exports.enforceSuperAdmin = (0, firestore_1.onDocumentWritten)({
+    document: 'users/{uid}',
+    memory: '256MiB',
+}, async (event) => {
+    const after = event.data?.after?.data();
+    if (!after)
+        return; // user deleted — nothing to do
+    const email = after.email;
+    if (email?.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase())
+        return;
+    const needsRoleFix = after.role !== 'admin';
+    const currentPerms = after.permissions || {};
+    const needsPermsFix = Object.keys(SUPER_ADMIN_PERMISSIONS).some((k) => currentPerms[k] !==
+        SUPER_ADMIN_PERMISSIONS[k]);
+    if (!needsRoleFix && !needsPermsFix)
+        return;
+    console.log(`enforceSuperAdmin: reasserting admin/super-admin on ${email} ` +
+        `(roleFix=${needsRoleFix}, permsFix=${needsPermsFix})`);
+    await db
+        .doc(`users/${event.params.uid}`)
+        .set({
+        role: 'admin',
+        permissions: SUPER_ADMIN_PERMISSIONS,
+    }, { merge: true });
 });
 //# sourceMappingURL=index.js.map
