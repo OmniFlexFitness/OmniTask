@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { VertexAI } from '@google-cloud/vertexai';
 import * as nodemailer from 'nodemailer';
+import { marked } from 'marked';
+import sanitizeHtml from 'sanitize-html';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -46,6 +48,107 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Render markdown task description as sanitized HTML with inline styles
+ * suitable for email clients (which typically strip <style> blocks and class
+ * attributes). Returns a string of HTML — empty string for missing/blank input.
+ */
+function renderDescriptionForEmail(markdown: string | undefined | null): string {
+  if (!markdown || !markdown.trim()) return '';
+
+  // Obsidian-style highlights: ==text== → <mark>text</mark>
+  const preprocessed = markdown.replace(/==([^=]+?)==/g, '<mark>$1</mark>');
+
+  // Parse with GFM + line breaks so user formatting survives the round-trip.
+  const rawHtml = marked.parse(preprocessed, { gfm: true, breaks: true }) as string;
+
+  // Sanitize — the description is user-provided and flows through an HTML email,
+  // so we strip scripts/handlers but keep all the formatting tags the editor
+  // can emit (bold, headings, lists, links, tables, blockquotes, images, code).
+  const cleanHtml = sanitizeHtml(rawHtml, {
+    allowedTags: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'hr', 'div', 'span',
+      'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark',
+      'ul', 'ol', 'li',
+      'a', 'img',
+      'blockquote',
+      'code', 'pre',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'input',
+    ],
+    allowedAttributes: {
+      a: ['href', 'name', 'target', 'rel', 'title'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
+      input: ['type', 'checked', 'disabled'],
+      '*': ['style'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+    transformTags: {
+      // Force links to open externally and be safe
+      a: sanitizeHtml.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }),
+    },
+  });
+
+  // Inject inline styles — email clients (Gmail, Outlook) strip <style> blocks,
+  // so each formatting tag needs its CSS inlined. We rewrite well-known tags
+  // to carry a style="" attribute, preserving any style the user already set.
+  const inline: Record<string, string> = {
+    h1: 'font-size:20px;font-weight:700;color:#f1f5f9;margin:16px 0 8px;line-height:1.3;',
+    h2: 'font-size:18px;font-weight:700;color:#f1f5f9;margin:14px 0 8px;line-height:1.3;',
+    h3: 'font-size:16px;font-weight:600;color:#f1f5f9;margin:12px 0 6px;line-height:1.3;',
+    h4: 'font-size:14px;font-weight:600;color:#e2e8f0;margin:10px 0 6px;line-height:1.3;',
+    h5: 'font-size:13px;font-weight:600;color:#e2e8f0;margin:8px 0 4px;line-height:1.3;',
+    h6: 'font-size:12px;font-weight:600;color:#cbd5e1;margin:8px 0 4px;line-height:1.3;',
+    p: 'margin:0 0 10px;line-height:1.6;color:#cbd5e1;',
+    strong: 'font-weight:700;color:#f8fafc;',
+    b: 'font-weight:700;color:#f8fafc;',
+    em: 'font-style:italic;',
+    i: 'font-style:italic;',
+    del: 'text-decoration:line-through;color:#94a3b8;',
+    s: 'text-decoration:line-through;color:#94a3b8;',
+    u: 'text-decoration:underline;',
+    mark: 'background:#fde68a;color:#78350f;padding:0 3px;border-radius:2px;',
+    a: 'color:#22d3ee;text-decoration:underline;',
+    ul: 'margin:0 0 10px;padding-left:22px;color:#cbd5e1;',
+    ol: 'margin:0 0 10px;padding-left:22px;color:#cbd5e1;',
+    li: 'margin-bottom:4px;line-height:1.5;',
+    blockquote:
+      'border-left:3px solid #64748b;margin:10px 0;padding:4px 0 4px 12px;color:#94a3b8;font-style:italic;',
+    code: 'background:#1e293b;color:#22d3ee;padding:1px 5px;border-radius:3px;font-family:Consolas,Monaco,monospace;font-size:13px;',
+    pre: 'background:#0f172a;border:1px solid #334155;border-radius:6px;padding:12px;margin:10px 0;overflow-x:auto;font-family:Consolas,Monaco,monospace;font-size:13px;color:#cbd5e1;',
+    table: 'border-collapse:collapse;margin:10px 0;width:100%;',
+    th: 'background:#1e293b;text-align:left;padding:6px 10px;font-weight:600;color:#e2e8f0;border:1px solid #334155;font-size:13px;',
+    td: 'padding:6px 10px;border:1px solid #334155;color:#cbd5e1;font-size:14px;',
+    hr: 'border:none;border-top:1px solid #334155;margin:14px 0;',
+    img: 'max-width:100%;border-radius:6px;',
+  };
+
+  // Rewrite open-tags to carry inline styles. We preserve any existing style
+  // attribute by appending — the user's own colors should win.
+  const styled = cleanHtml.replace(
+    /<(\/?)(h[1-6]|p|strong|b|em|i|u|s|del|mark|a|ul|ol|li|blockquote|code|pre|table|th|td|hr|img)([^>]*)>/gi,
+    (match, slash, tag, rest) => {
+      if (slash) return match; // closing tag
+      const tagLower = tag.toLowerCase();
+      const baseStyle = inline[tagLower];
+      if (!baseStyle) return match;
+      const styleMatch = rest.match(/\sstyle\s*=\s*"([^"]*)"/i);
+      if (styleMatch) {
+        const existing = styleMatch[1].trim().replace(/;?$/, ';');
+        const newAttrs = rest.replace(
+          /\sstyle\s*=\s*"[^"]*"/i,
+          ` style="${baseStyle}${existing}"`,
+        );
+        return `<${tag}${newAttrs}>`;
+      }
+      return `<${tag}${rest} style="${baseStyle}">`;
+    },
+  );
+
+  return styled;
+}
+
+/**
  * Load email template from file (cached for performance)
  */
 function loadEmailTemplate(): string {
@@ -61,14 +164,14 @@ function loadEmailTemplate(): string {
     return `
 <!DOCTYPE html>
 <html>
-<body style="font-family: sans-serif; padding: 20px;">
-  <h1>New Task Assigned</h1>
-  <p>Project: {{PROJECT_NAME}}</p>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:20px;color:#1f2937;">
+  <h1 style="color:#8b5cf6;">New Task Assigned</h1>
+  <p style="color:#6b7280;">Project: {{PROJECT_NAME}}</p>
   <h2>{{TASK_TITLE}}</h2>
   {{TASK_DESCRIPTION}}
-  <p>Priority: {{TASK_PRIORITY}}</p>
+  <p><strong>Priority:</strong> {{TASK_PRIORITY}}</p>
   {{DUE_DATE_HTML}}
-  <p><a href="{{TASK_URL}}">View Task</a></p>
+  <p><a href="{{TASK_URL}}" style="color:#8b5cf6;">View Task</a></p>
 </body>
 </html>
     `.trim();
@@ -92,8 +195,11 @@ function populateEmailTemplate(data: {
   html = html.replace(/{{PROJECT_NAME}}/g, escapeHtml(data.projectName));
   html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
 
-  const descriptionHtml = data.taskDescription
-    ? `<p class="description">${escapeHtml(data.taskDescription)}</p>`
+  // Render markdown description to sanitized, inline-styled HTML so email
+  // clients (Gmail, Outlook) display formatted text instead of raw markdown.
+  const descriptionBody = renderDescriptionForEmail(data.taskDescription);
+  const descriptionHtml = descriptionBody
+    ? `<div class="description" style="margin-top:12px;color:#cbd5e1;font-size:14px;line-height:1.6;">${descriptionBody}</div>`
     : '';
   html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
 
@@ -101,9 +207,9 @@ function populateEmailTemplate(data: {
 
   const dueDateHtml = data.dueDateStr
     ? `
-      <span class="meta-item">
-        <span class="meta-label">Due:</span>
-        <span class="meta-value">${escapeHtml(data.dueDateStr)}</span>
+      <span style="display:inline-block;background:#1e293b;padding:8px 12px;border-radius:6px;font-size:13px;">
+        <span style="color:#64748b;">Due:</span>
+        <span style="color:#e2e8f0;">${escapeHtml(data.dueDateStr)}</span>
       </span>
       `
     : '';
@@ -891,10 +997,15 @@ async function sendReminderEmail(
   offset: number,
   typeStr: string,
 ) {
+  const renderedDescription = renderDescriptionForEmail(description);
+  const descriptionBlock = renderedDescription
+    ? `<div class="description" style="margin-top:12px;color:#cbd5e1;font-size:14px;line-height:1.6;">${renderedDescription}</div>`
+    : '';
+
   const emailHtml = loadEmailTemplate()
     .replace(/{{PROJECT_NAME}}/g, escapeHtml(typeStr))
     .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${title}`))
-    .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(description))
+    .replace(/{{TASK_DESCRIPTION}}/g, descriptionBlock)
     .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
     .replace(
       /{{DUE_DATE_HTML}}/g,

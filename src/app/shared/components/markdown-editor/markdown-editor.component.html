@@ -1,357 +1,355 @@
 <div class="md-editor" [class.md-editor-minimal]="minimal()">
-      <!-- Toolbar — always visible -->
-      <div class="md-toolbar" [class.md-toolbar-minimal]="minimal()">
-        <!-- Undo -->
+  <!-- Toolbar — always visible -->
+  <div class="md-toolbar" [class.md-toolbar-minimal]="minimal()">
+    <!-- Undo -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-disabled]="!canUndo()"
+      title="Undo (Ctrl+Z)"
+      (click)="undo()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4" />
+      </svg>
+    </button>
+
+    <!-- Redo -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-disabled]="!canRedo()"
+      title="Redo (Ctrl+Y)"
+      (click)="redo()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a5 5 0 00-5 5v2M21 10l-4-4M21 10l-4 4" />
+      </svg>
+    </button>
+
+    <span class="md-divider"></span>
+
+    <!-- Bold -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().bold"
+      title="Bold (Ctrl+B)"
+      (click)="toggleBold()"
+    >
+      <span class="md-icon-bold">B</span>
+    </button>
+
+    <!-- Italic -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().italic"
+      title="Italic (Ctrl+I)"
+      (click)="toggleItalic()"
+    >
+      <span class="md-icon-italic">I</span>
+    </button>
+
+    <!-- Underline -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().underline"
+      title="Underline (Ctrl+U)"
+      (click)="toggleUnderline()"
+    >
+      <span class="md-icon-underline">U</span>
+    </button>
+
+    <!-- Strikethrough -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().strike"
+      title="Strikethrough"
+      (click)="toggleStrike()"
+    >
+      <span class="md-icon-strike">S</span>
+    </button>
+
+    <!-- Highlight -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().highlight"
+      title="Highlight"
+      (click)="toggleHighlight()"
+    >
+      <span class="md-icon-highlight">H</span>
+    </button>
+
+    <!-- Text color -->
+    <button
+      #textColorBtn
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Text color"
+      (click)="openColorPicker(textColorBtn)"
+    >
+      <span class="md-icon-color">
+        A
+        <span class="md-icon-color-swatch"></span>
+      </span>
+    </button>
+
+    <!-- Highlight color -->
+    <button
+      #highlightColorBtn
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Highlight color"
+      (click)="openHighlightPicker(highlightColorBtn)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    </button>
+
+    <span class="md-divider"></span>
+
+    <!-- Heading -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().h2"
+      title="Heading"
+      (click)="toggleHeading()"
+    >
+      <span class="md-icon-bold text-[10px]">H2</span>
+    </button>
+
+    <!-- Blockquote -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().blockquote"
+      title="Blockquote"
+      (click)="toggleBlockquote()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+      </svg>
+    </button>
+
+    <span class="md-divider"></span>
+
+    <!-- Bulleted list -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().ul"
+      title="Bulleted list"
+      (click)="toggleUnorderedList()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <!-- Numbered list -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().ol"
+      title="Numbered list"
+      (click)="toggleOrderedList()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h10M7 16h10M3 8h.01M3 12h.01M3 16h.01" />
+      </svg>
+    </button>
+
+    <!-- Task list -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Task list"
+      (click)="insertTaskList()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    </button>
+
+    <span class="md-divider"></span>
+
+    <!-- Code inline -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().code"
+      title="Inline code (Ctrl+E)"
+      (click)="toggleInlineCode()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    </button>
+
+    <!-- Code block -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Code block"
+      (click)="insertCodeBlock()"
+    >
+      <span class="md-icon-mono">{{ codeBlockLabel }}</span>
+    </button>
+
+    <!-- Link -->
+    <button
+      #linkBtn
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      [class.md-btn-active]="formatting().link"
+      title="Link (Ctrl+K)"
+      (click)="insertLink(linkBtn)"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+      </svg>
+    </button>
+
+    <!-- Table -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Insert table"
+      (click)="insertTable()"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="md-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" />
+      </svg>
+    </button>
+
+    <!-- Horizontal rule -->
+    <button
+      type="button"
+      tabindex="-1"
+      class="md-btn"
+      title="Horizontal rule"
+      (click)="insertHorizontalRule()"
+    >
+      <span class="md-icon-hr">—</span>
+    </button>
+
+    @if (!minimal()) {
+      <button
+        type="button"
+        tabindex="-1"
+        class="md-btn"
+        title="Callout"
+        (click)="insertCallout()"
+      >
+        <span class="md-icon-callout">📝</span>
+      </button>
+    }
+  </div>
+
+  <!-- Editor -->
+  <div
+    #editorRef
+    contenteditable="true"
+    [attr.placeholder]="placeholder()"
+    (input)="onInput()"
+    (blur)="blurred.emit()"
+    (keydown)="onKeydown($event)"
+    (keyup)="onInput()"
+    (mouseup)="onInput()"
+    (click)="onEditorClick($event)"
+    class="md-live-preview md-wysiwyg-editor"
+    [class.md-live-preview-minimal]="minimal()"
+  ></div>
+</div>
+
+<!-- Floating popups rendered at viewport-level so they are never clipped -->
+@if (showLinkPrompt() && linkPromptPos(); as pos) {
+  <div
+    class="md-popup md-link-popup"
+    [style.top.px]="pos.top"
+    [style.left.px]="pos.left"
+    (mousedown)="$event.stopPropagation()"
+  >
+    <input
+      type="url"
+      [value]="linkUrl()"
+      (input)="linkUrl.set($any($event.target).value)"
+      placeholder="https://example.com"
+      class="md-link-input"
+      (keydown.enter)="submitLink($event)"
+      (keydown.escape)="closeLinkPrompt()"
+      autofocus
+    />
+    <button type="button" class="md-popup-btn md-popup-btn-primary" (click)="submitLink()">Add</button>
+    <button type="button" class="md-popup-btn" (click)="closeLinkPrompt()" title="Cancel">✕</button>
+  </div>
+}
+
+@if (showColorPicker() && colorPickerPos(); as pos) {
+  <div
+    class="md-popup md-color-popup"
+    [style.top.px]="pos.top"
+    [style.left.px]="pos.left"
+    (mousedown)="$event.stopPropagation()"
+  >
+    <div class="md-popup-label">Text color</div>
+    <div class="md-swatch-grid">
+      @for (c of textColors; track c) {
         <button
           type="button"
-          tabindex="-1"
-          class="md-btn"
-          [class.md-btn-disabled]="!canUndo()"
-          title="Undo (Ctrl+Z)"
-          (click)="undo()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 10h10a5 5 0 015 5v2M3 10l4-4M3 10l4 4"
-            />
-          </svg>
-        </button>
-
-        <!-- Redo -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          [class.md-btn-disabled]="!canRedo()"
-          title="Redo (Ctrl+Y)"
-          (click)="redo()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 10H11a5 5 0 00-5 5v2M21 10l-4-4M21 10l-4 4"
-            />
-          </svg>
-        </button>
-
-        <span class="md-divider"></span>
-
-        <!-- Bold -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Bold (Ctrl+B)"
-          (click)="wrapSelection('**', '**')"
-        >
-          <span class="md-icon-bold">B</span>
-        </button>
-
-        <!-- Italic -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Italic (Ctrl+I)"
-          (click)="wrapSelection('*', '*')"
-        >
-          <span class="md-icon-italic">I</span>
-        </button>
-
-        <!-- Strikethrough -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Strikethrough"
-          (click)="wrapSelection('~~', '~~')"
-        >
-          <span class="md-icon-strike">S</span>
-        </button>
-
-        <!-- Highlight -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Highlight"
-          (click)="wrapSelection('==', '==')"
-        >
-          <span class="md-icon-highlight">H</span>
-        </button>
-
-        <span class="md-divider"></span>
-
-        <!-- Heading -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Heading"
-          (click)="insertPrefix('## ')"
-        >
-          <span class="md-icon-bold text-[10px]">H2</span>
-        </button>
-
-        <!-- Blockquote -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Blockquote"
-          (click)="insertPrefix('> ')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-            />
-          </svg>
-        </button>
-
-        <span class="md-divider"></span>
-
-        <!-- Bulleted list -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Bulleted list"
-          (click)="insertPrefix('- ')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          </svg>
-        </button>
-
-        <!-- Numbered list -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Numbered list"
-          (click)="insertPrefix('1. ')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 8h10M7 12h10M7 16h10M3 8h.01M3 12h.01M3 16h.01"
-            />
-          </svg>
-        </button>
-
-        <!-- Task list -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Task list"
-          (click)="insertPrefix('- [ ] ')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            />
-          </svg>
-        </button>
-
-        <span class="md-divider"></span>
-
-        <!-- Code inline -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Inline code (Ctrl+E)"
-          (click)="wrapSelection('\`', '\`')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-            />
-          </svg>
-        </button>
-
-        <!-- Code block -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Code block"
-          (click)="insertCodeBlock()"
-        >
-          <span class="md-icon-mono">{{ codeBlockLabel }}</span>
-        </button>
-
-        <!-- Link -->
-        <div style="position: relative; display: inline-flex;">
-          <button
-            type="button"
-            tabindex="-1"
-            class="md-btn"
-            title="Link (Ctrl+K)"
-            (click)="insertLink()"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="md-svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-              />
-            </svg>
-          </button>
-          
-          @if (showLinkPrompt()) {
-            <div style="position: absolute; top: 100%; left: 0; margin-top: 4px; padding: 8px; background-color: rgb(30, 41, 59); border: 1px solid rgb(51, 65, 85); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 10; display: flex; gap: 8px;">
-              <input 
-                type="url" 
-                [value]="linkUrl()" 
-                (input)="linkUrl.set($any($event.target).value)"
-                style="padding: 4px 8px; background-color: rgb(15, 23, 42); border: 1px solid rgb(51, 65, 85); border-radius: 4px; font-size: 14px; color: rgb(226, 232, 240); outline: none;"
-                placeholder="https://"
-                (keydown.enter)="submitLink($event)"
-                (keydown.escape)="closeLinkPrompt()"
-                #linkInput
-              >
-              <button 
-                type="button" 
-                class="md-btn" 
-                style="background-color: rgb(8, 145, 178); color: white;" 
-                (click)="submitLink()"
-              >
-                Add
-              </button>
-            </div>
-          }
-        </div>
-
-        <!-- Table -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Insert table"
-          (click)="insertTable()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="md-svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"
-            />
-          </svg>
-        </button>
-
-        <!-- Horizontal rule -->
-        <button
-          type="button"
-          tabindex="-1"
-          class="md-btn"
-          title="Horizontal rule"
-          (click)="insertHorizontalRule()"
-        >
-          <span class="md-icon-hr">—</span>
-        </button>
-
-        @if (!minimal()) {
-          <!-- Callout (full mode only to save space) -->
-          <button
-            type="button"
-            tabindex="-1"
-            class="md-btn"
-            title="Callout"
-            (click)="insertCallout()"
-          >
-            <span class="md-icon-callout">📝</span>
-          </button>
-        }
-      </div>
-
-      <!-- Textarea / Editor (always visible) -->
-      <div
-        #editorRef
-        contenteditable="true"
-        [attr.placeholder]="placeholder()"
-        (input)="onInput()"
-        (blur)="blurred.emit()"
-        (keydown)="onKeydown($event)"
-        class="md-live-preview md-wysiwyg-editor"
-        [class.md-live-preview-minimal]="minimal()"
-      ></div>
+          class="md-swatch"
+          [style.background]="c"
+          [title]="c"
+          (click)="applyColor(c)"
+        ></button>
+      }
     </div>
+  </div>
+}
+
+@if (showHighlightPicker() && highlightPickerPos(); as pos) {
+  <div
+    class="md-popup md-color-popup"
+    [style.top.px]="pos.top"
+    [style.left.px]="pos.left"
+    (mousedown)="$event.stopPropagation()"
+  >
+    <div class="md-popup-label">Highlight</div>
+    <div class="md-swatch-grid">
+      @for (c of highlightColors; track c) {
+        <button
+          type="button"
+          class="md-swatch"
+          [class.md-swatch-none]="c === 'transparent'"
+          [style.background]="c"
+          [title]="c === 'transparent' ? 'None' : c"
+          (click)="applyHighlight(c)"
+        ></button>
+      }
+    </div>
+  </div>
+}

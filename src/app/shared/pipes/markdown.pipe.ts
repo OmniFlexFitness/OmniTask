@@ -103,52 +103,35 @@ export class MarkdownPipe implements PipeTransform {
     const html = parseMarkdown(value);
     const sanitized = DOMPurify.sanitize(html, {
       ALLOWED_TAGS: [
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'p',
-        'br',
-        'hr',
-        'strong',
-        'em',
-        'del',
-        's',
-        'mark',
-        'code',
-        'pre',
-        'ul',
-        'ol',
-        'li',
-        'a',
-        'img',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'br', 'hr',
+        'strong', 'b', 'em', 'i', 'u', 'del', 's', 'mark',
+        'code', 'pre',
+        'ul', 'ol', 'li',
+        'a', 'img',
         'blockquote',
-        'table',
-        'thead',
-        'tbody',
-        'tr',
-        'th',
-        'td',
-        'div',
-        'span',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'div', 'span',
         'input',
       ],
       ALLOWED_ATTR: [
-        'href',
-        'src',
-        'alt',
-        'title',
-        'class',
-        'type',
-        'checked',
-        'disabled',
-        'target',
-        'rel',
+        'href', 'src', 'alt', 'title', 'class', 'type', 'checked', 'disabled',
+        'target', 'rel', 'style',
       ],
     });
-    return this.sanitizer.bypassSecurityTrustHtml(sanitized);
+    // Ensure every anchor opens in a new tab with safe rel attrs — read-only
+    // views aren't contenteditable, but the cross-origin protection is still
+    // good practice, and consistent with the editor's behavior.
+    const withSafeLinks = sanitized.replace(
+      /<a\b([^>]*)>/gi,
+      (match, attrs) => {
+        let out = attrs as string;
+        if (!/\btarget\s*=/i.test(out)) out += ' target="_blank"';
+        if (!/\brel\s*=/i.test(out)) out += ' rel="noopener noreferrer"';
+        return `<a${out}>`;
+      },
+    );
+    return this.sanitizer.bypassSecurityTrustHtml(withSafeLinks);
   }
 }
 
