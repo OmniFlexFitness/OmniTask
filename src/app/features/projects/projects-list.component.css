@@ -6,7 +6,7 @@
       }
 
 .project-card {
-  --h3-color: color-mix(in oklab, var(--project-color) 85%, white);
+  --h3-color: color-mix(in oklab, var(--project-color) 90%, white);
   transition:
     border-color 300ms ease,
     box-shadow 300ms ease,
