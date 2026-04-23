@@ -218,27 +218,27 @@
 }
 
 .theme-dark .site-body h1 {
-  color: var(--magenta);
+  color: var(--h1-color, var(--magenta));
   font-size: 2.15rem;
 }
 .theme-dark .site-body h2 {
-  color: var(--blue);
+  color: var(--h2-color, var(--blue));
   font-size: 1.8rem;
 }
 .theme-dark .site-body h3 {
-  color: var(--green);
+  color: var(--h3-color, var(--green));
   font-size: 1.42rem;
 }
 .theme-dark .site-body h4 {
-  color: var(--cyan);
+  color: var(--h4-color, var(--cyan));
   font-size: 1.2rem;
 }
 .theme-dark .site-body h5 {
-  color: var(--yellow);
+  color: var(--h5-color, var(--yellow));
   font-size: 1.05rem;
 }
 .theme-dark .site-body h6 {
-  color: var(--orange);
+  color: var(--h6-color, var(--orange));
   font-size: 0.96rem;
   text-transform: uppercase;
   letter-spacing: 0.8px;
