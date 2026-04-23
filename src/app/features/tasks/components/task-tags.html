@@ -9,7 +9,6 @@
       @for (tag of project()?.tags; track tag.id) {
         <button
           type="button"
-          data-fx-glitch
           (click)="toggleTag(tag.name)"
           [class.ring-2]="selectedTags().has(tag.name)"
           [style.--tw-ring-color]="

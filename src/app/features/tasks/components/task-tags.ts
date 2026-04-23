@@ -3,6 +3,34 @@ import { CommonModule } from '@angular/common';
 import { Project } from '../../../core/models/domain.model';
 import { ProjectService } from '../../../core/services/project.service';
 
+// Palette used when auto-assigning a color to a user-typed tag. Mirrors the
+// palette exposed in the project Tag Manager so manually-picked and
+// auto-generated tags share the same visual vocabulary.
+const AUTO_TAG_PALETTE = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#eab308', // Yellow
+  '#22c55e', // Green
+  '#14b8a6', // Teal
+  '#0ea5e9', // Sky
+  '#6366f1', // Indigo
+  '#8b5cf6', // Purple
+  '#ec4899', // Pink
+  '#00d2ff', // Cyan
+];
+
+/**
+ * Pick a random color that isn't already used by any of the existing tags.
+ * Once every palette entry is taken we fall back to a plain random pick so
+ * creation never blocks on exhausted colors.
+ */
+function pickRandomTagColor(existingColors: readonly string[]): string {
+  const taken = new Set(existingColors.map((c) => c.toLowerCase()));
+  const available = AUTO_TAG_PALETTE.filter((c) => !taken.has(c.toLowerCase()));
+  const pool = available.length > 0 ? available : AUTO_TAG_PALETTE;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 @Component({
   selector: 'app-task-tags',
   standalone: true,
@@ -53,14 +81,10 @@ export class TaskTagsComponent {
     const project = this.project();
     if (project) {
       try {
-        // Simple hash for color generation
-        const colors = ['#f472b6', '#34d399', '#60a5fa', '#a78bfa', '#fbbf24', '#f87171'];
-        const colorIndex =
-          name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-
+        const existingColors = (project.tags || []).map((t) => t.color);
         await this.projectService.addTag(project.id, {
           name: name,
-          color: colors[colorIndex],
+          color: pickRandomTagColor(existingColors),
         });
       } catch (err) {
         console.error('Failed to add tag to project', err);
