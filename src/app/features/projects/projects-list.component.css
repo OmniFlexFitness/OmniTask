@@ -21,10 +21,10 @@
 }
 
 .project-card-title {
-  color: color-mix(in oklab, var(--project-color) 55%, white);
+  color: color-mix(in oklab, var(--project-color) 35%, white);
   transition: color 300ms ease;
 }
 
 .project-card:hover .project-card-title {
-  color: color-mix(in oklab, var(--project-color) 30%, white);
+  color: color-mix(in oklab, var(--project-color) 20%, white);
 }
