@@ -20,11 +20,11 @@
   transform: translateY(-2px);
 }
 
-.project-card-title {
-  color: color-mix(in oklab, var(--project-color) 35%, white);
+.project-card .project-card-title {
+  color: color-mix(in oklab, var(--project-color) 45%, white);
   transition: color 300ms ease;
 }
 
 .project-card:hover .project-card-title {
-  color: color-mix(in oklab, var(--project-color) 20%, white);
+  color: color-mix(in oklab, var(--project-color) 25%, white);
 }
