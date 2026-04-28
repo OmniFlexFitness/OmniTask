@@ -273,12 +273,17 @@
 /* When the text-color picker wraps a format in ``<span style="color:...">``,
    let that colour cascade into the format. Only strong / del / s / mark
    have an explicit default to override; em and u already inherit naturally.
-   The ``:not([style*="background"])`` qualifier is critical — without it
-   the substring match would also catch ``background-color`` (used by the
-   highlight tool) and force ``color: inherit`` on formatting inside
-   highlighted text, regressing the defaults. */
+
+   The selector matches ``color:`` precisely — at the start of the style
+   string OR after a semicolon — instead of any substring containing
+   ``color``. Substring matching would falsely fire on
+   ``background-color:`` (used by the highlight tool), and a simple
+   ``:not([style*="background"])`` qualifier would miss the legitimate
+   case where a single span carries BOTH ``color`` and ``background-color``
+   (e.g. a highlighted span that the user has also coloured). */
 :host ::ng-deep :is(.md-wysiwyg-editor, .md-live-preview)
-  span[style*="color"]:not([style*="background"]) :is(strong, del, s, mark) {
+  span:is([style^="color:"], [style*=";color:"], [style*="; color:"])
+  :is(strong, del, s, mark) {
   color: inherit;
 }
 
