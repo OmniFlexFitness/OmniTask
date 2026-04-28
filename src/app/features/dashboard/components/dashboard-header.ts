@@ -26,7 +26,7 @@ export class DashboardHeaderComponent {
   editProjectModal = output<Project>();
   viewModeChange = output<TaskViewMode>();
   openCreateTaskModal = output<void>();
-  syncGoogleTasks = output<void>();
+  syncGoogleSheet = output<void>();
   toggleSidebar = output<void>();
 
   getColorWithOpacity(color: string | undefined, alpha: number): string {

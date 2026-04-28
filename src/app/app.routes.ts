@@ -19,6 +19,11 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
+          import('./features/my-tasks/my-tasks.component').then((m) => m.MyTasksComponent),
+      },
+      {
+        path: 'workspace',
+        loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
@@ -34,11 +39,6 @@ export const routes: Routes = [
           import('./features/projects/project-detail.component').then(
             (m) => m.ProjectDetailComponent,
           ),
-      },
-      {
-        path: 'tasks',
-        loadComponent: () =>
-          import('./features/my-tasks/my-tasks.component').then((m) => m.MyTasksComponent),
       },
       {
         path: 'schedule',
