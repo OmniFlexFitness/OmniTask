@@ -244,17 +244,12 @@
   margin-bottom: 0;
 }
 
-/* Default colors per format restore the pre-color-picker look (white bold,
-   slate-500 strikethrough, yellow-on-yellow mark for legacy data). User-set
-   colors still win because they're emitted as a wrapping
-   <span style="color: ..."> by execCommand('foreColor'), and the
-   ``span[style*="color"] X`` rules below have higher specificity than the
-   default-color rule on the format itself. Inline ``style="color: ..."`` on
-   the format tag itself also wins (inline > stylesheet). */
+/* Default colors per format restore the pre-color-picker look. Em and u
+   intentionally have no colour so they inherit from the surrounding text. */
 :host ::ng-deep .md-wysiwyg-editor strong,
 :host ::ng-deep .md-live-preview strong {
   font-weight: 700;
-  color: white;
+  color: var(--fg, white);
 }
 
 :host ::ng-deep .md-wysiwyg-editor em,
@@ -267,7 +262,7 @@
 :host ::ng-deep .md-live-preview del,
 :host ::ng-deep .md-live-preview s {
   text-decoration: line-through;
-  color: rgb(100, 116, 139);
+  color: var(--comment, rgb(100, 116, 139));
 }
 
 :host ::ng-deep .md-wysiwyg-editor u,
@@ -275,29 +270,15 @@
   text-decoration: underline;
 }
 
-/* When the user has wrapped any of these formats in an explicit color span
-   (via the text-color picker), let the wrapping color cascade into the
-   format. Same for spans nested inside the format. */
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] strong,
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] em,
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] del,
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] s,
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] u,
-:host ::ng-deep .md-wysiwyg-editor strong span[style*="color"],
-:host ::ng-deep .md-wysiwyg-editor em span[style*="color"],
-:host ::ng-deep .md-wysiwyg-editor del span[style*="color"],
-:host ::ng-deep .md-wysiwyg-editor s span[style*="color"],
-:host ::ng-deep .md-wysiwyg-editor u span[style*="color"],
-:host ::ng-deep .md-live-preview span[style*="color"] strong,
-:host ::ng-deep .md-live-preview span[style*="color"] em,
-:host ::ng-deep .md-live-preview span[style*="color"] del,
-:host ::ng-deep .md-live-preview span[style*="color"] s,
-:host ::ng-deep .md-live-preview span[style*="color"] u,
-:host ::ng-deep .md-live-preview strong span[style*="color"],
-:host ::ng-deep .md-live-preview em span[style*="color"],
-:host ::ng-deep .md-live-preview del span[style*="color"],
-:host ::ng-deep .md-live-preview s span[style*="color"],
-:host ::ng-deep .md-live-preview u span[style*="color"] {
+/* When the text-color picker wraps a format in ``<span style="color:...">``,
+   let that colour cascade into the format. Only strong / del / s / mark
+   have an explicit default to override; em and u already inherit naturally.
+   The ``:not([style*="background"])`` qualifier is critical — without it
+   the substring match would also catch ``background-color`` (used by the
+   highlight tool) and force ``color: inherit`` on formatting inside
+   highlighted text, regressing the defaults. */
+:host ::ng-deep :is(.md-wysiwyg-editor, .md-live-preview)
+  span[style*="color"]:not([style*="background"]) :is(strong, del, s, mark) {
   color: inherit;
 }
 
@@ -332,16 +313,8 @@
 
 :host ::ng-deep .md-wysiwyg-editor li,
 :host ::ng-deep .md-live-preview li {
-  color: rgb(203, 213, 225);
+  color: var(--fg_dark, rgb(203, 213, 225));
   margin-bottom: 4px;
-}
-
-/* Like the inline-format rules above, defer to a wrapping color span. */
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] li,
-:host ::ng-deep .md-wysiwyg-editor li span[style*="color"],
-:host ::ng-deep .md-live-preview span[style*="color"] li,
-:host ::ng-deep .md-live-preview li span[style*="color"] {
-  color: inherit;
 }
 
 :host ::ng-deep .md-wysiwyg-editor blockquote,
@@ -441,23 +414,14 @@
 /* Highlight (legacy <mark> data) — restored to the original yellow text on
    translucent yellow background. New highlights from the editor itself are
    emitted as <span style="background-color: rgba(...)"> via hiliteColor and
-   keep the surrounding text colour, which is the desired behaviour. */
-:host ::ng-deep .md-wysiwyg-editor mark,
-:host ::ng-deep .md-live-preview mark,
-:host ::ng-deep .md-wysiwyg-editor .md-highlight,
-:host ::ng-deep .md-live-preview .md-highlight {
+   keep the surrounding text colour, which is the desired behaviour. The
+   text-color override for mark is handled by the consolidated
+   ``span[style*="color"] :is(strong, del, s, mark)`` rule above. */
+:host ::ng-deep :is(.md-wysiwyg-editor, .md-live-preview) :is(mark, .md-highlight) {
   background: rgba(250, 204, 21, 0.25);
-  color: rgb(253, 224, 71);
+  color: var(--yellow, rgb(253, 224, 71));
   padding: 0 2px;
   border-radius: 2px;
-}
-
-/* Override mark's yellow text when wrapped in an explicit color span. */
-:host ::ng-deep .md-wysiwyg-editor span[style*="color"] mark,
-:host ::ng-deep .md-wysiwyg-editor mark span[style*="color"],
-:host ::ng-deep .md-live-preview span[style*="color"] mark,
-:host ::ng-deep .md-live-preview mark span[style*="color"] {
-  color: inherit;
 }
 
 :host ::ng-deep .md-wysiwyg-editor .md-callout,
