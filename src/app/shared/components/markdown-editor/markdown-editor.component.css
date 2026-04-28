@@ -244,18 +244,17 @@
   margin-bottom: 0;
 }
 
-/* Bold/italic/strike keep their weight/decoration but inherit color.
-   This lets user-selected text colors apply through inline styles. */
+/* Default colors per format restore the pre-color-picker look. Em and u
+   intentionally have no colour so they inherit from the surrounding text. */
 :host ::ng-deep .md-wysiwyg-editor strong,
 :host ::ng-deep .md-live-preview strong {
   font-weight: 700;
-  color: inherit;
+  color: var(--fg, white);
 }
 
 :host ::ng-deep .md-wysiwyg-editor em,
 :host ::ng-deep .md-live-preview em {
   font-style: italic;
-  color: inherit;
 }
 
 :host ::ng-deep .md-wysiwyg-editor del,
@@ -263,13 +262,28 @@
 :host ::ng-deep .md-live-preview del,
 :host ::ng-deep .md-live-preview s {
   text-decoration: line-through;
-  color: inherit;
-  opacity: 0.85;
+  color: var(--comment, rgb(100, 116, 139));
 }
 
 :host ::ng-deep .md-wysiwyg-editor u,
 :host ::ng-deep .md-live-preview u {
   text-decoration: underline;
+}
+
+/* When the text-color picker wraps a format in ``<span style="color:...">``,
+   let that colour cascade into the format. Only strong / del / s / mark
+   have an explicit default to override; em and u already inherit naturally.
+
+   The selector matches ``color:`` precisely — at the start of the style
+   string OR after a semicolon — instead of any substring containing
+   ``color``. Substring matching would falsely fire on
+   ``background-color:`` (used by the highlight tool), and a simple
+   ``:not([style*="background"])`` qualifier would miss the legitimate
+   case where a single span carries BOTH ``color`` and ``background-color``
+   (e.g. a highlighted span that the user has also coloured). */
+:host ::ng-deep :is(.md-wysiwyg-editor, .md-live-preview)
+  span:is([style^="color:"], [style*=";color:"], [style*="; color:"])
+  :is(strong, del, s, mark) {
   color: inherit;
 }
 
@@ -304,7 +318,7 @@
 
 :host ::ng-deep .md-wysiwyg-editor li,
 :host ::ng-deep .md-live-preview li {
-  color: inherit;
+  color: var(--fg_dark, rgb(203, 213, 225));
   margin-bottom: 4px;
 }
 
@@ -402,13 +416,15 @@
   accent-color: rgb(6, 182, 212);
 }
 
-/* Highlight */
-:host ::ng-deep .md-wysiwyg-editor mark,
-:host ::ng-deep .md-live-preview mark,
-:host ::ng-deep .md-wysiwyg-editor .md-highlight,
-:host ::ng-deep .md-live-preview .md-highlight {
+/* Highlight (legacy <mark> data) — restored to the original yellow text on
+   translucent yellow background. New highlights from the editor itself are
+   emitted as <span style="background-color: rgba(...)"> via hiliteColor and
+   keep the surrounding text colour, which is the desired behaviour. The
+   text-color override for mark is handled by the consolidated
+   ``span[style*="color"] :is(strong, del, s, mark)`` rule above. */
+:host ::ng-deep :is(.md-wysiwyg-editor, .md-live-preview) :is(mark, .md-highlight) {
   background: rgba(250, 204, 21, 0.25);
-  color: inherit;
+  color: var(--yellow, rgb(253, 224, 71));
   padding: 0 2px;
   border-radius: 2px;
 }
