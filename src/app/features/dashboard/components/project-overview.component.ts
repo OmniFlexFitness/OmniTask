@@ -14,6 +14,7 @@ import {
   TaskViewMode,
   CYBERPUNK_COLORS,
   ASSIGNEE_PALETTE,
+  DashboardWidgetKey,
 } from '../../../core/models/domain.model';
 
 /** How far in the future a due date counts as "due soon" in the dashboard KPIs. */
@@ -24,6 +25,7 @@ import { SectionManagerComponent } from '../../projects/components/section-manag
 import { TagManagerComponent } from '../../projects/components/tag-manager.component';
 import { ProjectMemberManagerComponent } from '../../projects/components/project-member-manager.component';
 import { CustomFieldManagerComponent } from '../../projects/components/custom-field-manager/custom-field-manager.component';
+import { DashboardPreferencesManagerComponent } from '../../projects/components/dashboard-preferences-manager.component';
 import { AuthService } from '../../../core/auth/auth.service';
 
 interface SectionStat {
@@ -70,6 +72,7 @@ interface ActivityItem {
     TagManagerComponent,
     ProjectMemberManagerComponent,
     CustomFieldManagerComponent,
+    DashboardPreferencesManagerComponent,
   ],
   templateUrl: './project-overview.component.html',
   styleUrls: ['./project-overview.component.css'],
@@ -88,9 +91,59 @@ export class ProjectOverviewComponent {
 
   // Which "manager" panel is expanded inline. Default to sections so users
   // immediately see the most common edit surface. Null collapses all.
-  activePanel = signal<'sections' | 'tags' | 'members' | 'fields' | null>('sections');
+  activePanel = signal<
+    'sections' | 'tags' | 'members' | 'fields' | 'dashboard' | null
+  >('sections');
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
+
+  /** Default widget palette/order used when a project hasn't customized anything. */
+  private readonly DEFAULT_VISIBLE_WIDGETS: DashboardWidgetKey[] = [
+    'status', 'completion', 'priority', 'sections', 'tags', 'upcoming', 'activity', 'assignees',
+  ];
+  private readonly DEFAULT_COMPLETION_GRADIENT = ['#00d2ff', '#e040fb', '#ff1493'];
+  private readonly DEFAULT_STATUS_COLORS = {
+    todo: CYBERPUNK_COLORS.TODO,
+    inProgress: CYBERPUNK_COLORS.IN_PROGRESS,
+    done: CYBERPUNK_COLORS.DONE,
+  };
+  private readonly DEFAULT_PRIORITY_COLORS = {
+    high: '#ff1493',
+    medium: '#e040fb',
+    low: '#00d2ff',
+  };
+
+  /** Resolved status colors: project override → cyber default. */
+  statusColors = computed(() => {
+    const override = this.project().dashboardPreferences?.statusColors ?? {};
+    return {
+      todo: override.todo || this.DEFAULT_STATUS_COLORS.todo,
+      inProgress: override.inProgress || this.DEFAULT_STATUS_COLORS.inProgress,
+      done: override.done || this.DEFAULT_STATUS_COLORS.done,
+    };
+  });
+
+  /** Resolved priority colors: project override → cyber default. */
+  priorityColors = computed(() => {
+    const override = this.project().dashboardPreferences?.priorityColors ?? {};
+    return {
+      high: override.high || this.DEFAULT_PRIORITY_COLORS.high,
+      medium: override.medium || this.DEFAULT_PRIORITY_COLORS.medium,
+      low: override.low || this.DEFAULT_PRIORITY_COLORS.low,
+    };
+  });
+
+  /** Display style for the Status Breakdown widget. */
+  statusDisplay = computed<'donut' | 'bars'>(
+    () => this.project().dashboardPreferences?.statusDisplay ?? 'donut',
+  );
+
+  /** Whether a given widget should be rendered for this project. */
+  showWidget(key: DashboardWidgetKey): boolean {
+    const list = this.project().dashboardPreferences?.visibleWidgets;
+    if (!list || list.length === 0) return true;
+    return list.includes(key);
+  }
 
   // ---------- Overall KPIs ----------
   totalTasks = computed(() => this.tasks().length);
@@ -137,24 +190,25 @@ export class ProjectOverviewComponent {
   // ---------- Status donut ----------
   statusBreakdown = computed(() => {
     const total = Math.max(this.totalTasks(), 1);
+    const colors = this.statusColors();
     const segments = [
       {
         key: 'done' as const,
         label: 'Done',
         count: this.completedTasks(),
-        color: CYBERPUNK_COLORS.DONE,
+        color: colors.done,
       },
       {
         key: 'in-progress' as const,
         label: 'In Progress',
         count: this.inProgressTasks(),
-        color: CYBERPUNK_COLORS.IN_PROGRESS,
+        color: colors.inProgress,
       },
       {
         key: 'todo' as const,
         label: 'To Do',
         count: this.todoTasks(),
-        color: CYBERPUNK_COLORS.TODO,
+        color: colors.todo,
       },
     ];
     // Build stroke-dasharray arc segments over a circumference.
@@ -186,25 +240,26 @@ export class ProjectOverviewComponent {
       totals[t.priority] = (totals[t.priority] ?? 0) + 1;
     }
     const total = Math.max(this.totalTasks(), 1);
+    const colors = this.priorityColors();
     return [
       {
         key: 'high',
         label: 'High',
-        color: '#ff1493',
+        color: colors.high,
         count: totals.high,
         percent: Math.round((totals.high / total) * 100),
       },
       {
         key: 'medium',
         label: 'Medium',
-        color: '#e040fb',
+        color: colors.medium,
         count: totals.medium,
         percent: Math.round((totals.medium / total) * 100),
       },
       {
         key: 'low',
         label: 'Low',
-        color: '#00d2ff',
+        color: colors.low,
         count: totals.low,
         percent: Math.round((totals.low / total) * 100),
       },
@@ -316,8 +371,23 @@ export class ProjectOverviewComponent {
     return getColorWithOpacity(this.project().color || this.defaultColor, alpha);
   }
 
+  /**
+   * Static gradient for the completion bar. The stops sit at fixed positions
+   * across the track so the palette stays the same regardless of completion %;
+   * only the visible (non-clipped) portion changes. Honours the project's
+   * dashboard preference, falling back to the cyber palette.
+   */
+  completionGradient(): string {
+    const prefs = this.project().dashboardPreferences;
+    const stops = prefs?.completionGradient?.length
+      ? prefs.completionGradient
+      : this.DEFAULT_COMPLETION_GRADIENT;
+    return `linear-gradient(90deg, ${stops.join(', ')})`;
+  }
+
   priorityDot(p: Task['priority']): string {
-    return p === 'high' ? '#ff1493' : p === 'medium' ? '#e040fb' : '#00d2ff';
+    const c = this.priorityColors();
+    return p === 'high' ? c.high : p === 'medium' ? c.medium : c.low;
   }
 
   statusLabel(s: Task['status']): string {
@@ -332,11 +402,8 @@ export class ProjectOverviewComponent {
   }
 
   statusColor(s: Task['status']): string {
-    return s === 'done'
-      ? CYBERPUNK_COLORS.DONE
-      : s === 'in-progress'
-        ? CYBERPUNK_COLORS.IN_PROGRESS
-        : CYBERPUNK_COLORS.TODO;
+    const c = this.statusColors();
+    return s === 'done' ? c.done : s === 'in-progress' ? c.inProgress : c.todo;
   }
 
   isOverdue(task: Task): boolean {
@@ -349,8 +416,15 @@ export class ProjectOverviewComponent {
     return !!uid && this.project().ownerId === uid;
   }
 
-  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields') {
+  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields' | 'dashboard') {
     this.activePanel.set(this.activePanel() === panel ? null : panel);
+  }
+
+  /** Whether the current user can edit dashboard preferences. */
+  canManageDashboard(): boolean {
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    return this.project().ownerId === user.uid || user.role === 'admin';
   }
 
   activityIcon(kind: ActivityItem['kind']): string {
