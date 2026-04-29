@@ -157,13 +157,25 @@ export class ProjectFormModalComponent {
 
       if (editingProject) {
         // Upload new icon if the user picked one, otherwise preserve or clear.
+        // We isolate the upload step in its own try/catch so a Storage failure
+        // (rules misconfig, network blip, oversized file) doesn't masquerade
+        // as a generic "Failed to save project" — and the rest of the form
+        // (name, description, color) still saves successfully.
         let iconUrl: string | undefined = editingProject.icon;
+        let iconUploadFailed = false;
         const pending = this.pendingIconFile();
         if (pending) {
-          iconUrl = await this.storageService.uploadProjectIcon(editingProject.id, pending);
-          // Best-effort cleanup of previous icon (swallows errors internally).
-          if (editingProject.icon && editingProject.icon !== iconUrl) {
-            void this.storageService.deleteByUrl(editingProject.icon);
+          try {
+            iconUrl = await this.storageService.uploadProjectIcon(editingProject.id, pending);
+            // Best-effort cleanup of previous icon (swallows errors internally).
+            if (editingProject.icon && editingProject.icon !== iconUrl) {
+              void this.storageService.deleteByUrl(editingProject.icon);
+            }
+          } catch (err) {
+            iconUploadFailed = true;
+            iconUrl = editingProject.icon; // keep prior icon
+            console.error('Icon upload failed:', err);
+            this.iconError.set('Failed to upload icon. Please try again.');
           }
         } else if (this.iconCleared()) {
           if (editingProject.icon) {
@@ -173,13 +185,21 @@ export class ProjectFormModalComponent {
         }
 
         const updates: Partial<Project> = { name, description, color };
-        if (pending) {
+        if (pending && !iconUploadFailed) {
           updates.icon = iconUrl;
         }
         await this.projectService.updateProject(editingProject.id, updates);
         if (!pending && this.iconCleared()) {
           // Remove the icon field entirely rather than persisting a sentinel.
           await this.projectService.clearProjectIcon(editingProject.id);
+        }
+        // If the icon upload failed, keep the modal open so the user sees the
+        // specific error and can retry without losing their other edits. We
+        // also withhold the `saved` event because parents (e.g. the dashboard)
+        // close the modal in their `(saved)` handler — emitting here would
+        // dismiss the dialog and hide the upload error.
+        if (iconUploadFailed) {
+          return;
         }
         this.saved.emit({ ...editingProject, ...updates, icon: iconUrl } as Project);
       } else {

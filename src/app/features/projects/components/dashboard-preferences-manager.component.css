@@ -1,0 +1,114 @@
+:host {
+  display: block;
+}
+
+.prefs-heading {
+  @apply text-sm font-bold text-slate-100 tracking-wider uppercase;
+  text-shadow: 0 0 8px rgba(0, 210, 255, 0.35);
+}
+
+.prefs-help {
+  @apply text-xs text-slate-400 mt-1 leading-relaxed;
+}
+
+.widget-toggle {
+  @apply flex flex-col items-start gap-0.5 px-3 py-2 rounded-md border text-xs text-left transition-all duration-200;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.6);
+  color: rgb(148, 163, 184);
+}
+
+.widget-toggle:hover:not(:disabled) {
+  border-color: rgba(0, 210, 255, 0.45);
+  color: rgb(226, 232, 240);
+}
+
+.widget-toggle.active {
+  border-color: rgba(0, 210, 255, 0.6);
+  background: rgba(0, 210, 255, 0.12);
+  color: #e6f8ff;
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.25), inset 0 0 8px rgba(0, 210, 255, 0.1);
+}
+
+.widget-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.widget-toggle-label {
+  @apply font-semibold;
+}
+
+.widget-toggle-state {
+  @apply text-[10px] uppercase tracking-[0.18em] opacity-80;
+}
+
+.style-toggle {
+  @apply px-3 py-1.5 rounded-md text-xs font-semibold border transition-all duration-200;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.6);
+  color: rgb(148, 163, 184);
+}
+
+.style-toggle.active {
+  color: #e6f8ff;
+  border-color: rgba(224, 64, 251, 0.55);
+  background: rgba(224, 64, 251, 0.14);
+  box-shadow: 0 0 12px rgba(224, 64, 251, 0.25), inset 0 0 8px rgba(224, 64, 251, 0.1);
+}
+
+.style-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.gradient-stop {
+  @apply inline-flex items-center gap-2 px-2 py-1 rounded-md border;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.6);
+}
+
+.color-input {
+  /* Browsers default to a rather large box for the native color picker —
+     constrain it so the gradient editor stays compact. */
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.remove-stop {
+  @apply text-slate-400 hover:text-rose-400 transition-colors text-base font-bold leading-none w-5 h-5 flex items-center justify-center;
+}
+
+.add-stop {
+  @apply px-2 py-1 rounded-md text-xs font-semibold border border-dashed text-slate-300 hover:text-cyan-300;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(10, 15, 30, 0.4);
+}
+
+.add-stop:hover {
+  border-color: rgba(0, 210, 255, 0.45);
+}
+
+.metric-row {
+  @apply flex items-center gap-3 px-3 py-2 rounded-md border;
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(10, 15, 30, 0.55);
+}
+
+.metric-label {
+  @apply text-sm text-slate-200 font-semibold flex-1;
+}
+
+.metric-default {
+  @apply text-[10px] font-mono text-slate-500;
+}

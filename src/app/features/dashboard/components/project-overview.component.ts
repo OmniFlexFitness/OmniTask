@@ -14,6 +14,12 @@ import {
   TaskViewMode,
   CYBERPUNK_COLORS,
   ASSIGNEE_PALETTE,
+  DashboardWidgetKey,
+  ALL_DASHBOARD_WIDGETS,
+  DEFAULT_COMPLETION_GRADIENT,
+  DEFAULT_DASHBOARD_STATUS_COLORS,
+  DEFAULT_DASHBOARD_PRIORITY_COLORS,
+  DEFAULT_DASHBOARD_STATUS_DISPLAY,
 } from '../../../core/models/domain.model';
 
 /** How far in the future a due date counts as "due soon" in the dashboard KPIs. */
@@ -24,6 +30,7 @@ import { SectionManagerComponent } from '../../projects/components/section-manag
 import { TagManagerComponent } from '../../projects/components/tag-manager.component';
 import { ProjectMemberManagerComponent } from '../../projects/components/project-member-manager.component';
 import { CustomFieldManagerComponent } from '../../projects/components/custom-field-manager/custom-field-manager.component';
+import { DashboardPreferencesManagerComponent } from '../../projects/components/dashboard-preferences-manager.component';
 import { AuthService } from '../../../core/auth/auth.service';
 
 interface SectionStat {
@@ -70,6 +77,7 @@ interface ActivityItem {
     TagManagerComponent,
     ProjectMemberManagerComponent,
     CustomFieldManagerComponent,
+    DashboardPreferencesManagerComponent,
   ],
   templateUrl: './project-overview.component.html',
   styleUrls: ['./project-overview.component.css'],
@@ -88,9 +96,60 @@ export class ProjectOverviewComponent {
 
   // Which "manager" panel is expanded inline. Default to sections so users
   // immediately see the most common edit surface. Null collapses all.
-  activePanel = signal<'sections' | 'tags' | 'members' | 'fields' | null>('sections');
+  activePanel = signal<
+    'sections' | 'tags' | 'members' | 'fields' | 'dashboard' | null
+  >('sections');
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
+
+  /** Resolved status colors: project override → shared default. */
+  statusColors = computed(() => {
+    const override = this.project().dashboardPreferences?.statusColors ?? {};
+    return {
+      todo: override.todo || DEFAULT_DASHBOARD_STATUS_COLORS.todo,
+      inProgress: override.inProgress || DEFAULT_DASHBOARD_STATUS_COLORS.inProgress,
+      done: override.done || DEFAULT_DASHBOARD_STATUS_COLORS.done,
+    };
+  });
+
+  /** Resolved priority colors: project override → shared default. */
+  priorityColors = computed(() => {
+    const override = this.project().dashboardPreferences?.priorityColors ?? {};
+    return {
+      high: override.high || DEFAULT_DASHBOARD_PRIORITY_COLORS.high,
+      medium: override.medium || DEFAULT_DASHBOARD_PRIORITY_COLORS.medium,
+      low: override.low || DEFAULT_DASHBOARD_PRIORITY_COLORS.low,
+    };
+  });
+
+  /** Display style for the Status Breakdown widget. */
+  statusDisplay = computed<'donut' | 'bars'>(
+    () => this.project().dashboardPreferences?.statusDisplay ?? DEFAULT_DASHBOARD_STATUS_DISPLAY,
+  );
+
+  /**
+   * Set of widget keys that should be rendered. We compute it once per
+   * project change rather than re-scanning the visibleWidgets array on every
+   * `showWidget()` call from the template (the template invokes it at least
+   * once per dashboard panel and per surrounding `@if`).
+   *
+   * `undefined` means "no preference saved" → show all widgets. An explicit
+   * empty array means "the admin hid every widget" → show none. We must keep
+   * those two cases distinct, otherwise the manager UI's "hide everything"
+   * state can never be persisted (the saved [] would be re-read as default).
+   */
+  private visibleWidgetSet = computed<ReadonlySet<DashboardWidgetKey>>(() => {
+    const list = this.project().dashboardPreferences?.visibleWidgets;
+    if (list === undefined) {
+      return new Set(ALL_DASHBOARD_WIDGETS.map((w) => w.key));
+    }
+    return new Set(list);
+  });
+
+  /** Whether a given widget should be rendered for this project. */
+  showWidget(key: DashboardWidgetKey): boolean {
+    return this.visibleWidgetSet().has(key);
+  }
 
   // ---------- Overall KPIs ----------
   totalTasks = computed(() => this.tasks().length);
@@ -137,24 +196,25 @@ export class ProjectOverviewComponent {
   // ---------- Status donut ----------
   statusBreakdown = computed(() => {
     const total = Math.max(this.totalTasks(), 1);
+    const colors = this.statusColors();
     const segments = [
       {
         key: 'done' as const,
         label: 'Done',
         count: this.completedTasks(),
-        color: CYBERPUNK_COLORS.DONE,
+        color: colors.done,
       },
       {
         key: 'in-progress' as const,
         label: 'In Progress',
         count: this.inProgressTasks(),
-        color: CYBERPUNK_COLORS.IN_PROGRESS,
+        color: colors.inProgress,
       },
       {
         key: 'todo' as const,
         label: 'To Do',
         count: this.todoTasks(),
-        color: CYBERPUNK_COLORS.TODO,
+        color: colors.todo,
       },
     ];
     // Build stroke-dasharray arc segments over a circumference.
@@ -186,25 +246,26 @@ export class ProjectOverviewComponent {
       totals[t.priority] = (totals[t.priority] ?? 0) + 1;
     }
     const total = Math.max(this.totalTasks(), 1);
+    const colors = this.priorityColors();
     return [
       {
         key: 'high',
         label: 'High',
-        color: '#ff1493',
+        color: colors.high,
         count: totals.high,
         percent: Math.round((totals.high / total) * 100),
       },
       {
         key: 'medium',
         label: 'Medium',
-        color: '#e040fb',
+        color: colors.medium,
         count: totals.medium,
         percent: Math.round((totals.medium / total) * 100),
       },
       {
         key: 'low',
         label: 'Low',
-        color: '#00d2ff',
+        color: colors.low,
         count: totals.low,
         percent: Math.round((totals.low / total) * 100),
       },
@@ -316,8 +377,23 @@ export class ProjectOverviewComponent {
     return getColorWithOpacity(this.project().color || this.defaultColor, alpha);
   }
 
+  /**
+   * Static gradient for the completion bar. The stops sit at fixed positions
+   * across the track so the palette stays the same regardless of completion %;
+   * only the visible (non-clipped) portion changes. Honours the project's
+   * dashboard preference, falling back to the cyber palette.
+   */
+  completionGradient(): string {
+    const prefs = this.project().dashboardPreferences;
+    const stops = prefs?.completionGradient?.length
+      ? prefs.completionGradient
+      : DEFAULT_COMPLETION_GRADIENT;
+    return `linear-gradient(90deg, ${stops.join(', ')})`;
+  }
+
   priorityDot(p: Task['priority']): string {
-    return p === 'high' ? '#ff1493' : p === 'medium' ? '#e040fb' : '#00d2ff';
+    const c = this.priorityColors();
+    return p === 'high' ? c.high : p === 'medium' ? c.medium : c.low;
   }
 
   statusLabel(s: Task['status']): string {
@@ -332,11 +408,8 @@ export class ProjectOverviewComponent {
   }
 
   statusColor(s: Task['status']): string {
-    return s === 'done'
-      ? CYBERPUNK_COLORS.DONE
-      : s === 'in-progress'
-        ? CYBERPUNK_COLORS.IN_PROGRESS
-        : CYBERPUNK_COLORS.TODO;
+    const c = this.statusColors();
+    return s === 'done' ? c.done : s === 'in-progress' ? c.inProgress : c.todo;
   }
 
   isOverdue(task: Task): boolean {
@@ -349,8 +422,15 @@ export class ProjectOverviewComponent {
     return !!uid && this.project().ownerId === uid;
   }
 
-  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields') {
+  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields' | 'dashboard') {
     this.activePanel.set(this.activePanel() === panel ? null : panel);
+  }
+
+  /** Whether the current user can edit dashboard preferences. */
+  canManageDashboard(): boolean {
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    return this.project().ownerId === user.uid || user.role === 'admin';
   }
 
   activityIcon(kind: ActivityItem['kind']): string {

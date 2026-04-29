@@ -1,0 +1,179 @@
+<div class="dashboard-prefs space-y-6">
+  @if (!canEdit()) {
+    <p class="text-amber-400 text-xs italic">
+      Only project owners and admins can change dashboard preferences. Showing read-only state.
+    </p>
+  }
+
+  <!-- Widget visibility -->
+  <section>
+    <h4 class="prefs-heading">Visible widgets</h4>
+    <p class="prefs-help">
+      Pick which panels appear on this project's overview. Hidden widgets are
+      removed from the page entirely (the KPI strip and project header always
+      render).
+    </p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mt-3">
+      @for (w of allWidgets; track w.key) {
+        <button
+          type="button"
+          class="widget-toggle"
+          [class.active]="isWidgetVisible(w.key)"
+          [disabled]="!canEdit()"
+          (click)="toggleWidget(w.key)"
+        >
+          <span class="widget-toggle-label">{{ w.label }}</span>
+          <span class="widget-toggle-state">
+            {{ isWidgetVisible(w.key) ? 'On' : 'Off' }}
+          </span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Status display style -->
+  <section>
+    <h4 class="prefs-heading">Status Breakdown style</h4>
+    <p class="prefs-help">Pick the visual indicator used to render task status.</p>
+    <div class="flex gap-2 mt-3 flex-wrap">
+      <button
+        type="button"
+        class="style-toggle"
+        [class.active]="statusDisplay() === 'donut'"
+        [disabled]="!canEdit()"
+        (click)="setStatusDisplay('donut')"
+      >
+        Donut chart
+      </button>
+      <button
+        type="button"
+        class="style-toggle"
+        [class.active]="statusDisplay() === 'bars'"
+        [disabled]="!canEdit()"
+        (click)="setStatusDisplay('bars')"
+      >
+        Stacked bars
+      </button>
+    </div>
+  </section>
+
+  <!-- Completion gradient -->
+  <section>
+    <h4 class="prefs-heading">Completion gradient</h4>
+    <p class="prefs-help">
+      Color stops for the Completion progress bar. The full gradient is always
+      drawn at fixed positions; only the visible portion changes with progress.
+    </p>
+    <div class="mt-3 h-3 rounded-full overflow-hidden border border-white/10 bg-slate-900/60"
+         [style.background]="gradientPreview()"></div>
+    <div class="flex flex-wrap gap-3 mt-3 items-center">
+      @for (stop of completionGradient(); track $index; let i = $index) {
+        <div class="gradient-stop">
+          <input
+            type="color"
+            class="color-input"
+            [value]="stop"
+            [disabled]="!canEdit()"
+            (input)="updateGradientStop(i, $any($event.target).value)"
+          />
+          <span class="text-[11px] font-mono text-slate-400">{{ stop }}</span>
+          @if (completionGradient().length > 2 && canEdit()) {
+            <button
+              type="button"
+              class="remove-stop"
+              (click)="removeGradientStop(i)"
+              title="Remove stop"
+            >×</button>
+          }
+        </div>
+      }
+      @if (completionGradient().length < 5 && canEdit()) {
+        <button type="button" class="add-stop" (click)="addGradientStop()">+ Add stop</button>
+      }
+    </div>
+  </section>
+
+  <!-- Status colors -->
+  <section>
+    <h4 class="prefs-heading">Status colors</h4>
+    <p class="prefs-help">
+      Override the colors used for task statuses across the donut, bars, and
+      activity widgets.
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+      @for (row of metricRowsStatus(); track row.key) {
+        <label class="metric-row">
+          <span class="metric-label">{{ row.label }}</span>
+          <input
+            type="color"
+            class="color-input"
+            [value]="row.value"
+            [disabled]="!canEdit()"
+            (input)="updateMetricColor('status', row.key, $any($event.target).value)"
+          />
+          <span class="metric-default">default {{ row.defaultValue }}</span>
+        </label>
+      }
+    </div>
+  </section>
+
+  <!-- Priority colors -->
+  <section>
+    <h4 class="prefs-heading">Priority colors</h4>
+    <p class="prefs-help">Override the bar / dot colors used for priorities.</p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+      @for (row of metricRowsPriority(); track row.key) {
+        <label class="metric-row">
+          <span class="metric-label">{{ row.label }}</span>
+          <input
+            type="color"
+            class="color-input"
+            [value]="row.value"
+            [disabled]="!canEdit()"
+            (input)="updateMetricColor('priority', row.key, $any($event.target).value)"
+          />
+          <span class="metric-default">default {{ row.defaultValue }}</span>
+        </label>
+      }
+    </div>
+  </section>
+
+  <!-- Action bar -->
+  <div class="flex items-center justify-between gap-3 flex-wrap pt-2 border-t border-white/5">
+    <div class="text-xs">
+      @if (saveSuccess()) {
+        <span class="text-emerald-400">Saved.</span>
+      }
+      @if (saveError(); as err) {
+        <span class="text-rose-400">{{ err }}</span>
+      }
+    </div>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        class="ofx-ghost-button text-sm"
+        [disabled]="!canEdit() || saving()"
+        (click)="discardChanges()"
+        title="Re-pull the saved preferences from this project"
+      >
+        Discard changes
+      </button>
+      <button
+        type="button"
+        class="ofx-ghost-button text-sm"
+        [disabled]="!canEdit() || saving()"
+        (click)="resetToDefaults()"
+      >
+        Reset to defaults
+      </button>
+      <button
+        type="button"
+        class="omni-glitch-btn ofx-gradient-button text-sm"
+        [disabled]="!canEdit() || saving()"
+        (click)="save()"
+      >
+        @if (saving()) { Saving... } @else { Save preferences }
+      </button>
+    </div>
+  </div>
+</div>

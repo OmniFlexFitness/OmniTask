@@ -63,6 +63,91 @@ export interface Tag {
   color: string; // Hex color code
 }
 
+/**
+ * Per-project, admin-managed customization for the project dashboard
+ * (Overview pane). Lets owners/admins decide which widgets are shown,
+ * change the visual style of certain indicators, and override the colors
+ * used by progress gradients and metric breakdowns.
+ *
+ * All fields are optional: the dashboard falls back to the default cyber
+ * palette and the full widget set when a project hasn't been customized.
+ */
+export interface DashboardPreferences {
+  /**
+   * Keys of dashboard widgets to render. When omitted, all widgets are
+   * shown. The supported keys are kept stable for forward compatibility.
+   */
+  visibleWidgets?: DashboardWidgetKey[];
+
+  /** Color stops used for the Completion progress gradient (left → right). */
+  completionGradient?: string[];
+
+  /** Override colors for the status breakdown (donut/bars). */
+  statusColors?: {
+    todo?: string;
+    inProgress?: string;
+    done?: string;
+  };
+
+  /** Override colors for the priority distribution bars. */
+  priorityColors?: {
+    low?: string;
+    medium?: string;
+    high?: string;
+  };
+
+  /** Visual style for the Status Breakdown widget. */
+  statusDisplay?: 'donut' | 'bars';
+}
+
+export type DashboardWidgetKey =
+  | 'status'
+  | 'completion'
+  | 'priority'
+  | 'sections'
+  | 'tags'
+  | 'upcoming'
+  | 'activity'
+  | 'assignees';
+
+export const ALL_DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[] = [
+  { key: 'status', label: 'Status Breakdown' },
+  { key: 'completion', label: 'Completion' },
+  { key: 'priority', label: 'Priority Distribution' },
+  { key: 'sections', label: 'Sections' },
+  { key: 'tags', label: 'Tags in use' },
+  { key: 'upcoming', label: 'Upcoming deadlines' },
+  { key: 'activity', label: 'Recent activity' },
+  { key: 'assignees', label: 'Top assignees' },
+];
+
+/**
+ * Default values consumed by the project dashboard when no per-project
+ * `dashboardPreferences` overrides are set. Centralized so the manager UI
+ * and the rendering surface stay in sync — change here, change everywhere.
+ */
+export const DEFAULT_COMPLETION_GRADIENT: readonly string[] = [
+  '#00d2ff',
+  '#e040fb',
+  '#ff1493',
+];
+
+export const DEFAULT_DASHBOARD_STATUS_COLORS = {
+  todo: '#e040fb',
+  inProgress: '#00d2ff',
+  done: '#6b7280',
+} as const;
+
+export const DEFAULT_DASHBOARD_PRIORITY_COLORS = {
+  high: '#ff1493',
+  medium: '#e040fb',
+  low: '#00d2ff',
+} as const;
+
+export const DEFAULT_DASHBOARD_STATUS_DISPLAY: NonNullable<
+  DashboardPreferences['statusDisplay']
+> = 'donut';
+
 export interface Project {
   id: string;
   name: string;
@@ -75,6 +160,8 @@ export interface Project {
   sections: Section[]; // Kanban columns
   customFieldIds?: string[]; // References to global CustomFieldDefinitions
   tags?: Tag[]; // Defined tags for this project
+  /** Admin-managed dashboard customization (widgets, colors, display style). */
+  dashboardPreferences?: DashboardPreferences;
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;
   status: 'active' | 'archived';

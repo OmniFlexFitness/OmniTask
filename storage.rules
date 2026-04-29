@@ -1,0 +1,63 @@
+rules_version = '2';
+
+// Firebase Storage security rules for OmniTask.
+//
+// We scope every writable path to the authenticated caller (their own user
+// folder) or to projects they belong to. Reads are kept open to any signed-in
+// user so download URLs work across the app (icons, avatars, attachments are
+// surfaced to anyone who can already see the parent document anyway, and
+// Firestore rules gate the documents themselves).
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // 4 MB hard cap mirrors MAX_IMAGE_BYTES on the client.
+    function withinSizeLimit() {
+      return request.resource.size < 4 * 1024 * 1024;
+    }
+
+    // Membership of a project is authoritative in Firestore — only members
+    // (or the owner) may read/write that project's storage tree.
+    function isProjectMember(projectId) {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/projects/$(projectId)) &&
+        (
+          request.auth.uid == firestore.get(
+            /databases/(default)/documents/projects/$(projectId)
+          ).data.ownerId ||
+          request.auth.uid in firestore.get(
+            /databases/(default)/documents/projects/$(projectId)
+          ).data.memberIds
+        );
+    }
+
+    // User-owned uploads (avatars, personal attachments).
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        isImage() &&
+        withinSizeLimit();
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Project icons and cover images, scoped to project membership.
+    match /projects/{projectId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isProjectMember(projectId) && isImage() && withinSizeLimit();
+      allow delete: if isProjectMember(projectId);
+    }
+
+    // Default deny — anything outside the namespaces above is rejected.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
