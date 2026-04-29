@@ -153,6 +153,15 @@
         type="button"
         class="ofx-ghost-button text-sm"
         [disabled]="!canEdit() || saving()"
+        (click)="discardChanges()"
+        title="Re-pull the saved preferences from this project"
+      >
+        Discard changes
+      </button>
+      <button
+        type="button"
+        class="ofx-ghost-button text-sm"
+        [disabled]="!canEdit() || saving()"
         (click)="resetToDefaults()"
       >
         Reset to defaults

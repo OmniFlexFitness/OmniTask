@@ -5,7 +5,7 @@ import {
   input,
   signal,
   computed,
-  effect,
+  OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,10 @@ import {
   DashboardPreferences,
   DashboardWidgetKey,
   ALL_DASHBOARD_WIDGETS,
+  DEFAULT_COMPLETION_GRADIENT,
+  DEFAULT_DASHBOARD_STATUS_COLORS,
+  DEFAULT_DASHBOARD_PRIORITY_COLORS,
+  DEFAULT_DASHBOARD_STATUS_DISPLAY,
 } from '../../../core/models/domain.model';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -33,8 +37,10 @@ interface MetricColorRow {
  *   • Customize the gradient stops used by the Completion progress bar.
  *
  * Edits are buffered locally; nothing is persisted until the user hits "Save".
- * The "Reset to defaults" button clears the project's dashboardPreferences,
- * returning every consumer to the cyber palette and the full widget set.
+ * Local drafts are seeded once from the input project on init — we deliberately
+ * avoid an effect that watches the input so a Firestore push (e.g. another tab
+ * updates the same project) doesn't silently clobber an in-flight edit. Users
+ * can re-pull state via `discardChanges()` or wipe to defaults via `resetToDefaults()`.
  */
 @Component({
   selector: 'app-dashboard-preferences-manager',
@@ -44,7 +50,7 @@ interface MetricColorRow {
   templateUrl: './dashboard-preferences-manager.component.html',
   styleUrls: ['./dashboard-preferences-manager.component.css'],
 })
-export class DashboardPreferencesManagerComponent {
+export class DashboardPreferencesManagerComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly auth = inject(AuthService);
 
@@ -52,17 +58,19 @@ export class DashboardPreferencesManagerComponent {
 
   readonly allWidgets = ALL_DASHBOARD_WIDGETS;
 
-  // Local drafts. They are seeded from the input project and updated as the
-  // admin edits; nothing leaves the component until `save()` is invoked.
-  visible = signal<Set<DashboardWidgetKey>>(new Set());
-  statusDisplay = signal<'donut' | 'bars'>('donut');
-  completionGradient = signal<string[]>(['#00d2ff', '#e040fb', '#ff1493']);
-  statusTodo = signal('#e040fb');
-  statusInProgress = signal('#00d2ff');
-  statusDone = signal('#6b7280');
-  priorityHigh = signal('#ff1493');
-  priorityMedium = signal('#e040fb');
-  priorityLow = signal('#00d2ff');
+  // Local drafts. They are seeded from the input project on init and updated
+  // as the admin edits; nothing leaves the component until `save()` is invoked.
+  visible = signal<Set<DashboardWidgetKey>>(
+    new Set<DashboardWidgetKey>(ALL_DASHBOARD_WIDGETS.map((w) => w.key)),
+  );
+  statusDisplay = signal<'donut' | 'bars'>(DEFAULT_DASHBOARD_STATUS_DISPLAY);
+  completionGradient = signal<string[]>([...DEFAULT_COMPLETION_GRADIENT]);
+  statusTodo = signal<string>(DEFAULT_DASHBOARD_STATUS_COLORS.todo);
+  statusInProgress = signal<string>(DEFAULT_DASHBOARD_STATUS_COLORS.inProgress);
+  statusDone = signal<string>(DEFAULT_DASHBOARD_STATUS_COLORS.done);
+  priorityHigh = signal<string>(DEFAULT_DASHBOARD_PRIORITY_COLORS.high);
+  priorityMedium = signal<string>(DEFAULT_DASHBOARD_PRIORITY_COLORS.medium);
+  priorityLow = signal<string>(DEFAULT_DASHBOARD_PRIORITY_COLORS.low);
 
   saving = signal(false);
   saveSuccess = signal<boolean | null>(null);
@@ -71,22 +79,51 @@ export class DashboardPreferencesManagerComponent {
   // Restricted to owners and admins — non-privileged members get a read-only
   // view. The toolbar reuses this for disabled-state styling.
   canEdit = computed(() => {
-    const uid = this.auth.currentUserSig()?.uid;
-    const userRole = this.auth.currentUserSig()?.role;
-    if (!uid) return false;
-    return this.project().ownerId === uid || userRole === 'admin';
+    const user = this.auth.currentUserSig();
+    if (!user) return false;
+    return this.project().ownerId === user.uid || user.role === 'admin';
   });
 
   metricRowsStatus = computed<MetricColorRow[]>(() => [
-    { key: 'todo', label: 'To Do', value: this.statusTodo(), defaultValue: '#e040fb' },
-    { key: 'inProgress', label: 'In Progress', value: this.statusInProgress(), defaultValue: '#00d2ff' },
-    { key: 'done', label: 'Done', value: this.statusDone(), defaultValue: '#6b7280' },
+    {
+      key: 'todo',
+      label: 'To Do',
+      value: this.statusTodo(),
+      defaultValue: DEFAULT_DASHBOARD_STATUS_COLORS.todo,
+    },
+    {
+      key: 'inProgress',
+      label: 'In Progress',
+      value: this.statusInProgress(),
+      defaultValue: DEFAULT_DASHBOARD_STATUS_COLORS.inProgress,
+    },
+    {
+      key: 'done',
+      label: 'Done',
+      value: this.statusDone(),
+      defaultValue: DEFAULT_DASHBOARD_STATUS_COLORS.done,
+    },
   ]);
 
   metricRowsPriority = computed<MetricColorRow[]>(() => [
-    { key: 'high', label: 'High', value: this.priorityHigh(), defaultValue: '#ff1493' },
-    { key: 'medium', label: 'Medium', value: this.priorityMedium(), defaultValue: '#e040fb' },
-    { key: 'low', label: 'Low', value: this.priorityLow(), defaultValue: '#00d2ff' },
+    {
+      key: 'high',
+      label: 'High',
+      value: this.priorityHigh(),
+      defaultValue: DEFAULT_DASHBOARD_PRIORITY_COLORS.high,
+    },
+    {
+      key: 'medium',
+      label: 'Medium',
+      value: this.priorityMedium(),
+      defaultValue: DEFAULT_DASHBOARD_PRIORITY_COLORS.medium,
+    },
+    {
+      key: 'low',
+      label: 'Low',
+      value: this.priorityLow(),
+      defaultValue: DEFAULT_DASHBOARD_PRIORITY_COLORS.low,
+    },
   ]);
 
   /** Live preview gradient for the Completion bar. */
@@ -94,37 +131,45 @@ export class DashboardPreferencesManagerComponent {
     () => `linear-gradient(90deg, ${this.completionGradient().join(', ')})`,
   );
 
-  constructor() {
-    // Re-seed local drafts whenever the underlying project's preferences
-    // change (e.g. an admin saved on another tab and Firestore pushed the
-    // new doc to us). We only resync when the project id changes or when
-    // we're not currently saving, so an in-flight edit isn't clobbered.
-    effect(() => {
-      if (this.saving()) return;
-      const p = this.project();
-      const prefs = p.dashboardPreferences ?? {};
-      this.seedFromPrefs(prefs);
-    });
+  ngOnInit(): void {
+    this.seedFromPrefs(this.project().dashboardPreferences ?? {});
   }
 
-  private seedFromPrefs(prefs: DashboardPreferences) {
+  /** Re-pull state from the latest server-side project doc. */
+  discardChanges(): void {
+    this.seedFromPrefs(this.project().dashboardPreferences ?? {});
+    this.saveSuccess.set(null);
+    this.saveError.set(null);
+  }
+
+  private seedFromPrefs(prefs: DashboardPreferences): void {
     const visible = prefs.visibleWidgets?.length
       ? new Set<DashboardWidgetKey>(prefs.visibleWidgets)
       : new Set<DashboardWidgetKey>(this.allWidgets.map((w) => w.key));
     this.visible.set(visible);
-    this.statusDisplay.set(prefs.statusDisplay ?? 'donut');
+    this.statusDisplay.set(prefs.statusDisplay ?? DEFAULT_DASHBOARD_STATUS_DISPLAY);
     this.completionGradient.set(
-      prefs.completionGradient?.length ? [...prefs.completionGradient] : ['#00d2ff', '#e040fb', '#ff1493'],
+      prefs.completionGradient?.length
+        ? [...prefs.completionGradient]
+        : [...DEFAULT_COMPLETION_GRADIENT],
     );
-    this.statusTodo.set(prefs.statusColors?.todo ?? '#e040fb');
-    this.statusInProgress.set(prefs.statusColors?.inProgress ?? '#00d2ff');
-    this.statusDone.set(prefs.statusColors?.done ?? '#6b7280');
-    this.priorityHigh.set(prefs.priorityColors?.high ?? '#ff1493');
-    this.priorityMedium.set(prefs.priorityColors?.medium ?? '#e040fb');
-    this.priorityLow.set(prefs.priorityColors?.low ?? '#00d2ff');
+    this.statusTodo.set(prefs.statusColors?.todo ?? DEFAULT_DASHBOARD_STATUS_COLORS.todo);
+    this.statusInProgress.set(
+      prefs.statusColors?.inProgress ?? DEFAULT_DASHBOARD_STATUS_COLORS.inProgress,
+    );
+    this.statusDone.set(prefs.statusColors?.done ?? DEFAULT_DASHBOARD_STATUS_COLORS.done);
+    this.priorityHigh.set(
+      prefs.priorityColors?.high ?? DEFAULT_DASHBOARD_PRIORITY_COLORS.high,
+    );
+    this.priorityMedium.set(
+      prefs.priorityColors?.medium ?? DEFAULT_DASHBOARD_PRIORITY_COLORS.medium,
+    );
+    this.priorityLow.set(
+      prefs.priorityColors?.low ?? DEFAULT_DASHBOARD_PRIORITY_COLORS.low,
+    );
   }
 
-  toggleWidget(key: DashboardWidgetKey) {
+  toggleWidget(key: DashboardWidgetKey): void {
     const next = new Set(this.visible());
     if (next.has(key)) next.delete(key);
     else next.add(key);
@@ -135,29 +180,29 @@ export class DashboardPreferencesManagerComponent {
     return this.visible().has(key);
   }
 
-  setStatusDisplay(value: 'donut' | 'bars') {
+  setStatusDisplay(value: 'donut' | 'bars'): void {
     this.statusDisplay.set(value);
   }
 
-  updateGradientStop(index: number, value: string) {
+  updateGradientStop(index: number, value: string): void {
     const next = [...this.completionGradient()];
     next[index] = value;
     this.completionGradient.set(next);
   }
 
-  addGradientStop() {
+  addGradientStop(): void {
     const stops = this.completionGradient();
     if (stops.length >= 5) return; // Cap to 5 to keep the gradient readable.
-    this.completionGradient.set([...stops, stops[stops.length - 1] ?? '#00d2ff']);
+    this.completionGradient.set([...stops, stops[stops.length - 1] ?? DEFAULT_COMPLETION_GRADIENT[0]]);
   }
 
-  removeGradientStop(index: number) {
+  removeGradientStop(index: number): void {
     const stops = this.completionGradient();
     if (stops.length <= 2) return; // A gradient needs at least 2 stops.
     this.completionGradient.set(stops.filter((_, i) => i !== index));
   }
 
-  updateMetricColor(group: 'status' | 'priority', key: string, value: string) {
+  updateMetricColor(group: 'status' | 'priority', key: string, value: string): void {
     if (group === 'status') {
       if (key === 'todo') this.statusTodo.set(value);
       else if (key === 'inProgress') this.statusInProgress.set(value);
@@ -186,27 +231,38 @@ export class DashboardPreferencesManagerComponent {
       if (visibleArr.length !== this.allWidgets.length) {
         prefs.visibleWidgets = visibleArr;
       }
-      if (this.statusDisplay() !== 'donut') {
+      if (this.statusDisplay() !== DEFAULT_DASHBOARD_STATUS_DISPLAY) {
         prefs.statusDisplay = this.statusDisplay();
       }
       const gradient = this.completionGradient();
-      const defaultGradient = ['#00d2ff', '#e040fb', '#ff1493'];
-      if (
-        gradient.length !== defaultGradient.length ||
-        gradient.some((c, i) => c !== defaultGradient[i])
-      ) {
+      const isDefaultGradient =
+        gradient.length === DEFAULT_COMPLETION_GRADIENT.length &&
+        gradient.every((c, i) => c === DEFAULT_COMPLETION_GRADIENT[i]);
+      if (!isDefaultGradient) {
         prefs.completionGradient = [...gradient];
       }
       const statusColors: NonNullable<DashboardPreferences['statusColors']> = {};
-      if (this.statusTodo() !== '#e040fb') statusColors.todo = this.statusTodo();
-      if (this.statusInProgress() !== '#00d2ff') statusColors.inProgress = this.statusInProgress();
-      if (this.statusDone() !== '#6b7280') statusColors.done = this.statusDone();
+      if (this.statusTodo() !== DEFAULT_DASHBOARD_STATUS_COLORS.todo) {
+        statusColors.todo = this.statusTodo();
+      }
+      if (this.statusInProgress() !== DEFAULT_DASHBOARD_STATUS_COLORS.inProgress) {
+        statusColors.inProgress = this.statusInProgress();
+      }
+      if (this.statusDone() !== DEFAULT_DASHBOARD_STATUS_COLORS.done) {
+        statusColors.done = this.statusDone();
+      }
       if (Object.keys(statusColors).length) prefs.statusColors = statusColors;
 
       const priorityColors: NonNullable<DashboardPreferences['priorityColors']> = {};
-      if (this.priorityHigh() !== '#ff1493') priorityColors.high = this.priorityHigh();
-      if (this.priorityMedium() !== '#e040fb') priorityColors.medium = this.priorityMedium();
-      if (this.priorityLow() !== '#00d2ff') priorityColors.low = this.priorityLow();
+      if (this.priorityHigh() !== DEFAULT_DASHBOARD_PRIORITY_COLORS.high) {
+        priorityColors.high = this.priorityHigh();
+      }
+      if (this.priorityMedium() !== DEFAULT_DASHBOARD_PRIORITY_COLORS.medium) {
+        priorityColors.medium = this.priorityMedium();
+      }
+      if (this.priorityLow() !== DEFAULT_DASHBOARD_PRIORITY_COLORS.low) {
+        priorityColors.low = this.priorityLow();
+      }
       if (Object.keys(priorityColors).length) prefs.priorityColors = priorityColors;
 
       await this.projectService.updateProject(this.project().id, {
@@ -216,8 +272,7 @@ export class DashboardPreferencesManagerComponent {
       setTimeout(() => this.saveSuccess.set(null), 2500);
     } catch (err) {
       console.error('Failed to save dashboard preferences:', err);
-      const detail = err instanceof Error ? err.message : 'Unknown error';
-      this.saveError.set(`Failed to save: ${detail}`);
+      this.saveError.set('Failed to save preferences. Please try again.');
     } finally {
       this.saving.set(false);
     }
@@ -239,8 +294,7 @@ export class DashboardPreferencesManagerComponent {
       setTimeout(() => this.saveSuccess.set(null), 2500);
     } catch (err) {
       console.error('Failed to reset dashboard preferences:', err);
-      const detail = err instanceof Error ? err.message : 'Unknown error';
-      this.saveError.set(`Failed to reset: ${detail}`);
+      this.saveError.set('Failed to reset preferences. Please try again.');
     } finally {
       this.saving.set(false);
     }

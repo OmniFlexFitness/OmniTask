@@ -174,9 +174,8 @@ export class ProjectFormModalComponent {
           } catch (err) {
             iconUploadFailed = true;
             iconUrl = editingProject.icon; // keep prior icon
-            const detail = err instanceof Error ? err.message : 'Unknown error';
             console.error('Icon upload failed:', err);
-            this.iconError.set(`Failed to upload icon: ${detail}`);
+            this.iconError.set('Failed to upload icon. Please try again.');
           }
         } else if (this.iconCleared()) {
           if (editingProject.icon) {
@@ -223,8 +222,7 @@ export class ProjectFormModalComponent {
       this.close.emit();
     } catch (error) {
       console.error('Failed to save project:', error);
-      const detail = error instanceof Error ? error.message : 'Unknown error';
-      this.iconError.set(`Failed to save project: ${detail}`);
+      this.iconError.set('Failed to save project. Please try again.');
     } finally {
       this.saving.set(false);
     }

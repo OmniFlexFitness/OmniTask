@@ -15,6 +15,11 @@ import {
   CYBERPUNK_COLORS,
   ASSIGNEE_PALETTE,
   DashboardWidgetKey,
+  ALL_DASHBOARD_WIDGETS,
+  DEFAULT_COMPLETION_GRADIENT,
+  DEFAULT_DASHBOARD_STATUS_COLORS,
+  DEFAULT_DASHBOARD_PRIORITY_COLORS,
+  DEFAULT_DASHBOARD_STATUS_DISPLAY,
 } from '../../../core/models/domain.model';
 
 /** How far in the future a due date counts as "due soon" in the dashboard KPIs. */
@@ -97,52 +102,48 @@ export class ProjectOverviewComponent {
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
 
-  /** Default widget palette/order used when a project hasn't customized anything. */
-  private readonly DEFAULT_VISIBLE_WIDGETS: DashboardWidgetKey[] = [
-    'status', 'completion', 'priority', 'sections', 'tags', 'upcoming', 'activity', 'assignees',
-  ];
-  private readonly DEFAULT_COMPLETION_GRADIENT = ['#00d2ff', '#e040fb', '#ff1493'];
-  private readonly DEFAULT_STATUS_COLORS = {
-    todo: CYBERPUNK_COLORS.TODO,
-    inProgress: CYBERPUNK_COLORS.IN_PROGRESS,
-    done: CYBERPUNK_COLORS.DONE,
-  };
-  private readonly DEFAULT_PRIORITY_COLORS = {
-    high: '#ff1493',
-    medium: '#e040fb',
-    low: '#00d2ff',
-  };
-
-  /** Resolved status colors: project override → cyber default. */
+  /** Resolved status colors: project override → shared default. */
   statusColors = computed(() => {
     const override = this.project().dashboardPreferences?.statusColors ?? {};
     return {
-      todo: override.todo || this.DEFAULT_STATUS_COLORS.todo,
-      inProgress: override.inProgress || this.DEFAULT_STATUS_COLORS.inProgress,
-      done: override.done || this.DEFAULT_STATUS_COLORS.done,
+      todo: override.todo || DEFAULT_DASHBOARD_STATUS_COLORS.todo,
+      inProgress: override.inProgress || DEFAULT_DASHBOARD_STATUS_COLORS.inProgress,
+      done: override.done || DEFAULT_DASHBOARD_STATUS_COLORS.done,
     };
   });
 
-  /** Resolved priority colors: project override → cyber default. */
+  /** Resolved priority colors: project override → shared default. */
   priorityColors = computed(() => {
     const override = this.project().dashboardPreferences?.priorityColors ?? {};
     return {
-      high: override.high || this.DEFAULT_PRIORITY_COLORS.high,
-      medium: override.medium || this.DEFAULT_PRIORITY_COLORS.medium,
-      low: override.low || this.DEFAULT_PRIORITY_COLORS.low,
+      high: override.high || DEFAULT_DASHBOARD_PRIORITY_COLORS.high,
+      medium: override.medium || DEFAULT_DASHBOARD_PRIORITY_COLORS.medium,
+      low: override.low || DEFAULT_DASHBOARD_PRIORITY_COLORS.low,
     };
   });
 
   /** Display style for the Status Breakdown widget. */
   statusDisplay = computed<'donut' | 'bars'>(
-    () => this.project().dashboardPreferences?.statusDisplay ?? 'donut',
+    () => this.project().dashboardPreferences?.statusDisplay ?? DEFAULT_DASHBOARD_STATUS_DISPLAY,
   );
+
+  /**
+   * Set of widget keys that should be rendered. We compute it once per
+   * project change rather than re-scanning the visibleWidgets array on every
+   * `showWidget()` call from the template (the template invokes it at least
+   * once per dashboard panel and per surrounding `@if`).
+   */
+  private visibleWidgetSet = computed<ReadonlySet<DashboardWidgetKey>>(() => {
+    const list = this.project().dashboardPreferences?.visibleWidgets;
+    if (!list || list.length === 0) {
+      return new Set(ALL_DASHBOARD_WIDGETS.map((w) => w.key));
+    }
+    return new Set(list);
+  });
 
   /** Whether a given widget should be rendered for this project. */
   showWidget(key: DashboardWidgetKey): boolean {
-    const list = this.project().dashboardPreferences?.visibleWidgets;
-    if (!list || list.length === 0) return true;
-    return list.includes(key);
+    return this.visibleWidgetSet().has(key);
   }
 
   // ---------- Overall KPIs ----------
@@ -381,7 +382,7 @@ export class ProjectOverviewComponent {
     const prefs = this.project().dashboardPreferences;
     const stops = prefs?.completionGradient?.length
       ? prefs.completionGradient
-      : this.DEFAULT_COMPLETION_GRADIENT;
+      : DEFAULT_COMPLETION_GRADIENT;
     return `linear-gradient(90deg, ${stops.join(', ')})`;
   }
 

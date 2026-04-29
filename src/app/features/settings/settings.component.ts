@@ -140,8 +140,7 @@ export class SettingsComponent {
       await this.deletePreviousPhoto(previousPhotoURL);
     } catch (err) {
       console.error('Failed to upload avatar:', err);
-      const detail = err instanceof Error ? err.message : 'Unknown error';
-      this.photoError.set(`Failed to upload image: ${detail}`);
+      this.photoError.set('Failed to upload image. Please try again.');
     } finally {
       this.uploadingPhoto.set(false);
       input.value = '';

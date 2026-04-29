@@ -121,6 +121,33 @@ export const ALL_DASHBOARD_WIDGETS: { key: DashboardWidgetKey; label: string }[]
   { key: 'assignees', label: 'Top assignees' },
 ];
 
+/**
+ * Default values consumed by the project dashboard when no per-project
+ * `dashboardPreferences` overrides are set. Centralized so the manager UI
+ * and the rendering surface stay in sync — change here, change everywhere.
+ */
+export const DEFAULT_COMPLETION_GRADIENT: readonly string[] = [
+  '#00d2ff',
+  '#e040fb',
+  '#ff1493',
+];
+
+export const DEFAULT_DASHBOARD_STATUS_COLORS = {
+  todo: '#e040fb',
+  inProgress: '#00d2ff',
+  done: '#6b7280',
+} as const;
+
+export const DEFAULT_DASHBOARD_PRIORITY_COLORS = {
+  high: '#ff1493',
+  medium: '#e040fb',
+  low: '#00d2ff',
+} as const;
+
+export const DEFAULT_DASHBOARD_STATUS_DISPLAY: NonNullable<
+  DashboardPreferences['statusDisplay']
+> = 'donut';
+
 export interface Project {
   id: string;
   name: string;
