@@ -62,8 +62,8 @@ export class DashboardComponent {
   seedService = inject(SeedDataService);
   dialogService = inject(DialogService);
   router = inject(Router);
-  googleSheetsSyncService = inject(GoogleSheetsSyncService);
-  googleSheetsService = inject(GoogleSheetsService);
+  readonly googleSheetsSyncService = inject(GoogleSheetsSyncService);
+  readonly googleSheetsService = inject(GoogleSheetsService);
 
   // State
   selectedProjectId = this.projectService.selectedProjectId;
@@ -185,7 +185,7 @@ export class DashboardComponent {
     }
   }
 
-  async syncGoogleSheet() {
+  async syncGoogleSheet(): Promise<void> {
     const project = this.currentProject();
     if (!project?.googleSheetId) {
       await this.dialogService.alert(
@@ -217,19 +217,15 @@ export class DashboardComponent {
         tabName,
       );
 
-      console.log(
-        `Sheet sync complete: ${result.added} added, ${result.updated} updated, ${result.pushed} pushed`,
-      );
+      await this.projectService.updateProject(project.id, {
+        sheetSyncStatus: 'synced',
+        lastSheetSyncAt: new Date(),
+      });
 
       await this.dialogService.alert(
         `Sync complete!\n\n${result.added} added, ${result.updated} updated, ${result.pushed} pushed to the sheet.`,
         'Sync Successful',
       );
-
-      await this.projectService.updateProject(project.id, {
-        sheetSyncStatus: 'synced',
-        lastSheetSyncAt: new Date(),
-      });
     } catch (error: unknown) {
       console.error('Sheet sync failed:', error);
       await this.projectService.updateProject(project.id, { sheetSyncStatus: 'error' });
