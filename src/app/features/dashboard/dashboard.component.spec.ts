@@ -6,8 +6,8 @@ import { TaskService } from '../../core/services/task.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { Router } from '@angular/router';
-import { GoogleTasksSyncService } from '../../core/services/google-tasks-sync.service';
-import { GoogleTasksService } from '../../core/services/google-tasks.service';
+import { GoogleSheetsSyncService } from '../../core/services/google-sheets-sync.service';
+import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { BehaviorSubject, of } from 'rxjs';
 import { signal } from '@angular/core';
 import { Project, Task } from '../../core/models/domain.model';
@@ -23,8 +23,8 @@ describe('DashboardComponent', () => {
   let mockSeedDataService: jasmine.SpyObj<SeedDataService>;
   let mockDialogService: jasmine.SpyObj<DialogService>;
   let mockRouter: jasmine.SpyObj<Router>;
-  let mockGTSyncService: jasmine.SpyObj<GoogleTasksSyncService>;
-  let mockGTService: jasmine.SpyObj<GoogleTasksService>;
+  let mockSheetsSyncService: jasmine.SpyObj<GoogleSheetsSyncService>;
+  let mockSheetsService: jasmine.SpyObj<GoogleSheetsService>;
 
   beforeEach(async () => {
     mockAuthService = jasmine.createSpyObj('AuthService', ['logout']);
@@ -48,8 +48,10 @@ describe('DashboardComponent', () => {
     mockDialogService = jasmine.createSpyObj('DialogService', ['confirm', 'alert']);
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
 
-    mockGTSyncService = jasmine.createSpyObj('GoogleTasksSyncService', ['pullFromGoogleTasks']);
-    mockGTService = jasmine.createSpyObj('GoogleTasksService', ['isAuthenticated']);
+    mockSheetsSyncService = jasmine.createSpyObj('GoogleSheetsSyncService', [
+      'syncProjectWithSheet',
+    ]);
+    mockSheetsService = jasmine.createSpyObj('GoogleSheetsService', ['isAuthenticated']);
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -60,8 +62,8 @@ describe('DashboardComponent', () => {
         { provide: SeedDataService, useValue: mockSeedDataService },
         { provide: DialogService, useValue: mockDialogService },
         { provide: Router, useValue: mockRouter },
-        { provide: GoogleTasksSyncService, useValue: mockGTSyncService },
-        { provide: GoogleTasksService, useValue: mockGTService },
+        { provide: GoogleSheetsSyncService, useValue: mockSheetsSyncService },
+        { provide: GoogleSheetsService, useValue: mockSheetsService },
       ],
     })
       // For standalone components with lots of deep dependencies, sometimes it's easier to just override the template,

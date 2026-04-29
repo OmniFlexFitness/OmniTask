@@ -16,8 +16,11 @@ import { ProjectService } from '../../core/services/project.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { SeedDataService } from '../../core/services/seed-data.service';
-import { GoogleTasksSyncService } from '../../core/services/google-tasks-sync.service';
-import { GoogleTasksService } from '../../core/services/google-tasks.service';
+import {
+  GoogleSheetsSyncService,
+  DEFAULT_SHEET_TAB_NAME,
+} from '../../core/services/google-sheets-sync.service';
+import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
@@ -59,8 +62,8 @@ export class DashboardComponent {
   seedService = inject(SeedDataService);
   dialogService = inject(DialogService);
   router = inject(Router);
-  googleTasksSyncService = inject(GoogleTasksSyncService);
-  googleTasksService = inject(GoogleTasksService);
+  readonly googleSheetsSyncService = inject(GoogleSheetsSyncService);
+  readonly googleSheetsService = inject(GoogleSheetsService);
 
   // State
   selectedProjectId = this.projectService.selectedProjectId;
@@ -182,21 +185,20 @@ export class DashboardComponent {
     }
   }
 
-  async syncGoogleTasks() {
+  async syncGoogleSheet(): Promise<void> {
     const project = this.currentProject();
-    if (!project?.googleTaskListId) {
+    if (!project?.googleSheetId) {
       await this.dialogService.alert(
-        'Please configure Google Tasks sync in project settings first.',
+        'Please link a Google Sheet in project settings first.',
         'Sync Not Configured',
       );
       return;
     }
 
-    // Check if Google Tasks is authenticated
-    if (!this.googleTasksService.isAuthenticated()) {
+    if (!this.googleSheetsService.isAuthenticated()) {
       const shouldReauth = await this.dialogService.confirm(
-        'Google Tasks is not connected. You need to sign out and sign in again to grant permission to access Google Tasks.\n\nWould you like to sign out now?',
-        'Google Tasks Not Connected',
+        'Google Sheets is not connected. You need to sign out and sign in again to grant permission to access Google Sheets.\n\nWould you like to sign out now?',
+        'Google Sheets Not Connected',
       );
       if (shouldReauth) {
         await this.auth.logout();
@@ -206,46 +208,32 @@ export class DashboardComponent {
 
     this.syncing.set(true);
     try {
-      // Update sync status to pending
-      await this.projectService.updateProject(project.id, { syncStatus: 'pending' });
+      await this.projectService.updateProject(project.id, { sheetSyncStatus: 'pending' });
 
-      // Get the last sync timestamp
-      const lastSyncAt = project.lastSyncAt;
-      const lastSyncDate = lastSyncAt
-        ? lastSyncAt instanceof Date
-          ? lastSyncAt
-          : (lastSyncAt as any).toDate?.() || undefined
-        : undefined;
-
-      // Pull tasks from Google Tasks
-      const result = await this.googleTasksSyncService.pullFromGoogleTasks(
+      const tabName = project.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
+      const result = await this.googleSheetsSyncService.syncProjectWithSheet(
         project.id,
-        project.googleTaskListId,
-        lastSyncDate,
+        project.googleSheetId,
+        tabName,
       );
 
-      console.log(`Sync complete: ${result.added} added, ${result.updated} updated`);
+      await this.projectService.updateProject(project.id, {
+        sheetSyncStatus: 'synced',
+        lastSheetSyncAt: new Date(),
+      });
 
-      // Show success message
       await this.dialogService.alert(
-        `Sync complete!\n\n${result.added} tasks added, ${result.updated} tasks updated.`,
+        `Sync complete!\n\n${result.added} added, ${result.updated} updated, ${result.pushed} pushed to the sheet.`,
         'Sync Successful',
       );
-
-      // Mark as synced
-      await this.projectService.updateProject(project.id, {
-        syncStatus: 'synced',
-        lastSyncAt: new Date(),
-      });
     } catch (error: unknown) {
-      console.error('Sync failed:', error);
-      await this.projectService.updateProject(project.id, { syncStatus: 'error' });
+      console.error('Sheet sync failed:', error);
+      await this.projectService.updateProject(project.id, { sheetSyncStatus: 'error' });
 
-      // Provide specific error message
       let errorMessage = 'Sync failed. Please try again.';
       const err = error as { message?: string; status?: number };
       if (err?.message?.includes('not authenticated')) {
-        errorMessage = 'Google Tasks authentication expired. Please sign out and sign in again.';
+        errorMessage = 'Google Sheets authentication expired. Please sign out and sign in again.';
       } else if (err?.status === 401 || err?.status === 403) {
         errorMessage = 'Access denied. Please sign out and sign in again to refresh permissions.';
       }

@@ -116,33 +116,35 @@
               </a>
 
               <a
-                routerLink="/tasks"
+                routerLink="/workspace"
                 routerLinkActive
-                #rlaTasks="routerLinkActive"
+                #rlaWorkspace="routerLinkActive"
                 class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
-                [class.text-cyan-400]="rlaTasks.isActive"
-                [class.text-slate-400]="!rlaTasks.isActive"
-                [class.hover:text-violet-400]="!rlaTasks.isActive"
+                [class.text-cyan-400]="rlaWorkspace.isActive"
+                [class.text-slate-400]="!rlaWorkspace.isActive"
+                [class.hover:text-violet-400]="!rlaWorkspace.isActive"
               >
                 <!-- Active/Hover Background -->
                 <span
                   class="absolute inset-0 rounded-lg transition-all duration-300"
-                  [class.bg-cyan-500/10]="rlaTasks.isActive"
-                  [class.bg-violet-500/0]="!rlaTasks.isActive"
-                  [class.group-hover:bg-violet-500/10]="!rlaTasks.isActive"
+                  [class.bg-cyan-500/10]="rlaWorkspace.isActive"
+                  [class.bg-violet-500/0]="!rlaWorkspace.isActive"
+                  [class.group-hover:bg-violet-500/10]="!rlaWorkspace.isActive"
                 ></span>
                 <!-- Underline -->
                 <span
                   class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full transition-all duration-300"
-                  [class.bg-cyan-500]="rlaTasks.isActive"
-                  [class.shadow-[0_0_10px_rgba(6,182,212,0.9)]]="rlaTasks.isActive"
-                  [class.w-2/3]="rlaTasks.isActive"
-                  [class.w-0]="!rlaTasks.isActive"
-                  [class.group-hover:w-2/3]="!rlaTasks.isActive"
-                  [class.group-hover:bg-violet-500]="!rlaTasks.isActive"
-                  [class.group-hover:shadow-[0_0_10px_rgba(139,92,246,0.9)]]="!rlaTasks.isActive"
+                  [class.bg-cyan-500]="rlaWorkspace.isActive"
+                  [class.shadow-[0_0_10px_rgba(6,182,212,0.9)]]="rlaWorkspace.isActive"
+                  [class.w-2/3]="rlaWorkspace.isActive"
+                  [class.w-0]="!rlaWorkspace.isActive"
+                  [class.group-hover:w-2/3]="!rlaWorkspace.isActive"
+                  [class.group-hover:bg-violet-500]="!rlaWorkspace.isActive"
+                  [class.group-hover:shadow-[0_0_10px_rgba(139,92,246,0.9)]]="
+                    !rlaWorkspace.isActive
+                  "
                 ></span>
-                <span class="relative">My Tasks</span>
+                <span class="relative">Workspace</span>
               </a>
 
               <a
