@@ -132,10 +132,15 @@ export class ProjectOverviewComponent {
    * project change rather than re-scanning the visibleWidgets array on every
    * `showWidget()` call from the template (the template invokes it at least
    * once per dashboard panel and per surrounding `@if`).
+   *
+   * `undefined` means "no preference saved" → show all widgets. An explicit
+   * empty array means "the admin hid every widget" → show none. We must keep
+   * those two cases distinct, otherwise the manager UI's "hide everything"
+   * state can never be persisted (the saved [] would be re-read as default).
    */
   private visibleWidgetSet = computed<ReadonlySet<DashboardWidgetKey>>(() => {
     const list = this.project().dashboardPreferences?.visibleWidgets;
-    if (!list || list.length === 0) {
+    if (list === undefined) {
       return new Set(ALL_DASHBOARD_WIDGETS.map((w) => w.key));
     }
     return new Set(list);

@@ -143,9 +143,14 @@ export class DashboardPreferencesManagerComponent implements OnInit {
   }
 
   private seedFromPrefs(prefs: DashboardPreferences): void {
-    const visible = prefs.visibleWidgets?.length
-      ? new Set<DashboardWidgetKey>(prefs.visibleWidgets)
-      : new Set<DashboardWidgetKey>(this.allWidgets.map((w) => w.key));
+    // Preserve the difference between "no preference saved" (visibleWidgets
+    // === undefined → show every widget) and "admin explicitly hid every
+    // widget" (visibleWidgets === [] → keep them all off). Coercing [] to
+    // "all" here would silently undo a fully-hidden dashboard on reopen.
+    const visible =
+      prefs.visibleWidgets === undefined
+        ? new Set<DashboardWidgetKey>(this.allWidgets.map((w) => w.key))
+        : new Set<DashboardWidgetKey>(prefs.visibleWidgets);
     this.visible.set(visible);
     this.statusDisplay.set(prefs.statusDisplay ?? DEFAULT_DASHBOARD_STATUS_DISPLAY);
     this.completionGradient.set(

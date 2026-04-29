@@ -193,12 +193,15 @@ export class ProjectFormModalComponent {
           // Remove the icon field entirely rather than persisting a sentinel.
           await this.projectService.clearProjectIcon(editingProject.id);
         }
-        this.saved.emit({ ...editingProject, ...updates, icon: iconUrl } as Project);
-        // If only the upload failed, keep the modal open so the user sees the
-        // specific error and can retry without losing their other edits.
+        // If the icon upload failed, keep the modal open so the user sees the
+        // specific error and can retry without losing their other edits. We
+        // also withhold the `saved` event because parents (e.g. the dashboard)
+        // close the modal in their `(saved)` handler — emitting here would
+        // dismiss the dialog and hide the upload error.
         if (iconUploadFailed) {
           return;
         }
+        this.saved.emit({ ...editingProject, ...updates, icon: iconUrl } as Project);
       } else {
         // Create project first so we have an ID to scope the storage path,
         // then upload the icon and patch the project.
