@@ -176,8 +176,8 @@
         Add Task
       </button>
 
-      <!-- Google Tasks Sync Button -->
-      @if (currentProject()?.syncEnabled && currentProject()?.googleTaskListId) {
+      <!-- Google Sheets Sync Button -->
+      @if (currentProject()?.googleSheetId) {
         <button
           class="omni-glitch-btn relative p-2 rounded-lg border transition-all duration-200 group"
           [class.border-emerald-500/30]="!syncing()"
@@ -188,8 +188,8 @@
           [class.bg-amber-500/10]="syncing()"
           [class.text-amber-400]="syncing()"
           [disabled]="syncing()"
-          (click)="syncGoogleTasks.emit()"
-          title="Sync with Google Tasks"
+          (click)="syncGoogleSheet.emit()"
+          title="Sync with Google Sheets"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
