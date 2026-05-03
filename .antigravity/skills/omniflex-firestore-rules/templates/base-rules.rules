@@ -1,0 +1,131 @@
+// OmniFlex base Firestore security rules
+// Drop into firestore.rules and adapt collection names per project.
+// Assumes App Check is enforced in production via Firebase Console settings,
+// not via rules (rules treat App Check as advisory; enforcement is project-level).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== Helper functions =====
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(resource) {
+      return isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    function isOwnerOrAdmin(resource) {
+      return isOwner(resource) || isAdmin();
+    }
+
+    function hasRequiredFields(required) {
+      return request.resource.data.keys().hasAll(required);
+    }
+
+    function fieldsAreSubsetOf(allowed) {
+      return request.resource.data.keys().hasOnly(allowed);
+    }
+
+    function isImmutable(fieldName) {
+      return !(fieldName in request.resource.data)
+        || resource.data[fieldName] == request.resource.data[fieldName];
+    }
+
+    function isRecentEnough(lastTimestampField, cooldownSeconds) {
+      return resource == null
+        || request.time > resource.data[lastTimestampField] + duration.value(cooldownSeconds, 's');
+    }
+
+    // ===== Users =====
+    // /users/{uid} — private profile data, owner-only access
+
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAuthenticated()
+        && request.auth.uid == uid
+        && hasRequiredFields(['email', 'displayName', 'createdAt'])
+        && fieldsAreSubsetOf([
+          'email', 'displayName', 'photoUrl', 'createdAt',
+          'updatedAt', 'preferences', 'role'
+        ]);
+      allow update: if isAuthenticated()
+        && request.auth.uid == uid
+        && isImmutable('createdAt')
+        && isImmutable('email')
+        && isImmutable('role');  // role changes require admin via Cloud Function
+      allow delete: if false;  // never client-deletable; use Cloud Function for GDPR
+    }
+
+    // ===== Public profiles =====
+    // /publicProfiles/{uid} — derived subset of /users/{uid} maintained by Cloud Function
+
+    match /publicProfiles/{uid} {
+      allow read: if true;  // public
+      allow write: if false;  // Cloud Function only
+    }
+
+    // ===== Workout logs =====
+    // /workoutLogs/{logId} — owner-only
+
+    match /workoutLogs/{logId} {
+      allow read: if isOwner(resource);
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && hasRequiredFields(['ownerUid', 'startedAt', 'exercises']);
+      allow update: if isOwner(resource)
+        && isImmutable('ownerUid')
+        && isImmutable('createdAt');
+      allow delete: if isOwner(resource);
+      allow list: if isAuthenticated()
+        && request.query.limit <= 100
+        && resource == null;  // no resource on list; rely on query constraints
+    }
+
+    // ===== Social feed posts =====
+    // /posts/{postId} — authenticated read, owner write, rate-limited
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerUid == request.auth.uid
+        && hasRequiredFields(['ownerUid', 'body', 'createdAt'])
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 2000;
+      allow update: if isOwner(resource)
+        && isImmutable('ownerUid')
+        && isImmutable('createdAt');
+      allow delete: if isOwnerOrAdmin(resource);
+      allow list: if isAuthenticated() && request.query.limit <= 50;
+    }
+
+    // ===== Match queue (FitMatch) =====
+    // /matchQueue/{uid}/candidates/{candidateId} — read own queue, server-managed writes
+
+    match /matchQueue/{uid}/candidates/{candidateId} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false;  // Cloud Function only
+    }
+
+    // ===== Public content =====
+    // /content/{contentId} — public read, admin write
+    // Used for Supplement Sundays cards, OmniFacts, Based or BS, Fitness Frauds entries
+
+    match /content/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ===== Default deny =====
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

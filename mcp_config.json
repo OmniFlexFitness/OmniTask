@@ -1,0 +1,78 @@
+{
+  "_comment": "OmniFlex Antigravity workspace MCP server registrations. Renamed to mcp_config.json during bootstrap. Schema follows the standard MCP server registration format. Antigravity has a known footgun where tool names containing dots fail validation against ^[a-zA-Z0-9_-]; if a server uses dot-notation tool names, route it through a sanitizing proxy (see C:/OmniFlex Vault/Tech/mcp-proxy-pattern.md if it exists, or have Claude Code scaffold one).",
+  "mcpServers": {
+    "github": {
+      "_comment": "GitHub repo operations: read issues, PRs, file contents, run actions. Requires GITHUB_PERSONAL_ACCESS_TOKEN env var with appropriate scopes (repo, read:org).",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "filesystem-vault": {
+      "_comment": "Read access to the OmniFlex Obsidian vault for cross-cutting context. Restricted to read-only by configuring the server with --readonly. Path uses Windows-style with forward slashes for Git Bash compatibility.",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "--readonly",
+        "C:/OmniFlex Vault"
+      ]
+    },
+    "filesystem-drive-mirror": {
+      "_comment": "Optional: if you mirror Google Drive locally via Drive for Desktop, point this at the mirror folder. Faster than the Drive MCP for read-heavy workflows. Comment out if not using a mirror.",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "--readonly",
+        "G:/My Drive"
+      ]
+    },
+    "firebase": {
+      "_comment": "Firebase project management: emulator control, deploy, logs, Firestore inspection. Requires firebase-tools installed globally (npm i -g firebase-tools) and `firebase login` already completed.",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@gannonh/firebase-mcp"
+      ],
+      "env": {
+        "SERVICE_ACCOUNT_KEY_PATH": "${OMNIFLEX_FIREBASE_SERVICE_ACCOUNT}",
+        "FIREBASE_STORAGE_BUCKET": "omnitask-475422.firebasestorage.app"
+      }
+    },
+    "figma": {
+      "_comment": "Figma component and frame access. Requires FIGMA_ACCESS_TOKEN env var. Antigravity should rename any dot-notation tool names automatically; if you see 'invalid tool name' errors, route through the proxy pattern.",
+      "command": "npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp"
+      ],
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_ACCESS_TOKEN}"
+      }
+    },
+    "_disabled_examples": {
+      "_comment": "Servers below are commented-out examples. Uncomment by moving them into the parent mcpServers object and removing the _disabled wrapper.",
+      "supabase": {
+        "_comment": "If a project uses Supabase instead of Firebase",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@supabase/mcp-server-supabase"
+        ]
+      },
+      "vercel": {
+        "_comment": "Deployment management for landing pages and the Zenith microsite",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@vercel/mcp-server"
+        ]
+      }
+    }
+  }
+}
