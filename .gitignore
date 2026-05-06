@@ -56,3 +56,8 @@ service-account*.json
 test-results.log
 *.txt
 *.log
+
+# OmniFlex Antigravity workspace artifacts
+.antigravity/cache/
+.antigravity/runtime/
+mcp_config.local.json
