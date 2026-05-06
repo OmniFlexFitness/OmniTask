@@ -123,7 +123,7 @@
       } @else {
         @let donut = statusBreakdown();
         <div class="flex items-center gap-5">
-          <svg viewBox="0 0 100 100" class="w-36 h-36 -rotate-90 flex-shrink-0">
+          <svg viewBox="0 0 100 100" class="w-36 h-36 -rotate-90 flex-shrink-0 donut">
             <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" />
             @for (arc of donut.arcs; track arc.key) {
               @if (arc.count > 0) {

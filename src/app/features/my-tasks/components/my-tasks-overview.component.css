@@ -63,3 +63,8 @@
 .mt-mini-stat {
   @apply rounded-md py-1.5 bg-slate-900/40 border border-white/5;
 }
+
+/* Status donut: let drop-shadow glow extend past the SVG viewport. */
+.donut {
+  overflow: visible;
+}
