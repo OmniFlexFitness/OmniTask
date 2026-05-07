@@ -47,13 +47,10 @@ abstract final class OmniFlexTheme {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
       ),
-      cardTheme: const CardThemeData(
-        color: OmniFlexColors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(OmniFlexRadii.lg)),
-        ),
-      ),
+      // Card theme intentionally omitted at Phase 0 — Flutter 3.27 vs newer
+      // Material 3 drift around CardTheme/CardThemeData makes this fragile,
+      // and the placeholder screens don't render Cards. Reintroduce in
+      // Phase 1 once we have real surfaces and a single Flutter floor.
       dividerTheme: const DividerThemeData(
         color: OmniFlexColors.border,
         space: 1,

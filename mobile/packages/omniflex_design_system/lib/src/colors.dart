@@ -43,16 +43,19 @@ abstract final class OmniFlexColors {
   static const Color violet900 = Color(0xFF2B0359);
   static const Color violet950 = Color(0xFF1B003D);
 
-  static const MaterialColor violet = MaterialColor(0xFF8225E6, <int, Color>{
-    50: violet50,
-    100: violet100,
-    200: violet200,
-    300: violet300,
-    400: violet400,
-    500: violet500,
-    600: violet600,
-    700: violet700,
-    800: violet800,
-    900: violet900,
-  });
+  static const MaterialColor violet = MaterialColor(
+    0xFF8225E6,
+    <int, Color>{
+      50: violet50,
+      100: violet100,
+      200: violet200,
+      300: violet300,
+      400: violet400,
+      500: violet500,
+      600: violet600,
+      700: violet700,
+      800: violet800,
+      900: violet900,
+    },
+  );
 }

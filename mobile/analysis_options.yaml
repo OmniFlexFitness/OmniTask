@@ -10,8 +10,9 @@ analyzer:
   exclude:
     - '**/*.g.dart'
     - '**/*.freezed.dart'
-  plugins:
-    - custom_lint
+  # custom_lint plugin (with riverpod_lint) will be re-enabled in Phase 1
+  # once we have real @riverpod providers to lint. It requires a separate
+  # `dart run custom_lint` invocation in CI to actually run.
 
 linter:
   rules:
