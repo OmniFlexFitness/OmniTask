@@ -189,4 +189,14 @@ Located under `.antigravity/skills/`:
 - `omniflex-content-brief/` — Educational content drafting in OmniFlex Voice
 - `omniflex-code-review/` — Pre-commit code review checklist (review for Angular relevance; some items may be Flutter-flavored from the template)
 
-The original template included a `omniflex-flutter-widget/` skill; it was removed for this workspace because OmniTask is Angular, not Flutter.
+The original template included a `omniflex-flutter-widget/` skill; it was removed for this workspace. The Angular web app is the primary surface, but a Flutter mobile companion now lives at `mobile/` (see "Mobile (Flutter)" below) — the OmniFlex code-review checklist applies to both.
+
+---
+
+## Mobile (Flutter)
+
+The `mobile/` directory holds the OmniTask iOS + Android companion app, built with Flutter. It shares the `omnitask-475422` Firebase backend (Auth, Firestore, Cloud Functions, Storage) — no separate database. See `docs/plans/omnitask-mobile-flutter.md` for the roadmap.
+
+Stack: Flutter 3.27+ stable, Riverpod 2.x, `go_router`, FlutterFire (core/auth/firestore/functions/storage/messaging/app_check), `google_sign_in`, design system at `mobile/packages/omniflex_design_system/`.
+
+When a task references mobile-specific work, operate inside `mobile/` and follow the Flutter side of the OmniFlex code-review checklist (`AsyncValue` handling, `OmniFlexColors`/`Typography`/`Spacing`/`Effects`, `go_router` routes, no `print`, no App Check bypass). The Cloud Run web deploy chain ignores `mobile/` (see `.dockerignore`); pushes to `mobile/**` should not be sent to `live` until web parity is intentional.
