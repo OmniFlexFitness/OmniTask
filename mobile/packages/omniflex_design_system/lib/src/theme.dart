@@ -21,11 +21,10 @@ abstract final class OmniFlexTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: OmniFlexColors.deepBackground,
       canvasColor: OmniFlexColors.deepBackground,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: OmniFlexColors.deepBackground,
         foregroundColor: OmniFlexColors.textPrimary,
         elevation: 0,
-        centerTitle: false,
         titleTextStyle: OmniFlexTypography.headline,
       ),
       textTheme: base.textTheme.copyWith(
@@ -56,7 +55,7 @@ abstract final class OmniFlexTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0x14FFFFFF),
+        color: OmniFlexColors.border,
         space: 1,
         thickness: 1,
       ),

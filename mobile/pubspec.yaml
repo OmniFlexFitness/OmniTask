@@ -33,6 +33,7 @@ dependencies:
   path_provider: ^2.1.5
 
   logger: ^2.5.0
+  google_fonts: ^6.2.1
 
   omniflex_design_system:
     path: packages/omniflex_design_system
