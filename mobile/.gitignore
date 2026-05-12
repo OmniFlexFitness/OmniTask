@@ -7,7 +7,11 @@
 .pub/
 build/
 .fvm/
-pubspec.lock
+
+# pubspec.lock for the main `mobile/` application package is COMMITTED for
+# reproducible builds across CI + workstations. The lockfile inside the
+# `packages/omniflex_design_system/` *library* package stays ignored.
+packages/*/pubspec.lock
 
 # IDE
 .idea/
