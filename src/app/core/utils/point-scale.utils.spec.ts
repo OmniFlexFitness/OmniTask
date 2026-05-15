@@ -99,6 +99,34 @@ describe('point-scale.utils', () => {
       ).toEqual([0.5, 1, 2, 4]);
     });
 
+    it('generates new buckets past the default 8h cap when max is raised', () => {
+      // max_value=24 should add 16h (doubling) but stop before 32h.
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'bucket',
+          min_value: 1,
+          max_value: 24,
+        }),
+      ).toEqual([1, 2, 4, 8, 16]);
+    });
+
+    it('generates new Fibonacci hours past the default 13h cap when max is raised', () => {
+      // max_value=30 should add 21h but stop before 34h.
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'fibonacci',
+          min_value: 2,
+          max_value: 30,
+        }),
+      ).toEqual([2, 3, 5, 8, 13, 21]);
+    });
+
     it('filters fibonacci hours similarly', () => {
       expect(
         getCreditHoursAllowedValues({

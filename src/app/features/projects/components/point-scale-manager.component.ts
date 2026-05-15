@@ -26,10 +26,13 @@ import {
   TimeScaleConfig,
 } from '../../../core/models/domain.model';
 import {
+  generateCreditHoursBucketList,
+  generateCreditHoursFibList,
   getCreditHoursAllowedValues,
   SCALE_LABELS,
   scaleSupportsPert,
 } from '../../../core/utils/point-scale.utils';
+import { SnapSliderComponent } from '../../../shared/components/snap-slider/snap-slider.component';
 
 interface ScaleOption {
   id: PointScaleId;
@@ -73,7 +76,7 @@ const SCALE_OPTIONS: readonly ScaleOption[] = [
 @Component({
   selector: 'app-point-scale-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SnapSliderComponent],
   templateUrl: './point-scale-manager.component.html',
   styleUrls: ['./point-scale-manager.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -313,6 +316,47 @@ export class PointScaleManagerComponent {
     const allowed = getCreditHoursAllowedValues(cfg);
     if (!allowed.length) return '—';
     return allowed.map((v) => `${v}h`).join(', ');
+  }
+
+  /**
+   * Full list of bucket stops the range slider can reach. We extend past the
+   * user's currently-configured max so they can drag the upper thumb to
+   * raise the cap, not just lower it — without arbitrarily large fallback
+   * lists. Default cap: 64h for buckets, 89h for Fibonacci. Stays at least
+   * one step past the configured max so the upper thumb has room to grow.
+   */
+  creditHoursRangeStops(cfg: CreditHoursScaleConfig): number[] {
+    if (cfg.input_mode === 'bucket') {
+      const ceiling = Math.max(64, (cfg.max_value ?? 8) * 2);
+      return generateCreditHoursBucketList(ceiling);
+    }
+    if (cfg.input_mode === 'fibonacci') {
+      const ceiling = Math.max(89, (cfg.max_value ?? 13) * 2);
+      return generateCreditHoursFibList(ceiling);
+    }
+    return [];
+  }
+
+  /** Labels for the range slider stops ("0.25h", "0.5h", "1h", …). */
+  creditHoursRangeLabels(cfg: CreditHoursScaleConfig): string[] {
+    return this.creditHoursRangeStops(cfg).map((v) => `${v}h`);
+  }
+
+  /** Apply a range emitted by the slider. */
+  onCreditHoursRangeChange(value: { min: number; max: number }): void {
+    const d = this.asCreditHours();
+    if (!d) return;
+    this.draft.set({ ...d, min_value: value.min, max_value: value.max });
+  }
+
+  /** Reset min/max to defaults so the slider snaps back to the full range. */
+  clearCreditHoursBounds(): void {
+    const d = this.asCreditHours();
+    if (!d) return;
+    const next = { ...d } as CreditHoursScaleConfig;
+    delete next.min_value;
+    delete next.max_value;
+    this.draft.set(next);
   }
 
   // Persist ------------------------------------------------------------------

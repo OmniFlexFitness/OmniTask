@@ -46,6 +46,25 @@
   pointer-events: none;
 }
 
+.snap-slider__fill--between {
+  background: linear-gradient(90deg, var(--accent), var(--accent));
+  opacity: 0.45;
+}
+
+.snap-slider__tick.in-range {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.snap-slider__label.in-range {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.snap-slider__thumb--min,
+.snap-slider__thumb--max {
+  background: linear-gradient(135deg, #fff, var(--accent));
+}
+
 .snap-slider__ticks {
   position: absolute;
   inset: 0;

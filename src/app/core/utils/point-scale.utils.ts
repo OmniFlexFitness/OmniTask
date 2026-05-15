@@ -86,24 +86,56 @@ function round(n: number, decimals: number): number {
 }
 
 /**
- * Allowed hour-bucket values for a credit-hours scale, after applying any
- * configured min/max bounds. Falls back to the full default list when
- * bounds are not set. `direct` mode has no fixed list, so this returns an
- * empty array for it (callers should treat that as "use continuous input").
+ * Allowed hour-bucket values for a credit-hours scale. When `max_value` is
+ * set, the list is *generated* up to that bound rather than being filtered
+ * from the default range — raising the max past the built-in 8h cap adds
+ * 16h, 32h, … (doubling) for buckets, and the next Fibonacci hours
+ * (21, 34, 55, …) for Fibonacci mode. Lower-bound filtering is applied
+ * after generation. `direct` mode has no fixed list (continuous input).
  */
 export function getCreditHoursAllowedValues(config: CreditHoursScaleConfig): number[] {
-  let base: readonly number[];
-  if (config.input_mode === 'bucket') {
-    base = CREDIT_HOURS_BUCKETS;
-  } else if (config.input_mode === 'fibonacci') {
-    base = CREDIT_HOURS_FIB;
-  } else {
-    return [];
+  if (config.input_mode === 'direct') return [];
+
+  const defaultMax =
+    config.input_mode === 'bucket'
+      ? CREDIT_HOURS_BUCKETS[CREDIT_HOURS_BUCKETS.length - 1]
+      : CREDIT_HOURS_FIB[CREDIT_HOURS_FIB.length - 1];
+  const maxHint = config.max_value !== undefined ? config.max_value : defaultMax;
+
+  const generated =
+    config.input_mode === 'bucket'
+      ? generateCreditHoursBucketList(maxHint)
+      : generateCreditHoursFibList(maxHint);
+
+  if (config.min_value === undefined) return generated;
+  return generated.filter((v) => v >= config.min_value!);
+}
+
+/**
+ * Doubling progression starting at 0.25 (matches the built-in
+ * `CREDIT_HOURS_BUCKETS` and extends past 8h on demand: 16, 32, 64, …).
+ */
+export function generateCreditHoursBucketList(maxHint: number): number[] {
+  if (!isFinite(maxHint) || maxHint < 0.25) return [0.25];
+  const out: number[] = [];
+  for (let v = 0.25; v <= maxHint + 1e-9; v *= 2) out.push(v);
+  return out;
+}
+
+/**
+ * Fibonacci hour list starting at 0.5, 1, then the standard Fibonacci
+ * sequence (2, 3, 5, 8, 13, 21, …) up to `maxHint` inclusive.
+ */
+export function generateCreditHoursFibList(maxHint: number): number[] {
+  if (!isFinite(maxHint) || maxHint < 0.5) return [0.5];
+  const out: number[] = [0.5];
+  let a = 1;
+  let b = 2;
+  while (a <= maxHint + 1e-9) {
+    out.push(a);
+    [a, b] = [b, a + b];
   }
-  const min = config.min_value;
-  const max = config.max_value;
-  if (min === undefined && max === undefined) return [...base];
-  return base.filter((v) => (min === undefined || v >= min) && (max === undefined || v <= max));
+  return out;
 }
 
 /** Time-unit suffix used for display. */

@@ -1,11 +1,12 @@
 <div
   class="snap-slider"
+  [class.range]="range()"
   tabindex="0"
   role="slider"
   [attr.aria-label]="ariaLabel()"
   [attr.aria-valuemin]="values()[0]"
   [attr.aria-valuemax]="values()[values().length - 1]"
-  [attr.aria-valuenow]="value() ?? values()[0]"
+  [attr.aria-valuenow]="range() ? (minValue() ?? values()[0]) : (value() ?? values()[0])"
 >
   <div
     #track
@@ -16,24 +17,46 @@
     (pointerup)="onPointerUp($event)"
     (pointercancel)="onPointerUp($event)"
   >
-    @if (activeIndex() !== null) {
+    @if (!range() && activeIndex() !== null) {
       <div
         class="snap-slider__fill"
         [style.width.%]="thumbPercent()"
+      ></div>
+    }
+    @if (range()) {
+      <div
+        class="snap-slider__fill snap-slider__fill--between"
+        [style.left.%]="minPercent()"
+        [style.width.%]="maxPercent() - minPercent()"
       ></div>
     }
     <div class="snap-slider__ticks">
       @for (v of values(); track $index) {
         <span
           class="snap-slider__tick"
-          [class.active]="activeIndex() === $index"
+          [class.active]="!range() && activeIndex() === $index"
+          [class.in-range]="
+            range() &&
+            (minIndex() ?? 0) <= $index &&
+            $index <= (maxIndex() ?? values().length - 1)
+          "
         ></span>
       }
     </div>
-    @if (activeIndex() !== null) {
+    @if (!range() && activeIndex() !== null) {
       <div
         class="snap-slider__thumb"
         [style.left.%]="thumbPercent()"
+      ></div>
+    }
+    @if (range()) {
+      <div
+        class="snap-slider__thumb snap-slider__thumb--min"
+        [style.left.%]="minPercent()"
+      ></div>
+      <div
+        class="snap-slider__thumb snap-slider__thumb--max"
+        [style.left.%]="maxPercent()"
       ></div>
     }
   </div>
@@ -42,14 +65,24 @@
       @for (l of labelArr; track $index) {
         <span
           class="snap-slider__label"
-          [class.active]="activeIndex() === $index"
+          [class.active]="!range() && activeIndex() === $index"
+          [class.in-range]="
+            range() &&
+            (minIndex() ?? 0) <= $index &&
+            $index <= (maxIndex() ?? values().length - 1)
+          "
         >{{ l }}</span>
       }
     } @else {
       @for (v of values(); track $index) {
         <span
           class="snap-slider__label"
-          [class.active]="activeIndex() === $index"
+          [class.active]="!range() && activeIndex() === $index"
+          [class.in-range]="
+            range() &&
+            (minIndex() ?? 0) <= $index &&
+            $index <= (maxIndex() ?? values().length - 1)
+          "
         >{{ v }}</span>
       }
     }

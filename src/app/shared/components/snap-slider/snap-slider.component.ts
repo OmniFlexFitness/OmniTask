@@ -13,17 +13,14 @@ import { CommonModule } from '@angular/common';
 
 /**
  * Snap slider — a horizontal slider whose thumb snaps to a fixed list of
- * discrete values. Built for the task point-value input so users can drag a
- * thumb instead of clicking individual chips. Works for any monotonic value
- * set (Fibonacci, T-shirt sizes mapped to numbers, etc).
- *
- * The component intentionally exposes the raw selected number (the caller
- * decides how to render it as a label). When `labels` is provided, that
- * string is shown above the thumb; otherwise the raw value is used.
+ * discrete values. Used for the per-task point-value picker (single mode)
+ * and the min/max range picker on configurable hour-bucket scales (range
+ * mode with two thumbs).
  *
  * Drag interactions use pointer events so it works on mouse, touch, and pen
  * without separate code paths. Keyboard support uses ArrowLeft / ArrowRight
- * so the slider is reachable by users who can't drag.
+ * so the slider is reachable by users who can't drag — in range mode, the
+ * keyboard moves whichever thumb was last touched.
  */
 @Component({
   selector: 'app-snap-slider',
@@ -38,61 +35,99 @@ export class SnapSliderComponent {
   values = input.required<number[]>();
   /** Optional display labels parallel to `values` (e.g. ["XS","S",…]). */
   labels = input<string[] | undefined>(undefined);
-  /** Currently-selected value, or null when nothing is set. */
+  /** Single-mode: currently-selected value, or null when nothing is set. */
   value = input<number | null>(null);
+  /** Range-mode: lower bound (inclusive). Defaults to first value. */
+  minValue = input<number | null>(null);
+  /** Range-mode: upper bound (inclusive). Defaults to last value. */
+  maxValue = input<number | null>(null);
+  /** Whether the slider has two thumbs (min/max selection). */
+  range = input<boolean>(false);
   /** Accent color used for the active track + thumb glow. */
   accent = input<string>('#06b6d4');
   /** ARIA label for assistive tech. */
   ariaLabel = input<string>('Value');
 
   valueChange = output<number>();
+  rangeChange = output<{ min: number; max: number }>();
 
   @ViewChild('track', { static: true }) trackEl!: ElementRef<HTMLDivElement>;
 
-  private dragging = signal(false);
+  private dragging = signal<'single' | 'min' | 'max' | null>(null);
+  /** Which thumb was last touched — drives keyboard navigation in range mode. */
+  private lastActiveThumb = signal<'min' | 'max'>('min');
 
-  /** Index of the active value (0..values.length-1), or null. */
+  /** Single-mode active index. */
   activeIndex = computed<number | null>(() => {
+    if (this.range()) return null;
     const v = this.value();
     if (v === null) return null;
     const idx = this.values().indexOf(v);
     return idx === -1 ? this.nearestIndex(v) : idx;
   });
 
-  /** Thumb position as a percentage of track width. */
+  minIndex = computed<number | null>(() => {
+    if (!this.range()) return null;
+    const v = this.minValue();
+    if (v === null) return 0;
+    return Math.max(0, this.nearestIndex(v));
+  });
+
+  maxIndex = computed<number | null>(() => {
+    if (!this.range()) return null;
+    const v = this.maxValue();
+    if (v === null) return this.values().length - 1;
+    return Math.min(this.values().length - 1, this.nearestIndex(v));
+  });
+
+  /** Thumb position (single mode) as a percentage of track width. */
   thumbPercent = computed<number>(() => {
     const idx = this.activeIndex();
     if (idx === null) return 0;
-    const max = Math.max(this.values().length - 1, 1);
-    return (idx / max) * 100;
+    return this.indexToPercent(idx);
+  });
+
+  minPercent = computed<number>(() => {
+    const idx = this.minIndex();
+    return idx === null ? 0 : this.indexToPercent(idx);
+  });
+
+  maxPercent = computed<number>(() => {
+    const idx = this.maxIndex();
+    return idx === null ? 100 : this.indexToPercent(idx);
   });
 
   activeLabel = computed<string>(() => {
     const idx = this.activeIndex();
     if (idx === null) return '';
-    const labels = this.labels();
-    return labels ? labels[idx] ?? String(this.values()[idx]) : String(this.values()[idx]);
+    return this.labelAt(idx);
   });
 
   onPointerDown(event: PointerEvent): void {
     (event.target as Element).setPointerCapture?.(event.pointerId);
-    this.dragging.set(true);
+    const target = this.range() ? this.pickClosestThumb(event) : 'single';
+    this.dragging.set(target);
+    if (target === 'min' || target === 'max') this.lastActiveThumb.set(target);
     this.updateFromEvent(event);
   }
 
   onPointerMove(event: PointerEvent): void {
-    if (!this.dragging()) return;
+    if (this.dragging() === null) return;
     this.updateFromEvent(event);
   }
 
   onPointerUp(event: PointerEvent): void {
-    if (!this.dragging()) return;
+    if (this.dragging() === null) return;
     (event.target as Element).releasePointerCapture?.(event.pointerId);
-    this.dragging.set(false);
+    this.dragging.set(null);
   }
 
   @HostListener('keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (this.range()) {
+      this.handleRangeKey(event);
+      return;
+    }
     const idx = this.activeIndex();
     if (idx === null) return;
     if (event.key === 'ArrowLeft' && idx > 0) {
@@ -110,11 +145,28 @@ export class SnapSliderComponent {
     }
   }
 
-  /**
-   * Translate a pointer event's x-coordinate into the closest discrete value
-   * and emit the change. Re-emitting the same value is a no-op for the
-   * parent's signal because the input identity stays the same.
-   */
+  private handleRangeKey(event: KeyboardEvent): void {
+    const which = this.lastActiveThumb();
+    const minIdx = this.minIndex();
+    const maxIdx = this.maxIndex();
+    if (minIdx === null || maxIdx === null) return;
+    let nextMin = minIdx;
+    let nextMax = maxIdx;
+    if (event.key === 'ArrowLeft') {
+      if (which === 'min' && minIdx > 0) nextMin = minIdx - 1;
+      else if (which === 'max' && maxIdx > minIdx) nextMax = maxIdx - 1;
+      else return;
+    } else if (event.key === 'ArrowRight') {
+      const last = this.values().length - 1;
+      if (which === 'min' && minIdx < maxIdx) nextMin = minIdx + 1;
+      else if (which === 'max' && maxIdx < last) nextMax = maxIdx + 1;
+      else return;
+    } else return;
+    event.preventDefault();
+    this.emitRange(nextMin, nextMax);
+  }
+
+  /** Translate the pointer's x-coordinate into a discrete value and emit. */
   private updateFromEvent(event: PointerEvent): void {
     const track = this.trackEl?.nativeElement;
     if (!track) return;
@@ -122,7 +174,18 @@ export class SnapSliderComponent {
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const lastIdx = this.values().length - 1;
     const idx = Math.round(ratio * lastIdx);
-    this.emitIndex(idx);
+    const which = this.dragging();
+    if (which === 'single') {
+      this.emitIndex(idx);
+      return;
+    }
+    const minIdx = this.minIndex() ?? 0;
+    const maxIdx = this.maxIndex() ?? lastIdx;
+    if (which === 'min') {
+      this.emitRange(Math.min(idx, maxIdx), maxIdx);
+    } else if (which === 'max') {
+      this.emitRange(minIdx, Math.max(idx, minIdx));
+    }
   }
 
   private emitIndex(idx: number): void {
@@ -130,6 +193,31 @@ export class SnapSliderComponent {
     if (idx < 0 || idx >= values.length) return;
     if (values[idx] === this.value()) return;
     this.valueChange.emit(values[idx]);
+  }
+
+  private emitRange(minIdx: number, maxIdx: number): void {
+    const values = this.values();
+    const min = values[minIdx];
+    const max = values[maxIdx];
+    if (min === this.minValue() && max === this.maxValue()) return;
+    this.rangeChange.emit({ min, max });
+  }
+
+  /**
+   * In range mode, decide which thumb the pointer is closest to so dragging
+   * naturally picks up the nearer handle. Falls back to "min" on exact ties.
+   */
+  private pickClosestThumb(event: PointerEvent): 'min' | 'max' {
+    const track = this.trackEl?.nativeElement;
+    if (!track) return 'min';
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const pointerPct = ratio * 100;
+    const minDist = Math.abs(pointerPct - this.minPercent());
+    const maxDist = Math.abs(pointerPct - this.maxPercent());
+    const choice: 'min' | 'max' = maxDist < minDist ? 'max' : 'min';
+    this.lastActiveThumb.set(choice);
+    return choice;
   }
 
   /** Closest index for a value not directly present in `values`. */
@@ -145,5 +233,15 @@ export class SnapSliderComponent {
       }
     }
     return best;
+  }
+
+  private indexToPercent(idx: number): number {
+    const max = Math.max(this.values().length - 1, 1);
+    return (idx / max) * 100;
+  }
+
+  private labelAt(idx: number): string {
+    const labels = this.labels();
+    return labels ? labels[idx] ?? String(this.values()[idx]) : String(this.values()[idx]);
   }
 }

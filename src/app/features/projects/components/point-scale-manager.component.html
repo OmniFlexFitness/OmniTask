@@ -307,6 +307,31 @@
       </label>
 
       @if (cfg.input_mode === 'bucket' || cfg.input_mode === 'fibonacci') {
+        <div class="col-span-2 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400">Bucket range</span>
+            @if (cfg.min_value !== undefined || cfg.max_value !== undefined) {
+              <button
+                type="button"
+                class="text-[10px] text-slate-500 hover:text-slate-200"
+                (click)="clearCreditHoursBounds()"
+              >
+                Reset to default
+              </button>
+            }
+          </div>
+          <app-snap-slider
+            [values]="creditHoursRangeStops(cfg)"
+            [labels]="creditHoursRangeLabels(cfg)"
+            [range]="true"
+            [minValue]="cfg.min_value ?? creditHoursDefaultMin(cfg)"
+            [maxValue]="cfg.max_value ?? creditHoursDefaultMax(cfg)"
+            accent="#a564ff"
+            ariaLabel="Bucket range"
+            (rangeChange)="onCreditHoursRangeChange($event)"
+          ></app-snap-slider>
+        </div>
+
         <label class="text-xs text-slate-400">
           Minimum hours
           <input
