@@ -67,6 +67,18 @@
         (fieldUpdated)="updateCustomField($event.fieldId, $event.value)"
       ></app-task-custom-fields-form>
 
+      <!-- Point Value -->
+      @if (project()?.pointScaleConfig) {
+        <div>
+          <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Effort / Points</label>
+          <app-task-point-value-input
+            [config]="project()?.pointScaleConfig"
+            [value]="pointValue()"
+            (valueChange)="pointValue.set($event)"
+          ></app-task-point-value-input>
+        </div>
+      }
+
       <!-- Tags -->
       <div>
         <label class="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Tags</label>

@@ -7,19 +7,23 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  getDocs,
   query,
   where,
   collectionData,
   deleteField,
   DocumentReference,
+  writeBatch,
 } from '@angular/fire/firestore';
 import {
   Project,
   Section,
   DEFAULT_SECTIONS,
   CustomFieldDefinition,
+  PointScaleConfig,
   Tag,
 } from '../models/domain.model';
+import { migrateValue } from '../utils/point-scale.utils';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map, firstValueFrom } from 'rxjs';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
@@ -424,6 +428,60 @@ export class ProjectService {
     await this.updateProject(projectId, { tags: updatedTags });
 
     return newTag;
+  }
+
+  /**
+   * Update the project's point-scale configuration. If existing tasks have
+   * `pointValue` set, each value is migrated through `migrateValue` so that
+   * switching scale shape (e.g. linear → Fibonacci, or toggling PERT) keeps
+   * the closest equivalent rather than dropping data.
+   */
+  async updatePointScaleConfig(projectId: string, newConfig: PointScaleConfig | null): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const prevConfig = project.pointScaleConfig;
+
+    // Update the project document first; this is the single source of truth
+    // even if the migration loop below fails partway.
+    if (newConfig === null) {
+      const docRef = doc(this.firestore, `projects/${projectId}`);
+      await updateDoc(docRef, {
+        pointScaleConfig: deleteField(),
+        updatedAt: new Date(),
+      });
+    } else {
+      await this.updateProject(projectId, { pointScaleConfig: newConfig });
+    }
+
+    // Migrate existing task values. We need this even when clearing the
+    // config so stale `pointValue` objects don't render in a now-unconfigured
+    // project. Batch in chunks of 400 to stay under Firestore's 500-op limit.
+    const tasksQuery = query(
+      collection(this.firestore, 'tasks'),
+      where('projectId', '==', projectId),
+    );
+    const snap = await getDocs(tasksQuery);
+    const docs = snap.docs.filter((d) => (d.data() as { pointValue?: unknown }).pointValue);
+    if (!docs.length) return;
+
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = writeBatch(this.firestore);
+      const slice = docs.slice(i, i + 400);
+      for (const d of slice) {
+        const data = d.data() as { pointValue?: unknown };
+        const oldValue = data.pointValue as Parameters<typeof migrateValue>[0];
+        const migrated = newConfig
+          ? migrateValue(oldValue, prevConfig, newConfig)
+          : undefined;
+        if (migrated) {
+          batch.update(d.ref, { pointValue: migrated, updatedAt: new Date() });
+        } else {
+          batch.update(d.ref, { pointValue: deleteField(), updatedAt: new Date() });
+        }
+      }
+      await batch.commit();
+    }
   }
 
   /**

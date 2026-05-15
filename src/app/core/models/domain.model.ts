@@ -162,6 +162,11 @@ export interface Project {
   tags?: Tag[]; // Defined tags for this project
   /** Admin-managed dashboard customization (widgets, colors, display style). */
   dashboardPreferences?: DashboardPreferences;
+  /**
+   * Per-project task-effort scale. When absent, the point-value UI is hidden
+   * for this project. See `PointScaleConfig` for the discriminated union.
+   */
+  pointScaleConfig?: PointScaleConfig;
   createdAt: FirestoreDate;
   updatedAt?: FirestoreDate;
   status: 'active' | 'archived';
@@ -205,6 +210,12 @@ export interface Task {
   blockingIds?: string[]; // IDs of tasks this task blocks
   blockedByIds?: string[]; // IDs of tasks that block this task from being completed
   customFieldValues?: Record<string, any>;
+  /**
+   * Per-task effort estimate. Shape is determined by the project's active
+   * `pointScaleConfig` (numeric, PERT triple, T-shirt, animal, or per-factor
+   * map). Cleared automatically when migration cannot map a value.
+   */
+  pointValue?: PointValue;
   attachments?: string[]; // Image/file URLs (Firebase Storage)
   createdAt: FirestoreDate;
   updatedAt: FirestoreDate;
@@ -324,3 +335,205 @@ export const DEFAULT_SECTIONS: Omit<Section, 'id'>[] = [
  * View mode for task display
  */
 export type TaskViewMode = 'overview' | 'list' | 'board' | 'calendar' | 'timeline';
+
+// ---------------------------------------------------------------------------
+// Task Point Values
+// ---------------------------------------------------------------------------
+
+export type PointScaleId =
+  | 'numeric_configurable'
+  | 'time_unit'
+  | 'tshirt'
+  | 'animal'
+  | 'custom_multi_factor'
+  | 'credit_hours';
+
+export type NumericIncrementType = 'linear' | 'fibonacci' | 'powers_of_two' | 'custom';
+
+export interface NumericScaleConfig {
+  scale: 'numeric_configurable';
+  min_value: number;
+  max_value: number;
+  increment_type: NumericIncrementType;
+  increment_step?: number;
+  custom_values?: number[];
+  allow_zero?: boolean;
+  pert_mode_enabled?: boolean;
+}
+
+export type TimeUnit = 'minutes' | 'hours' | 'days' | 'weeks';
+
+export interface TimeScaleConfig {
+  scale: 'time_unit';
+  unit: TimeUnit;
+  decimal_precision?: number;
+  input_mode: 'freeform' | 'preset';
+  preset_values?: number[];
+  load_factor?: number;
+  pert_mode_enabled?: boolean;
+}
+
+export type TShirtSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+export const TSHIRT_SIZES: readonly TShirtSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+export const DEFAULT_TSHIRT_MAPPING: Readonly<Record<TShirtSize, number>> = {
+  XS: 1,
+  S: 2,
+  M: 3,
+  L: 5,
+  XL: 8,
+  XXL: 13,
+};
+
+export interface TShirtScaleConfig {
+  scale: 'tshirt';
+  mapping?: Record<TShirtSize, number>;
+}
+
+export type AnimalSize = 'Mouse' | 'Cat' | 'Dog' | 'Horse' | 'Elephant' | 'Whale';
+export const ANIMAL_SIZES: readonly AnimalSize[] = [
+  'Mouse',
+  'Cat',
+  'Dog',
+  'Horse',
+  'Elephant',
+  'Whale',
+];
+export const DEFAULT_ANIMAL_MAPPING: Readonly<Record<AnimalSize, number>> = {
+  Mouse: 1,
+  Cat: 2,
+  Dog: 3,
+  Horse: 5,
+  Elephant: 8,
+  Whale: 13,
+};
+export const ANIMAL_ICONS: Readonly<Record<AnimalSize, string>> = {
+  Mouse: '🐭',
+  Cat: '🐱',
+  Dog: '🐶',
+  Horse: '🐴',
+  Elephant: '🐘',
+  Whale: '🐋',
+};
+
+export interface MultiFactor {
+  id: string;
+  name: string;
+  scale: number[];
+  weight: number;
+}
+
+export interface MultiFactorScaleConfig {
+  scale: 'custom_multi_factor';
+  factors: MultiFactor[];
+  formula: 'sum' | 'product' | 'weighted_sum';
+}
+
+export type CreditHoursInputMode = 'direct' | 'bucket' | 'fibonacci';
+export const CREDIT_HOURS_BUCKETS: readonly number[] = [0.25, 0.5, 1, 2, 4, 8];
+export const CREDIT_HOURS_FIB: readonly number[] = [0.5, 1, 2, 3, 5, 8, 13];
+
+export interface CreditHoursScaleConfig {
+  scale: 'credit_hours';
+  total_credit_hours: number;
+  total_work_hours: number;
+  start_date?: FirestoreDate;
+  end_date?: FirestoreDate;
+  weekly_target_hours?: number;
+  input_mode: CreditHoursInputMode;
+  pert_mode_enabled?: boolean;
+}
+
+export type PointScaleConfig =
+  | NumericScaleConfig
+  | TimeScaleConfig
+  | TShirtScaleConfig
+  | AnimalScaleConfig
+  | MultiFactorScaleConfig
+  | CreditHoursScaleConfig;
+
+export type PointValue =
+  | { type: 'numeric'; value: number }
+  | { type: 'numeric_pert'; optimistic: number; mostLikely: number; pessimistic: number }
+  | { type: 'tshirt'; value: TShirtSize }
+  | { type: 'animal'; value: AnimalSize }
+  | { type: 'multi_factor'; values: Record<string, number> };
+
+/** Built-in preset templates for the Configurable Numeric scale. */
+export interface NumericPreset {
+  id: string;
+  label: string;
+  config: Omit<NumericScaleConfig, 'pert_mode_enabled'>;
+}
+
+export const NUMERIC_PRESETS: readonly NumericPreset[] = [
+  {
+    id: 'linear_1_5',
+    label: 'Linear 1-5',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 1,
+      max_value: 5,
+      increment_type: 'linear',
+      increment_step: 1,
+    },
+  },
+  {
+    id: 'linear_1_10',
+    label: 'Linear 1-10',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 1,
+      max_value: 10,
+      increment_type: 'linear',
+      increment_step: 1,
+    },
+  },
+  {
+    id: 'fibonacci',
+    label: 'Fibonacci',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 1,
+      max_value: 100,
+      increment_type: 'fibonacci',
+    },
+  },
+  {
+    id: 'modified_fibonacci',
+    label: 'Modified Fibonacci',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 0,
+      max_value: 100,
+      increment_type: 'custom',
+      custom_values: [0, 0.5, 1, 2, 3, 5, 8, 13, 20, 40, 100],
+      allow_zero: true,
+    },
+  },
+  {
+    id: 'powers_of_two',
+    label: 'Powers of 2',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 1,
+      max_value: 64,
+      increment_type: 'powers_of_two',
+    },
+  },
+  {
+    id: 'bucket',
+    label: 'Bucket',
+    config: {
+      scale: 'numeric_configurable',
+      min_value: 1,
+      max_value: 100,
+      increment_type: 'custom',
+      custom_values: [1, 2, 3, 5, 8, 13, 20, 40, 100],
+    },
+  },
+] as const;
+
+export interface AnimalScaleConfig {
+  scale: 'animal';
+  mapping?: Record<AnimalSize, number>;
+}

@@ -87,3 +87,6 @@ export const writeBatch = jasmine.createSpy('writeBatch').and.returnValue({
   delete: jasmine.createSpy('batch.delete'),
   commit: jasmine.createSpy('batch.commit').and.returnValue(Promise.resolve()),
 });
+export const deleteField = jasmine.createSpy('deleteField').and.returnValue({});
+export const or = jasmine.createSpy('or').and.returnValue({});
+export const and = jasmine.createSpy('and').and.returnValue({});

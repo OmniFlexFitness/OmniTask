@@ -17,6 +17,7 @@ import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of } from 'rxjs';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
+import { formatPointValue } from '../../core/utils/point-scale.utils';
 
 export interface TaskListViewNode extends Task {
   _depth: number;
@@ -71,11 +72,15 @@ export class TaskListViewComponent {
   gridTemplateCols = computed(() => {
     const fieldCount = this.projectCustomFields().length;
     const customFieldCols = Array(fieldCount).fill('120px').join(' ');
+    const pointsCol = this.project()?.pointScaleConfig ? ' 120px' : '';
     if (this.selectionMode()) {
-      return `auto auto 1fr 120px 120px 120px ${customFieldCols} auto`;
+      return `auto auto 1fr 120px 120px 120px${pointsCol} ${customFieldCols} auto`;
     }
-    return `auto 1fr 120px 120px 120px ${customFieldCols} auto`;
+    return `auto 1fr 120px 120px 120px${pointsCol} ${customFieldCols} auto`;
   });
+
+  // Make formatter available to the template.
+  readonly formatPointValue = formatPointValue;
 
   // Track session start time to show recently completed tasks
   private sessionStartTime = new Date();

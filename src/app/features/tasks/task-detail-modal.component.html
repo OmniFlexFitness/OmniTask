@@ -65,8 +65,18 @@
         />
       </div>
 
-      <!-- Subtasks -->
-      <!-- Subtasks -->
+      <!-- Point Value -->
+      @if (project()?.pointScaleConfig) {
+        <div class="mb-6">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Effort / Points</label>
+          <app-task-point-value-input
+            [config]="project()?.pointScaleConfig"
+            [value]="pointValue()"
+            (valueChange)="onPointValueChange($event)"
+          ></app-task-point-value-input>
+        </div>
+      }
+
       <app-task-subtasks
         [task]="task()"
         [project]="project() || null"
