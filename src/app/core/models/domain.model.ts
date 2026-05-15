@@ -445,6 +445,16 @@ export interface CreditHoursScaleConfig {
   end_date?: FirestoreDate;
   weekly_target_hours?: number;
   input_mode: CreditHoursInputMode;
+  /**
+   * Optional inclusive lower bound applied to the bucket / fibonacci value
+   * lists. When omitted, the full default list is offered. Ignored when
+   * `input_mode` is `direct` since direct entry has no fixed value set.
+   */
+  min_value?: number;
+  /**
+   * Optional inclusive upper bound. See `min_value` for semantics.
+   */
+  max_value?: number;
   pert_mode_enabled?: boolean;
 }
 

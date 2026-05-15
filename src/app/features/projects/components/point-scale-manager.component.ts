@@ -13,6 +13,8 @@ import { FormsModule } from '@angular/forms';
 import { ProjectService } from '../../../core/services/project.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import {
+  CREDIT_HOURS_BUCKETS,
+  CREDIT_HOURS_FIB,
   CreditHoursScaleConfig,
   MultiFactor,
   MultiFactorScaleConfig,
@@ -23,7 +25,11 @@ import {
   Project,
   TimeScaleConfig,
 } from '../../../core/models/domain.model';
-import { SCALE_LABELS, scaleSupportsPert } from '../../../core/utils/point-scale.utils';
+import {
+  getCreditHoursAllowedValues,
+  SCALE_LABELS,
+  scaleSupportsPert,
+} from '../../../core/utils/point-scale.utils';
 
 interface ScaleOption {
   id: PointScaleId;
@@ -276,7 +282,37 @@ export class PointScaleManagerComponent {
   ): void {
     const d = this.asCreditHours();
     if (!d) return;
-    this.draft.set({ ...d, [key]: value });
+    // An empty input (`null`/`''`/`NaN`) for the bounds should clear them
+    // rather than persist as 0 — that's how the user goes back to "use the
+    // full default range".
+    const cleared =
+      (key === 'min_value' || key === 'max_value') &&
+      (value === null || (value as unknown) === '' || Number.isNaN(value as number))
+        ? undefined
+        : value;
+    const next = { ...d, [key]: cleared as CreditHoursScaleConfig[K] };
+    if (cleared === undefined && (key === 'min_value' || key === 'max_value')) {
+      delete (next as Partial<CreditHoursScaleConfig>)[key];
+    }
+    this.draft.set(next);
+  }
+
+  /** Default lower bound for the bucket/fibonacci list (shown as placeholder). */
+  creditHoursDefaultMin(cfg: CreditHoursScaleConfig): number {
+    const list = cfg.input_mode === 'bucket' ? CREDIT_HOURS_BUCKETS : CREDIT_HOURS_FIB;
+    return list[0];
+  }
+
+  creditHoursDefaultMax(cfg: CreditHoursScaleConfig): number {
+    const list = cfg.input_mode === 'bucket' ? CREDIT_HOURS_BUCKETS : CREDIT_HOURS_FIB;
+    return list[list.length - 1];
+  }
+
+  /** Comma-joined preview of the buckets that will be offered to task authors. */
+  creditHoursAllowedPreview(cfg: CreditHoursScaleConfig): string {
+    const allowed = getCreditHoursAllowedValues(cfg);
+    if (!allowed.length) return '—';
+    return allowed.map((v) => `${v}h`).join(', ');
   }
 
   // Persist ------------------------------------------------------------------

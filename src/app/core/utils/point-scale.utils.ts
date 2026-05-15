@@ -85,6 +85,27 @@ function round(n: number, decimals: number): number {
   return Math.round(n * factor) / factor;
 }
 
+/**
+ * Allowed hour-bucket values for a credit-hours scale, after applying any
+ * configured min/max bounds. Falls back to the full default list when
+ * bounds are not set. `direct` mode has no fixed list, so this returns an
+ * empty array for it (callers should treat that as "use continuous input").
+ */
+export function getCreditHoursAllowedValues(config: CreditHoursScaleConfig): number[] {
+  let base: readonly number[];
+  if (config.input_mode === 'bucket') {
+    base = CREDIT_HOURS_BUCKETS;
+  } else if (config.input_mode === 'fibonacci') {
+    base = CREDIT_HOURS_FIB;
+  } else {
+    return [];
+  }
+  const min = config.min_value;
+  const max = config.max_value;
+  if (min === undefined && max === undefined) return [...base];
+  return base.filter((v) => (min === undefined || v >= min) && (max === undefined || v <= max));
+}
+
 /** Time-unit suffix used for display. */
 export function timeUnitSuffix(unit: TimeScaleConfig['unit']): string {
   switch (unit) {
@@ -377,11 +398,10 @@ function snapNumericLike(
     return raw;
   }
   // credit_hours
-  if (toConfig.input_mode === 'bucket') {
-    return nearestFromList(raw, [...CREDIT_HOURS_BUCKETS]);
-  }
-  if (toConfig.input_mode === 'fibonacci') {
-    return nearestFromList(raw, [...CREDIT_HOURS_FIB]);
+  if (toConfig.input_mode === 'bucket' || toConfig.input_mode === 'fibonacci') {
+    const allowed = getCreditHoursAllowedValues(toConfig);
+    if (allowed.length === 0) return raw;
+    return nearestFromList(raw, allowed);
   }
   return raw;
 }

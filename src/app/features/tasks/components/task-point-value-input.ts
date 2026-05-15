@@ -6,8 +6,6 @@ import {
   ANIMAL_ICONS,
   ANIMAL_SIZES,
   CreditHoursScaleConfig,
-  CREDIT_HOURS_BUCKETS,
-  CREDIT_HOURS_FIB,
   DEFAULT_ANIMAL_MAPPING,
   DEFAULT_TSHIRT_MAPPING,
   MultiFactorScaleConfig,
@@ -22,6 +20,7 @@ import {
   computePertEstimate,
   computePertStdDev,
   formatPointValue,
+  getCreditHoursAllowedValues,
   getNumericAllowedValues,
   timeUnitSuffix,
 } from '../../../core/utils/point-scale.utils';
@@ -45,8 +44,6 @@ export class TaskPointValueInputComponent {
   readonly tshirtSizes = TSHIRT_SIZES;
   readonly animalSizes = ANIMAL_SIZES;
   readonly animalIcons = ANIMAL_ICONS;
-  readonly creditBuckets = CREDIT_HOURS_BUCKETS;
-  readonly creditFib = CREDIT_HOURS_FIB;
   readonly formatPointValue = formatPointValue;
 
   // --- Type-narrowed config accessors ----------------------------------------
@@ -143,9 +140,7 @@ export class TaskPointValueInputComponent {
       return c.input_mode === 'preset' ? c.preset_values || [] : [];
     }
     if (c.scale === 'credit_hours') {
-      if (c.input_mode === 'bucket') return [...CREDIT_HOURS_BUCKETS];
-      if (c.input_mode === 'fibonacci') return [...CREDIT_HOURS_FIB];
-      return [];
+      return getCreditHoursAllowedValues(c);
     }
     return [];
   });

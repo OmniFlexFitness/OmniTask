@@ -305,6 +305,40 @@
           <option value="fibonacci">Fibonacci hours</option>
         </select>
       </label>
+
+      @if (cfg.input_mode === 'bucket' || cfg.input_mode === 'fibonacci') {
+        <label class="text-xs text-slate-400">
+          Minimum hours
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            class="ofx-input mt-1 text-sm"
+            [ngModel]="cfg.min_value"
+            (ngModelChange)="updateCreditHours('min_value', $event)"
+            [placeholder]="creditHoursDefaultMin(cfg)"
+          />
+        </label>
+        <label class="text-xs text-slate-400">
+          Maximum hours
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            class="ofx-input mt-1 text-sm"
+            [ngModel]="cfg.max_value"
+            (ngModelChange)="updateCreditHours('max_value', $event)"
+            [placeholder]="creditHoursDefaultMax(cfg)"
+          />
+        </label>
+        <div class="col-span-2 text-[11px] text-slate-500">
+          Buckets in range:
+          <span class="text-slate-300 font-mono">
+            {{ creditHoursAllowedPreview(cfg) }}
+          </span>
+        </div>
+      }
+
       <label class="text-xs text-slate-400 col-span-2">
         Weekly target hours (optional)
         <input

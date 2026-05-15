@@ -3,6 +3,7 @@ import {
   computePertEstimate,
   computePertStdDev,
   formatPointValue,
+  getCreditHoursAllowedValues,
   getNumericAllowedValues,
   migrateValue,
   nearestNumericValue,
@@ -70,6 +71,56 @@ describe('point-scale.utils', () => {
       };
       // 40 > max, 0 stripped by allow_zero:false
       expect(getNumericAllowedValues(cfg)).toEqual([0.5, 1, 5, 13]);
+    });
+  });
+
+  describe('getCreditHoursAllowedValues', () => {
+    it('returns the full bucket list when no bounds are set', () => {
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'bucket',
+        }),
+      ).toEqual([0.25, 0.5, 1, 2, 4, 8]);
+    });
+
+    it('filters bucket list by min_value and max_value', () => {
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'bucket',
+          min_value: 0.5,
+          max_value: 4,
+        }),
+      ).toEqual([0.5, 1, 2, 4]);
+    });
+
+    it('filters fibonacci hours similarly', () => {
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'fibonacci',
+          min_value: 2,
+          max_value: 8,
+        }),
+      ).toEqual([2, 3, 5, 8]);
+    });
+
+    it('returns empty for direct entry mode', () => {
+      expect(
+        getCreditHoursAllowedValues({
+          scale: 'credit_hours',
+          total_credit_hours: 3,
+          total_work_hours: 135,
+          input_mode: 'direct',
+        }),
+      ).toEqual([]);
     });
   });
 
