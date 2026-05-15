@@ -6,6 +6,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   or,
@@ -610,6 +611,17 @@ export class TaskService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Remove the per-task point value entirely. `stripUndefined` in `updateTask`
+   * silently drops `undefined` fields, which means a clearing autosave would
+   * otherwise never reach Firestore — the on-screen value would reappear on
+   * reload. This path uses `deleteField()` so the document field is removed.
+   */
+  async clearPointValue(id: string): Promise<void> {
+    const taskRef = doc(this.firestore, `tasks/${id}`);
+    await updateDoc(taskRef, { pointValue: deleteField(), updatedAt: new Date() });
   }
 
   /**

@@ -1,0 +1,633 @@
+import {
+  AnimalScaleConfig,
+  AnimalSize,
+  ANIMAL_SIZES,
+  CreditHoursScaleConfig,
+  CREDIT_HOURS_BUCKETS,
+  CREDIT_HOURS_FIB,
+  DEFAULT_ANIMAL_MAPPING,
+  DEFAULT_TSHIRT_MAPPING,
+  MultiFactorScaleConfig,
+  NumericScaleConfig,
+  PointScaleConfig,
+  PointValue,
+  TimeScaleConfig,
+  TShirtScaleConfig,
+  TShirtSize,
+  TSHIRT_SIZES,
+} from '../models/domain.model';
+
+/**
+ * Generate the allowed numeric values from a numeric scale config.
+ * For `custom`, returns the user-defined list (clipped to allow_zero).
+ */
+export function getNumericAllowedValues(config: NumericScaleConfig): number[] {
+  const values = generateNumericValues(config);
+  if (!config.allow_zero) {
+    return values.filter((v) => v !== 0);
+  }
+  return values;
+}
+
+function generateNumericValues(config: NumericScaleConfig): number[] {
+  const { min_value, max_value, increment_type } = config;
+
+  switch (increment_type) {
+    case 'linear': {
+      const step = config.increment_step && config.increment_step > 0 ? config.increment_step : 1;
+      const out: number[] = [];
+      // Use rounding to avoid floating point drift on non-integer steps.
+      const decimals = decimalPlaces(step);
+      for (let v = min_value; v <= max_value + 1e-9; v += step) {
+        out.push(round(v, decimals));
+      }
+      return out;
+    }
+    case 'fibonacci': {
+      const out: number[] = [];
+      let a = 1;
+      let b = 1;
+      // Include 0 only if min_value is 0; otherwise start at 1.
+      if (min_value <= 0) out.push(0);
+      while (a <= max_value) {
+        if (a >= min_value) out.push(a);
+        [a, b] = [b, a + b];
+      }
+      return out;
+    }
+    case 'powers_of_two': {
+      const out: number[] = [];
+      let v = 1;
+      // Reach min_value first.
+      while (v < min_value) v *= 2;
+      while (v <= max_value) {
+        out.push(v);
+        v *= 2;
+      }
+      return out;
+    }
+    case 'custom': {
+      const values = (config.custom_values || []).slice().sort((a, b) => a - b);
+      return values.filter((v) => v >= min_value && v <= max_value);
+    }
+  }
+}
+
+function decimalPlaces(n: number): number {
+  if (!isFinite(n)) return 0;
+  const s = n.toString();
+  if (s.indexOf('.') === -1) return 0;
+  return s.split('.')[1].length;
+}
+
+function round(n: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(n * factor) / factor;
+}
+
+/**
+ * Allowed hour-bucket values for a credit-hours scale. When `max_value` is
+ * set, the list is *generated* up to that bound rather than being filtered
+ * from the default range — raising the max past the built-in 8h cap adds
+ * 16h, 32h, … (doubling) for buckets, and the next Fibonacci hours
+ * (21, 34, 55, …) for Fibonacci mode. Lower-bound filtering is applied
+ * after generation. `direct` mode has no fixed list (continuous input).
+ */
+export function getCreditHoursAllowedValues(config: CreditHoursScaleConfig): number[] {
+  if (config.input_mode === 'direct') return [];
+
+  const defaultMax =
+    config.input_mode === 'bucket'
+      ? CREDIT_HOURS_BUCKETS[CREDIT_HOURS_BUCKETS.length - 1]
+      : CREDIT_HOURS_FIB[CREDIT_HOURS_FIB.length - 1];
+  const maxHint = config.max_value !== undefined ? config.max_value : defaultMax;
+
+  const generated =
+    config.input_mode === 'bucket'
+      ? generateCreditHoursBucketList(maxHint)
+      : generateCreditHoursFibList(maxHint);
+
+  if (config.min_value === undefined) return generated;
+  return generated.filter((v) => v >= config.min_value!);
+}
+
+/**
+ * Doubling progression starting at 0.25 (matches the built-in
+ * `CREDIT_HOURS_BUCKETS` and extends past 8h on demand: 16, 32, 64, …).
+ */
+export function generateCreditHoursBucketList(maxHint: number): number[] {
+  if (!isFinite(maxHint) || maxHint < 0.25) return [0.25];
+  const out: number[] = [];
+  for (let v = 0.25; v <= maxHint + 1e-9; v *= 2) out.push(v);
+  return out;
+}
+
+/**
+ * Fibonacci hour list starting at 0.5, 1, then the standard Fibonacci
+ * sequence (2, 3, 5, 8, 13, 21, …) up to `maxHint` inclusive.
+ */
+export function generateCreditHoursFibList(maxHint: number): number[] {
+  if (!isFinite(maxHint) || maxHint < 0.5) return [0.5];
+  const out: number[] = [0.5];
+  let a = 1;
+  let b = 2;
+  while (a <= maxHint + 1e-9) {
+    out.push(a);
+    [a, b] = [b, a + b];
+  }
+  return out;
+}
+
+/** Time-unit suffix used for display. */
+export function timeUnitSuffix(unit: TimeScaleConfig['unit']): string {
+  switch (unit) {
+    case 'minutes':
+      return 'm';
+    case 'hours':
+      return 'h';
+    case 'days':
+      return 'd';
+    case 'weeks':
+      return 'w';
+  }
+}
+
+/** PERT weighted estimate: (O + 4M + P) / 6. */
+export function computePertEstimate(o: number, m: number, p: number): number {
+  return (o + 4 * m + p) / 6;
+}
+
+/** PERT standard deviation: (P - O) / 6. */
+export function computePertStdDev(o: number, m: number, p: number): number {
+  return (p - o) / 6;
+}
+
+/**
+ * Project any PointValue down to a single number so it can be summed or
+ * compared. For PERT values, returns the weighted estimate. Used for
+ * roll-ups and credit-fraction calculations.
+ */
+export function pointValueScalar(
+  value: PointValue | undefined,
+  config: PointScaleConfig,
+): number {
+  if (!value) return 0;
+  switch (value.type) {
+    case 'numeric':
+      return value.value;
+    case 'numeric_pert':
+      return computePertEstimate(value.optimistic, value.mostLikely, value.pessimistic);
+    case 'tshirt': {
+      const mapping = (config as TShirtScaleConfig).mapping || DEFAULT_TSHIRT_MAPPING;
+      return mapping[value.value] ?? 0;
+    }
+    case 'animal': {
+      const mapping = (config as AnimalScaleConfig).mapping || DEFAULT_ANIMAL_MAPPING;
+      return mapping[value.value] ?? 0;
+    }
+    case 'multi_factor':
+      return multiFactorScore(value.values, config as MultiFactorScaleConfig);
+  }
+}
+
+function multiFactorScore(
+  values: Record<string, number>,
+  config: MultiFactorScaleConfig,
+): number {
+  const factors = config.factors || [];
+  if (factors.length === 0) return 0;
+
+  switch (config.formula) {
+    case 'product': {
+      let acc = 1;
+      for (const f of factors) {
+        const v = Number(values[f.id]);
+        if (!isFinite(v)) return 0;
+        acc *= v;
+      }
+      return acc;
+    }
+    case 'weighted_sum': {
+      let acc = 0;
+      for (const f of factors) {
+        const v = Number(values[f.id]) || 0;
+        acc += v * (f.weight || 0);
+      }
+      return acc;
+    }
+    case 'sum':
+    default: {
+      let acc = 0;
+      for (const f of factors) {
+        acc += Number(values[f.id]) || 0;
+      }
+      return acc;
+    }
+  }
+}
+
+export interface AggregateResult {
+  total: number;
+  /** Total standard deviation for PERT roll-ups; 0 when not applicable. */
+  totalStdDev: number;
+  /** Forecasted total after applying load factor (time scale only). */
+  forecastTotal?: number;
+  /** Number of tasks contributing a non-zero value. */
+  contributingCount: number;
+}
+
+export function aggregateValues(
+  values: (PointValue | undefined)[],
+  config: PointScaleConfig,
+): AggregateResult {
+  let total = 0;
+  let variance = 0;
+  let contributing = 0;
+  for (const v of values) {
+    if (!v) continue;
+    const scalar = pointValueScalar(v, config);
+    if (scalar !== 0) contributing += 1;
+    total += scalar;
+    if (v.type === 'numeric_pert') {
+      const sd = computePertStdDev(v.optimistic, v.mostLikely, v.pessimistic);
+      variance += sd * sd;
+    }
+  }
+  const result: AggregateResult = {
+    total,
+    totalStdDev: Math.sqrt(variance),
+    contributingCount: contributing,
+  };
+  if (config.scale === 'time_unit' && config.load_factor && config.load_factor !== 1) {
+    result.forecastTotal = total * config.load_factor;
+  }
+  return result;
+}
+
+/** Format a single PointValue for compact display (badge / sidebar). */
+export function formatPointValue(
+  value: PointValue | undefined,
+  config: PointScaleConfig | undefined,
+): string {
+  if (!value || !config) return '';
+  switch (value.type) {
+    case 'numeric': {
+      if (config.scale === 'time_unit') {
+        return `${formatNumber(value.value)}${timeUnitSuffix(config.unit)}`;
+      }
+      if (config.scale === 'credit_hours') {
+        return `${formatNumber(value.value)}h`;
+      }
+      return formatNumber(value.value);
+    }
+    case 'numeric_pert': {
+      const est = computePertEstimate(value.optimistic, value.mostLikely, value.pessimistic);
+      const sd = computePertStdDev(value.optimistic, value.mostLikely, value.pessimistic);
+      const suffix =
+        config.scale === 'time_unit'
+          ? timeUnitSuffix(config.unit)
+          : config.scale === 'credit_hours'
+            ? 'h'
+            : '';
+      return `${formatNumber(est)} ± ${formatNumber(sd)}${suffix}`;
+    }
+    case 'tshirt':
+      return value.value;
+    case 'animal':
+      return value.value;
+    case 'multi_factor': {
+      const total = multiFactorScore(value.values, config as MultiFactorScaleConfig);
+      return formatNumber(total);
+    }
+  }
+}
+
+function formatNumber(n: number): string {
+  if (!isFinite(n)) return '0';
+  // Trim trailing zeros while keeping useful precision.
+  const rounded = Math.round(n * 100) / 100;
+  return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(2).replace(/\.?0+$/, '');
+}
+
+/**
+ * Snap an arbitrary numeric input to the nearest allowed value in a numeric
+ * config. Used when switching scale shapes (e.g. linear → Fibonacci).
+ */
+export function nearestNumericValue(target: number, config: NumericScaleConfig): number {
+  const allowed = getNumericAllowedValues(config);
+  if (allowed.length === 0) return target;
+  return allowed.reduce((best, v) =>
+    Math.abs(v - target) < Math.abs(best - target) ? v : best,
+  );
+}
+
+/**
+ * Map an existing PointValue to the new scale using a best-effort
+ * nearest-equivalent strategy. Returns `undefined` when no sensible mapping
+ * exists so the task's value is cleared.
+ *
+ * Behavior:
+ *  - Switching numeric → numeric snaps to nearest allowed value (per O/M/P).
+ *  - Toggling PERT on for an existing single value sets O=M=P=value (zero SD).
+ *  - Toggling PERT off collapses to the weighted estimate.
+ *  - Numeric → T-shirt / animal maps via the default numeric mapping.
+ *  - T-shirt ↔ animal maps via mapped scalar then back to nearest label.
+ *  - Multi-factor and credit-hours: clear unless the target is the same scale.
+ */
+export function migrateValue(
+  value: PointValue | undefined,
+  fromConfig: PointScaleConfig | undefined,
+  toConfig: PointScaleConfig,
+): PointValue | undefined {
+  if (!value) return undefined;
+
+  // Numeric-like target scales (numeric_configurable, time_unit, credit_hours)
+  if (isNumericLikeScale(toConfig)) {
+    const pertOn = isPertEnabled(toConfig);
+
+    // When the source is a PERT triple and the target also supports PERT,
+    // preserve the optimistic / most-likely / pessimistic bounds independently
+    // so uncertainty data is never silently collapsed to a scalar. Snapping
+    // is done per-bound against the target's allowed values.
+    if (value.type === 'numeric_pert' && pertOn) {
+      return {
+        type: 'numeric_pert',
+        optimistic: snapNumericLike(value.optimistic, toConfig),
+        mostLikely: snapNumericLike(value.mostLikely, toConfig),
+        pessimistic: snapNumericLike(value.pessimistic, toConfig),
+      };
+    }
+
+    const scalar =
+      fromConfig !== undefined ? pointValueScalar(value, fromConfig) : numericFromValue(value);
+    if (!isFinite(scalar)) return undefined;
+
+    const snap = snapNumericLike(scalar, toConfig);
+    if (pertOn) {
+      return { type: 'numeric_pert', optimistic: snap, mostLikely: snap, pessimistic: snap };
+    }
+    return { type: 'numeric', value: snap };
+  }
+
+  if (toConfig.scale === 'tshirt') {
+    const mapping = toConfig.mapping || DEFAULT_TSHIRT_MAPPING;
+    const scalar =
+      fromConfig !== undefined ? pointValueScalar(value, fromConfig) : numericFromValue(value);
+    const size = nearestLabel<TShirtSize>(scalar, TSHIRT_SIZES, mapping);
+    return size ? { type: 'tshirt', value: size } : undefined;
+  }
+
+  if (toConfig.scale === 'animal') {
+    const mapping = toConfig.mapping || DEFAULT_ANIMAL_MAPPING;
+    const scalar =
+      fromConfig !== undefined ? pointValueScalar(value, fromConfig) : numericFromValue(value);
+    const size = nearestLabel<AnimalSize>(scalar, ANIMAL_SIZES, mapping);
+    return size ? { type: 'animal', value: size } : undefined;
+  }
+
+  // Multi-factor: only keep the existing map if the new config matches by ID.
+  if (toConfig.scale === 'custom_multi_factor') {
+    if (value.type === 'multi_factor') {
+      const allowedIds = new Set(toConfig.factors.map((f) => f.id));
+      const next: Record<string, number> = {};
+      for (const [k, v] of Object.entries(value.values)) {
+        if (allowedIds.has(k)) next[k] = v;
+      }
+      return Object.keys(next).length > 0 ? { type: 'multi_factor', values: next } : undefined;
+    }
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function isNumericLikeScale(
+  config: PointScaleConfig,
+): config is NumericScaleConfig | TimeScaleConfig | CreditHoursScaleConfig {
+  return (
+    config.scale === 'numeric_configurable' ||
+    config.scale === 'time_unit' ||
+    config.scale === 'credit_hours'
+  );
+}
+
+/**
+ * Snap a single number to the closest value allowed by a numeric-like scale.
+ * Used for both single values and per-bound PERT migration so the rules are
+ * identical regardless of how the source value was encoded.
+ */
+function snapNumericLike(
+  raw: number,
+  toConfig: NumericScaleConfig | TimeScaleConfig | CreditHoursScaleConfig,
+): number {
+  if (toConfig.scale === 'numeric_configurable') {
+    return nearestNumericValue(raw, toConfig);
+  }
+  if (toConfig.scale === 'time_unit') {
+    if (toConfig.input_mode === 'preset') {
+      return nearestFromList(raw, toConfig.preset_values || []);
+    }
+    return raw;
+  }
+  // credit_hours
+  if (toConfig.input_mode === 'bucket' || toConfig.input_mode === 'fibonacci') {
+    const allowed = getCreditHoursAllowedValues(toConfig);
+    if (allowed.length === 0) return raw;
+    return nearestFromList(raw, allowed);
+  }
+  return raw;
+}
+
+function isPertEnabled(config: PointScaleConfig): boolean {
+  return (
+    (config.scale === 'numeric_configurable' ||
+      config.scale === 'time_unit' ||
+      config.scale === 'credit_hours') &&
+    !!config.pert_mode_enabled
+  );
+}
+
+function numericFromValue(value: PointValue): number {
+  switch (value.type) {
+    case 'numeric':
+      return value.value;
+    case 'numeric_pert':
+      return computePertEstimate(value.optimistic, value.mostLikely, value.pessimistic);
+    case 'tshirt':
+      return DEFAULT_TSHIRT_MAPPING[value.value] ?? 0;
+    case 'animal':
+      return DEFAULT_ANIMAL_MAPPING[value.value] ?? 0;
+    case 'multi_factor':
+      return Object.values(value.values).reduce((a, b) => a + (Number(b) || 0), 0);
+  }
+}
+
+function nearestFromList(target: number, list: number[]): number {
+  if (!list.length) return target;
+  return list.reduce((best, v) => (Math.abs(v - target) < Math.abs(best - target) ? v : best));
+}
+
+function nearestLabel<T extends string>(
+  target: number,
+  labels: readonly T[],
+  mapping: Record<T, number>,
+): T | undefined {
+  if (!labels.length) return undefined;
+  let best = labels[0];
+  let bestDist = Math.abs(mapping[best] - target);
+  for (const l of labels) {
+    const d = Math.abs(mapping[l] - target);
+    if (d < bestDist) {
+      best = l;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+/** Human label for the scale, used in pickers. */
+export const SCALE_LABELS: Readonly<Record<PointScaleConfig['scale'], string>> = {
+  numeric_configurable: 'Numeric (Points)',
+  time_unit: 'Time-Based',
+  tshirt: 'T-Shirt Sizing',
+  animal: 'Animal Sizing',
+  custom_multi_factor: 'Custom Multi-Factor',
+  credit_hours: 'Internship Credit Hours',
+};
+
+/** Returns true when this scale type supports a PERT toggle. */
+export function scaleSupportsPert(scale: PointScaleConfig['scale']): boolean {
+  return scale === 'numeric_configurable' || scale === 'time_unit' || scale === 'credit_hours';
+}
+
+/**
+ * Project a task's point value onto a 0..1 position within the scale's
+ * configured range. Drives the badge gradient: 0 = lowest effort
+ * (light blue), 1 = highest (hot pink). Returns 0.5 when the scale doesn't
+ * expose a meaningful range so the badge picks a neutral mid-gradient hue.
+ */
+export function pointValueNormalized(
+  value: PointValue,
+  config: PointScaleConfig,
+): number {
+  if (value.type === 'tshirt') {
+    const idx = TSHIRT_SIZES.indexOf(value.value);
+    return idx === -1 ? 0 : idx / Math.max(TSHIRT_SIZES.length - 1, 1);
+  }
+  if (value.type === 'animal') {
+    const idx = ANIMAL_SIZES.indexOf(value.value);
+    return idx === -1 ? 0 : idx / Math.max(ANIMAL_SIZES.length - 1, 1);
+  }
+  if (value.type === 'multi_factor') {
+    if (config.scale !== 'custom_multi_factor') return 0.5;
+    return normalizeMultiFactor(value.values, config);
+  }
+  // numeric / numeric_pert
+  const scalar = pointValueScalar(value, config);
+  if (config.scale === 'numeric_configurable') {
+    const allowed = getNumericAllowedValues(config);
+    return rangePosition(scalar, allowed);
+  }
+  if (config.scale === 'time_unit') {
+    if (config.input_mode === 'preset') {
+      const allowed = (config.preset_values || []).slice().sort((a, b) => a - b);
+      return rangePosition(scalar, allowed);
+    }
+    // Freeform — use a unit-specific upper bound so the gradient still has
+    // shape without an explicit scale max.
+    const maxByUnit = { minutes: 480, hours: 40, days: 30, weeks: 12 };
+    return clamp01(scalar / maxByUnit[config.unit]);
+  }
+  if (config.scale === 'credit_hours') {
+    const allowed = getCreditHoursAllowedValues(config);
+    if (allowed.length > 0) return rangePosition(scalar, allowed);
+    return clamp01(scalar / Math.max(config.total_work_hours || 1, 1));
+  }
+  return 0.5;
+}
+
+/**
+ * Resolve a badge color from a PointValue. Interpolates between
+ * `low` (light cyan blue) at position 0 and `high` (hot pink) at position 1
+ * with a mid-stop through magenta so the gradient feels brand-correct.
+ */
+export function pointValueColor(value: PointValue, config: PointScaleConfig): string {
+  return pointValueGradientColor(pointValueNormalized(value, config));
+}
+
+/** Standalone gradient sampler for a normalized 0..1 position. */
+export function pointValueGradientColor(position: number): string {
+  const t = clamp01(position);
+  // Three-stop gradient: #00d2ff → #e040fb → #ff1493
+  const stops: [number, [number, number, number]][] = [
+    [0, [0, 210, 255]],
+    [0.5, [224, 64, 251]],
+    [1, [255, 20, 147]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i];
+    const [t1, c1] = stops[i + 1];
+    if (t <= t1) {
+      const local = (t - t0) / Math.max(t1 - t0, 1e-9);
+      const r = Math.round(c0[0] + (c1[0] - c0[0]) * local);
+      const g = Math.round(c0[1] + (c1[1] - c0[1]) * local);
+      const b = Math.round(c0[2] + (c1[2] - c0[2]) * local);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  }
+  const [, last] = stops[stops.length - 1];
+  return `rgb(${last[0]}, ${last[1]}, ${last[2]})`;
+}
+
+function rangePosition(scalar: number, allowed: number[]): number {
+  if (allowed.length === 0) return 0.5;
+  const lo = allowed[0];
+  const hi = allowed[allowed.length - 1];
+  if (hi === lo) return 0.5;
+  return clamp01((scalar - lo) / (hi - lo));
+}
+
+function clamp01(n: number): number {
+  if (!isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function normalizeMultiFactor(
+  values: Record<string, number>,
+  config: MultiFactorScaleConfig,
+): number {
+  const factors = config.factors || [];
+  if (factors.length === 0) return 0.5;
+  // Per-factor min/max from the configured scale list.
+  let lo = 0;
+  let hi = 0;
+  let cur = 0;
+  if (config.formula === 'product') {
+    lo = 1;
+    hi = 1;
+    cur = 1;
+  }
+  for (const f of factors) {
+    if (!f.scale.length) continue;
+    const sorted = [...f.scale].sort((a, b) => a - b);
+    const fLo = sorted[0];
+    const fHi = sorted[sorted.length - 1];
+    const v = Number(values[f.id]);
+    const useV = isFinite(v) ? v : fLo;
+    if (config.formula === 'weighted_sum') {
+      lo += fLo * (f.weight || 0);
+      hi += fHi * (f.weight || 0);
+      cur += useV * (f.weight || 0);
+    } else if (config.formula === 'product') {
+      lo *= fLo;
+      hi *= fHi;
+      cur *= useV;
+    } else {
+      lo += fLo;
+      hi += fHi;
+      cur += useV;
+    }
+  }
+  if (hi === lo) return 0.5;
+  return clamp01((cur - lo) / (hi - lo));
+}

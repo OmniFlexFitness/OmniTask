@@ -29,6 +29,16 @@
 
   <hr class="border-white/10" />
 
+  <!-- Task Point Values -->
+  <section class="ofx-settings-section">
+    <app-point-scale-manager
+      [project]="project()"
+      (projectChanged)="projectChanged.emit()"
+    ></app-point-scale-manager>
+  </section>
+
+  <hr class="border-white/10" />
+
   <!-- Custom Fields -->
   <section class="ofx-settings-section">
     <h3 class="text-sm font-semibold text-slate-200 mb-4">Custom Fields</h3>

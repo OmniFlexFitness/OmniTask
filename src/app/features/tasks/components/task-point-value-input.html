@@ -1,0 +1,175 @@
+@if (config(); as cfg) {
+  <div class="space-y-3">
+    <!-- Numeric / time-preset / credit-hours discrete scales (single value) -->
+    @if (!pertSupported() && hasDiscreteValues()) {
+      <app-snap-slider
+        [values]="sliderValues()"
+        [labels]="sliderLabels()"
+        [value]="numericValue()"
+        ariaLabel="Effort points"
+        (valueChange)="setNumeric($event)"
+      ></app-snap-slider>
+    }
+
+    <!-- Continuous time-freeform / credit-hours direct entry -->
+    @if (!pertSupported() && !hasDiscreteValues() && continuousRange(); as range) {
+      <div class="flex items-center gap-3">
+        <input
+          type="range"
+          class="ofx-range flex-1"
+          [min]="range.min"
+          [max]="range.max"
+          [step]="range.step"
+          [ngModel]="numericValue() ?? range.min"
+          (ngModelChange)="setNumeric($event)"
+        />
+        <input
+          type="number"
+          class="ofx-input text-sm w-20"
+          [min]="range.min"
+          [max]="range.max"
+          [step]="range.step"
+          [ngModel]="numericValue() ?? ''"
+          (ngModelChange)="setNumeric($event)"
+        />
+        <span class="text-xs text-slate-400">{{ unitSuffix() }}</span>
+      </div>
+    }
+
+    <!-- PERT mode: three sliders for the same scale -->
+    @if (pertSupported()) {
+      <div class="space-y-2">
+        @if (hasDiscreteValues()) {
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Optimistic</div>
+              <app-snap-slider
+                [values]="sliderValues()"
+                [labels]="sliderLabels()"
+                [value]="pertValue()?.o ?? null"
+                accent="#10b981"
+                ariaLabel="Optimistic"
+                (valueChange)="setPert('o', $event)"
+              ></app-snap-slider>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Most likely</div>
+              <app-snap-slider
+                [values]="sliderValues()"
+                [labels]="sliderLabels()"
+                [value]="pertValue()?.m ?? null"
+                accent="#06b6d4"
+                ariaLabel="Most likely"
+                (valueChange)="setPert('m', $event)"
+              ></app-snap-slider>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Pessimistic</div>
+              <app-snap-slider
+                [values]="sliderValues()"
+                [labels]="sliderLabels()"
+                [value]="pertValue()?.p ?? null"
+                accent="#f43f5e"
+                ariaLabel="Pessimistic"
+                (valueChange)="setPert('p', $event)"
+              ></app-snap-slider>
+            </div>
+          </div>
+        } @else if (continuousRange(); as range) {
+          <div class="space-y-2">
+            <label class="block text-[10px] text-slate-400 uppercase tracking-wide">
+              Optimistic
+              <input
+                type="range"
+                class="ofx-range mt-1 w-full"
+                [min]="range.min"
+                [max]="range.max"
+                [step]="range.step"
+                [ngModel]="pertValue()?.o ?? range.min"
+                (ngModelChange)="setPert('o', $event)"
+              />
+            </label>
+            <label class="block text-[10px] text-slate-400 uppercase tracking-wide">
+              Most likely
+              <input
+                type="range"
+                class="ofx-range mt-1 w-full"
+                [min]="range.min"
+                [max]="range.max"
+                [step]="range.step"
+                [ngModel]="pertValue()?.m ?? range.min"
+                (ngModelChange)="setPert('m', $event)"
+              />
+            </label>
+            <label class="block text-[10px] text-slate-400 uppercase tracking-wide">
+              Pessimistic
+              <input
+                type="range"
+                class="ofx-range mt-1 w-full"
+                [min]="range.min"
+                [max]="range.max"
+                [step]="range.step"
+                [ngModel]="pertValue()?.p ?? range.min"
+                (ngModelChange)="setPert('p', $event)"
+              />
+            </label>
+          </div>
+        }
+        @if (pertValue()) {
+          <div class="text-xs text-cyan-400">{{ pertSummary() }}</div>
+        }
+      </div>
+    }
+
+    <!-- T-Shirt -->
+    @if (cfg.scale === 'tshirt') {
+      <app-snap-slider
+        [values]="tshirtSliderValues()"
+        [labels]="$any(tshirtSizes)"
+        [value]="tshirtSliderActive()"
+        ariaLabel="T-shirt size"
+        (valueChange)="setTShirtFromSlider($event)"
+      ></app-snap-slider>
+    }
+
+    <!-- Animal -->
+    @if (cfg.scale === 'animal') {
+      <app-snap-slider
+        [values]="animalSliderValues()"
+        [labels]="animalSliderLabels()"
+        [value]="animalSliderActive()"
+        accent="#a564ff"
+        ariaLabel="Animal size"
+        (valueChange)="setAnimalFromSlider($event)"
+      ></app-snap-slider>
+    }
+
+    <!-- Multi-factor: one slider per factor -->
+    @if (multiFactorConfig(); as mf) {
+      <div class="space-y-3">
+        @for (f of mf.factors; track f.id) {
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">{{ f.name }}</div>
+            <app-snap-slider
+              [values]="f.scale"
+              [value]="$any(multiFactorValue()[f.id]) ?? null"
+              [ariaLabel]="f.name"
+              (valueChange)="setFactor(f.id, $event)"
+            ></app-snap-slider>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Clear button -->
+    @if (value()) {
+      <button
+        type="button"
+        class="text-[11px] text-slate-500 hover:text-slate-200"
+        (click)="clear()"
+      >
+        Clear value
+      </button>
+    }
+  </div>
+}

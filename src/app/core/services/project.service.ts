@@ -7,19 +7,23 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  getDocs,
   query,
   where,
   collectionData,
   deleteField,
   DocumentReference,
+  writeBatch,
 } from '@angular/fire/firestore';
 import {
   Project,
   Section,
   DEFAULT_SECTIONS,
   CustomFieldDefinition,
+  PointScaleConfig,
   Tag,
 } from '../models/domain.model';
+import { migrateValue } from '../utils/point-scale.utils';
 import { AuthService } from '../auth/auth.service';
 import { Observable, switchMap, of, map, firstValueFrom } from 'rxjs';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
@@ -424,6 +428,93 @@ export class ProjectService {
     await this.updateProject(projectId, { tags: updatedTags });
 
     return newTag;
+  }
+
+  /**
+   * Update the project's point-scale configuration. If existing tasks have
+   * `pointValue` set, each value is migrated through `migrateValue` so that
+   * switching scale shape (e.g. linear → Fibonacci, or toggling PERT) keeps
+   * the closest equivalent rather than dropping data.
+   *
+   * Order matters: we migrate task values FIRST and only update the project
+   * config after every batch has committed. If a batch fails, the project
+   * still reflects the old config so the UI and the task data stay in sync.
+   */
+  async updatePointScaleConfig(projectId: string, newConfig: PointScaleConfig | null): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const prevConfig = project.pointScaleConfig;
+
+    // 1. Pre-compute every migration in memory so the project document is
+    //    only updated when we know we have a complete plan. Firestore's
+    //    500-op-per-batch limit means we can't make the task rewrites truly
+    //    atomic, but committing all batches up-front and rolling back
+    //    committed slices on failure keeps the project + task state aligned.
+    const tasksQuery = query(
+      collection(this.firestore, 'tasks'),
+      where('projectId', '==', projectId),
+    );
+    const snapshot = await getDocs(tasksQuery);
+    const plan = snapshot.docs
+      .filter((d) => (d.data() as { pointValue?: unknown }).pointValue)
+      .map((d) => {
+        const data = d.data() as { pointValue?: unknown };
+        const oldValue = data.pointValue as Parameters<typeof migrateValue>[0];
+        const migrated = newConfig
+          ? migrateValue(oldValue, prevConfig, newConfig)
+          : undefined;
+        return { ref: d.ref, oldValue, migrated } as const;
+      });
+
+    // Track which entries have been successfully committed so we can roll
+    // them back if a later batch fails.
+    const committed: typeof plan = [];
+
+    try {
+      for (let i = 0; i < plan.length; i += 400) {
+        const slice = plan.slice(i, i + 400);
+        const batch = writeBatch(this.firestore);
+        for (const entry of slice) {
+          if (entry.migrated) {
+            batch.update(entry.ref, { pointValue: entry.migrated, updatedAt: new Date() });
+          } else {
+            batch.update(entry.ref, { pointValue: deleteField(), updatedAt: new Date() });
+          }
+        }
+        await batch.commit();
+        committed.push(...slice);
+      }
+    } catch (err) {
+      // Best-effort rollback: restore the original pointValue on every task
+      // that we already overwrote. Each rollback batch is committed even if
+      // later ones fail, so the project document is never flipped when the
+      // task data is in a mixed state.
+      for (let i = 0; i < committed.length; i += 400) {
+        const slice = committed.slice(i, i + 400);
+        const batch = writeBatch(this.firestore);
+        for (const entry of slice) {
+          batch.update(entry.ref, { pointValue: entry.oldValue, updatedAt: new Date() });
+        }
+        try {
+          await batch.commit();
+        } catch (rollbackErr) {
+          console.error('Rollback failed for batch starting at', i, rollbackErr);
+        }
+      }
+      throw err;
+    }
+
+    // 2. Every task is on the new shape — flip the project config last.
+    if (newConfig === null) {
+      const docRef = doc(this.firestore, `projects/${projectId}`);
+      await updateDoc(docRef, {
+        pointScaleConfig: deleteField(),
+        updatedAt: new Date(),
+      });
+    } else {
+      await this.updateProject(projectId, { pointScaleConfig: newConfig });
+    }
   }
 
   /**

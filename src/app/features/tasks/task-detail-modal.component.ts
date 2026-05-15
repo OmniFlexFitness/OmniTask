@@ -18,7 +18,7 @@ import { Contact } from '../../core/models/contact.model';
 
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { TaskDependencyService } from '../../core/services/task-dependency.service';
-import { Task, Project, CustomFieldDefinition } from '../../core/models/domain.model';
+import { Task, Project, CustomFieldDefinition, PointValue } from '../../core/models/domain.model';
 import { UserGroupMember } from '../../core/models/user-group.model';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, BehaviorSubject, debounceTime, firstValueFrom } from 'rxjs';
@@ -38,6 +38,7 @@ import { TaskFieldsSidebarComponent } from './components/task-fields-sidebar';
 import { TaskSubtasksComponent } from './components/task-subtasks';
 import { TaskTagsComponent } from './components/task-tags';
 import { TaskAiActionsComponent } from './components/task-ai-actions';
+import { TaskPointValueInputComponent } from './components/task-point-value-input';
 
 @Component({
   selector: 'app-task-detail-modal',
@@ -53,6 +54,7 @@ import { TaskAiActionsComponent } from './components/task-ai-actions';
     TaskSubtasksComponent,
     TaskTagsComponent,
     TaskAiActionsComponent,
+    TaskPointValueInputComponent,
   ],
   templateUrl: './task-detail-modal.component.html',
   styleUrls: ['./task-detail-modal.component.css'],
@@ -174,6 +176,9 @@ export class TaskDetailModalComponent {
 
   customFieldValues = signal<Record<string, any>>({});
 
+  // Point value
+  pointValue = signal<PointValue | undefined>(undefined);
+
   // Tags
   selectedTags = signal<Set<string>>(new Set());
 
@@ -250,6 +255,9 @@ export class TaskDetailModalComponent {
 
         // Load custom fields
         this.customFieldValues.set(task.customFieldValues || {});
+
+        // Load point value
+        this.pointValue.set(task.pointValue);
 
         // Initialize selected tags
         this.selectedTags.set(new Set(task.tags || []));
@@ -392,6 +400,25 @@ export class TaskDetailModalComponent {
     this.autoSave();
   }
 
+  onPointValueChange(value: PointValue | undefined): void {
+    this.pointValue.set(value);
+    if (value === undefined) {
+      // `updateTask` strips undefined fields before writing, so a plain
+      // autosave never removes an existing `pointValue` from Firestore.
+      // Use the dedicated delete path so the cleared state actually persists.
+      const task = this.task();
+      if (task?.id) {
+        this.taskService.clearPointValue(task.id).then(
+          () => this.updated.emit({ ...task, pointValue: undefined } as Task),
+          (err) => console.error('Failed to clear point value', err),
+        );
+      }
+      return;
+    }
+    this.form.markAsDirty();
+    this.autoSave();
+  }
+
   async autoSave() {
     const task = this.task();
     const project = this.project();
@@ -420,6 +447,7 @@ export class TaskDetailModalComponent {
       priority: val.priority as Task['priority'],
       sectionId: val.sectionId || undefined,
       customFieldValues: this.customFieldValues(),
+      pointValue: this.pointValue(),
     };
 
     // Add startDate to updates (extending Task type for this)

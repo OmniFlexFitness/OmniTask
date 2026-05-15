@@ -256,6 +256,10 @@
           }}</span>
         </div>
 
+        @if (project()?.pointScaleConfig) {
+          <div class="text-slate-500">Points</div>
+        }
+
         @for (field of projectCustomFields(); track field.id) {
           <div class="text-slate-500 truncate" [title]="field.name">
             {{ field.name }}
@@ -466,6 +470,20 @@
                   {{ task.status.replace('-', ' ') }}
                 </span>
               </div>
+
+              <!-- Point Value -->
+              @if (project()?.pointScaleConfig) {
+                <div class="flex items-center justify-center">
+                  @if (task.pointValue) {
+                    <app-point-value-badge
+                      [config]="project()?.pointScaleConfig"
+                      [value]="task.pointValue"
+                    ></app-point-value-badge>
+                  } @else {
+                    <span class="text-xs text-slate-600">—</span>
+                  }
+                </div>
+              }
 
               <!-- Custom Fields -->
               @for (field of projectCustomFields(); track field.id) {

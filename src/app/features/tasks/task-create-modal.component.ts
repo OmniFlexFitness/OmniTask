@@ -22,6 +22,7 @@ import {
   Section,
   Subtask,
   CustomFieldDefinition,
+  PointValue,
 } from '../../core/models/domain.model';
 import { toSignal, toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { switchMap, of, map, startWith, debounceTime } from 'rxjs';
@@ -42,6 +43,7 @@ import { TaskFormFieldsComponent } from './components/task-form-fields';
 import { TaskAiSuggestionsComponent } from './components/task-ai-suggestions';
 import { TaskCustomFieldsFormComponent } from './components/task-custom-fields-form';
 import { TaskTagsComponent } from './components/task-tags';
+import { TaskPointValueInputComponent } from './components/task-point-value-input';
 
 @Component({
   selector: 'app-task-create-modal',
@@ -53,6 +55,7 @@ import { TaskTagsComponent } from './components/task-tags';
     TaskAiSuggestionsComponent,
     TaskCustomFieldsFormComponent,
     TaskTagsComponent,
+    TaskPointValueInputComponent,
   ],
   templateUrl: './task-create-modal.component.html',
   styleUrls: ['./task-create-modal.component.css'],
@@ -148,6 +151,7 @@ export class TaskCreateModalComponent {
   customFieldValues = signal<Record<string, any>>({});
   customFieldErrors = signal<Record<string, string>>({});
   selectedTags = signal<Set<string>>(new Set());
+  pointValue = signal<PointValue | undefined>(undefined);
 
   priorityOptions: SelectOption[] = [
     { value: 'low', label: 'Low', colorClass: 'bg-emerald-400 text-emerald-400' },
@@ -380,6 +384,7 @@ export class TaskCreateModalComponent {
         dueDate: dueDate as any,
         tags,
         customFieldValues: this.customFieldValues(),
+        pointValue: this.pointValue(),
         subtasks: this.aiSubtasks().length > 0 ? this.aiSubtasks() : undefined,
       };
 

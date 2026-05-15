@@ -9,6 +9,7 @@ import { ProjectBasicInfoComponent } from './project-basic-info.component';
 import { ProjectDangerZoneComponent } from './project-danger-zone.component';
 import { ProjectGoogleTasksSyncComponent } from './project-google-tasks-sync.component';
 import { ProjectGoogleSheetsSyncComponent } from './project-google-sheets-sync.component';
+import { PointScaleManagerComponent } from './point-scale-manager.component';
 
 /**
  * Project Settings Panel Component
@@ -27,6 +28,7 @@ import { ProjectGoogleSheetsSyncComponent } from './project-google-sheets-sync.c
     ProjectDangerZoneComponent,
     ProjectGoogleTasksSyncComponent,
     ProjectGoogleSheetsSyncComponent,
+    PointScaleManagerComponent,
   ],
   templateUrl: './project-settings-panel.component.html',
   styleUrls: ['./project-settings-panel.component.css'],
