@@ -473,11 +473,12 @@
 
               <!-- Point Value -->
               @if (project()?.pointScaleConfig) {
-                <div>
+                <div class="flex items-center justify-center">
                   @if (task.pointValue) {
-                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
-                      {{ formatPointValue(task.pointValue, project()?.pointScaleConfig) }}
-                    </span>
+                    <app-point-value-badge
+                      [config]="project()?.pointScaleConfig"
+                      [value]="task.pointValue"
+                    ></app-point-value-badge>
                   } @else {
                     <span class="text-xs text-slate-600">—</span>
                   }

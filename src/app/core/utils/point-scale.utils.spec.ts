@@ -7,6 +7,8 @@ import {
   getNumericAllowedValues,
   migrateValue,
   nearestNumericValue,
+  pointValueGradientColor,
+  pointValueNormalized,
   pointValueScalar,
 } from './point-scale.utils';
 import {
@@ -310,6 +312,46 @@ describe('point-scale.utils', () => {
       expect(nearestNumericValue(6, cfg)).toBe(5);
       expect(nearestNumericValue(7, cfg)).toBe(8);
       expect(nearestNumericValue(50, cfg)).toBe(55);
+    });
+  });
+
+  describe('pointValueGradientColor', () => {
+    it('anchors at the cyan stop for position 0', () => {
+      expect(pointValueGradientColor(0)).toBe('rgb(0, 210, 255)');
+    });
+    it('hits the hot-pink stop at position 1', () => {
+      expect(pointValueGradientColor(1)).toBe('rgb(255, 20, 147)');
+    });
+    it('passes through magenta near the midpoint', () => {
+      expect(pointValueGradientColor(0.5)).toBe('rgb(224, 64, 251)');
+    });
+  });
+
+  describe('pointValueNormalized', () => {
+    it('numeric scale: low value reads as 0', () => {
+      const cfg = {
+        scale: 'numeric_configurable' as const,
+        min_value: 1,
+        max_value: 8,
+        increment_type: 'fibonacci' as const,
+      };
+      expect(pointValueNormalized({ type: 'numeric', value: 1 }, cfg)).toBeCloseTo(0, 5);
+    });
+
+    it('numeric scale: high value reads as 1', () => {
+      const cfg = {
+        scale: 'numeric_configurable' as const,
+        min_value: 1,
+        max_value: 8,
+        increment_type: 'fibonacci' as const,
+      };
+      expect(pointValueNormalized({ type: 'numeric', value: 8 }, cfg)).toBeCloseTo(1, 5);
+    });
+
+    it('tshirt: XS at 0, XXL at 1', () => {
+      const cfg = { scale: 'tshirt' as const };
+      expect(pointValueNormalized({ type: 'tshirt', value: 'XS' }, cfg)).toBeCloseTo(0, 5);
+      expect(pointValueNormalized({ type: 'tshirt', value: 'XXL' }, cfg)).toBeCloseTo(1, 5);
     });
   });
 

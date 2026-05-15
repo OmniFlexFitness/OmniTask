@@ -18,6 +18,7 @@ import { switchMap, of } from 'rxjs';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 import { formatPointValue } from '../../core/utils/point-scale.utils';
+import { PointValueBadgeComponent } from './components/point-value-badge';
 
 export interface TaskListViewNode extends Task {
   _depth: number;
@@ -26,7 +27,14 @@ export interface TaskListViewNode extends Task {
 @Component({
   selector: 'app-task-list-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, MarkdownPipe, MarkdownPlainPipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DragDropModule,
+    MarkdownPipe,
+    MarkdownPlainPipe,
+    PointValueBadgeComponent,
+  ],
   templateUrl: './task-list-view.component.html',
   styleUrls: ['./task-list-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,

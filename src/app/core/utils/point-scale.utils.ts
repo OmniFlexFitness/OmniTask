@@ -499,3 +499,135 @@ export const SCALE_LABELS: Readonly<Record<PointScaleConfig['scale'], string>> =
 export function scaleSupportsPert(scale: PointScaleConfig['scale']): boolean {
   return scale === 'numeric_configurable' || scale === 'time_unit' || scale === 'credit_hours';
 }
+
+/**
+ * Project a task's point value onto a 0..1 position within the scale's
+ * configured range. Drives the badge gradient: 0 = lowest effort
+ * (light blue), 1 = highest (hot pink). Returns 0.5 when the scale doesn't
+ * expose a meaningful range so the badge picks a neutral mid-gradient hue.
+ */
+export function pointValueNormalized(
+  value: PointValue,
+  config: PointScaleConfig,
+): number {
+  if (value.type === 'tshirt') {
+    const idx = TSHIRT_SIZES.indexOf(value.value);
+    return idx === -1 ? 0 : idx / Math.max(TSHIRT_SIZES.length - 1, 1);
+  }
+  if (value.type === 'animal') {
+    const idx = ANIMAL_SIZES.indexOf(value.value);
+    return idx === -1 ? 0 : idx / Math.max(ANIMAL_SIZES.length - 1, 1);
+  }
+  if (value.type === 'multi_factor') {
+    if (config.scale !== 'custom_multi_factor') return 0.5;
+    return normalizeMultiFactor(value.values, config);
+  }
+  // numeric / numeric_pert
+  const scalar = pointValueScalar(value, config);
+  if (config.scale === 'numeric_configurable') {
+    const allowed = getNumericAllowedValues(config);
+    return rangePosition(scalar, allowed);
+  }
+  if (config.scale === 'time_unit') {
+    if (config.input_mode === 'preset') {
+      const allowed = (config.preset_values || []).slice().sort((a, b) => a - b);
+      return rangePosition(scalar, allowed);
+    }
+    // Freeform — use a unit-specific upper bound so the gradient still has
+    // shape without an explicit scale max.
+    const maxByUnit = { minutes: 480, hours: 40, days: 30, weeks: 12 };
+    return clamp01(scalar / maxByUnit[config.unit]);
+  }
+  if (config.scale === 'credit_hours') {
+    const allowed = getCreditHoursAllowedValues(config);
+    if (allowed.length > 0) return rangePosition(scalar, allowed);
+    return clamp01(scalar / Math.max(config.total_work_hours || 1, 1));
+  }
+  return 0.5;
+}
+
+/**
+ * Resolve a badge color from a PointValue. Interpolates between
+ * `low` (light cyan blue) at position 0 and `high` (hot pink) at position 1
+ * with a mid-stop through magenta so the gradient feels brand-correct.
+ */
+export function pointValueColor(value: PointValue, config: PointScaleConfig): string {
+  return pointValueGradientColor(pointValueNormalized(value, config));
+}
+
+/** Standalone gradient sampler for a normalized 0..1 position. */
+export function pointValueGradientColor(position: number): string {
+  const t = clamp01(position);
+  // Three-stop gradient: #00d2ff → #e040fb → #ff1493
+  const stops: [number, [number, number, number]][] = [
+    [0, [0, 210, 255]],
+    [0.5, [224, 64, 251]],
+    [1, [255, 20, 147]],
+  ];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [t0, c0] = stops[i];
+    const [t1, c1] = stops[i + 1];
+    if (t <= t1) {
+      const local = (t - t0) / Math.max(t1 - t0, 1e-9);
+      const r = Math.round(c0[0] + (c1[0] - c0[0]) * local);
+      const g = Math.round(c0[1] + (c1[1] - c0[1]) * local);
+      const b = Math.round(c0[2] + (c1[2] - c0[2]) * local);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  }
+  const [, last] = stops[stops.length - 1];
+  return `rgb(${last[0]}, ${last[1]}, ${last[2]})`;
+}
+
+function rangePosition(scalar: number, allowed: number[]): number {
+  if (allowed.length === 0) return 0.5;
+  const lo = allowed[0];
+  const hi = allowed[allowed.length - 1];
+  if (hi === lo) return 0.5;
+  return clamp01((scalar - lo) / (hi - lo));
+}
+
+function clamp01(n: number): number {
+  if (!isFinite(n)) return 0;
+  return Math.max(0, Math.min(1, n));
+}
+
+function normalizeMultiFactor(
+  values: Record<string, number>,
+  config: MultiFactorScaleConfig,
+): number {
+  const factors = config.factors || [];
+  if (factors.length === 0) return 0.5;
+  // Per-factor min/max from the configured scale list.
+  let lo = 0;
+  let hi = 0;
+  let cur = 0;
+  if (config.formula === 'product') {
+    lo = 1;
+    hi = 1;
+    cur = 1;
+  }
+  for (const f of factors) {
+    if (!f.scale.length) continue;
+    const sorted = [...f.scale].sort((a, b) => a - b);
+    const fLo = sorted[0];
+    const fHi = sorted[sorted.length - 1];
+    const v = Number(values[f.id]);
+    const useV = isFinite(v) ? v : fLo;
+    if (config.formula === 'weighted_sum') {
+      lo += fLo * (f.weight || 0);
+      hi += fHi * (f.weight || 0);
+      cur += useV * (f.weight || 0);
+    } else if (config.formula === 'product') {
+      lo *= fLo;
+      hi *= fHi;
+      cur *= useV;
+    } else {
+      lo += fLo;
+      hi += fHi;
+      cur += useV;
+    }
+  }
+  if (hi === lo) return 0.5;
+  return clamp01((cur - lo) / (hi - lo));
+}
