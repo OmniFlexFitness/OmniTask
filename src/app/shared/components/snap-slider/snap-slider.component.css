@@ -1,0 +1,104 @@
+:host {
+  display: block;
+  --accent: #06b6d4;
+}
+
+.snap-slider {
+  outline: none;
+  user-select: none;
+}
+
+.snap-slider:focus-visible .snap-slider__thumb {
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.12),
+    0 0 12px var(--accent);
+}
+
+.snap-slider__track {
+  position: relative;
+  height: 28px;
+  margin: 4px 0 2px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.snap-slider__track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+
+.snap-slider__fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, var(--accent));
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.snap-slider__ticks {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.snap-slider__tick {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.5);
+  transition: background 120ms ease;
+}
+
+.snap-slider__tick.active {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.snap-slider__thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff, var(--accent));
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 10px var(--accent);
+  transform: translateY(-50%);
+  transition: left 120ms ease;
+  pointer-events: none;
+}
+
+.snap-slider__labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(148, 163, 184);
+  letter-spacing: 0.04em;
+}
+
+.snap-slider__label {
+  flex: 1;
+  text-align: center;
+  transition: color 120ms ease;
+}
+
+.snap-slider__label.active {
+  color: #fff;
+  text-shadow: 0 0 8px var(--accent);
+}

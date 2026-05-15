@@ -31,6 +31,7 @@ import { TagManagerComponent } from '../../projects/components/tag-manager.compo
 import { ProjectMemberManagerComponent } from '../../projects/components/project-member-manager.component';
 import { CustomFieldManagerComponent } from '../../projects/components/custom-field-manager/custom-field-manager.component';
 import { DashboardPreferencesManagerComponent } from '../../projects/components/dashboard-preferences-manager.component';
+import { PointScaleManagerComponent } from '../../projects/components/point-scale-manager.component';
 import { AuthService } from '../../../core/auth/auth.service';
 
 interface SectionStat {
@@ -78,6 +79,7 @@ interface ActivityItem {
     ProjectMemberManagerComponent,
     CustomFieldManagerComponent,
     DashboardPreferencesManagerComponent,
+    PointScaleManagerComponent,
   ],
   templateUrl: './project-overview.component.html',
   styleUrls: ['./project-overview.component.css'],
@@ -97,7 +99,7 @@ export class ProjectOverviewComponent {
   // Which "manager" panel is expanded inline. Default to sections so users
   // immediately see the most common edit surface. Null collapses all.
   activePanel = signal<
-    'sections' | 'tags' | 'members' | 'fields' | 'dashboard' | null
+    'sections' | 'tags' | 'members' | 'fields' | 'dashboard' | 'points' | null
   >('sections');
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
@@ -422,7 +424,7 @@ export class ProjectOverviewComponent {
     return !!uid && this.project().ownerId === uid;
   }
 
-  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields' | 'dashboard') {
+  togglePanel(panel: 'sections' | 'tags' | 'members' | 'fields' | 'dashboard' | 'points') {
     this.activePanel.set(this.activePanel() === panel ? null : panel);
   }
 

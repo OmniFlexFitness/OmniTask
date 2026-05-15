@@ -8,6 +8,8 @@ import {
   CreditHoursScaleConfig,
   CREDIT_HOURS_BUCKETS,
   CREDIT_HOURS_FIB,
+  DEFAULT_ANIMAL_MAPPING,
+  DEFAULT_TSHIRT_MAPPING,
   MultiFactorScaleConfig,
   NumericScaleConfig,
   PointScaleConfig,
@@ -23,11 +25,12 @@ import {
   getNumericAllowedValues,
   timeUnitSuffix,
 } from '../../../core/utils/point-scale.utils';
+import { SnapSliderComponent } from '../../../shared/components/snap-slider/snap-slider.component';
 
 @Component({
   selector: 'app-task-point-value-input',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SnapSliderComponent],
   templateUrl: './task-point-value-input.html',
   styleUrls: ['./task-point-value-input.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -126,6 +129,111 @@ export class TaskPointValueInputComponent {
     if (c.scale === 'credit_hours') return 'h';
     return '';
   });
+
+  // --- Slider source data ----------------------------------------------------
+  // Each scale projects to (values[], labels?[]) so the same slider component
+  // can drive every discrete picker.
+
+  /** Allowed numeric values, used by the numeric and time-preset sliders. */
+  sliderValues = computed<number[]>(() => {
+    const c = this.config();
+    if (!c) return [];
+    if (c.scale === 'numeric_configurable') return getNumericAllowedValues(c);
+    if (c.scale === 'time_unit') {
+      return c.input_mode === 'preset' ? c.preset_values || [] : [];
+    }
+    if (c.scale === 'credit_hours') {
+      if (c.input_mode === 'bucket') return [...CREDIT_HOURS_BUCKETS];
+      if (c.input_mode === 'fibonacci') return [...CREDIT_HOURS_FIB];
+      return [];
+    }
+    return [];
+  });
+
+  /** Optional labels for the slider — only the time-unit slider adds a suffix. */
+  sliderLabels = computed<string[] | undefined>(() => {
+    const c = this.config();
+    if (!c) return undefined;
+    if (c.scale === 'time_unit' && c.input_mode === 'preset') {
+      return (c.preset_values || []).map((v) => `${v}${timeUnitSuffix(c.unit)}`);
+    }
+    if (c.scale === 'credit_hours' && c.input_mode !== 'direct') {
+      return this.sliderValues().map((v) => `${v}h`);
+    }
+    return undefined;
+  });
+
+  /**
+   * Whether the active numeric-like scale picks values from a discrete set
+   * (so a snap-slider makes sense). Free-form time and direct-entry credit
+   * hours fall back to a continuous range input.
+   */
+  hasDiscreteValues = computed<boolean>(() => this.sliderValues().length > 0);
+
+  /** Min/max for the continuous range input (free-form time / direct credit hours). */
+  continuousRange = computed<{ min: number; max: number; step: number } | null>(() => {
+    const c = this.config();
+    if (!c) return null;
+    if (c.scale === 'time_unit' && c.input_mode === 'freeform') {
+      const precision = c.decimal_precision ?? 2;
+      const step = Math.pow(10, -precision);
+      // Time scales don't carry an explicit range; pick sensible defaults
+      // per unit so the slider has stops to drag between.
+      const maxByUnit = { minutes: 480, hours: 40, days: 30, weeks: 12 };
+      return { min: 0, max: maxByUnit[c.unit], step };
+    }
+    if (c.scale === 'credit_hours' && c.input_mode === 'direct') {
+      return { min: 0, max: c.total_work_hours || 100, step: 0.25 };
+    }
+    return null;
+  });
+
+  /** T-shirt slider values map to the configured numeric mapping. */
+  tshirtSliderValues = computed<number[]>(() => {
+    const c = this.config();
+    if (c?.scale !== 'tshirt') return [];
+    const mapping = c.mapping || DEFAULT_TSHIRT_MAPPING;
+    return TSHIRT_SIZES.map((s) => mapping[s]);
+  });
+
+  tshirtSliderActive = computed<number | null>(() => {
+    const c = this.config();
+    const v = this.tshirtValue();
+    if (c?.scale !== 'tshirt' || !v) return null;
+    return (c.mapping || DEFAULT_TSHIRT_MAPPING)[v];
+  });
+
+  animalSliderValues = computed<number[]>(() => {
+    const c = this.config();
+    if (c?.scale !== 'animal') return [];
+    const mapping = c.mapping || DEFAULT_ANIMAL_MAPPING;
+    return ANIMAL_SIZES.map((s) => mapping[s]);
+  });
+
+  animalSliderActive = computed<number | null>(() => {
+    const c = this.config();
+    const v = this.animalValue();
+    if (c?.scale !== 'animal' || !v) return null;
+    return (c.mapping || DEFAULT_ANIMAL_MAPPING)[v];
+  });
+
+  animalSliderLabels = computed<string[]>(() => ANIMAL_SIZES.map((s) => `${ANIMAL_ICONS[s]} ${s}`));
+
+  setTShirtFromSlider(mapped: number): void {
+    const c = this.config();
+    if (c?.scale !== 'tshirt') return;
+    const mapping = c.mapping || DEFAULT_TSHIRT_MAPPING;
+    const match = TSHIRT_SIZES.find((s) => mapping[s] === mapped);
+    if (match) this.valueChange.emit({ type: 'tshirt', value: match });
+  }
+
+  setAnimalFromSlider(mapped: number): void {
+    const c = this.config();
+    if (c?.scale !== 'animal') return;
+    const mapping = c.mapping || DEFAULT_ANIMAL_MAPPING;
+    const match = ANIMAL_SIZES.find((s) => mapping[s] === mapped);
+    if (match) this.valueChange.emit({ type: 'animal', value: match });
+  }
 
   // --- Mutation handlers -----------------------------------------------------
   setNumeric(raw: string | number): void {

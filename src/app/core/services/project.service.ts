@@ -446,35 +446,66 @@ export class ProjectService {
 
     const prevConfig = project.pointScaleConfig;
 
-    // 1. Migrate existing task values first. Batched in chunks of 400 to stay
-    //    under Firestore's 500-op limit. If any batch throws, we bail before
-    //    touching the project doc so state stays consistent.
+    // 1. Pre-compute every migration in memory so the project document is
+    //    only updated when we know we have a complete plan. Firestore's
+    //    500-op-per-batch limit means we can't make the task rewrites truly
+    //    atomic, but committing all batches up-front and rolling back
+    //    committed slices on failure keeps the project + task state aligned.
     const tasksQuery = query(
       collection(this.firestore, 'tasks'),
       where('projectId', '==', projectId),
     );
-    const snap = await getDocs(tasksQuery);
-    const docs = snap.docs.filter((d) => (d.data() as { pointValue?: unknown }).pointValue);
-
-    for (let i = 0; i < docs.length; i += 400) {
-      const batch = writeBatch(this.firestore);
-      const slice = docs.slice(i, i + 400);
-      for (const d of slice) {
+    const snapshot = await getDocs(tasksQuery);
+    const plan = snapshot.docs
+      .filter((d) => (d.data() as { pointValue?: unknown }).pointValue)
+      .map((d) => {
         const data = d.data() as { pointValue?: unknown };
         const oldValue = data.pointValue as Parameters<typeof migrateValue>[0];
         const migrated = newConfig
           ? migrateValue(oldValue, prevConfig, newConfig)
           : undefined;
-        if (migrated) {
-          batch.update(d.ref, { pointValue: migrated, updatedAt: new Date() });
-        } else {
-          batch.update(d.ref, { pointValue: deleteField(), updatedAt: new Date() });
+        return { ref: d.ref, oldValue, migrated } as const;
+      });
+
+    // Track which entries have been successfully committed so we can roll
+    // them back if a later batch fails.
+    const committed: typeof plan = [];
+
+    try {
+      for (let i = 0; i < plan.length; i += 400) {
+        const slice = plan.slice(i, i + 400);
+        const batch = writeBatch(this.firestore);
+        for (const entry of slice) {
+          if (entry.migrated) {
+            batch.update(entry.ref, { pointValue: entry.migrated, updatedAt: new Date() });
+          } else {
+            batch.update(entry.ref, { pointValue: deleteField(), updatedAt: new Date() });
+          }
+        }
+        await batch.commit();
+        committed.push(...slice);
+      }
+    } catch (err) {
+      // Best-effort rollback: restore the original pointValue on every task
+      // that we already overwrote. Each rollback batch is committed even if
+      // later ones fail, so the project document is never flipped when the
+      // task data is in a mixed state.
+      for (let i = 0; i < committed.length; i += 400) {
+        const slice = committed.slice(i, i + 400);
+        const batch = writeBatch(this.firestore);
+        for (const entry of slice) {
+          batch.update(entry.ref, { pointValue: entry.oldValue, updatedAt: new Date() });
+        }
+        try {
+          await batch.commit();
+        } catch (rollbackErr) {
+          console.error('Rollback failed for batch starting at', i, rollbackErr);
         }
       }
-      await batch.commit();
+      throw err;
     }
 
-    // 2. Now that every task is on the new shape, flip the project config.
+    // 2. Every task is on the new shape — flip the project config last.
     if (newConfig === null) {
       const docRef = doc(this.firestore, `projects/${projectId}`);
       await updateDoc(docRef, {

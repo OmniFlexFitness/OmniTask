@@ -290,35 +290,26 @@ export function migrateValue(
 
   // Numeric-like target scales (numeric_configurable, time_unit, credit_hours)
   if (isNumericLikeScale(toConfig)) {
-    const scalar =
-      fromConfig !== undefined ? pointValueScalar(value, fromConfig) : numericFromValue(value);
-    if (!isFinite(scalar)) return undefined;
     const pertOn = isPertEnabled(toConfig);
 
-    if (value.type === 'numeric_pert' && pertOn && toConfig.scale === 'numeric_configurable') {
+    // When the source is a PERT triple and the target also supports PERT,
+    // preserve the optimistic / most-likely / pessimistic bounds independently
+    // so uncertainty data is never silently collapsed to a scalar. Snapping
+    // is done per-bound against the target's allowed values.
+    if (value.type === 'numeric_pert' && pertOn) {
       return {
         type: 'numeric_pert',
-        optimistic: nearestNumericValue(value.optimistic, toConfig),
-        mostLikely: nearestNumericValue(value.mostLikely, toConfig),
-        pessimistic: nearestNumericValue(value.pessimistic, toConfig),
+        optimistic: snapNumericLike(value.optimistic, toConfig),
+        mostLikely: snapNumericLike(value.mostLikely, toConfig),
+        pessimistic: snapNumericLike(value.pessimistic, toConfig),
       };
     }
 
-    let snap = scalar;
-    if (toConfig.scale === 'numeric_configurable') {
-      snap = nearestNumericValue(scalar, toConfig);
-    } else if (toConfig.scale === 'time_unit' && toConfig.input_mode === 'preset') {
-      snap = nearestFromList(scalar, toConfig.preset_values || []);
-    } else if (toConfig.scale === 'credit_hours') {
-      const allowed =
-        toConfig.input_mode === 'bucket'
-          ? CREDIT_HOURS_BUCKETS
-          : toConfig.input_mode === 'fibonacci'
-            ? CREDIT_HOURS_FIB
-            : null;
-      if (allowed) snap = nearestFromList(scalar, [...allowed]);
-    }
+    const scalar =
+      fromConfig !== undefined ? pointValueScalar(value, fromConfig) : numericFromValue(value);
+    if (!isFinite(scalar)) return undefined;
 
+    const snap = snapNumericLike(scalar, toConfig);
     if (pertOn) {
       return { type: 'numeric_pert', optimistic: snap, mostLikely: snap, pessimistic: snap };
     }
@@ -365,6 +356,34 @@ function isNumericLikeScale(
     config.scale === 'time_unit' ||
     config.scale === 'credit_hours'
   );
+}
+
+/**
+ * Snap a single number to the closest value allowed by a numeric-like scale.
+ * Used for both single values and per-bound PERT migration so the rules are
+ * identical regardless of how the source value was encoded.
+ */
+function snapNumericLike(
+  raw: number,
+  toConfig: NumericScaleConfig | TimeScaleConfig | CreditHoursScaleConfig,
+): number {
+  if (toConfig.scale === 'numeric_configurable') {
+    return nearestNumericValue(raw, toConfig);
+  }
+  if (toConfig.scale === 'time_unit') {
+    if (toConfig.input_mode === 'preset') {
+      return nearestFromList(raw, toConfig.preset_values || []);
+    }
+    return raw;
+  }
+  // credit_hours
+  if (toConfig.input_mode === 'bucket') {
+    return nearestFromList(raw, [...CREDIT_HOURS_BUCKETS]);
+  }
+  if (toConfig.input_mode === 'fibonacci') {
+    return nearestFromList(raw, [...CREDIT_HOURS_FIB]);
+  }
+  return raw;
 }
 
 function isPertEnabled(config: PointScaleConfig): boolean {

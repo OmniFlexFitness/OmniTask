@@ -313,6 +313,61 @@ describe('point-scale.utils', () => {
       expect(result).toEqual({ type: 'tshirt', value: 'L' });
     });
 
+    it('preserves PERT triples when migrating time_unit with PERT still on', () => {
+      const from = {
+        scale: 'time_unit' as const,
+        unit: 'hours' as const,
+        input_mode: 'freeform' as const,
+        pert_mode_enabled: true,
+      };
+      const to = {
+        scale: 'time_unit' as const,
+        unit: 'hours' as const,
+        input_mode: 'freeform' as const,
+        pert_mode_enabled: true,
+      };
+      const result = migrateValue(
+        { type: 'numeric_pert', optimistic: 2, mostLikely: 5, pessimistic: 12 },
+        from,
+        to,
+      );
+      // None of the bounds should collapse to the weighted estimate.
+      expect(result).toEqual({
+        type: 'numeric_pert',
+        optimistic: 2,
+        mostLikely: 5,
+        pessimistic: 12,
+      });
+    });
+
+    it('preserves PERT triples when migrating credit_hours with PERT still on', () => {
+      const from = {
+        scale: 'credit_hours' as const,
+        total_credit_hours: 3,
+        total_work_hours: 135,
+        input_mode: 'fibonacci' as const,
+        pert_mode_enabled: true,
+      };
+      const to = {
+        scale: 'credit_hours' as const,
+        total_credit_hours: 3,
+        total_work_hours: 135,
+        input_mode: 'fibonacci' as const,
+        pert_mode_enabled: true,
+      };
+      const result = migrateValue(
+        { type: 'numeric_pert', optimistic: 1, mostLikely: 3, pessimistic: 8 },
+        from,
+        to,
+      );
+      expect(result).toEqual({
+        type: 'numeric_pert',
+        optimistic: 1,
+        mostLikely: 3,
+        pessimistic: 8,
+      });
+    });
+
     it('clears multi_factor when factor IDs change entirely', () => {
       const from: PointScaleConfig = {
         scale: 'custom_multi_factor',

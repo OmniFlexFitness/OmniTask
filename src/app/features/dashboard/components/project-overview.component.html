@@ -503,6 +503,11 @@
           [class.active]="activePanel() === 'fields'"
           (click)="togglePanel('fields')"
         >Custom fields</button>
+        <button
+          class="omni-glitch-btn manage-tab"
+          [class.active]="activePanel() === 'points'"
+          (click)="togglePanel('points')"
+        >Point values</button>
         @if (canManageDashboard()) {
           <button
             class="omni-glitch-btn manage-tab"
@@ -532,6 +537,9 @@
         }
         @case ('fields') {
           <app-custom-field-manager [project]="proj"></app-custom-field-manager>
+        }
+        @case ('points') {
+          <app-point-scale-manager [project]="proj"></app-point-scale-manager>
         }
         @case ('dashboard') {
           <app-dashboard-preferences-manager

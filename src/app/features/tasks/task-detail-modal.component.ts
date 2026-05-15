@@ -402,6 +402,19 @@ export class TaskDetailModalComponent {
 
   onPointValueChange(value: PointValue | undefined): void {
     this.pointValue.set(value);
+    if (value === undefined) {
+      // `updateTask` strips undefined fields before writing, so a plain
+      // autosave never removes an existing `pointValue` from Firestore.
+      // Use the dedicated delete path so the cleared state actually persists.
+      const task = this.task();
+      if (task?.id) {
+        this.taskService.clearPointValue(task.id).then(
+          () => this.updated.emit({ ...task, pointValue: undefined } as Task),
+          (err) => console.error('Failed to clear point value', err),
+        );
+      }
+      return;
+    }
     this.form.markAsDirty();
     this.autoSave();
   }

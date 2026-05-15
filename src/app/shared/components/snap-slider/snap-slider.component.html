@@ -1,0 +1,57 @@
+<div
+  class="snap-slider"
+  tabindex="0"
+  role="slider"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-valuemin]="values()[0]"
+  [attr.aria-valuemax]="values()[values().length - 1]"
+  [attr.aria-valuenow]="value() ?? values()[0]"
+>
+  <div
+    #track
+    class="snap-slider__track"
+    [style.--accent]="accent()"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)"
+  >
+    @if (activeIndex() !== null) {
+      <div
+        class="snap-slider__fill"
+        [style.width.%]="thumbPercent()"
+      ></div>
+    }
+    <div class="snap-slider__ticks">
+      @for (v of values(); track $index) {
+        <span
+          class="snap-slider__tick"
+          [class.active]="activeIndex() === $index"
+        ></span>
+      }
+    </div>
+    @if (activeIndex() !== null) {
+      <div
+        class="snap-slider__thumb"
+        [style.left.%]="thumbPercent()"
+      ></div>
+    }
+  </div>
+  <div class="snap-slider__labels">
+    @if (labels(); as labelArr) {
+      @for (l of labelArr; track $index) {
+        <span
+          class="snap-slider__label"
+          [class.active]="activeIndex() === $index"
+        >{{ l }}</span>
+      }
+    } @else {
+      @for (v of values(); track $index) {
+        <span
+          class="snap-slider__label"
+          [class.active]="activeIndex() === $index"
+        >{{ v }}</span>
+      }
+    }
+  </div>
+</div>
