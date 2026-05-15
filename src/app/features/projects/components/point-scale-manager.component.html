@@ -13,10 +13,6 @@
     <button
       type="button"
       class="text-left p-3 rounded-lg border transition-all"
-      [class.border-cyan-500]="selectedScaleId() === 'none'"
-      [class.bg-cyan-500_10]="selectedScaleId() === 'none'"
-      [class.border-white_10]="selectedScaleId() !== 'none'"
-      [class.bg-slate-800_40]="selectedScaleId() !== 'none'"
       [ngClass]="{
         'border-cyan-500 bg-cyan-500/10': selectedScaleId() === 'none',
         'border-white/10 bg-slate-800/40 hover:bg-slate-800/60': selectedScaleId() !== 'none',
@@ -338,6 +334,12 @@
   @if (error()) {
     <div class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
       {{ error() }}
+    </div>
+  }
+
+  @if (successMessage()) {
+    <div class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+      {{ successMessage() }}
     </div>
   }
 

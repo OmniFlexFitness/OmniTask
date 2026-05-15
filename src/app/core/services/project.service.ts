@@ -435,6 +435,10 @@ export class ProjectService {
    * `pointValue` set, each value is migrated through `migrateValue` so that
    * switching scale shape (e.g. linear → Fibonacci, or toggling PERT) keeps
    * the closest equivalent rather than dropping data.
+   *
+   * Order matters: we migrate task values FIRST and only update the project
+   * config after every batch has committed. If a batch fails, the project
+   * still reflects the old config so the UI and the task data stay in sync.
    */
   async updatePointScaleConfig(projectId: string, newConfig: PointScaleConfig | null): Promise<void> {
     const project = await this.getProject(projectId);
@@ -442,28 +446,15 @@ export class ProjectService {
 
     const prevConfig = project.pointScaleConfig;
 
-    // Update the project document first; this is the single source of truth
-    // even if the migration loop below fails partway.
-    if (newConfig === null) {
-      const docRef = doc(this.firestore, `projects/${projectId}`);
-      await updateDoc(docRef, {
-        pointScaleConfig: deleteField(),
-        updatedAt: new Date(),
-      });
-    } else {
-      await this.updateProject(projectId, { pointScaleConfig: newConfig });
-    }
-
-    // Migrate existing task values. We need this even when clearing the
-    // config so stale `pointValue` objects don't render in a now-unconfigured
-    // project. Batch in chunks of 400 to stay under Firestore's 500-op limit.
+    // 1. Migrate existing task values first. Batched in chunks of 400 to stay
+    //    under Firestore's 500-op limit. If any batch throws, we bail before
+    //    touching the project doc so state stays consistent.
     const tasksQuery = query(
       collection(this.firestore, 'tasks'),
       where('projectId', '==', projectId),
     );
     const snap = await getDocs(tasksQuery);
     const docs = snap.docs.filter((d) => (d.data() as { pointValue?: unknown }).pointValue);
-    if (!docs.length) return;
 
     for (let i = 0; i < docs.length; i += 400) {
       const batch = writeBatch(this.firestore);
@@ -481,6 +472,17 @@ export class ProjectService {
         }
       }
       await batch.commit();
+    }
+
+    // 2. Now that every task is on the new shape, flip the project config.
+    if (newConfig === null) {
+      const docRef = doc(this.firestore, `projects/${projectId}`);
+      await updateDoc(docRef, {
+        pointScaleConfig: deleteField(),
+        updatedAt: new Date(),
+      });
+    } else {
+      await this.updateProject(projectId, { pointScaleConfig: newConfig });
     }
   }
 

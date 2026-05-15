@@ -91,6 +91,8 @@ export class PointScaleManagerComponent {
   draft = signal<PointScaleConfig | null>(null);
   saving = signal(false);
   error = signal<string | null>(null);
+  successMessage = signal<string | null>(null);
+  private successTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** ID of the previously-loaded project, used to detect switches. */
   private lastProjectId: string | null = null;
@@ -281,6 +283,7 @@ export class PointScaleManagerComponent {
   async save(): Promise<void> {
     this.saving.set(true);
     this.error.set(null);
+    this.successMessage.set(null);
     try {
       const draft = this.draft();
       const previous = this.project().pointScaleConfig;
@@ -296,6 +299,7 @@ export class PointScaleManagerComponent {
 
       await this.projectService.updatePointScaleConfig(this.project().id, draft);
       this.projectChanged.emit();
+      this.flashSuccess(draft ? 'Point-scale settings saved' : 'Point-scale disabled for project');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to save point-scale configuration';
@@ -303,6 +307,12 @@ export class PointScaleManagerComponent {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  private flashSuccess(message: string): void {
+    this.successMessage.set(message);
+    if (this.successTimer) clearTimeout(this.successTimer);
+    this.successTimer = setTimeout(() => this.successMessage.set(null), 4000);
   }
 
   reset(): void {

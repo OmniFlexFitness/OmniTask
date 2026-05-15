@@ -415,6 +415,11 @@ export const ANIMAL_ICONS: Readonly<Record<AnimalSize, string>> = {
   Whale: '🐋',
 };
 
+export interface AnimalScaleConfig {
+  scale: 'animal';
+  mapping?: Record<AnimalSize, number>;
+}
+
 export interface MultiFactor {
   id: string;
   name: string;
@@ -532,8 +537,3 @@ export const NUMERIC_PRESETS: readonly NumericPreset[] = [
     },
   },
 ] as const;
-
-export interface AnimalScaleConfig {
-  scale: 'animal';
-  mapping?: Record<AnimalSize, number>;
-}
