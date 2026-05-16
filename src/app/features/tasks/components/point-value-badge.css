@@ -49,6 +49,25 @@
   font-size: 11px;
 }
 
+.pv-badge--sm {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 9px;
+  border-width: 1px;
+  box-shadow:
+    0 0 4px color-mix(in srgb, var(--pv-color) 70%, transparent),
+    0 0 8px color-mix(in srgb, var(--pv-color) 45%, transparent),
+    inset 0 0 5px color-mix(in srgb, var(--pv-color) 30%, transparent);
+}
+
+.pv-badge--sm.pv-badge--pill {
+  width: auto;
+  min-width: 1.6rem;
+  height: 1.15rem;
+  padding: 0 0.4rem;
+  font-size: 9px;
+}
+
 .pv-badge__text {
   position: relative;
   z-index: 1;

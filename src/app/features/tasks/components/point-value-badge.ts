@@ -26,6 +26,7 @@ import {
         <span
           class="pv-badge"
           [class.pv-badge--pill]="isLong()"
+          [class.pv-badge--sm]="size() === 'sm'"
           [style.--pv-color]="color()"
           [title]="fullLabel()"
         >
@@ -40,6 +41,8 @@ import {
 export class PointValueBadgeComponent {
   config = input.required<PointScaleConfig | undefined>();
   value = input.required<PointValue | undefined>();
+  /** Visual size — `sm` (20px) for cramped surfaces like calendar cells. */
+  size = input<'sm' | 'md'>('md');
 
   /** Hex/rgb colour resolved from the gradient. Computed once per value. */
   color = computed<string>(() => {

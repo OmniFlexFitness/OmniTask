@@ -570,6 +570,12 @@
                           </div>
                         }
                       </div>
+                      @if (project().pointScaleConfig && task.pointValue) {
+                        <app-point-value-badge
+                          [config]="project().pointScaleConfig"
+                          [value]="task.pointValue"
+                        ></app-point-value-badge>
+                      }
                     </div>
                   </div>
                 }

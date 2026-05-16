@@ -45,9 +45,10 @@ function generateNumericValues(config: NumericScaleConfig): number[] {
     }
     case 'fibonacci': {
       const out: number[] = [];
+      // Start at (a=1, b=2) so the sequence is 1, 2, 3, 5, 8, … rather than
+      // 1, 1, 2, 3, … which would duplicate 1 in the slider stops.
       let a = 1;
-      let b = 1;
-      // Include 0 only if min_value is 0; otherwise start at 1.
+      let b = 2;
       if (min_value <= 0) out.push(0);
       while (a <= max_value) {
         if (a >= min_value) out.push(a);
@@ -57,8 +58,10 @@ function generateNumericValues(config: NumericScaleConfig): number[] {
     }
     case 'powers_of_two': {
       const out: number[] = [];
+      // Mirror the fibonacci branch: surface 0 when the scale spans it so
+      // `allow_zero` actually has something to keep when enabled.
+      if (min_value <= 0) out.push(0);
       let v = 1;
-      // Reach min_value first.
       while (v < min_value) v *= 2;
       while (v <= max_value) {
         out.push(v);
@@ -76,6 +79,17 @@ function generateNumericValues(config: NumericScaleConfig): number[] {
 function decimalPlaces(n: number): number {
   if (!isFinite(n)) return 0;
   const s = n.toString();
+  // Numbers in scientific notation (e.g. 1e-7) don't carry a literal '.',
+  // so the simple split-on-dot check undercounts their decimal places.
+  // Combine the magnitude of the exponent with whatever decimals appear in
+  // the mantissa.
+  const eIdx = s.indexOf('e');
+  if (eIdx !== -1) {
+    const mantissa = s.slice(0, eIdx);
+    const exp = parseInt(s.slice(eIdx + 1), 10);
+    const mantissaDecimals = mantissa.includes('.') ? mantissa.split('.')[1].length : 0;
+    return Math.max(0, mantissaDecimals - exp);
+  }
   if (s.indexOf('.') === -1) return 0;
   return s.split('.')[1].length;
 }

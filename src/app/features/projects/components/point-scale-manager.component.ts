@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -114,6 +115,14 @@ export class PointScaleManagerComponent {
         this.draft.set(this.cloneConfig(p.pointScaleConfig) ?? null);
         this.error.set(null);
       }
+    });
+
+    // Make sure the success-toast timer doesn't fire on a destroyed component.
+    // setTimeout callbacks survive destruction and would set a signal that
+    // belongs to a detached view — small leak, easy to avoid.
+    inject(DestroyRef).onDestroy(() => {
+      if (this.successTimer) clearTimeout(this.successTimer);
+      this.successTimer = null;
     });
   }
 
@@ -401,6 +410,6 @@ export class PointScaleManagerComponent {
   }
 
   private cloneConfig(c: PointScaleConfig | undefined): PointScaleConfig | undefined {
-    return c ? (JSON.parse(JSON.stringify(c)) as PointScaleConfig) : undefined;
+    return c ? structuredClone(c) : undefined;
   }
 }
