@@ -64,7 +64,7 @@
             <div class="flex flex-col gap-1 overflow-y-auto px-1 scrollbar-none">
               @for (task of getTasksForDate(date.date); track task.id) {
                 <button
-                  class="text-left text-[10px] px-1.5 py-1 rounded border border-l-2 truncate transition-all w-full"
+                  class="flex items-center justify-between gap-1.5 text-left text-[10px] px-1.5 py-1 rounded border border-l-2 transition-all w-full"
                   [ngClass]="{
                     'bg-emerald-500/10 border-emerald-500/20 border-l-emerald-500 text-emerald-200': task.status === 'done',
                     'bg-slate-800 border-white/10 border-l-amber-500 text-slate-300': task.status !== 'done' && task.priority === 'medium',
@@ -75,7 +75,15 @@
                   [class.line-through]="task.status === 'done'"
                   (click)="$event.stopPropagation(); taskClick.emit(task)"
                 >
-                  {{ task.title }}
+                  <span class="truncate flex-1 min-w-0">{{ task.title }}</span>
+                  @if (pointScaleConfig() && task.pointValue) {
+                    <app-point-value-badge
+                      class="flex-shrink-0"
+                      [config]="pointScaleConfig()"
+                      [value]="task.pointValue"
+                      size="sm"
+                    ></app-point-value-badge>
+                  }
                 </button>
               }
             </div>

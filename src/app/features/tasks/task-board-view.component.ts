@@ -16,6 +16,7 @@ import {
   ColumnDisplaySettings,
 } from './column-settings-menu.component';
 import { OverlayModule } from '@angular/cdk/overlay';
+import { PointValueBadgeComponent } from './components/point-value-badge';
 
 @Component({
   selector: 'app-task-board-view',
@@ -27,6 +28,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
     MarkdownPlainPipe,
     ColumnSettingsMenuComponent,
     OverlayModule,
+    PointValueBadgeComponent,
   ],
   templateUrl: './task-board-view.component.html',
   styleUrls: ['./task-board-view.component.css'],

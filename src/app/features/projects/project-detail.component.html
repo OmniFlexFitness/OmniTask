@@ -319,6 +319,7 @@
                     @case ('calendar') {
                       <app-task-calendar-view
                         [tasks]="tasks()"
+                        [pointScaleConfig]="project.pointScaleConfig"
                         (taskClick)="openTaskDetail($event)"
                         (addTaskForDate)="addTaskForDate($event)"
                       ></app-task-calendar-view>

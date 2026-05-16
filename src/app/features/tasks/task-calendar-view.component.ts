@@ -1,17 +1,24 @@
 import { Component, input, output, computed, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Task } from '../../core/models/domain.model';
+import { PointScaleConfig, Task } from '../../core/models/domain.model';
+import { PointValueBadgeComponent } from './components/point-value-badge';
 
 @Component({
   selector: 'app-task-calendar-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PointValueBadgeComponent],
   templateUrl: './task-calendar-view.component.html',
   styleUrls: ['./task-calendar-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskCalendarViewComponent {
   tasks = input.required<Task[]>();
+  /**
+   * Optional point-scale config used to render the per-task points badge
+   * next to each calendar entry. When omitted (e.g. the cross-project
+   * dashboard view, where tasks span many configs) the badge is hidden.
+   */
+  pointScaleConfig = input<PointScaleConfig | undefined>(undefined);
   taskClick = output<Task>();
   addTaskForDate = output<Date>();
 
