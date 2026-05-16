@@ -279,7 +279,7 @@
             <input
               type="url"
               [value]="linkUrl()"
-              (input)="linkUrl.set($any($event.target).value)"
+              (input)="linkUrl.set(linkInput.value)"
               style="padding: 4px 8px; background-color: rgb(15, 23, 42); border: 1px solid rgb(51, 65, 85); border-radius: 4px; font-size: 14px; color: rgb(226, 232, 240); outline: none;"
               placeholder="https://"
               (keydown.enter)="submitLink($event)"

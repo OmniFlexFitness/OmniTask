@@ -215,8 +215,8 @@ export class MarkdownEditorComponent {
         top: rect.bottom + 4,
         left: rect.left,
       });
+      this.showLinkPrompt.set(true);
     }
-    this.showLinkPrompt.set(true);
   }
 
   submitLink(event?: Event): void {
