@@ -407,18 +407,23 @@ export class TaskDetailModalComponent {
       // `updateTask` strips undefined fields before writing, so a plain
       // autosave never removes an existing `pointValue` from Firestore.
       // Use the dedicated delete path so the cleared state actually persists,
-      // and roll back the optimistic UI update if the write fails.
+      // and roll back the optimistic UI update if the write fails — but
+      // ONLY when the user hasn't already moved on. If a newer selection
+      // came in while the clear was in flight, the rollback would clobber
+      // it; leave the newer value alone in that case.
       const task = this.task();
       if (task?.id) {
         this.taskService.clearPointValue(task.id).then(
           () => this.updated.emit({ ...task, pointValue: undefined } as Task),
           (err) => {
             console.error('Failed to clear point value', err);
-            this.pointValue.set(previous);
-            void this.dialogService.alert(
-              'Failed to clear point value. Please try again.',
-              'Error',
-            );
+            if (this.pointValue() === undefined) {
+              this.pointValue.set(previous);
+              void this.dialogService.alert(
+                'Failed to clear point value. Please try again.',
+                'Error',
+              );
+            }
           },
         );
       }
