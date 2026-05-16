@@ -205,7 +205,11 @@ export class SnapSliderComponent {
 
   /**
    * In range mode, decide which thumb the pointer is closest to so dragging
-   * naturally picks up the nearer handle. Falls back to "min" on exact ties.
+   * naturally picks up the nearer handle. When the thumbs are stacked
+   * (e.g. the user just collapsed the range to a single value), the side of
+   * the pointer relative to the shared position picks the side that lets
+   * the user spread the range — otherwise the min thumb would always win
+   * and trap the user on a degenerate range.
    */
   private pickClosestThumb(event: PointerEvent): 'min' | 'max' {
     const track = this.trackEl?.nativeElement;
@@ -215,7 +219,16 @@ export class SnapSliderComponent {
     const pointerPct = ratio * 100;
     const minDist = Math.abs(pointerPct - this.minPercent());
     const maxDist = Math.abs(pointerPct - this.maxPercent());
-    const choice: 'min' | 'max' = maxDist < minDist ? 'max' : 'min';
+    let choice: 'min' | 'max';
+    if (maxDist < minDist) {
+      choice = 'max';
+    } else if (maxDist === minDist && pointerPct > this.maxPercent()) {
+      // Thumbs are stacked and the user clicked on the right side — let them
+      // drag the max thumb outward.
+      choice = 'max';
+    } else {
+      choice = 'min';
+    }
     this.lastActiveThumb.set(choice);
     return choice;
   }

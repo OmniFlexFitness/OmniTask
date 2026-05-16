@@ -62,6 +62,29 @@ describe('point-scale.utils', () => {
       expect(getNumericAllowedValues(cfg)).toEqual([1, 2, 4, 8, 16, 32, 64]);
     });
 
+    it('powers of two prepends 0 when min_value is 0 and allow_zero is true', () => {
+      const cfg: NumericScaleConfig = {
+        scale: 'numeric_configurable',
+        min_value: 0,
+        max_value: 8,
+        increment_type: 'powers_of_two',
+        allow_zero: true,
+      };
+      expect(getNumericAllowedValues(cfg)).toEqual([0, 1, 2, 4, 8]);
+    });
+
+    it('fibonacci sequence has no duplicate 1', () => {
+      const cfg: NumericScaleConfig = {
+        scale: 'numeric_configurable',
+        min_value: 1,
+        max_value: 13,
+        increment_type: 'fibonacci',
+      };
+      const out = getNumericAllowedValues(cfg);
+      const unique = new Set(out);
+      expect(out.length).toBe(unique.size);
+    });
+
     it('filters custom values by min/max and zero', () => {
       const cfg: NumericScaleConfig = {
         scale: 'numeric_configurable',
