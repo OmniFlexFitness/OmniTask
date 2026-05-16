@@ -246,53 +246,56 @@
         </button>
 
         <!-- Link -->
-        <div style="position: relative; display: inline-flex;">
-          <button
-            type="button"
-            tabindex="-1"
-            class="md-btn"
-            title="Link (Ctrl+K)"
-            (click)="insertLink()"
+        <button
+          #linkBtnRef
+          type="button"
+          tabindex="-1"
+          class="md-btn"
+          title="Link (Ctrl+K)"
+          (click)="insertLink()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="md-svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="md-svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+            />
+          </svg>
+        </button>
+
+        @if (showLinkPrompt()) {
+          <div
+            [style.top.px]="linkPromptPosition().top"
+            [style.left.px]="linkPromptPosition().left"
+            style="position: fixed; padding: 8px; background-color: rgb(30, 41, 59); border: 1px solid rgb(51, 65, 85); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1000; display: flex; gap: 8px;"
+          >
+            <input
+              type="url"
+              [value]="linkUrl()"
+              (input)="linkUrl.set($any($event.target).value)"
+              style="padding: 4px 8px; background-color: rgb(15, 23, 42); border: 1px solid rgb(51, 65, 85); border-radius: 4px; font-size: 14px; color: rgb(226, 232, 240); outline: none;"
+              placeholder="https://"
+              (keydown.enter)="submitLink($event)"
+              (keydown.escape)="closeLinkPrompt()"
+              #linkInput
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-              />
-            </svg>
-          </button>
-          
-          @if (showLinkPrompt()) {
-            <div style="position: absolute; top: 100%; left: 0; margin-top: 4px; padding: 8px; background-color: rgb(30, 41, 59); border: 1px solid rgb(51, 65, 85); border-radius: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 10; display: flex; gap: 8px;">
-              <input 
-                type="url" 
-                [value]="linkUrl()" 
-                (input)="linkUrl.set($any($event.target).value)"
-                style="padding: 4px 8px; background-color: rgb(15, 23, 42); border: 1px solid rgb(51, 65, 85); border-radius: 4px; font-size: 14px; color: rgb(226, 232, 240); outline: none;"
-                placeholder="https://"
-                (keydown.enter)="submitLink($event)"
-                (keydown.escape)="closeLinkPrompt()"
-                #linkInput
-              >
-              <button 
-                type="button" 
-                class="md-btn" 
-                style="background-color: rgb(8, 145, 178); color: white;" 
-                (click)="submitLink()"
-              >
-                Add
-              </button>
-            </div>
-          }
-        </div>
+            <button
+              type="button"
+              class="md-btn"
+              style="background-color: rgb(8, 145, 178); color: white;"
+              (click)="submitLink()"
+            >
+              Add
+            </button>
+          </div>
+        }
 
         <!-- Table -->
         <button
