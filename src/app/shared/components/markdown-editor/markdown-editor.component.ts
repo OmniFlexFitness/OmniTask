@@ -52,6 +52,8 @@ export class MarkdownEditorComponent {
   // Link Prompt State
   showLinkPrompt = signal(false);
   linkUrl = signal('');
+  linkPromptPosition = signal<{ top: number; left: number }>({ top: 0, left: 0 });
+  linkBtnRef = viewChild<ElementRef<HTMLButtonElement>>('linkBtnRef');
   private savedRange: Range | null = null;
 
   private turndownService: TurndownService;
@@ -93,6 +95,29 @@ export class MarkdownEditorComponent {
         }
       }
     });
+
+    // Keep the link prompt anchored to the trigger button while open.
+    effect((onCleanup) => {
+      if (!this.showLinkPrompt()) return;
+      const update = () => this.updateLinkPromptPosition();
+      window.addEventListener('scroll', update, true);
+      window.addEventListener('resize', update);
+      onCleanup(() => {
+        window.removeEventListener('scroll', update, true);
+        window.removeEventListener('resize', update);
+      });
+    });
+  }
+
+  private updateLinkPromptPosition(): boolean {
+    const btn = this.linkBtnRef()?.nativeElement;
+    if (!btn) return false;
+    const rect = btn.getBoundingClientRect();
+    this.linkPromptPosition.set({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
+    return true;
   }
 
   onInput(): void {
@@ -206,7 +231,9 @@ export class MarkdownEditorComponent {
       this.savedRange = sel.getRangeAt(0);
     }
     this.linkUrl.set('');
-    this.showLinkPrompt.set(true);
+    if (this.updateLinkPromptPosition()) {
+      this.showLinkPrompt.set(true);
+    }
   }
 
   submitLink(event?: Event): void {
