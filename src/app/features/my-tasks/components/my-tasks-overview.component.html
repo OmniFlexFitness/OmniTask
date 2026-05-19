@@ -115,7 +115,10 @@
        straight to the projects they care about most. Only renders when
        the user has at least one project pinned. -->
   @if (pinnedContributions().length > 0) {
-    <section class="ofx-panel p-5" [style.border-color]="'rgba(255,20,147,0.35)'">
+    <section
+      class="ofx-panel mt-panel-pinned p-5"
+      [style.border-color]="'rgba(255,20,147,0.45)'"
+    >
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h3 class="ofx-section-title inline-flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" [style.color]="'#ff1493'">
@@ -350,7 +353,8 @@
     <div
       class="mt-project-card"
       [class.mt-pinned]="isPinned(c.project.id)"
-      [style.border-color]="isPinned(c.project.id) ? '#ff1493aa' : projectColor(c.project) + '55'"
+      [style.border-color]="projectColor(c.project) + (isPinned(c.project.id) ? 'cc' : '55')"
+      [style.--card-glow]="projectColor(c.project) + '66'"
     >
       <div class="flex items-start gap-3">
         <span

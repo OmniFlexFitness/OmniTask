@@ -78,7 +78,13 @@
 
 .ofx-panel {
   @apply relative overflow-hidden bg-slate-950/90 border border-white/10 rounded-2xl;
-  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.55);
+  /* Outer-edge neon glow. Per-instance overrides set `--panel-glow` inline
+     (or via a modifier class) to retint the glow to match the panel's
+     border color — e.g. the Pinned panel sets pink. */
+  --panel-glow: rgba(0, 210, 255, 0.45);
+  box-shadow:
+    0 14px 48px rgba(0, 0, 0, 0.55),
+    0 0 22px var(--panel-glow);
 }
 
 .ofx-gradient-button {
