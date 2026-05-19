@@ -75,25 +75,33 @@
   --panel-glow: rgba(255, 20, 147, 0.55);
 }
 
-/* Pin/unpin icon button on each project card. */
+/* Pin/unpin icon button on each project card. Hover + active states tint
+   themselves with the card's project color via the inline `--pin-color`
+   variable, so the star matches the project it pins. Falls back to the
+   default cyan accent if the variable is unset. */
 .mt-pin-btn {
   @apply inline-flex items-center justify-center w-7 h-7 rounded-md border text-slate-500 transition-all duration-200 flex-shrink-0;
+  --pin-color: #00d2ff;
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(15, 23, 42, 0.4);
 }
 
 .mt-pin-btn:hover {
-  color: #ff1493;
-  border-color: rgba(255, 20, 147, 0.7);
-  background: rgba(255, 20, 147, 0.12);
-  box-shadow: 0 0 14px rgba(255, 20, 147, 0.6), 0 0 28px rgba(255, 20, 147, 0.25);
+  color: var(--pin-color);
+  border-color: color-mix(in srgb, var(--pin-color) 70%, transparent);
+  background: color-mix(in srgb, var(--pin-color) 12%, transparent);
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--pin-color) 60%, transparent),
+    0 0 28px color-mix(in srgb, var(--pin-color) 25%, transparent);
 }
 
 .mt-pin-btn.is-pinned {
-  color: #ff1493;
-  border-color: rgba(255, 20, 147, 0.8);
-  background: rgba(255, 20, 147, 0.18);
-  box-shadow: 0 0 14px rgba(255, 20, 147, 0.7), 0 0 32px rgba(255, 20, 147, 0.3);
+  color: var(--pin-color);
+  border-color: color-mix(in srgb, var(--pin-color) 80%, transparent);
+  background: color-mix(in srgb, var(--pin-color) 18%, transparent);
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--pin-color) 70%, transparent),
+    0 0 32px color-mix(in srgb, var(--pin-color) 30%, transparent);
 }
 
 /* Pinned card variant — stronger drop-shadow + a project-color outer glow

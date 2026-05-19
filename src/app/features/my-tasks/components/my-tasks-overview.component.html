@@ -381,6 +381,7 @@
           type="button"
           class="mt-pin-btn"
           [class.is-pinned]="isPinned(c.project.id)"
+          [style.--pin-color]="projectColor(c.project)"
           [attr.title]="isPinned(c.project.id) ? 'Unpin from dashboard' : 'Pin to dashboard'"
           [attr.aria-label]="isPinned(c.project.id) ? 'Unpin from dashboard' : 'Pin to dashboard'"
           [attr.aria-pressed]="isPinned(c.project.id)"
