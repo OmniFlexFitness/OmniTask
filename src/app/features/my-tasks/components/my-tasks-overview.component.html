@@ -111,6 +111,30 @@
     </div>
   </section>
 
+  <!-- Pinned projects — surfaced at the top so the user can jump
+       straight to the projects they care about most. Only renders when
+       the user has at least one project pinned. -->
+  @if (pinnedContributions().length > 0) {
+    <section class="ofx-panel p-5" [style.border-color]="'rgba(255,20,147,0.35)'">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h3 class="ofx-section-title inline-flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" [style.color]="'#ff1493'">
+            <path d="M10 1.5l1.74 4.42 4.74.36-3.63 3.05 1.16 4.63L10 11.6l-4.01 2.36 1.16-4.63L3.52 6.28l4.74-.36L10 1.5z" />
+          </svg>
+          Pinned
+        </h3>
+        <span class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+          {{ pinnedContributions().length }} pinned
+        </span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        @for (c of pinnedContributions(); track c.project.id) {
+          <ng-container *ngTemplateOutlet="projectCard; context: { $implicit: c }"></ng-container>
+        }
+      </div>
+    </section>
+  }
+
   <!-- Row: status donut, completion gauge, reports-to -->
   <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Status breakdown -->
@@ -315,78 +339,97 @@
     } @else {
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         @for (c of contributions(); track c.project.id) {
-          <div
-            class="mt-project-card"
-            [style.border-color]="projectColor(c.project) + '55'"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs border flex-shrink-0"
-                [style.color]="projectColor(c.project)"
-                [style.border-color]="projectColor(c.project) + 'aa'"
-                [style.background]="projectColor(c.project) + '22'"
-                [style.box-shadow]="'0 0 10px ' + projectColor(c.project) + '55'"
-              >
-                {{ projectAvatar(c.project) }}
-              </span>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="truncate text-sm font-semibold text-slate-100">{{ c.project.name }}</span>
-                  @if (c.project.status === 'archived') {
-                    <span class="ofx-chip bg-slate-700/50 text-slate-300 text-[10px]">Archived</span>
-                  }
-                </div>
-                <div class="text-[11px] text-slate-500 truncate">
-                  {{ c.role }}{{ c.lastActivity ? ' · active ' + (c.lastActivity | date: 'MMM d') : '' }}
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
-              <div class="mt-mini-stat">
-                <div class="text-slate-400">My tasks</div>
-                <div class="text-slate-100 font-mono">{{ c.totalMyTasks }}</div>
-              </div>
-              <div class="mt-mini-stat">
-                <div class="text-slate-400">Done</div>
-                <div class="font-mono" [style.color]="'#10b981'">{{ c.completed }}</div>
-              </div>
-              <div class="mt-mini-stat">
-                <div class="text-slate-400">In Prog</div>
-                <div class="font-mono" [style.color]="'#00d2ff'">{{ c.inProgress }}</div>
-              </div>
-              <div class="mt-mini-stat">
-                <div class="text-slate-400">Created</div>
-                <div class="font-mono text-slate-200">{{ c.created }}</div>
-              </div>
-            </div>
-
-            <div class="mt-3 h-1.5 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
-              <div
-                class="h-full"
-                [style.width.%]="c.progress"
-                [style.background]="'linear-gradient(90deg, ' + projectColor(c.project) + ', ' + projectColor(c.project) + '88)'"
-                [style.box-shadow]="'0 0 8px ' + projectColor(c.project)"
-              ></div>
-            </div>
-
-            <div class="mt-3 flex items-center justify-between">
-              <a
-                class="text-[11px] text-cyan-400 hover:text-cyan-300"
-                [routerLink]="'/projects/' + c.project.id"
-              >
-                Open project →
-              </a>
-              <button
-                class="text-[11px] text-violet-400 hover:text-violet-300"
-                (click)="createTask.emit(c.project.id)"
-              >
-                + Task
-              </button>
-            </div>
-          </div>
+          <ng-container *ngTemplateOutlet="projectCard; context: { $implicit: c }"></ng-container>
         }
       </div>
     }
   </section>
+
+  <!-- Shared project card template — used by both Pinned and the contributions list. -->
+  <ng-template #projectCard let-c>
+    <div
+      class="mt-project-card"
+      [class.mt-pinned]="isPinned(c.project.id)"
+      [style.border-color]="isPinned(c.project.id) ? '#ff1493aa' : projectColor(c.project) + '55'"
+    >
+      <div class="flex items-start gap-3">
+        <span
+          class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs border flex-shrink-0"
+          [style.color]="projectColor(c.project)"
+          [style.border-color]="projectColor(c.project) + 'aa'"
+          [style.background]="projectColor(c.project) + '22'"
+          [style.box-shadow]="'0 0 10px ' + projectColor(c.project) + '55'"
+        >
+          {{ projectAvatar(c.project) }}
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="truncate text-sm font-semibold text-slate-100">{{ c.project.name }}</span>
+            @if (c.project.status === 'archived') {
+              <span class="ofx-chip bg-slate-700/50 text-slate-300 text-[10px]">Archived</span>
+            }
+          </div>
+          <div class="text-[11px] text-slate-500 truncate">
+            {{ c.role }}{{ c.lastActivity ? ' · active ' + (c.lastActivity | date: 'MMM d') : '' }}
+          </div>
+        </div>
+        <button
+          type="button"
+          class="mt-pin-btn"
+          [class.is-pinned]="isPinned(c.project.id)"
+          [attr.title]="isPinned(c.project.id) ? 'Unpin from dashboard' : 'Pin to dashboard'"
+          [attr.aria-label]="isPinned(c.project.id) ? 'Unpin from dashboard' : 'Pin to dashboard'"
+          [attr.aria-pressed]="isPinned(c.project.id)"
+          (click)="togglePin.emit(c.project.id)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 1.5l1.74 4.42 4.74.36-3.63 3.05 1.16 4.63L10 11.6l-4.01 2.36 1.16-4.63L3.52 6.28l4.74-.36L10 1.5z" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px]">
+        <div class="mt-mini-stat">
+          <div class="text-slate-400">My tasks</div>
+          <div class="text-slate-100 font-mono">{{ c.totalMyTasks }}</div>
+        </div>
+        <div class="mt-mini-stat">
+          <div class="text-slate-400">Done</div>
+          <div class="font-mono" [style.color]="'#10b981'">{{ c.completed }}</div>
+        </div>
+        <div class="mt-mini-stat">
+          <div class="text-slate-400">In Prog</div>
+          <div class="font-mono" [style.color]="'#00d2ff'">{{ c.inProgress }}</div>
+        </div>
+        <div class="mt-mini-stat">
+          <div class="text-slate-400">Created</div>
+          <div class="font-mono text-slate-200">{{ c.created }}</div>
+        </div>
+      </div>
+
+      <div class="mt-3 h-1.5 rounded-full overflow-hidden bg-slate-900/60 border border-white/5">
+        <div
+          class="h-full"
+          [style.width.%]="c.progress"
+          [style.background]="'linear-gradient(90deg, ' + projectColor(c.project) + ', ' + projectColor(c.project) + '88)'"
+          [style.box-shadow]="'0 0 8px ' + projectColor(c.project)"
+        ></div>
+      </div>
+
+      <div class="mt-3 flex items-center justify-between">
+        <a
+          class="text-[11px] text-cyan-400 hover:text-cyan-300"
+          [routerLink]="'/projects/' + c.project.id"
+        >
+          Open project →
+        </a>
+        <button
+          class="text-[11px] text-violet-400 hover:text-violet-300"
+          (click)="createTask.emit(c.project.id)"
+        >
+          + Task
+        </button>
+      </div>
+    </div>
+  </ng-template>
 </div>

@@ -63,6 +63,11 @@ export class MyTasksComponent {
   // can bind directly to current-user info via the component.
   readonly currentUser = computed(() => this.auth.currentUserSig());
 
+  /** Project IDs the user has pinned to their dashboard. */
+  readonly pinnedProjectIds = computed(
+    () => this.currentUser()?.pinnedProjectIds ?? [],
+  );
+
   // Active top-level pane. Overview is the default entry because it answers
   // "what's going on with me?" at a glance.
   viewMode = signal<MyTasksViewMode>('overview');
@@ -213,6 +218,26 @@ export class MyTasksComponent {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not save manager';
       await this.dialogService.alert(message, 'Update failed');
+    }
+  }
+
+  /**
+   * Pin / unpin a project on the dashboard. Persists via the user doc and
+   * mirrors the change into `AuthService.currentUserSig` so the UI reacts
+   * immediately. Errors surface via the dialog service.
+   */
+  async togglePinProject(projectId: string) {
+    const user = this.currentUser();
+    if (!user) return;
+    const current = user.pinnedProjectIds ?? [];
+    const next = current.includes(projectId)
+      ? current.filter((id) => id !== projectId)
+      : [...current, projectId];
+    try {
+      await this.auth.updateProfile({ pinnedProjectIds: next });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not update pinned projects';
+      await this.dialogService.alert(message, 'Pin failed');
     }
   }
 

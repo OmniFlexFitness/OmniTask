@@ -69,6 +69,14 @@ export interface UserProfile {
   myTasksSheetTabName?: string;
   lastMyTasksSheetSyncAt?: Date;
   myTasksSheetSyncStatus?: 'synced' | 'pending' | 'error';
+
+  /**
+   * Project IDs the user has pinned to their dashboard. Pinned projects
+   * surface in a dedicated panel at the top of the My Tasks dashboard so
+   * the user can jump straight to the projects they care about. Order is
+   * not preserved — the dashboard sorts pinned projects alphabetically.
+   */
+  pinnedProjectIds?: string[];
 }
 
 /**

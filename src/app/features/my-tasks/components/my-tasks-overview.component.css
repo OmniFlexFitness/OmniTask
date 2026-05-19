@@ -68,3 +68,30 @@
 .donut {
   overflow: visible;
 }
+
+/* Pin/unpin icon button on each project card. */
+.mt-pin-btn {
+  @apply inline-flex items-center justify-center w-7 h-7 rounded-md border text-slate-500 transition-all duration-200 flex-shrink-0;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.mt-pin-btn:hover {
+  color: #ff1493;
+  border-color: rgba(255, 20, 147, 0.5);
+  background: rgba(255, 20, 147, 0.08);
+  box-shadow: 0 0 10px rgba(255, 20, 147, 0.35);
+}
+
+.mt-pin-btn.is-pinned {
+  color: #ff1493;
+  border-color: rgba(255, 20, 147, 0.6);
+  background: rgba(255, 20, 147, 0.12);
+  box-shadow: 0 0 10px rgba(255, 20, 147, 0.45);
+}
+
+/* Pinned card variant — slightly stronger glow so pins stand out in the
+   contributions grid even after they appear in the Pinned panel above. */
+.mt-project-card.mt-pinned {
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 14px rgba(255, 20, 147, 0.2);
+}
