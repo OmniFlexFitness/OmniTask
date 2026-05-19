@@ -61,11 +61,13 @@ export class MyTasksOverviewComponent {
   myTasks = input.required<Task[]>();
   myProjects = input.required<Project[]>();
   availableCount = input<number>(0);
+  pinnedProjectIds = input<string[]>([]);
 
   taskClick = output<Task>();
   createTask = output<string | null>();
   viewChange = output<MyTasksViewMode>();
   reportsToChange = output<UserProfile | null>();
+  togglePin = output<string>();
 
   readonly defaultColor = CYBERPUNK_COLORS.TODO;
 
@@ -222,6 +224,29 @@ export class MyTasksOverviewComponent {
         return b.totalMyTasks - a.totalMyTasks;
       });
   });
+
+  /** Membership set of pinned project IDs, for fast `isPinned` lookups. */
+  private readonly pinnedSet = computed(() => new Set(this.pinnedProjectIds()));
+
+  /**
+   * Pinned projects rendered in the dedicated "Pinned" panel at the top
+   * of the overview. Sorted alphabetically so the order is stable
+   * regardless of pin recency. Pins that no longer match a project the
+   * user can see (e.g. they were removed from the project) are silently
+   * dropped — the pin still lives on their profile so the panel reappears
+   * if access is restored.
+   */
+  pinnedContributions = computed<ProjectContribution[]>(() => {
+    const set = this.pinnedSet();
+    if (set.size === 0) return [];
+    return this.contributions()
+      .filter((c) => set.has(c.project.id))
+      .sort((a, b) => a.project.name.localeCompare(b.project.name));
+  });
+
+  isPinned(projectId: string): boolean {
+    return this.pinnedSet().has(projectId);
+  }
 
   /**
    * Combined roster of people the user "reports to" — their direct manager

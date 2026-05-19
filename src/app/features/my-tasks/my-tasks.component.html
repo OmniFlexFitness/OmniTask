@@ -91,10 +91,12 @@
             [myTasks]="myTasks()"
             [myProjects]="myProjects()"
             [availableCount]="availableCount()"
+            [pinnedProjectIds]="pinnedProjectIds()"
             (taskClick)="openTaskDetail($event)"
             (createTask)="openCreateForProject($event)"
             (viewChange)="viewMode.set($event)"
             (reportsToChange)="saveReportsTo($event)"
+            (togglePin)="togglePinProject($event)"
           ></app-my-tasks-overview>
         }
         @case ('list') {
