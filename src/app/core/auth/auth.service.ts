@@ -11,6 +11,8 @@ import {
   Firestore,
   collection,
   doc,
+  arrayRemove,
+  arrayUnion,
   getDoc,
   getDocs,
   query,
@@ -266,6 +268,43 @@ export class AuthService {
     const userRef = doc(this.firestore, `users/${currentUser.uid}`);
     await updateDoc(userRef, updates as { [k: string]: unknown });
     this.currentUserSig.set({ ...currentUser, ...updates });
+  }
+
+  /**
+   * Atomically pin or unpin a project on the user's profile.
+   *
+   * Uses arrayUnion/arrayRemove to avoid lost updates when multiple pins are
+   * toggled quickly (e.g., pinning multiple projects back-to-back).
+   */
+  async updatePinnedProjectId(projectId: string, pinned: boolean): Promise<void> {
+    const currentUser = this.currentUserSig();
+    if (!currentUser) return;
+
+    const previous = currentUser.pinnedProjectIds ?? [];
+    const optimistic = pinned
+      ? Array.from(new Set([...previous, projectId]))
+      : previous.filter((id) => id !== projectId);
+
+    this.currentUserSig.set({ ...currentUser, pinnedProjectIds: optimistic });
+
+    const userRef = doc(this.firestore, 'users', currentUser.uid);
+    try {
+      await updateDoc(userRef, {
+        pinnedProjectIds: pinned ? arrayUnion(projectId) : arrayRemove(projectId),
+      });
+    } catch (err) {
+      this.currentUserSig.set({ ...currentUser, pinnedProjectIds: previous });
+      throw err;
+    }
+
+    const latestUser = this.currentUserSig();
+    if (!latestUser) return;
+    const latest = latestUser.pinnedProjectIds ?? [];
+    const reconciled = pinned
+      ? Array.from(new Set([...latest, projectId]))
+      : latest.filter((id) => id !== projectId);
+
+    this.currentUserSig.set({ ...latestUser, pinnedProjectIds: reconciled });
   }
 
   async logout() {
