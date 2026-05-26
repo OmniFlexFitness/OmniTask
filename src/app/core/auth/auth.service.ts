@@ -280,17 +280,31 @@ export class AuthService {
     const currentUser = this.currentUserSig();
     if (!currentUser) return;
 
-    const userRef = doc(this.firestore, `users/${currentUser.uid}`);
-    await updateDoc(userRef, {
-      pinnedProjectIds: pinned ? arrayUnion(projectId) : arrayRemove(projectId),
-    });
+    const previous = currentUser.pinnedProjectIds ?? [];
+    const optimistic = pinned
+      ? Array.from(new Set([...previous, projectId]))
+      : previous.filter((id) => id !== projectId);
 
-    const current = currentUser.pinnedProjectIds ?? [];
-    const next = pinned
-      ? Array.from(new Set([...current, projectId]))
-      : current.filter((id) => id !== projectId);
+    this.currentUserSig.set({ ...currentUser, pinnedProjectIds: optimistic });
 
-    this.currentUserSig.set({ ...currentUser, pinnedProjectIds: next });
+    const userRef = doc(this.firestore, 'users', currentUser.uid);
+    try {
+      await updateDoc(userRef, {
+        pinnedProjectIds: pinned ? arrayUnion(projectId) : arrayRemove(projectId),
+      });
+    } catch (err) {
+      this.currentUserSig.set({ ...currentUser, pinnedProjectIds: previous });
+      throw err;
+    }
+
+    const latestUser = this.currentUserSig();
+    if (!latestUser) return;
+    const latest = latestUser.pinnedProjectIds ?? [];
+    const reconciled = pinned
+      ? Array.from(new Set([...latest, projectId]))
+      : latest.filter((id) => id !== projectId);
+
+    this.currentUserSig.set({ ...latestUser, pinnedProjectIds: reconciled });
   }
 
   async logout() {
