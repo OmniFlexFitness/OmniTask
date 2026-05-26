@@ -1,0 +1,49 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+.fvm/
+
+# pubspec.lock for the main `mobile/` application package is COMMITTED for
+# reproducible builds across CI + workstations. The lockfile inside the
+# `packages/omniflex_design_system/` *library* package stays ignored.
+packages/*/pubspec.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Generated
+*.g.dart.bak
+**/*.freezed.dart
+**/*.g.dart
+
+# Firebase config (must NOT be committed)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Android
+android/.gradle/
+android/captures/
+android/local.properties
+android/key.properties
+android/app/upload-keystore.jks
+android/app/debug.keystore
+
+# macOS
+**/.DS_Store
+
+# Coverage
+coverage/

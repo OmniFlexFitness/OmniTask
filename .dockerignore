@@ -1,0 +1,43 @@
+# Cloud Run image only needs the Angular web build artefacts.
+# Excluding the rest keeps the build context small and avoids accidentally
+# shipping mobile, function, or local-dev files into the production container.
+
+.git
+.github
+.angular/
+.firebase/
+.vscode/
+.idea/
+.dart_tool/
+.fvm/
+
+# Mobile companion app — never part of the web container
+mobile/
+
+# Node + Angular work folders
+node_modules/
+dist/
+coverage/
+out-tsc/
+tmp/
+.sass-cache/
+
+# Cloud Functions are deployed separately, not baked into the web image
+functions/node_modules/
+functions/lib/
+
+# Local config and secrets
+.env*
+*-key.json
+*-credentials.json
+service-account*.json
+mcp_config.local.json
+
+# Logs and scratch artefacts
+*.log
+*.txt
+test-results.log
+
+# OS / editor
+.DS_Store
+Thumbs.db

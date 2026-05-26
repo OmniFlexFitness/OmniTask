@@ -113,7 +113,18 @@ src/app/
 │   └── settings/            # User preferences
 └── shared/                  # Reusable components
     └── components/          # Buttons, modals, inputs
+
+mobile/                     # Flutter iOS + Android companion (Phase 0+)
+├── lib/
+│   ├── core/{auth,firestore,cloud_functions,messaging,logging,router}/
+│   ├── features/{dashboard,my_tasks,projects,tasks,schedule,settings,user_groups}/
+│   └── models/
+├── packages/omniflex_design_system/   # OmniFlexColors/Typography/Spacing/Effects/Theme
+├── test/                              # widget + unit tests
+└── integration_test/                  # device tests
 ```
+
+> **Mobile companion**: A Flutter app at `mobile/` shares this same Firebase backend (`omnitask-475422`). Stack: Flutter 3.27+, Riverpod 2.x, `go_router`, FlutterFire, `google_sign_in`. Backend reuse is total — same Firestore collections, same `firestore.rules`, same Cloud Functions. Only push notifications add new backend (a `users/{uid}/fcmTokens` subcollection and `sendTaskAssignmentPush` trigger). See `docs/plans/omnitask-mobile-flutter.md` for the full roadmap.
 
 ---
 

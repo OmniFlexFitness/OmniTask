@@ -61,3 +61,23 @@ test-results.log
 .antigravity/cache/
 .antigravity/runtime/
 mcp_config.local.json
+
+# Flutter mobile companion (mobile/) — most ignores live in mobile/.gitignore;
+# these are repeated here as a safety net for tooling that runs from repo root.
+# Note: mobile/pubspec.lock is COMMITTED (it's an application package, not a
+# library) so CI and workstation builds resolve to the same dependency graph.
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.fvm/
+mobile/build/
+mobile/packages/*/pubspec.lock
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/google-services.json
+mobile/android/app/upload-keystore.jks
+mobile/ios/Runner/GoogleService-Info.plist
+mobile/lib/firebase_options.dart

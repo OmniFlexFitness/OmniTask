@@ -120,3 +120,18 @@ Commands that span multiple OmniFlex repos (e.g., propagating a template update 
 - **Cloud Run deploy fails on push to `live`**: GitHub Actions deploy log is the source of truth. Don't push retry commits to `live` to "kick CI" — that ships untested code to production. Open a PR back to `live` instead.
 - **Service account project mismatch**: `OMNIFLEX_FIREBASE_SERVICE_ACCOUNT` env var must reference a JSON key for project `omnitask-475422` for the Firebase MCP to work in this workspace. If it points elsewhere, the MCP will return 403s that look like permission bugs.
 - **Antigravity MCP tool-name regex**: tool names with dots (`.`) fail Antigravity's `^[a-zA-Z0-9_-]` validation. If a server fails to register, scaffold a Node.js sanitizing proxy — don't disable the server.
+
+---
+
+## Mobile (Flutter)
+
+A Flutter companion app lives at `mobile/`. It shares the `omnitask-475422` Firebase backend with the Angular web app — no separate database, no parallel auth. Roadmap and rationale: `docs/plans/omnitask-mobile-flutter.md`.
+
+Stack: Flutter 3.27+ stable, Riverpod 2.x with `riverpod_generator`, `go_router`, FlutterFire (core/auth/firestore/functions/storage/messaging/app_check), `google_sign_in`, local design-system package at `mobile/packages/omniflex_design_system/`.
+
+When working in `mobile/`:
+
+- The Flutter side of `.antigravity/skills/omniflex-code-review/checklist.md` applies literally (the bullets that reference `AsyncValue`, `OmniFlexColors`, `pubspec.yaml`, App Check, `go_router`, etc.). The "spirit-not-letter" guidance above is for the Angular side only.
+- Pre-done checklist for mobile changes: `cd mobile && flutter analyze && flutter test` (and `flutter build apk --debug` / `flutter build ios --no-codesign` if platform code changed). CI lives at `.github/workflows/mobile-ci.yml`.
+- Never commit `lib/firebase_options.dart`, `android/app/google-services.json`, or `ios/Runner/GoogleService-Info.plist` — distribute via secrets manager.
+- The Cloud Run web deploy chain (`.github/workflows/deploy-cloudrun.yml`) ignores `mobile/` via `.dockerignore`. Mobile pushes to `live` should not be made until intentional release.
