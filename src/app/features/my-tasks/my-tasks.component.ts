@@ -226,18 +226,16 @@ export class MyTasksComponent {
    * mirrors the change into `AuthService.currentUserSig` so the UI reacts
    * immediately. Errors surface via the dialog service.
    */
-  async togglePinProject(projectId: string) {
+  async togglePinProject(projectId: string): Promise<void> {
     const user = this.currentUser();
     if (!user) return;
-    const current = user.pinnedProjectIds ?? [];
-    const next = current.includes(projectId)
-      ? current.filter((id) => id !== projectId)
-      : [...current, projectId];
     try {
-      await this.auth.updateProfile({ pinnedProjectIds: next });
+      const current = user.pinnedProjectIds ?? [];
+      const shouldPin = !current.includes(projectId);
+      await this.auth.updatePinnedProjectId(projectId, shouldPin);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not update pinned projects';
-      await this.dialogService.alert(message, 'Pin failed');
+      console.error('Failed to toggle project pin:', err);
+      await this.dialogService.alert('Could not update pinned projects', 'Pin failed');
     }
   }
 
