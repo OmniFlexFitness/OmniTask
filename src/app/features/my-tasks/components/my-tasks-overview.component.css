@@ -72,7 +72,7 @@
 /* Pinned panel — retint `.ofx-panel`'s outer glow to pink so it visually
    ties to the pink border / star icon. */
 .mt-panel-pinned {
-  --panel-glow: rgba(255, 20, 147, 0.55);
+  --panel-glow: rgba(139, 92, 246, 0.55);
 }
 
 /* Pin/unpin icon button on each project card. Hover + active states tint
