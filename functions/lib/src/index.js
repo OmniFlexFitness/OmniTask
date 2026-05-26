@@ -78,71 +78,32 @@ function escapeHtml(text) {
 }
 /**
  * Convert markdown text to Gmail-compatible HTML with inline styles.
- * Uses marked with a custom renderer for email-safe output.
+ * Sanitizes input first, then applies markdown rendering.
  */
 function markdownToEmailHtml(markdown) {
     const renderer = new marked_1.Renderer();
-    renderer.heading = function ({ tokens, depth }) {
+    renderer.heading = ({ text, depth }) => {
         const sizes = {
             1: '22px', 2: '19px', 3: '16px', 4: '14px', 5: '13px', 6: '12px',
         };
         const size = sizes[depth] || '14px';
-        const text = this.parser.parseInline(tokens);
         return `<h${depth} style="color:#e2e8f0;font-size:${size};margin:12px 0 6px 0;">${text}</h${depth}>`;
     };
-    renderer.paragraph = function ({ tokens }) {
-        const text = this.parser.parseInline(tokens);
-        return `<p style="color:#94a3b8;margin:8px 0;line-height:1.6;">${text}</p>`;
-    };
-    renderer.blockquote = function ({ tokens }) {
-        const body = this.parser.parse(tokens);
-        return `<blockquote style="border-left:3px solid #8b5cf6;margin:10px 0;padding:8px 14px;color:#cbd5e1;background:#1e293b;border-radius:4px;">${body}</blockquote>`;
-    };
-    renderer.list = function (token) {
-        const tag = token.ordered ? 'ol' : 'ul';
-        let body = '';
-        for (const item of token.items) {
-            body += this.listitem(item);
-        }
+    renderer.paragraph = ({ text }) => `<p style="color:#94a3b8;margin:8px 0;line-height:1.6;">${text}</p>`;
+    renderer.blockquote = ({ text }) => `<blockquote style="border-left:3px solid #8b5cf6;margin:10px 0;padding:8px 14px;color:#cbd5e1;background:#1e293b;border-radius:4px;">${text}</blockquote>`;
+    renderer.list = ({ body, ordered }) => {
+        const tag = ordered ? 'ol' : 'ul';
         return `<${tag} style="color:#94a3b8;margin:8px 0;padding-left:24px;line-height:1.6;">${body}</${tag}>`;
     };
-    renderer.listitem = function (item) {
-        let itemBody = '';
-        if (item.task) {
-            const checkbox = this.checkbox({ checked: !!item.checked, raw: '', type: 'checkbox' });
-            itemBody += checkbox;
-        }
-        itemBody += this.parser.parse(item.tokens);
-        return `<li style="margin:4px 0;">${itemBody}</li>`;
-    };
-    renderer.strong = function ({ tokens }) {
-        const text = this.parser.parseInline(tokens);
-        return `<strong style="color:#e2e8f0;font-weight:600;">${text}</strong>`;
-    };
-    renderer.em = function ({ tokens }) {
-        const text = this.parser.parseInline(tokens);
-        return `<em style="font-style:italic;">${text}</em>`;
-    };
-    renderer.del = function ({ tokens }) {
-        const text = this.parser.parseInline(tokens);
-        return `<del style="text-decoration:line-through;color:#64748b;">${text}</del>`;
-    };
-    renderer.codespan = function ({ text }) {
-        return `<code style="background:#0f172a;color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:13px;">${text}</code>`;
-    };
-    renderer.code = function ({ text }) {
-        return `<pre style="background:#0f172a;color:#a5b4fc;padding:12px 16px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;"><code>${text}</code></pre>`;
-    };
-    renderer.link = function ({ href, tokens }) {
-        const text = this.parser.parseInline(tokens);
-        return `<a href="${href}" style="color:#8b5cf6;text-decoration:underline;">${text}</a>`;
-    };
-    renderer.hr = function () {
-        return `<hr style="border:none;border-top:1px solid #334155;margin:16px 0;">`;
-    };
-    renderer.br = function () {
-        return '<br>';
-    };
+    renderer.listitem = ({ text }) => `<li style="margin:4px 0;">${text}</li>`;
+    renderer.strong = ({ text }) => `<strong style="color:#e2e8f0;font-weight:600;">${text}</strong>`;
+    renderer.em = ({ text }) => `<em style="font-style:italic;">${text}</em>`;
+    renderer.del = ({ text }) => `<del style="text-decoration:line-through;color:#64748b;">${text}</del>`;
+    renderer.codespan = ({ text }) => `<code style="background:#0f172a;color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:13px;">${text}</code>`;
+    renderer.code = ({ text, lang }) => `<pre style="background:#0f172a;color:#a5b4fc;padding:12px 16px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;"><code>${text}</code></pre>`;
+    renderer.link = ({ href, text }) => `<a href="${href}" style="color:#8b5cf6;text-decoration:underline;">${text}</a>`;
+    renderer.hr = () => `<hr style="border:none;border-top:1px solid #334155;margin:16px 0;">`;
+    renderer.br = () => '<br>';
     return (0, marked_1.marked)(markdown, { renderer, async: false });
 }
 /**
@@ -785,7 +746,7 @@ async function sendReminderEmail(transporter, email, title, description, timeStr
     const emailHtml = loadEmailTemplate()
         .replace(/{{PROJECT_NAME}}/g, escapeHtml(typeStr))
         .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${title}`))
-        .replace(/{{TASK_DESCRIPTION}}/g, `<div class="description">${markdownToEmailHtml(description)}</div>`)
+        .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(description))
         .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
         .replace(/{{DUE_DATE_HTML}}/g, `<p>Starts in ${offset === 0 ? 'now' : offset + ' minutes'} (at ${timeString})</p>`)
         .replace(/{{TASK_URL}}/g, 'https://omnitask.omniflexfitness.com/schedule');
