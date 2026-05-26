@@ -67,6 +67,7 @@ mcp_config.local.json
 # Note: mobile/pubspec.lock is COMMITTED (it's an application package, not a
 # library) so CI and workstation builds resolve to the same dependency graph.
 mobile/.dart_tool/
+mobile/.metadata
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/.fvm/
