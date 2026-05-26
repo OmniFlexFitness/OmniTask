@@ -107,7 +107,10 @@ function markdownToEmailHtml(markdown: string): string {
   };
 
   renderer.codespan = function ({ text }) {
-    return `<code style="background:#0f172a;color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:13px;">${text}</code>`;
+    const escaped = escapeHtml(text);
+    const style = 'background:#0f172a;color:#a5b4fc;padding:2px 6px;' +
+      'border-radius:4px;font-size:13px;';
+    return `<code style="${style}">${escaped}</code>`;
   };
 
   renderer.code = function ({ text }) {

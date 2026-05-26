@@ -128,7 +128,10 @@ function markdownToEmailHtml(markdown) {
         return `<del style="text-decoration:line-through;color:#64748b;">${text}</del>`;
     };
     renderer.codespan = function ({ text }) {
-        return `<code style="background:#0f172a;color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:13px;">${text}</code>`;
+        const escaped = escapeHtml(text);
+        const style = 'background:#0f172a;color:#a5b4fc;padding:2px 6px;' +
+            'border-radius:4px;font-size:13px;';
+        return `<code style="${style}">${escaped}</code>`;
     };
     renderer.code = function ({ text }) {
         const escaped = escapeHtml(text);
@@ -163,7 +166,7 @@ function markdownToEmailHtml(markdown) {
     renderer.br = function () {
         return '<br>';
     };
-    return (0, marked_1.marked)(markdown, { renderer, async: false });
+    return marked_1.marked.parse(markdown, { renderer, async: false });
 }
 /**
  * Load email template from file (cached for performance)
