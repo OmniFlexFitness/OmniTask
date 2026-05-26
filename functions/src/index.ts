@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { VertexAI } from '@google-cloud/vertexai';
 import * as nodemailer from 'nodemailer';
+import { marked, Renderer } from 'marked';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -43,6 +44,90 @@ function escapeHtml(text: string): string {
     '/': '&#x2F;',
   };
   return text.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char]);
+}
+
+/**
+ * Convert markdown text to Gmail-compatible HTML with inline styles.
+ * Uses marked with a custom renderer for email-safe output.
+ */
+function markdownToEmailHtml(markdown: string): string {
+  const renderer = new Renderer();
+
+  renderer.heading = function ({ tokens, depth }) {
+    const sizes: Record<number, string> = {
+      1: '22px', 2: '19px', 3: '16px', 4: '14px', 5: '13px', 6: '12px',
+    };
+    const size = sizes[depth] || '14px';
+    const text = this.parser.parseInline(tokens);
+    return `<h${depth} style="color:#e2e8f0;font-size:${size};margin:12px 0 6px 0;">${text}</h${depth}>`;
+  };
+
+  renderer.paragraph = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<p style="color:#94a3b8;margin:8px 0;line-height:1.6;">${text}</p>`;
+  };
+
+  renderer.blockquote = function ({ tokens }) {
+    const body = this.parser.parse(tokens);
+    return `<blockquote style="border-left:3px solid #8b5cf6;margin:10px 0;padding:8px 14px;color:#cbd5e1;background:#1e293b;border-radius:4px;">${body}</blockquote>`;
+  };
+
+  renderer.list = function (token) {
+    const tag = token.ordered ? 'ol' : 'ul';
+    let body = '';
+    for (const item of token.items) {
+      body += this.listitem(item);
+    }
+    return `<${tag} style="color:#94a3b8;margin:8px 0;padding-left:24px;line-height:1.6;">${body}</${tag}>`;
+  };
+
+  renderer.listitem = function (item) {
+    let itemBody = '';
+    if (item.task) {
+      const checkbox = this.checkbox({ checked: !!item.checked, raw: '', type: 'checkbox' });
+      itemBody += checkbox;
+    }
+    itemBody += this.parser.parse(item.tokens);
+    return `<li style="margin:4px 0;">${itemBody}</li>`;
+  };
+
+  renderer.strong = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<strong style="color:#e2e8f0;font-weight:600;">${text}</strong>`;
+  };
+
+  renderer.em = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<em style="font-style:italic;">${text}</em>`;
+  };
+
+  renderer.del = function ({ tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<del style="text-decoration:line-through;color:#64748b;">${text}</del>`;
+  };
+
+  renderer.codespan = function ({ text }) {
+    return `<code style="background:#0f172a;color:#a5b4fc;padding:2px 6px;border-radius:4px;font-size:13px;">${text}</code>`;
+  };
+
+  renderer.code = function ({ text }) {
+    return `<pre style="background:#0f172a;color:#a5b4fc;padding:12px 16px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;"><code>${text}</code></pre>`;
+  };
+
+  renderer.link = function ({ href, tokens }) {
+    const text = this.parser.parseInline(tokens);
+    return `<a href="${href}" style="color:#8b5cf6;text-decoration:underline;">${text}</a>`;
+  };
+
+  renderer.hr = function () {
+    return `<hr style="border:none;border-top:1px solid #334155;margin:16px 0;">`;
+  };
+
+  renderer.br = function () {
+    return '<br>';
+  };
+
+  return marked(markdown, { renderer, async: false }) as string;
 }
 
 /**
@@ -93,7 +178,7 @@ function populateEmailTemplate(data: {
   html = html.replace(/{{TASK_TITLE}}/g, escapeHtml(data.taskTitle));
 
   const descriptionHtml = data.taskDescription
-    ? `<p class="description">${escapeHtml(data.taskDescription)}</p>`
+    ? `<div class="description">${markdownToEmailHtml(data.taskDescription)}</div>`
     : '';
   html = html.replace(/{{TASK_DESCRIPTION}}/g, descriptionHtml);
 
@@ -894,7 +979,7 @@ async function sendReminderEmail(
   const emailHtml = loadEmailTemplate()
     .replace(/{{PROJECT_NAME}}/g, escapeHtml(typeStr))
     .replace(/{{TASK_TITLE}}/g, escapeHtml(`Reminder: ${title}`))
-    .replace(/{{TASK_DESCRIPTION}}/g, escapeHtml(description))
+    .replace(/{{TASK_DESCRIPTION}}/g, `<div class="description">${markdownToEmailHtml(description)}</div>`)
     .replace(/{{TASK_PRIORITY}}/g, 'HIGH')
     .replace(
       /{{DUE_DATE_HTML}}/g,
