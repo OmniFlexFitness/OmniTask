@@ -127,7 +127,7 @@ function markdownToEmailHtml(markdown: string): string {
     return '<br>';
   };
 
-  return marked(markdown, { renderer, async: false }) as string;
+  return marked.parse(markdown, { renderer, async: false }) as string;
 }
 
 /**
