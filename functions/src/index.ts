@@ -111,12 +111,33 @@ function markdownToEmailHtml(markdown: string): string {
   };
 
   renderer.code = function ({ text }) {
-    return `<pre style="background:#0f172a;color:#a5b4fc;padding:12px 16px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;"><code>${text}</code></pre>`;
+    const escaped = escapeHtml(text);
+    const style = 'background:#0f172a;color:#a5b4fc;padding:12px 16px;border-radius:6px;' +
+      'overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0;';
+    return `<pre style="${style}"><code>${escaped}</code></pre>`;
   };
 
   renderer.link = function ({ href, tokens }) {
     const text = this.parser.parseInline(tokens);
-    return `<a href="${href}" style="color:#8b5cf6;text-decoration:underline;">${text}</a>`;
+    const cleanHref = href.trim();
+    const isSafe = /^(https?|mailto|tel):/i.test(cleanHref) ||
+      cleanHref.startsWith('#') ||
+      cleanHref.startsWith('/');
+    const safeHref = isSafe ? escapeHtml(cleanHref) : '#';
+    return `<a href="${safeHref}" style="color:#8b5cf6;text-decoration:underline;">${text}</a>`;
+  };
+
+  renderer.image = function ({ href, text }) {
+    const cleanHref = href.trim();
+    if (!/^https?:/i.test(cleanHref)) return escapeHtml(text || '');
+    const safeHref = escapeHtml(cleanHref);
+    const alt = escapeHtml(text || '');
+    const style = 'max-width:100%;height:auto;border-radius:4px;margin:8px 0;';
+    return `<img src="${safeHref}" alt="${alt}" style="${style}">`;
+  };
+
+  renderer.html = function ({ text }) {
+    return escapeHtml(text);
   };
 
   renderer.hr = function () {
