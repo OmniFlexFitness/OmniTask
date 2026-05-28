@@ -4,7 +4,7 @@ import {
   signal,
   output,
   input,
-  ChangeDetectionStrategy,
+  ChangeDetectionStrategy, OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -41,7 +41,7 @@ const PROJECT_COLORS = [
   styleUrls: ['./project-form-modal.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProjectFormModalComponent {
+export class ProjectFormModalComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly storageService = inject(StorageService);
   private readonly fb = inject(FormBuilder);

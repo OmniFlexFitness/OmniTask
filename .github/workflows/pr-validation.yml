@@ -31,8 +31,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Lint check
-        run: yarn lint || echo "Lint check skipped - no lint script configured"
-        continue-on-error: true
+        run: yarn lint
 
       - name: Build Angular app
         run: yarn build

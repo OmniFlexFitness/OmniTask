@@ -18,10 +18,10 @@ describe('ProjectDetailComponent', () => {
   let mockRouter: any;
   let mockSheetsAutoSync: jasmine.SpyObj<GoogleSheetsAutoSyncService>;
 
-  let paramMapSubject = new BehaviorSubject<{ get: (key: string) => string | null }>({
+  const paramMapSubject = new BehaviorSubject<{ get: (key: string) => string | null }>({
     get: () => 'p1',
   });
-  let queryParamMapSubject = new BehaviorSubject<{ get: (key: string) => string | null }>({
+  const queryParamMapSubject = new BehaviorSubject<{ get: (key: string) => string | null }>({
     get: () => 'overview',
   });
 

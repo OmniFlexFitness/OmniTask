@@ -56,7 +56,7 @@ function parseMarkdown(source: string): string {
   if (!source?.trim()) return '';
 
   // Pre-process: ==highlight== → <mark>
-  let processed = source.replace(/==(.*?)==/g, '<mark class="md-highlight">$1</mark>');
+  const processed = source.replace(/==(.*?)==/g, '<mark class="md-highlight">$1</mark>');
 
   // Parse with marked (GFM enabled by default in v17+)
   let html = marked.parse(processed, { gfm: true, breaks: true }) as string;

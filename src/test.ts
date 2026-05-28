@@ -20,11 +20,11 @@ const configureTestingModule = TestBed.configureTestingModule.bind(TestBed);
 TestBed.configureTestingModule = (moduleDef) => {
   const specProviders = moduleDef.providers ?? [];
   const specTokens = new Set(
-    specProviders.map(providerToken).filter((token): token is Type<unknown> | string => token != null),
+    specProviders.map(providerToken).filter((token): token is Type<unknown> | string => token !== null),
   );
   const defaultFirebase = FIREBASE_TEST_PROVIDERS.filter((provider) => {
     const token = providerToken(provider);
-    return token != null && !specTokens.has(token);
+    return token !== null && !specTokens.has(token);
   });
 
   return configureTestingModule({

@@ -60,7 +60,7 @@ describe('CustomDatePickerComponent', () => {
     const initialMonth = component.viewDate().getMonth();
 
     component.nextMonth();
-    let newMonth = component.viewDate().getMonth();
+    const newMonth = component.viewDate().getMonth();
     expect(newMonth === (initialMonth + 1) % 12).toBeTrue();
 
     component.prevMonth();
