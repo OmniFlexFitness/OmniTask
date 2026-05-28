@@ -2,12 +2,18 @@ rules_version = '2';
 
 // Firebase Storage security rules for OmniTask.
 //
-// Writable paths require an authenticated caller plus image content-type and
-// size validation; the user folder additionally requires the caller to own it.
-// Reads are kept open to any signed-in user so download URLs work across the
-// app (icons, avatars, attachments are surfaced to anyone who can already see
-// the parent document anyway, and Firestore rules gate the documents
-// themselves).
+// We scope every writable path to the authenticated caller (their own user
+// folder) or to projects they belong to. Reads are kept open to any signed-in
+// user so download URLs work across the app (icons, avatars, attachments are
+// surfaced to anyone who can already see the parent document anyway, and
+// Firestore rules gate the documents themselves).
+//
+// NOTE: `isProjectMember` performs a cross-service Firestore read. This
+// requires the Firebase Storage Service Agent
+// (`service-{PROJECT_NUMBER}@gcp-sa-firebasestorage.iam.gserviceaccount.com`)
+// to hold `roles/datastore.viewer` on the project. Without that IAM grant
+// every project-scoped write/delete fails as `storage/unauthorized` (403)
+// even for the project owner.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -24,6 +30,21 @@ service firebase.storage {
       return request.resource.size < 4 * 1024 * 1024;
     }
 
+    // Membership of a project is authoritative in Firestore — only members
+    // (or the owner) may read/write that project's storage tree.
+    function isProjectMember(projectId) {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/projects/$(projectId)) &&
+        (
+          request.auth.uid == firestore.get(
+            /databases/(default)/documents/projects/$(projectId)
+          ).data.ownerId ||
+          request.auth.uid in firestore.get(
+            /databases/(default)/documents/projects/$(projectId)
+          ).data.memberIds
+        );
+    }
+
     // User-owned uploads (avatars, personal attachments).
     match /users/{userId}/{allPaths=**} {
       allow read: if isSignedIn();
@@ -34,24 +55,11 @@ service firebase.storage {
       allow delete: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // Project icons and cover images.
-    //
-    // We intentionally authorize on `isSignedIn()` alone (plus image + size
-    // validation) rather than doing a cross-service firestore.get() into the
-    // project document to check ownerId/memberIds. Cross-service Storage ->
-    // Firestore rule reads were the cause of icon uploads failing with
-    // `storage/unauthorized` (403) even for the project owner — see the
-    // regression where this path was the only one using a cross-service read
-    // and the only one failing. Reads here are already open to every signed-in
-    // user, and the project documents themselves remain gated by Firestore
-    // rules, so this matches the app's existing access posture for an internal
-    // team tool. If membership-scoped writes are needed later, enforce them
-    // server-side (callable Function / signed upload token), not via a
-    // cross-service rule.
+    // Project icons and cover images, scoped to project membership.
     match /projects/{projectId}/{allPaths=**} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && isImage() && withinSizeLimit();
-      allow delete: if isSignedIn();
+      allow write: if isProjectMember(projectId) && isImage() && withinSizeLimit();
+      allow delete: if isProjectMember(projectId);
     }
 
     // Default deny — anything outside the namespaces above is rejected.
