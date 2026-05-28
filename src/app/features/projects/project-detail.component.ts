@@ -178,7 +178,6 @@ export class ProjectDetailComponent implements OnDestroy {
   // Event Handlers
   onProjectUpdated() {
     // Firestore subscription handles data updates
-    console.log('Project updated');
   }
 
   onProjectDeleted() {

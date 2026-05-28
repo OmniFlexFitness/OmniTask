@@ -180,7 +180,6 @@ export class CustomDatePickerComponent implements ControlValueAccessor {
           this.writeValue(val);
         }
       },
-      { allowSignalWrites: true },
     );
   }
 
