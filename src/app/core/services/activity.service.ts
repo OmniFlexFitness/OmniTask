@@ -43,11 +43,27 @@ export class ActivityService {
 
     if (messages.length === 0) return;
 
+    await this.appendEntry(taskId, user.uid, user.displayName || user.email || 'User', messages.join('; '));
+  }
+
+  async logCommentAdded(taskId: string): Promise<void> {
+    const user = this.auth.currentUserSig();
+    if (!user) return;
+
+    await this.appendEntry(taskId, user.uid, user.displayName || user.email || 'User', 'added a comment');
+  }
+
+  private async appendEntry(
+    taskId: string,
+    actorId: string,
+    actorName: string,
+    message: string,
+  ): Promise<void> {
     await addDoc(collection(this.firestore, `tasks/${taskId}/activity`), {
       taskId,
-      actorId: user.uid,
-      actorName: user.displayName || user.email,
-      message: messages.join('; '),
+      actorId,
+      actorName,
+      message,
       createdAt: new Date(),
     });
   }

@@ -28,7 +28,11 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs text-slate-400 mb-1">When field</label>
-          <select [(ngModel)]="newField" class="ofx-input text-sm w-full">
+          <select
+            [(ngModel)]="newField"
+            (ngModelChange)="onTriggerFieldChange()"
+            class="ofx-input text-sm w-full"
+          >
             @for (f of fieldOptions; track f) {
               <option [value]="f">{{ f }}</option>
             }
@@ -36,7 +40,26 @@
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-1">Equals</label>
-          <input type="text" [(ngModel)]="newValue" class="ofx-input text-sm w-full" />
+          @if (newField === 'status') {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              @for (opt of statusOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          } @else if (newField === 'priority') {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              @for (opt of priorityOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          } @else {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              <option value="">No Section</option>
+              @for (section of sectionOptions(); track section.id) {
+                <option [value]="section.id">{{ section.name }}</option>
+              }
+            </select>
+          }
         </div>
       </div>
 
@@ -49,25 +72,42 @@
 
         @if (newActionType === 'update_field') {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <select [(ngModel)]="newActionField" class="ofx-input text-sm w-full">
+            <select
+              [(ngModel)]="newActionField"
+              (ngModelChange)="onActionFieldChange()"
+              class="ofx-input text-sm w-full"
+            >
               @for (f of fieldOptions; track f) {
                 <option [value]="f">{{ f }}</option>
               }
             </select>
-            <input
-              type="text"
-              [(ngModel)]="newActionValue"
-              placeholder="New value"
-              class="ofx-input text-sm w-full"
-            />
+            @if (newActionField === 'status') {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                @for (opt of statusOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            } @else if (newActionField === 'priority') {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                @for (opt of priorityOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            } @else {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                <option value="">No Section</option>
+                @for (section of sectionOptions(); track section.id) {
+                  <option [value]="section.id">{{ section.name }}</option>
+                }
+              </select>
+            }
           </div>
         } @else {
-          <input
-            type="text"
-            [(ngModel)]="newSectionId"
-            placeholder="Section ID"
-            class="ofx-input text-sm w-full"
-          />
+          <select [(ngModel)]="newSectionId" class="ofx-input text-sm w-full">
+            @for (section of sectionOptions(); track section.id) {
+              <option [value]="section.id">{{ section.name }}</option>
+            }
+          </select>
         }
       </div>
 
@@ -93,12 +133,12 @@
         <div class="min-w-0">
           <div class="text-sm font-medium text-slate-200">{{ rule.name }}</div>
           <div class="text-xs text-slate-400 mt-1">
-            When {{ rule.field }} = "{{ rule.value }}" →
+            When {{ rule.field }} = "{{ fieldLabel(rule.field, rule.value) }}" →
             @for (action of rule.actions; track $index) {
               @if (action.type === 'move_section') {
-                move to section {{ action.sectionId }}
+                move to {{ fieldLabel('sectionId', action.sectionId ?? '') }}
               } @else {
-                set {{ action.field }} to "{{ action.value }}"
+                set {{ action.field }} to "{{ fieldLabel(action.field ?? 'status', action.value ?? '') }}"
               }
             }
           </div>

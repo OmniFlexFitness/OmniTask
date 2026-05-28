@@ -282,6 +282,7 @@ export class AuthService {
     );
     await revokeFn();
     this.hasOfflineAccess.set(false);
+    this.googleTasksAccessToken.set(null);
   }
 
   /**

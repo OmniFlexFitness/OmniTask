@@ -12,11 +12,13 @@ import {
 import { Observable } from 'rxjs';
 import { TaskComment } from '../models/collaboration.model';
 import { AuthService } from '../auth/auth.service';
+import { ActivityService } from './activity.service';
 
 @Injectable({ providedIn: 'root' })
 export class CommentService {
   private readonly firestore = inject(Firestore);
   private readonly auth = inject(AuthService);
+  private readonly activityService = inject(ActivityService);
   private readonly injector = inject(Injector);
 
   watchComments(taskId: string): Observable<TaskComment[]> {
@@ -42,6 +44,7 @@ export class CommentService {
       body: trimmed,
       createdAt: new Date(),
     });
+    void this.activityService.logCommentAdded(taskId);
   }
 
   async deleteComment(taskId: string, commentId: string): Promise<void> {

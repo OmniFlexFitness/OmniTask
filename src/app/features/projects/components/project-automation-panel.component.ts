@@ -1,4 +1,4 @@
-import { Component, input, output, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Project } from '../../../core/models/domain.model';
@@ -8,6 +8,18 @@ import {
   AutomationTriggerField,
 } from '../../../core/models/automation.model';
 import { AutomationService } from '../../../core/services/automation.service';
+
+const STATUS_OPTIONS = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'in-progress', label: 'In Progress' },
+  { value: 'done', label: 'Done' },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+];
 
 @Component({
   selector: 'app-project-automation-panel',
@@ -34,9 +46,27 @@ export class ProjectAutomationPanelComponent {
   newSectionId = '';
 
   readonly fieldOptions: AutomationTriggerField[] = ['status', 'priority', 'sectionId'];
+  readonly statusOptions = STATUS_OPTIONS;
+  readonly priorityOptions = PRIORITY_OPTIONS;
+
+  sectionOptions = computed(() => this.project().sections ?? []);
 
   rules(): AutomationRule[] {
     return this.project().automationRules ?? [];
+  }
+
+  fieldLabel(field: AutomationTriggerField, value: string): string {
+    if (field === 'status') {
+      return STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+    }
+    if (field === 'priority') {
+      return PRIORITY_OPTIONS.find((o) => o.value === value)?.label ?? value;
+    }
+    if (field === 'sectionId') {
+      if (!value) return 'No Section';
+      return this.sectionOptions().find((s) => s.id === value)?.name ?? value;
+    }
+    return value;
   }
 
   cancelAdd(): void {
@@ -46,6 +76,8 @@ export class ProjectAutomationPanelComponent {
 
   async addRule(): Promise<void> {
     if (!this.newName.trim() || !this.newValue.trim()) return;
+    if (this.newActionType === 'move_section' && !this.newSectionId.trim()) return;
+    if (this.newActionType === 'update_field' && !this.newActionValue.trim()) return;
 
     const action: AutomationAction =
       this.newActionType === 'move_section'
@@ -91,13 +123,25 @@ export class ProjectAutomationPanelComponent {
     this.projectChanged.emit();
   }
 
+  onTriggerFieldChange(): void {
+    if (this.newField === 'status') this.newValue = 'done';
+    else if (this.newField === 'priority') this.newValue = 'high';
+    else this.newValue = this.sectionOptions()[0]?.id ?? '';
+  }
+
+  onActionFieldChange(): void {
+    if (this.newActionField === 'status') this.newActionValue = 'todo';
+    else if (this.newActionField === 'priority') this.newActionValue = 'medium';
+    else this.newActionValue = this.sectionOptions()[0]?.id ?? '';
+  }
+
   private resetForm(): void {
     this.newName = '';
     this.newField = 'status';
-    this.newValue = '';
+    this.newValue = 'done';
     this.newActionType = 'update_field';
     this.newActionField = 'priority';
-    this.newActionValue = '';
-    this.newSectionId = '';
+    this.newActionValue = 'medium';
+    this.newSectionId = this.sectionOptions()[0]?.id ?? '';
   }
 }
