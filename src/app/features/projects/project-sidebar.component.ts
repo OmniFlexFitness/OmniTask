@@ -73,7 +73,6 @@ export class ProjectSidebarComponent {
     this.seeding.set(true);
     try {
       await this.seedService.seedSampleData();
-      console.log('Sample data loaded!');
     } catch (error) {
       console.error('Failed to load sample data:', error);
     } finally {

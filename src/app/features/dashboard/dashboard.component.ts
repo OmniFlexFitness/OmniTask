@@ -77,10 +77,7 @@ export class DashboardComponent {
   private async seedSampleDataIfNeeded() {
     this.seeding.set(true);
     try {
-      const seeded = await this.seedService.seedIfEmpty();
-      if (seeded) {
-        console.log('Sample data created for new user!');
-      }
+      await this.seedService.seedIfEmpty();
     } catch (err) {
       console.error('Failed to seed data:', err);
     } finally {

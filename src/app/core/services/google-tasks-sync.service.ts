@@ -316,9 +316,6 @@ export class GoogleTasksSyncService {
       }
     }
 
-    console.log(
-      `Sync result: ${added} added, ${updated} updated, ${pushed} pushed, ${linked} linked by title`,
-    );
     return { added, updated, pushed };
   }
 

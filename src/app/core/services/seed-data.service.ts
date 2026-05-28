@@ -347,6 +347,5 @@ export class SeedDataService {
 
     // Commit all data
     await batch.commit();
-    console.log('✅ Sample data seeded successfully!');
   }
 }

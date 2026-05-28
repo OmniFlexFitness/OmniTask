@@ -208,8 +208,6 @@ export class ProjectGoogleTasksSyncComponent implements OnInit {
         lastSyncDate,
       );
 
-      console.log(`Sync complete: ${result.added} added, ${result.updated} updated`);
-
       // Mark as synced and show result
       await this.projectService.updateProject(this.project().id, {
         syncStatus: 'synced',

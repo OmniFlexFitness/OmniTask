@@ -101,9 +101,6 @@ export class ContactsService {
       this.contactsCache$ = combineLatest([
         // 1. Cached contacts from Firestore (fast, primary source, user-scoped)
         from(this.fetchCachedContacts()).pipe(
-          tap((contacts) =>
-            console.log('[ContactsService] Firestore cache:', contacts.length, 'contacts'),
-          ),
           catchError((err) => {
             console.warn('Failed to fetch cached contacts:', err);
             return of([]);
@@ -111,9 +108,6 @@ export class ContactsService {
         ),
         // 2. Google Directory people (domain users) - primary source for team contacts
         this.googleContactsService.getDirectoryPeople().pipe(
-          tap((contacts) =>
-            console.log('[ContactsService] Google Directory:', contacts.length, 'contacts'),
-          ),
           map((contacts) => contacts.map((c) => this.mapGoogleContactToContact(c))),
           catchError((err) => {
             console.warn('[ContactsService] Google Directory failed:', err);
@@ -122,17 +116,11 @@ export class ContactsService {
         ),
         // 3. Google Contacts (personal contacts)
         this.googleContactsService.getContacts().pipe(
-          tap((contacts) =>
-            console.log('[ContactsService] Google Contacts:', contacts.length, 'contacts'),
-          ),
           map((contacts) => contacts.map((c) => this.mapGoogleContactToContact(c))),
           catchError(() => of([])),
         ),
         // 4. Other contacts inferred from interactions
         this.googleContactsService.getOtherContacts().pipe(
-          tap((contacts) =>
-            console.log('[ContactsService] Google Other Contacts:', contacts.length, 'contacts'),
-          ),
           map((contacts) => contacts.map((c) => this.mapGoogleContactToContact(c))),
           catchError((err) => {
             console.warn('[ContactsService] Google Other Contacts failed:', err);
@@ -242,7 +230,6 @@ export class ContactsService {
     try {
       const currentUser = this.authService.currentUserSig();
       if (!currentUser?.uid) {
-        console.log('No current user, skipping cached contacts fetch');
         return [];
       }
 
@@ -281,7 +268,6 @@ export class ContactsService {
     try {
       const currentUser = this.authService.currentUserSig();
       if (!currentUser?.uid) {
-        console.log('No current user, skipping contacts sync');
         return;
       }
 
@@ -305,7 +291,6 @@ export class ContactsService {
       }
 
       await batch.commit();
-      console.log(`Synced ${contactsToSync.length} contacts to Firestore (user-scoped)`);
     } catch (e) {
       console.error('Error syncing contacts to Firestore:', e);
       throw e;
