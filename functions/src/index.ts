@@ -455,26 +455,22 @@ export const scheduledGoogleTasksSync = onSchedule(
     for (const projectDoc of projectsSnapshot.docs) {
       const project = { id: projectDoc.id, ...projectDoc.data() } as Project & { id: string };
 
-      // Get user's OAuth token (you'd need to implement token storage)
-      const userDoc = await db.collection('users').doc(project.ownerId).get();
-      const userData = userDoc.data();
+      const refreshToken = await getStoredRefreshToken(project.ownerId);
 
-      if (!userData?.googleTasksRefreshToken) {
+      if (!refreshToken) {
         console.log(`No refresh token for user ${project.ownerId}, skipping project ${project.id}`);
         failed++;
         continue;
       }
 
       try {
-        // Refresh the access token using the stored refresh token
-        // Access secrets via .value() method
         const oauth2Client = new google.auth.OAuth2(
           googleClientId.value(),
           googleClientSecret.value(),
         );
 
         oauth2Client.setCredentials({
-          refresh_token: userData.googleTasksRefreshToken,
+          refresh_token: refreshToken,
         });
 
         const tokens = await oauth2Client.refreshAccessToken();
@@ -546,6 +542,165 @@ export const manualGoogleTasksSync = onCall<{ projectId: string; accessToken: st
     const result = await syncProject(project, accessToken);
 
     return result;
+  },
+);
+
+const GOOGLE_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/contacts.readonly',
+  'https://www.googleapis.com/auth/contacts.other.readonly',
+  'https://www.googleapis.com/auth/directory.readonly',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
+];
+
+async function getStoredRefreshToken(uid: string): Promise<string | null> {
+  const legacyUser = await db.collection('users').doc(uid).get();
+  const legacyToken = legacyUser.data()?.googleTasksRefreshToken;
+  if (legacyToken) return legacyToken as string;
+
+  const privateDoc = await db.collection('users').doc(uid).collection('private').doc('googleOAuth').get();
+  const token = privateDoc.data()?.refreshToken;
+  return typeof token === 'string' && token.length > 0 ? token : null;
+}
+
+async function storeRefreshToken(uid: string, refreshToken: string): Promise<void> {
+  const now = FieldValue.serverTimestamp();
+  await db.collection('users').doc(uid).collection('private').doc('googleOAuth').set(
+    {
+      refreshToken,
+      updatedAt: now,
+    },
+    { merge: true },
+  );
+  await db.collection('users').doc(uid).update({
+    hasGoogleTasksOfflineAccess: true,
+    googleTasksOfflineAccessGrantedAt: now,
+    googleTasksRefreshToken: FieldValue.delete(),
+  });
+}
+
+/**
+ * Returns the public OAuth client ID for the redirect-based offline access flow.
+ */
+export const getGoogleOAuthConfig = onCall<void>(
+  {
+    secrets: [googleClientId],
+    memory: '128MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const clientId = googleClientId.value();
+    if (!clientId) {
+      throw new HttpsError('failed-precondition', 'Google OAuth client ID is not configured');
+    }
+    return { clientId, scopes: GOOGLE_OAUTH_SCOPES };
+  },
+);
+
+/**
+ * Exchange an authorization code for tokens and store the refresh token server-side.
+ */
+export const exchangeGoogleOAuthCode = onCall<{ code: string; redirectUri: string }>(
+  {
+    secrets: [googleClientId, googleClientSecret],
+    memory: '256MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const { code, redirectUri } = request.data ?? {};
+    if (!code || !redirectUri) {
+      throw new HttpsError('invalid-argument', 'Missing code or redirectUri');
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      googleClientId.value(),
+      googleClientSecret.value(),
+      redirectUri,
+    );
+
+    const { tokens } = await oauth2Client.getToken(code);
+    if (!tokens.refresh_token) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Google did not return a refresh token. Revoke prior access and try again with consent.',
+      );
+    }
+    if (!tokens.access_token) {
+      throw new HttpsError('internal', 'Google did not return an access token');
+    }
+
+    await storeRefreshToken(request.auth.uid, tokens.refresh_token);
+
+    return {
+      accessToken: tokens.access_token,
+      expiresIn: tokens.expiry_date ?? null,
+    };
+  },
+);
+
+/**
+ * Refresh a short-lived access token using the server-stored refresh token.
+ */
+export const refreshGoogleAccessToken = onCall<void>(
+  {
+    secrets: [googleClientId, googleClientSecret],
+    memory: '256MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const refreshToken = await getStoredRefreshToken(request.auth.uid);
+    if (!refreshToken) {
+      throw new HttpsError('failed-precondition', 'No offline Google access configured');
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      googleClientId.value(),
+      googleClientSecret.value(),
+    );
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+    const tokens = await oauth2Client.refreshAccessToken();
+    const accessToken = tokens.credentials.access_token;
+    if (!accessToken) {
+      throw new HttpsError('internal', 'Failed to refresh Google access token');
+    }
+
+    return {
+      accessToken,
+      expiresIn: tokens.credentials.expiry_date ?? null,
+    };
+  },
+);
+
+/**
+ * Revoke stored offline Google access for the signed-in user.
+ */
+export const revokeGoogleOfflineAccess = onCall<void>(
+  {
+    memory: '128MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    await db.collection('users').doc(request.auth.uid).collection('private').doc('googleOAuth').delete();
+    await db.collection('users').doc(request.auth.uid).update({
+      hasGoogleTasksOfflineAccess: false,
+      googleTasksOfflineAccessGrantedAt: FieldValue.delete(),
+      googleTasksRefreshToken: FieldValue.delete(),
+    });
+
+    return { success: true };
   },
 );
 

@@ -39,6 +39,7 @@ import { TaskSubtasksComponent } from './components/task-subtasks';
 import { TaskTagsComponent } from './components/task-tags';
 import { TaskAiActionsComponent } from './components/task-ai-actions';
 import { TaskPointValueInputComponent } from './components/task-point-value-input';
+import { TaskCollaborationPanelComponent } from './components/task-collaboration-panel.component';
 
 @Component({
   selector: 'app-task-detail-modal',
@@ -55,6 +56,7 @@ import { TaskPointValueInputComponent } from './components/task-point-value-inpu
     TaskTagsComponent,
     TaskAiActionsComponent,
     TaskPointValueInputComponent,
+    TaskCollaborationPanelComponent,
   ],
   templateUrl: './task-detail-modal.component.html',
   styleUrls: ['./task-detail-modal.component.css'],

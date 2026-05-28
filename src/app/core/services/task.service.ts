@@ -26,6 +26,8 @@ import { GoogleTasksSyncService } from './google-tasks-sync.service';
 import { GoogleSheetsSyncService } from './google-sheets-sync.service';
 import { ProjectService } from './project.service';
 import { PermissionsService } from './permissions.service';
+import { ActivityService } from './activity.service';
+import { AutomationService } from './automation.service';
 
 @Injectable({
   providedIn: 'root',
@@ -39,6 +41,8 @@ export class TaskService {
   private projectService = inject(ProjectService);
   private permissions = inject(PermissionsService);
   private injector = inject(Injector);
+  /** Prevents automation-triggered updates from re-entering side effects. */
+  private sideEffectsDepth = 0;
   private tasksCollection = collection(this.firestore, 'tasks');
 
   // Loading state for UI feedback
@@ -612,12 +616,38 @@ export class TaskService {
 
       // Optional Google Sheets push — never blocks the update
       void this.pushTaskToSheet(id);
+
+      if (taskDoc && this.sideEffectsDepth === 0) {
+        const updatedTask = { ...taskDoc, ...reconciled } as Task;
+        void this.runUpdateSideEffects(taskDoc, reconciled, updatedTask);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update task';
       this.error.set(message);
       throw err;
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private async runUpdateSideEffects(
+    before: Task,
+    patch: Partial<Task>,
+    after: Task,
+  ): Promise<void> {
+    this.sideEffectsDepth++;
+    try {
+      const activityService = this.injector.get(ActivityService);
+      const automationService = this.injector.get(AutomationService);
+      await activityService.logTaskChanges(before.id, before, patch);
+      const project = await this.projectService.getProject(before.projectId);
+      if (project) {
+        await automationService.evaluateTaskUpdate(project, before, after);
+      }
+    } catch (err) {
+      console.warn('Task update side effects failed:', err);
+    } finally {
+      this.sideEffectsDepth--;
     }
   }
 

@@ -165,6 +165,10 @@
         [(selectedTags)]="selectedTags"
       ></app-task-tags>
 
+      @if (task()?.id) {
+        <app-task-collaboration-panel [taskId]="task()!.id"></app-task-collaboration-panel>
+      }
+
     </div>
 
     <!-- Footer Actions -->
