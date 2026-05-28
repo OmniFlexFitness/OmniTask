@@ -1,3 +1,5 @@
+@import 'vis-timeline/styles/vis-timeline-graph2d.css';
+
 .timeline-container {
   width: 100%;
   height: 100%;
@@ -14,37 +16,37 @@
 }
 
 /* Vis-Timeline overrides for cyberpunk dark theme */
-::ng-deep .vis-timeline {
+.vis-timeline {
   border: none;
   background: transparent;
   font-family: inherit;
 }
 
-::ng-deep .vis-panel.vis-background {
+.vis-panel.vis-background {
   background-color: transparent;
 }
 
-::ng-deep .vis-panel.vis-bottom,
-::ng-deep .vis-panel.vis-center,
-::ng-deep .vis-panel.vis-left,
-::ng-deep .vis-panel.vis-right,
-::ng-deep .vis-panel.vis-top {
+.vis-panel.vis-bottom,
+.vis-panel.vis-center,
+.vis-panel.vis-left,
+.vis-panel.vis-right,
+.vis-panel.vis-top {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-::ng-deep .vis-time-axis .vis-text {
+.vis-time-axis .vis-text {
   color: #94a3b8; /* slate-400 */
 }
 
-::ng-deep .vis-time-axis .vis-grid.vis-minor {
+.vis-time-axis .vis-grid.vis-minor {
   border-color: rgba(255, 255, 255, 0.05);
 }
 
-::ng-deep .vis-time-axis .vis-grid.vis-major {
+.vis-time-axis .vis-grid.vis-major {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-::ng-deep .vis-labelset .vis-label {
+.vis-labelset .vis-label {
   color: #e2e8f0;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   display: flex;
@@ -52,7 +54,7 @@
   padding: 0 10px;
 }
 
-::ng-deep .vis-item {
+.vis-item {
   border-radius: 6px;
   border-width: 1px;
   border-style: solid;
@@ -62,27 +64,27 @@
   backdrop-filter: blur(4px);
 }
 
-::ng-deep .vis-item.vis-selected {
+.vis-item.vis-selected {
   border-color: #f8fafc !important;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
   z-index: 10;
 }
 
-::ng-deep .vis-item .vis-item-content {
+.vis-item .vis-item-content {
   padding: 6px 10px;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
 }
 
-::ng-deep .vis-item .vis-drag-left,
-::ng-deep .vis-item .vis-drag-right {
+.vis-item .vis-drag-left,
+.vis-item .vis-drag-right {
   width: 8px;
   background: rgba(255, 255, 255, 0.1);
 }
 
-::ng-deep .vis-item .vis-drag-left:hover,
-::ng-deep .vis-item .vis-drag-right:hover {
+.vis-item .vis-drag-left:hover,
+.vis-item .vis-drag-right:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 

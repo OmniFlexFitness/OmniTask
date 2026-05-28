@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./core/auth/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./core/auth/oauth-callback.component').then((m) => m.OAuthCallbackComponent),
+  },
+  {
     path: 'demo/board',
     loadComponent: () =>
       import('./features/demo/board-demo.component').then((m) => m.BoardDemoComponent),
@@ -60,5 +65,9 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: '' },
+  {
+    path: '**',
+    loadComponent: () =>
+      import('./shared/components/not-found.component').then((m) => m.NotFoundComponent),
+  },
 ];

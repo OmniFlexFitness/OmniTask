@@ -69,6 +69,32 @@
 
   <hr class="border-white/10" />
 
+  <!-- Export -->
+  <section class="ofx-settings-section">
+    <h3 class="ofx-section-title">Export</h3>
+    <p class="mt-1 text-xs text-slate-400">
+      Download a snapshot of this project's tasks for backup or migration.
+    </p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="omni-glitch-btn px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-200 text-xs font-semibold hover:bg-cyan-500/20 transition-all"
+        (click)="exportTasksCsv()"
+      >
+        Export CSV
+      </button>
+      <button
+        type="button"
+        class="omni-glitch-btn px-3 py-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 text-violet-200 text-xs font-semibold hover:bg-violet-500/20 transition-all"
+        (click)="exportTasksJson()"
+      >
+        Export JSON
+      </button>
+    </div>
+  </section>
+
+  <hr class="border-white/10" />
+
   <!-- Danger Zone -->
   <app-project-danger-zone
     [project]="project()"

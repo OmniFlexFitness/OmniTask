@@ -11,8 +11,6 @@ import {
   Firestore,
   collection,
   doc,
-  arrayRemove,
-  arrayUnion,
   getDoc,
   getDocs,
   query,
@@ -20,6 +18,7 @@ import {
   updateDoc,
   where,
 } from '@angular/fire/firestore';
+import { arrayRemove, arrayUnion } from 'firebase/firestore';
 import { Router } from '@angular/router';
 import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
 import { SUPER_ADMIN_EMAIL } from '../constants';
@@ -386,7 +385,7 @@ export class AuthService {
         status: 'accepted',
         acceptedAt: new Date(),
         acceptedByUid: user.uid,
-      }).catch((err) => console.warn('Failed to mark invite accepted:', err));
+      }).catch((err: unknown) => console.warn('Failed to mark invite accepted:', err));
     }
   }
 

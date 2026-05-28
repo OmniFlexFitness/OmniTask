@@ -30,6 +30,54 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
+          <!-- Search -->
+          <div class="relative">
+            <input
+              id="task-search-input"
+              type="search"
+              class="w-56 sm:w-64 rounded-lg bg-slate-900/50 border border-white/10 px-3 py-1.5 pr-8 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+              placeholder="Search tasks…"
+              [value]="searchQuery()"
+              (input)="searchQuery.set(($any($event.target).value ?? ''))"
+            />
+            @if (searchQuery().trim()) {
+              <button
+                type="button"
+                class="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                aria-label="Clear search"
+                (click)="searchQuery.set('')"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            } @else {
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            }
+          </div>
+
           <!-- Selection Mode Toggle -->
           <button
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all border"

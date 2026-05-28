@@ -113,11 +113,15 @@
                 ></app-task-calendar-view>
               }
               @case ('timeline') {
-                <app-task-timeline-view
-                  [tasks]="tasks()"
-                  [project]="currentProject()!"
-                  (taskClick)="openTaskDetail($event)"
-                ></app-task-timeline-view>
+                @defer {
+                  <app-task-timeline-view
+                    [tasks]="tasks()"
+                    [project]="currentProject()!"
+                    (taskClick)="openTaskDetail($event)"
+                  />
+                } @placeholder {
+                  <p class="p-4 text-sm text-white/50">Loading timeline…</p>
+                }
               }
             }
           }

@@ -1,9 +1,7 @@
 import {
   Component,
-  computed,
   inject,
   signal,
-  effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -22,6 +20,7 @@ import {
 } from '../../core/services/google-sheets-sync.service';
 import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
+import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
 import { ProjectFormModalComponent } from '../projects/project-form-modal.component';
@@ -29,7 +28,6 @@ import { CustomFieldManagerComponent } from '../projects/components/custom-field
 import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
-import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 import { DashboardHeaderComponent } from './components/dashboard-header';
@@ -73,7 +71,6 @@ export class DashboardComponent {
   mobileSidebarOpen = signal(false);
 
   constructor() {
-    // Seed sample data if user has no projects
     this.seedSampleDataIfNeeded();
   }
 

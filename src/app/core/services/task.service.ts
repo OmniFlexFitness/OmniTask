@@ -278,6 +278,14 @@ export class TaskService {
   }
 
   /**
+   * Export-friendly variant of `getTasksByProject()` that resolves once.
+   * Useful for CSV/JSON downloads where we want a single snapshot.
+   */
+  async getTasksByProjectOnce(projectId: string): Promise<Task[]> {
+    return firstValueFrom(this.getTasksByProject(projectId));
+  }
+
+  /**
    * Get subtasks for a specific parent task
    */
   getSubtasks(parentId: string): Observable<Task[]> {
