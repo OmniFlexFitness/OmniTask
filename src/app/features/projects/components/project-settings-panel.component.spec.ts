@@ -40,6 +40,24 @@ class MockProjectGoogleTasksSync {
   projectChanged = output<void>();
 }
 
+@Component({ selector: 'app-project-google-sheets-sync', standalone: true, template: '' })
+class MockProjectGoogleSheetsSync {
+  project = input<Project>();
+  projectChanged = output<void>();
+}
+
+@Component({ selector: 'app-point-scale-manager', standalone: true, template: '' })
+class MockPointScaleManager {
+  project = input<Project>();
+  projectChanged = output<void>();
+}
+
+@Component({ selector: 'app-project-automation-panel', standalone: true, template: '' })
+class MockProjectAutomationPanel {
+  project = input<Project>();
+  projectChanged = output<void>();
+}
+
 @Component({ selector: 'app-project-danger-zone', standalone: true, template: '' })
 class MockProjectDangerZone {
   project = input<Project>();
@@ -79,6 +97,9 @@ describe('ProjectSettingsPanelComponent', () => {
             MockCustomFieldManager,
             MockProjectMemberManager,
             MockProjectGoogleTasksSync,
+            MockProjectGoogleSheetsSync,
+            MockPointScaleManager,
+            MockProjectAutomationPanel,
             MockProjectDangerZone,
           ],
         },
