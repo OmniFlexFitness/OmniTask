@@ -227,6 +227,13 @@ export interface Task {
   googleSheetId?: string; // Spreadsheet this task is mirrored in
   googleSheetRowId?: string; // Stable ID written to the sheet row (task.id by default)
   isGoogleSheetTask?: boolean; // True if the task originated from a Google Sheet
+  /**
+   * Last row OmniTask believes it wrote to the linked sheet for this task.
+   * Used to support field-level merge when the sheet and app both changed
+   * different columns within the same polling window.
+   */
+  sheetLastSyncedRow?: string[];
+  sheetLastSyncedAt?: FirestoreDate;
 }
 
 /**

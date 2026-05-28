@@ -56,6 +56,9 @@ export class TaskListViewComponent {
   // Filter state - hide completed tasks older than 30 minutes by default
   showCompleted = signal(false);
 
+  // Text search (client-side)
+  searchQuery = signal('');
+
   // Selection mode for bulk actions
   selectionMode = signal(false);
   selectedTaskIds = signal<Set<string>>(new Set());
@@ -96,18 +99,28 @@ export class TaskListViewComponent {
   sortField = signal<'title' | 'dueDate' | 'priority' | 'status'>('title');
   sortDirection = signal<'asc' | 'desc'>('asc');
 
-  // Filter tasks based on completed status
+  // Filter tasks based on completed status + text search
   filteredTasks = computed(() => {
     const allTasks = this.tasks();
+    const q = this.searchQuery().trim().toLowerCase();
+
+    const passSearch = (task: Task) => {
+      if (!q) return true;
+      const title = (task.title ?? '').toLowerCase();
+      const desc = (task.description ?? '').toLowerCase();
+      return title.includes(q) || desc.includes(q);
+    };
+
+    const searched = q ? allTasks.filter(passSearch) : allTasks;
 
     if (this.showCompleted()) {
-      return allTasks; // Show all tasks
+      return searched; // Show all tasks (post-search)
     }
 
     const now = new Date();
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
-    return allTasks.filter((task) => {
+    return searched.filter((task) => {
       if (task.status !== 'done') return true; // Always show non-completed tasks
 
       // Show recently completed tasks (within 30 min or completed during this session)
@@ -128,6 +141,9 @@ export class TaskListViewComponent {
 
   // Count hidden completed tasks
   hiddenCompletedCount = computed(() => {
+    // If search is active, "hidden completed" becomes ambiguous; keep the old
+    // meaning: items removed by the completed filter (not by search).
+    if (this.searchQuery().trim()) return 0;
     return this.tasks().length - this.filteredTasks().length;
   });
 

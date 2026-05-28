@@ -369,10 +369,13 @@ export class GoogleSheetsSyncService {
 
     // Mark each task with its sheet linkage for future syncs, in one atomic batch.
     await this.commitInBatches(tasks, (batch, t) => {
+      const row = this.transformToSheetRow(t, sections);
       batch.update(doc(this.firestore, `tasks/${t.id}`), {
         googleSheetId: spreadsheetId,
         googleSheetRowId: t.id,
         isGoogleSheetTask: true,
+        sheetLastSyncedRow: row,
+        sheetLastSyncedAt: new Date(),
         updatedAt: new Date(),
       });
     });
@@ -455,6 +458,37 @@ export class GoogleSheetsSyncService {
       if (av !== bv) return false;
     }
     return true;
+  }
+
+  private editableColumnIndices(): number[] {
+    const skip = new Set([headerIndex('ID'), headerIndex('Updated At')]);
+    const out: number[] = [];
+    for (let i = 0; i < SHEET_HEADERS.length; i++) {
+      if (!skip.has(i)) out.push(i);
+    }
+    return out;
+  }
+
+  private mergeRowFieldLevel(options: {
+    sheetRow: string[];
+    expectedRow: string[];
+    lastSyncedRow: string[];
+  }): string[] {
+    const { sheetRow, expectedRow, lastSyncedRow } = options;
+    const merged = [...expectedRow];
+    for (const idx of this.editableColumnIndices()) {
+      const sheetVal = (sheetRow[idx] ?? '').toString();
+      const expectedVal = (expectedRow[idx] ?? '').toString();
+      const lastVal = (lastSyncedRow[idx] ?? '').toString();
+      const sheetChanged = sheetVal !== lastVal;
+      const appChanged = expectedVal !== lastVal;
+
+      // If only one side changed a column since the last sync snapshot, take it.
+      // If both changed the same column, prefer the sheet (predictable resolution).
+      if (sheetChanged && !appChanged) merged[idx] = sheetVal;
+      else if (sheetChanged && appChanged) merged[idx] = sheetVal;
+    }
+    return merged;
   }
 
   async syncProjectWithSheet(
@@ -562,11 +596,48 @@ export class GoogleSheetsSyncService {
             values: expected,
           });
         } else {
-          // Sheet has user edits we haven't pulled. Update the Firestore task.
+          // Sheet has user edits we haven't pulled. If we have a last-synced
+          // snapshot, do a field-level merge to preserve concurrent edits to
+          // different columns within the polling window.
+          const lastSynced = existing.sheetLastSyncedRow;
+          const mergedRow =
+            Array.isArray(lastSynced) && lastSynced.length > 0
+              ? this.mergeRowFieldLevel({
+                  sheetRow: row,
+                  expectedRow: expected,
+                  lastSyncedRow: lastSynced,
+                })
+              : row;
+
+          // If we merged, write the merged row back so the sheet reflects the
+          // resolution (and Updated At advances).
+          if (mergedRow !== row) {
+            mergedRow[headerIndex('Updated At')] = new Date().toISOString();
+            ops.push({
+              kind: 'sheet-update',
+              taskId: existing.id,
+              sheetRowIndex: i + 2,
+              values: mergedRow,
+            });
+          }
+
+          const mergedParsed = this.transformFromSheetRow(
+            mergedRow,
+            projectId,
+            spreadsheetId,
+            sections,
+          );
+
+          // Update the Firestore task (and store the last-synced row snapshot).
           ops.push({
             kind: 'app-update',
             id: existing.id,
-            data: { ...parsed.data, googleSheetRowId: existing.id },
+            data: {
+              ...mergedParsed.data,
+              googleSheetRowId: existing.id,
+              sheetLastSyncedRow: mergedRow,
+              sheetLastSyncedAt: new Date(),
+            },
           });
         }
       } else {
@@ -576,7 +647,13 @@ export class GoogleSheetsSyncService {
           kind: 'create',
           id: newRef.id,
           sheetRowIndex: i + 2,
-          data: { ...parsed.data, googleSheetRowId: newRef.id, order: i },
+          data: {
+            ...parsed.data,
+            googleSheetRowId: newRef.id,
+            order: i,
+            sheetLastSyncedRow: row,
+            sheetLastSyncedAt: new Date(),
+          },
         });
       }
     }
