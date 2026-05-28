@@ -13,6 +13,13 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { GoogleSheetsService, BatchUpdateValuesData } from './google-sheets.service';
 import { Task, Project, Section } from '../models/domain.model';
+import { SHEET_HEADERS, sheetHeaderIndex } from './google-sheets.constants';
+import {
+  dataSheetCellsMatch,
+  mergeSheetRowFieldLevel,
+} from './google-sheets-merge.util';
+
+export { SHEET_HEADERS } from './google-sheets.constants';
 
 /**
  * Default tab name used when a brand-new spreadsheet is created for a project,
@@ -20,43 +27,10 @@ import { Task, Project, Section } from '../models/domain.model';
  */
 export const DEFAULT_SHEET_TAB_NAME = 'Tasks';
 
-/**
- * Column order written to the spreadsheet. Row 1 holds these headers; each
- * subsequent row is one task.
- *
- * Layout goals:
- *   - Human-readable, user-editable columns come first (Title, Section, Order,
- *     Status, Priority, Due Date, Assignees, Tags, Description). These are the
- *     columns a user actually opens the sheet to edit.
- *   - Bookkeeping columns that OmniTask owns come last (ID, Updated At). ID is
- *     an opaque Firestore doc ID; Updated At is a machine-managed timestamp.
- *   - "Section" holds the section's human name (e.g. "To Do"), not its ID, so
- *     users can reassign a task by typing another section name directly.
- *   - "Order" is the 0-based position within its section; editing it reorders
- *     the task in OmniTask's board/list views on the next sync.
- *
- * If you change this list, the schema-migration path in syncProjectWithSheet
- * will detect the mismatch against existing linked sheets and rewrite them.
- */
-export const SHEET_HEADERS = [
-  'Title',
-  'Section',
-  'Order',
-  'Status',
-  'Priority',
-  'Due Date',
-  'Assignees',
-  'Tags',
-  'Description',
-  'ID',
-  'Updated At',
-] as const;
-
 type SheetColumn = (typeof SHEET_HEADERS)[number];
 
-/** 0-based column index for the given header name. */
 function headerIndex(name: SheetColumn): number {
-  return SHEET_HEADERS.indexOf(name);
+  return sheetHeaderIndex(name);
 }
 
 export interface SheetSyncResult {
@@ -450,45 +424,11 @@ export class GoogleSheetsSyncService {
    * everything a user can edit" — in which case a sync is a no-op.
    */
   private dataCellsMatch(a: string[], b: string[]): boolean {
-    const skip = new Set([headerIndex('ID'), headerIndex('Updated At')]);
-    for (let i = 0; i < SHEET_HEADERS.length; i++) {
-      if (skip.has(i)) continue;
-      const av = (a[i] ?? '').toString();
-      const bv = (b[i] ?? '').toString();
-      if (av !== bv) return false;
-    }
-    return true;
+    return dataSheetCellsMatch(a, b);
   }
 
-  private editableColumnIndices(): number[] {
-    const skip = new Set([headerIndex('ID'), headerIndex('Updated At')]);
-    const out: number[] = [];
-    for (let i = 0; i < SHEET_HEADERS.length; i++) {
-      if (!skip.has(i)) out.push(i);
-    }
-    return out;
-  }
-
-  private mergeRowFieldLevel(options: {
-    sheetRow: string[];
-    expectedRow: string[];
-    lastSyncedRow: string[];
-  }): string[] {
-    const { sheetRow, expectedRow, lastSyncedRow } = options;
-    const merged = [...expectedRow];
-    for (const idx of this.editableColumnIndices()) {
-      const sheetVal = (sheetRow[idx] ?? '').toString();
-      const expectedVal = (expectedRow[idx] ?? '').toString();
-      const lastVal = (lastSyncedRow[idx] ?? '').toString();
-      const sheetChanged = sheetVal !== lastVal;
-      const appChanged = expectedVal !== lastVal;
-
-      // If only one side changed a column since the last sync snapshot, take it.
-      // If both changed the same column, prefer the sheet (predictable resolution).
-      if (sheetChanged && !appChanged) merged[idx] = sheetVal;
-      else if (sheetChanged && appChanged) merged[idx] = sheetVal;
-    }
-    return merged;
+  private hasSyncSnapshot(row: string[] | undefined): row is string[] {
+    return Array.isArray(row) && row.length > 0;
   }
 
   async syncProjectWithSheet(
@@ -582,36 +522,29 @@ export class GoogleSheetsSyncService {
           (sheetTs === null || taskTs.getTime() - sheetTs.getTime() > TS_TOLERANCE_MS);
 
         if (isMatch) {
-          // Row already reflects the app — do nothing.
+          // Backfill snapshot for tasks linked before field-level merge shipped.
+          if (!this.hasSyncSnapshot(existing.sheetLastSyncedRow)) {
+            ops.push({
+              kind: 'app-update',
+              id: existing.id,
+              data: { sheetLastSyncedRow: expected, sheetLastSyncedAt: new Date() },
+            });
+          }
           continue;
         }
 
-        if (taskNewer) {
-          // App has changes the sheet hasn't received yet. Overwrite the row
-          // with what the task should look like; Firestore stays untouched.
-          ops.push({
-            kind: 'sheet-update',
-            taskId: existing.id,
-            sheetRowIndex: i + 2,
-            values: expected,
+        if (this.hasSyncSnapshot(existing.sheetLastSyncedRow)) {
+          const mergedRow = mergeSheetRowFieldLevel({
+            sheetRow: row,
+            expectedRow: expected,
+            lastSyncedRow: existing.sheetLastSyncedRow,
+            conflictPreference: taskNewer ? 'app' : 'sheet',
           });
-        } else {
-          // Sheet has user edits we haven't pulled. If we have a last-synced
-          // snapshot, do a field-level merge to preserve concurrent edits to
-          // different columns within the polling window.
-          const lastSynced = existing.sheetLastSyncedRow;
-          const mergedRow =
-            Array.isArray(lastSynced) && lastSynced.length > 0
-              ? this.mergeRowFieldLevel({
-                  sheetRow: row,
-                  expectedRow: expected,
-                  lastSyncedRow: lastSynced,
-                })
-              : row;
 
-          // If we merged, write the merged row back so the sheet reflects the
-          // resolution (and Updated At advances).
-          if (mergedRow !== row) {
+          const sheetNeedsUpdate = !this.dataCellsMatch(mergedRow, row);
+          const appNeedsUpdate = !this.dataCellsMatch(mergedRow, expected);
+
+          if (sheetNeedsUpdate) {
             mergedRow[headerIndex('Updated At')] = new Date().toISOString();
             ops.push({
               kind: 'sheet-update',
@@ -621,21 +554,57 @@ export class GoogleSheetsSyncService {
             });
           }
 
+          if (appNeedsUpdate || sheetNeedsUpdate) {
+            const mergedParsed = this.transformFromSheetRow(
+              mergedRow,
+              projectId,
+              spreadsheetId,
+              sections,
+            );
+            ops.push({
+              kind: 'app-update',
+              id: existing.id,
+              data: {
+                ...mergedParsed.data,
+                googleSheetRowId: existing.id,
+                sheetLastSyncedRow: mergedRow,
+                sheetLastSyncedAt: new Date(),
+              },
+            });
+          }
+          continue;
+        }
+
+        // No snapshot yet — fall back to whole-row direction-aware merge.
+        if (taskNewer) {
+          ops.push({
+            kind: 'sheet-update',
+            taskId: existing.id,
+            sheetRowIndex: i + 2,
+            values: expected,
+          });
+          ops.push({
+            kind: 'app-update',
+            id: existing.id,
+            data: {
+              sheetLastSyncedRow: expected,
+              sheetLastSyncedAt: new Date(),
+            },
+          });
+        } else {
           const mergedParsed = this.transformFromSheetRow(
-            mergedRow,
+            row,
             projectId,
             spreadsheetId,
             sections,
           );
-
-          // Update the Firestore task (and store the last-synced row snapshot).
           ops.push({
             kind: 'app-update',
             id: existing.id,
             data: {
               ...mergedParsed.data,
               googleSheetRowId: existing.id,
-              sheetLastSyncedRow: mergedRow,
+              sheetLastSyncedRow: row,
               sheetLastSyncedAt: new Date(),
             },
           });
@@ -916,8 +885,30 @@ export class GoogleSheetsSyncService {
   }
 
   /**
+   * Read the full row values for a 1-based sheet row index.
+   */
+  private async getRowValues(
+    spreadsheetId: string,
+    tabName: string,
+    rowIndex: number,
+  ): Promise<string[] | null> {
+    const lastCol = this.columnLetter(SHEET_HEADERS.length);
+    const resp = await firstValueFrom(
+      this.sheetsService.getValues(
+        spreadsheetId,
+        this.range(tabName, `A${rowIndex}:${lastCol}${rowIndex}`),
+      ),
+    );
+    const row = resp.values?.[0];
+    return row ?? null;
+  }
+
+  /**
    * Push a single task to the project's linked sheet. Inserts a new row if
    * the task isn't already present, or replaces the existing row in place.
+   *
+   * When a last-synced snapshot exists, merges field-by-field with the current
+   * sheet row so concurrent sheet edits to other columns are preserved.
    *
    * Best-effort: authentication errors and missing-sheet errors are swallowed
    * so they don't break the calling task-save flow. The caller gets `false`
@@ -929,9 +920,27 @@ export class GoogleSheetsSyncService {
     if (!this.sheetsService.isAuthenticated()) return false;
     const tabName = project.googleSheetTabName || DEFAULT_SHEET_TAB_NAME;
     const lastCol = this.columnLetter(SHEET_HEADERS.length);
+    const sections = project.sections ?? [];
     try {
-      const rowValues = this.transformToSheetRow(task, project.sections ?? []);
+      const expectedRow = this.transformToSheetRow(task, sections);
       const existingRow = await this.findRowIndex(spreadsheetId, tabName, task.id);
+
+      let rowValues = expectedRow;
+      let mergedFromSheet = false;
+      if (existingRow !== null && this.hasSyncSnapshot(task.sheetLastSyncedRow)) {
+        const sheetRow = await this.getRowValues(spreadsheetId, tabName, existingRow);
+        if (sheetRow) {
+          rowValues = mergeSheetRowFieldLevel({
+            sheetRow,
+            expectedRow,
+            lastSyncedRow: task.sheetLastSyncedRow!,
+            conflictPreference: 'app',
+          });
+          rowValues[headerIndex('Updated At')] = new Date().toISOString();
+          mergedFromSheet = !this.dataCellsMatch(rowValues, expectedRow);
+        }
+      }
+
       if (existingRow !== null) {
         await firstValueFrom(
           this.sheetsService.updateValues(
@@ -948,6 +957,27 @@ export class GoogleSheetsSyncService {
             [rowValues],
           ),
         );
+      }
+
+      const snapshotUpdate = {
+        sheetLastSyncedRow: rowValues,
+        sheetLastSyncedAt: new Date(),
+      };
+
+      if (mergedFromSheet) {
+        const mergedParsed = this.transformFromSheetRow(
+          rowValues,
+          task.projectId,
+          spreadsheetId,
+          sections,
+        );
+        await updateDoc(doc(this.firestore, `tasks/${task.id}`), {
+          ...mergedParsed.data,
+          ...snapshotUpdate,
+          updatedAt: new Date(),
+        });
+      } else {
+        await updateDoc(doc(this.firestore, `tasks/${task.id}`), snapshotUpdate);
       }
       return true;
     } catch (err) {
