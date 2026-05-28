@@ -248,7 +248,7 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     const t = this.tasks().find((task) => task.id === item.id);
     if (t) {
       try {
-        let currentStatus = t.status;
+        const currentStatus = t.status;
         let newStatus = currentStatus;
         if (t.sectionId !== sectionId) {
           const targetSection = this.project().sections.find((s) => s.id === sectionId);
