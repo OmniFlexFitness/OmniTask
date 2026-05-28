@@ -4,6 +4,7 @@ import {
   output,
   inject,
   ChangeDetectionStrategy,
+  ViewEncapsulation,
   ElementRef,
   ViewChild,
   AfterViewInit,
@@ -41,11 +42,9 @@ const DEFAULT_START_HOUR = 9;
   standalone: true,
   imports: [CommonModule],
   templateUrl: './task-timeline-view.component.html',
-  styleUrls: [
-    '../../../../node_modules/vis-timeline/styles/vis-timeline-graph2d.css',
-    './task-timeline-view.component.css',
-  ],
+  styleUrls: ['./task-timeline-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
 })
 export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
   @ViewChild('timelineContainer', { static: true }) timelineContainer!: ElementRef;
@@ -62,7 +61,7 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
   private timeline: Timeline | null = null;
   private items: DataSet<AppTimelineItem> | null = null;
   private groups: DataSet<TimelineGroup> | null = null;
-  private initPromise: Promise<void> | null = null;
+  private destroyed = false;
 
   constructor() {
     effect(() => {
@@ -75,20 +74,30 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    this.initPromise = this.initTimeline();
+    void this.initTimeline();
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
     if (this.timeline) {
       this.timeline.destroy();
     }
   }
 
   private async initTimeline(): Promise<void> {
-    const [{ Timeline: TimelineCtor }, { DataSet: DataSetCtor }] = await Promise.all([
-      import('vis-timeline/standalone'),
-      import('vis-data'),
-    ]);
+    const [{ Timeline: TimelineCtor }, { DataSet: DataSetCtor }] =
+      await Promise.all([
+        import('vis-timeline/standalone'),
+        import('vis-data'),
+      ]);
+
+    if (
+      this.destroyed ||
+      !this.timelineContainer?.nativeElement ||
+      !document.body.contains(this.timelineContainer.nativeElement)
+    ) {
+      return;
+    }
 
     this.items = new DataSetCtor<AppTimelineItem>();
     this.groups = new DataSetCtor<TimelineGroup>();
@@ -107,11 +116,13 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
       },
       orientation: 'top',
       onMove: (item, callback) => {
-        void this.handleTaskMove(item as AppTimelineItem & { end?: Date });
+        void this.handleTaskMove(item as AppTimelineItem);
         callback(item);
       },
       onUpdate: (item, callback) => {
-        const t = this.tasks().find((task) => task.id === String(item.id));
+        const t = this.tasks().find(
+          (task) => task.id === String(item.id),
+        );
         if (t) {
           this.taskClick.emit(t);
         }
@@ -119,25 +130,14 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
       },
     };
 
-    if (this.timelineContainer?.nativeElement) {
-      this.timeline = new TimelineCtor(
-        this.timelineContainer.nativeElement,
-        this.items,
-        this.groups,
-        options,
-      );
+    this.timeline = new TimelineCtor(
+      this.timelineContainer.nativeElement,
+      this.items,
+      this.groups,
+      options,
+    );
 
-      this.timeline.on('doubleClick', (properties: { item?: string }) => {
-        if (properties.item) {
-          const t = this.tasks().find((task) => task.id === properties.item);
-          if (t) {
-            this.taskClick.emit(t);
-          }
-        }
-      });
-
-      this.updateTimelineData(this.tasks(), this.project());
-    }
+    this.updateTimelineData(this.tasks(), this.project());
   }
 
   private updateTimelineData(tasks: Task[], project: Project) {
@@ -240,7 +240,7 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async handleTaskMove(item: AppTimelineItem & { end?: Date }) {
+  private async handleTaskMove(item: AppTimelineItem) {
     const start = item.start as Date;
     const end = item.end as Date;
     const sectionId = item.group as string;
@@ -322,8 +322,14 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  private getSectionStatus(section: { status?: string; name: string }): 'todo' | 'in-progress' | 'done' {
-    if (section.status === 'todo' || section.status === 'in-progress' || section.status === 'done') {
+  private getSectionStatus(
+    section: { status?: string; name: string },
+  ): 'todo' | 'in-progress' | 'done' {
+    if (
+      section.status === 'todo' ||
+      section.status === 'in-progress' ||
+      section.status === 'done'
+    ) {
       return section.status;
     }
     const nameLower = section.name.toLowerCase();

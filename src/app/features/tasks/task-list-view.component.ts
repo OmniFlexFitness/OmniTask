@@ -385,20 +385,19 @@ export class TaskListViewComponent {
   }
 
   onDrop(event: CdkDragDrop<TaskListViewNode[]>) {
-    // Dragging within the current list view (single drop list).
-    // Persist order to Firestore using TaskService.reorderTasks().
-    const current = this.tasks();
-    const prevIndex = current.findIndex((t) => t.id === event.item.data.id);
+    const visible = event.container.data ?? this.sortedTasks();
+    const prevIndex = event.previousIndex;
     const newIndex = event.currentIndex;
     if (prevIndex < 0 || newIndex < 0 || prevIndex === newIndex) return;
 
-    const reordered = [...current];
+    const reordered = [...visible];
     moveItemInArray(reordered, prevIndex, newIndex);
 
-    // Maintain stable ordering by re-spacing order values.
-    // Keep it simple: integers in steps of 1000 (matches typical seed defaults).
     const ORDER_STEP = 1000;
-    const updates = reordered.map((t, idx) => ({ id: t.id, order: (idx + 1) * ORDER_STEP }));
+    const updates = reordered.map((t, idx) => ({
+      id: t.id,
+      order: (idx + 1) * ORDER_STEP,
+    }));
 
     void this.taskService.reorderTasks(updates);
   }

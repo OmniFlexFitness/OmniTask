@@ -113,15 +113,13 @@
                 ></app-task-calendar-view>
               }
               @case ('timeline') {
-                @if (timelineComponent(); as timelineCmp) {
-                  <ng-container
-                    *ngComponentOutlet="
-                      timelineCmp;
-                      inputs: timelineInputs();
-                      outputs: timelineOutputs
-                    "
+                @defer {
+                  <app-task-timeline-view
+                    [tasks]="tasks()"
+                    [project]="currentProject()!"
+                    (taskClick)="openTaskDetail($event)"
                   />
-                } @else {
+                } @placeholder {
                   <p class="p-4 text-sm text-white/50">Loading timeline…</p>
                 }
               }

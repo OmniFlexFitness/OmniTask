@@ -1,13 +1,10 @@
 import {
   Component,
-  computed,
   inject,
   signal,
-  effect,
   ChangeDetectionStrategy,
-  Type,
 } from '@angular/core';
-import { CommonModule, NgComponentOutlet } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { switchMap, of } from 'rxjs';
@@ -23,6 +20,7 @@ import {
 } from '../../core/services/google-sheets-sync.service';
 import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { Project, Task, TaskViewMode } from '../../core/models/domain.model';
+import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component';
 
 import { ProjectSidebarComponent } from '../projects/project-sidebar.component';
 import { ProjectFormModalComponent } from '../projects/project-form-modal.component';
@@ -46,7 +44,7 @@ import { ProjectOverviewComponent } from './components/project-overview.componen
     TaskListViewComponent,
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
-    NgComponentOutlet,
+    TaskTimelineViewComponent,
     TaskDetailModalComponent,
     TaskCreateModalComponent,
     CustomFieldManagerComponent,
@@ -72,29 +70,8 @@ export class DashboardComponent {
   syncing = signal(false);
   mobileSidebarOpen = signal(false);
 
-  /** Lazy-loaded when user switches to timeline view (keeps vis-timeline out of dashboard chunk). */
-  timelineComponent = signal<Type<unknown> | null>(null);
-
-  timelineInputs = computed(() => ({
-    tasks: this.tasks(),
-    project: this.currentProject()!,
-  }));
-
-  readonly timelineOutputs = {
-    taskClick: (task: Task) => this.openTaskDetail(task),
-  };
-
   constructor() {
-    // Seed sample data if user has no projects
     this.seedSampleDataIfNeeded();
-
-    effect(() => {
-      if (this.viewMode() === 'timeline' && !this.timelineComponent()) {
-        void import('../tasks/task-timeline-view.component').then((m) =>
-          this.timelineComponent.set(m.TaskTimelineViewComponent),
-        );
-      }
-    });
   }
 
   private async seedSampleDataIfNeeded() {

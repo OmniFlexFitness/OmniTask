@@ -1,4 +1,11 @@
-import { Component, inject, ChangeDetectionStrategy, computed, signal, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  ChangeDetectionStrategy,
+  computed,
+  signal,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -41,15 +48,14 @@ export class NavbarComponent {
       this.mobileMenuOpen.set(false);
     });
 
-    // Close on escape
-    effect(() => {
+    effect((onCleanup) => {
       const open = this.mobileMenuOpen();
       if (!open) return;
       const onKeyDown = (ev: KeyboardEvent) => {
         if (ev.key === 'Escape') this.mobileMenuOpen.set(false);
       };
       window.addEventListener('keydown', onKeyDown);
-      return () => window.removeEventListener('keydown', onKeyDown);
+      onCleanup(() => window.removeEventListener('keydown', onKeyDown));
     });
   }
 
