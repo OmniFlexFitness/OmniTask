@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import { UserGroupManagerComponent } from '../user-groups/user-group-manager.component';
+import { DataExportImportComponent } from './data-export-import.component';
 
 const AVATAR_COLORS = [
   { name: 'Purple', value: '#8b5cf6' },
@@ -30,7 +31,7 @@ const AVATAR_COLORS = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, UserGroupManagerComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UserGroupManagerComponent, DataExportImportComponent],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
