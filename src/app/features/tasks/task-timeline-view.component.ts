@@ -2,8 +2,6 @@ import {
   Component,
   input,
   output,
-  computed,
-  signal,
   inject,
   ChangeDetectionStrategy,
   ElementRef,
@@ -15,8 +13,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { Task, Project } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
-import { Timeline } from 'vis-timeline/standalone';
-import { DataSet } from 'vis-data';
+import type { DataSet } from 'vis-data';
+import type { Timeline, TimelineOptions } from 'vis-timeline/standalone';
 
 interface TimelineGroup {
   id: string;
@@ -25,7 +23,7 @@ interface TimelineGroup {
   style?: string;
 }
 
-interface TimelineItem {
+interface AppTimelineItem {
   id: string;
   group?: string;
   content: string;
@@ -43,7 +41,10 @@ const DEFAULT_START_HOUR = 9;
   standalone: true,
   imports: [CommonModule],
   templateUrl: './task-timeline-view.component.html',
-  styleUrls: ['./task-timeline-view.component.css'],
+  styleUrls: [
+    '../../../../node_modules/vis-timeline/styles/vis-timeline-graph2d.css',
+    './task-timeline-view.component.css',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
@@ -59,19 +60,22 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
   taskClick = output<Task>();
 
   private timeline: Timeline | null = null;
-  private items = new DataSet<TimelineItem>();
-  private groups = new DataSet<TimelineGroup>();
+  private items: DataSet<AppTimelineItem> | null = null;
+  private groups: DataSet<TimelineGroup> | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     effect(() => {
       const currentTasks = this.tasks();
       const currentProject = this.project();
-      this.updateTimelineData(currentTasks, currentProject);
+      if (this.items && this.groups) {
+        this.updateTimelineData(currentTasks, currentProject);
+      }
     });
   }
 
   ngAfterViewInit() {
-    this.initTimeline();
+    this.initPromise = this.initTimeline();
   }
 
   ngOnDestroy() {
@@ -80,8 +84,16 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private initTimeline() {
-    const options = {
+  private async initTimeline(): Promise<void> {
+    const [{ Timeline: TimelineCtor }, { DataSet: DataSetCtor }] = await Promise.all([
+      import('vis-timeline/standalone'),
+      import('vis-data'),
+    ]);
+
+    this.items = new DataSetCtor<AppTimelineItem>();
+    this.groups = new DataSetCtor<TimelineGroup>();
+
+    const options: TimelineOptions = {
       groupOrder: 'order',
       editable: {
         add: false,
@@ -91,61 +103,63 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
       },
       margin: {
         item: 10,
-        axis: 5
+        axis: 5,
       },
       orientation: 'top',
-      onMove: (item: any, callback: any) => {
-        this.handleTaskMove(item);
+      onMove: (item, callback) => {
+        void this.handleTaskMove(item as AppTimelineItem & { end?: Date });
         callback(item);
       },
-      onUpdate: (item: any, callback: any) => {
-         const t = this.tasks().find(task => task.id === item.id);
-         if (t) {
-           this.taskClick.emit(t);
-         }
-         callback(item);
-      }
+      onUpdate: (item, callback) => {
+        const t = this.tasks().find((task) => task.id === String(item.id));
+        if (t) {
+          this.taskClick.emit(t);
+        }
+        callback(item);
+      },
     };
 
     if (this.timelineContainer?.nativeElement) {
-       this.timeline = new Timeline(this.timelineContainer.nativeElement, this.items, this.groups, options);
-       
-       this.timeline.on('doubleClick', (properties) => {
-          if (properties.item) {
-             const t = this.tasks().find(task => task.id === properties.item);
-             if (t) {
-               this.taskClick.emit(t);
-             }
+      this.timeline = new TimelineCtor(
+        this.timelineContainer.nativeElement,
+        this.items,
+        this.groups,
+        options,
+      );
+
+      this.timeline.on('doubleClick', (properties: { item?: string }) => {
+        if (properties.item) {
+          const t = this.tasks().find((task) => task.id === properties.item);
+          if (t) {
+            this.taskClick.emit(t);
           }
-       });
+        }
+      });
+
+      this.updateTimelineData(this.tasks(), this.project());
     }
   }
 
   private updateTimelineData(tasks: Task[], project: Project) {
-    if (!project || !tasks) return;
+    if (!project || !tasks || !this.items || !this.groups) return;
 
-    // Filter out 'done' tasks for the timeline view by default or keep them? 
-    // Usually timelines show all active tasks. 
-    // We'll show all of them but color 'done' tasks gray if needed.
-    // The board-view filters out completed based on settings, but we'll show all passed in task array for now.
-
-    const newGroups = project.sections.map((section, idx) => ({
+    const newGroups = project.sections.map((section) => ({
       id: section.id,
       content: section.name,
       order: section.order,
-      style: `color: ${section.color || '#fff'}; font-weight: bold;`
+      style: `color: ${section.color || '#fff'}; font-weight: bold;`,
     }));
 
     const currentGroupIds = this.groups.getIds();
-    const groupUpdates = newGroups.filter(g => currentGroupIds.includes(g.id));
-    const groupAdds = newGroups.filter(g => !currentGroupIds.includes(g.id));
-    const groupRemoves = currentGroupIds.filter((id: any) => !newGroups.find(g => g.id === id));
+    const groupUpdates = newGroups.filter((g) => currentGroupIds.includes(g.id));
+    const groupAdds = newGroups.filter((g) => !currentGroupIds.includes(g.id));
+    const groupRemoves = currentGroupIds.filter((id) => !newGroups.find((g) => g.id === id));
 
     if (groupUpdates.length) this.groups.update(groupUpdates);
     if (groupAdds.length) this.groups.add(groupAdds);
     if (groupRemoves.length) this.groups.remove(groupRemoves);
 
-    const newItems = tasks.map(task => {
+    const newItems = tasks.map((task) => {
       let start = task.startDate ? this.toDate(task.startDate) : undefined;
       let end = task.dueDate ? this.toDate(task.dueDate) : undefined;
 
@@ -155,8 +169,8 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
           s.setDate(s.getDate() - 1);
           start = s;
         } else {
-           start = new Date();
-           start.setHours(DEFAULT_START_HOUR, 0, 0, 0); 
+          start = new Date();
+          start.setHours(DEFAULT_START_HOUR, 0, 0, 0);
         }
       }
 
@@ -165,18 +179,22 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
         e.setDate(e.getDate() + 1);
         end = e;
       }
-      
-      const section = project.sections.find(s => s.id === task.sectionId);
-      
+
+      const section = project.sections.find((s) => s.id === task.sectionId);
+
       const isDone = task.status === 'done';
-      const color = isDone ? '#6b7280' : (section?.color || '#3b82f6');
-      
+      const color = isDone ? '#6b7280' : section?.color || '#3b82f6';
+
       const bgColor = this.hexToRgba(color, isDone ? 0.1 : 0.2);
       const borderColor = this.hexToRgba(color, isDone ? 0.4 : 0.8);
       const textColor = isDone ? 'rgba(255,255,255,0.5)' : '#fff';
 
       const safeTitle = this.escapeHtml(task.title);
-      const baseItem: Partial<TimelineItem> & { id: string, group: string | undefined, content: string } = {
+      const baseItem: Partial<AppTimelineItem> & {
+        id: string;
+        group: string | undefined;
+        content: string;
+      } = {
         id: task.id,
         group: task.sectionId || (project.sections.length > 0 ? project.sections[0].id : undefined),
         content: `
@@ -184,14 +202,16 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
             <span class="timeline-title">${safeTitle}</span>
           </div>
         `,
-        style: `background-color: ${bgColor}; border-color: ${borderColor}; color: ${textColor};`
+        style: `background-color: ${bgColor}; border-color: ${borderColor}; color: ${textColor};`,
       };
 
       if (isDone) {
-        // Complete items are milestones ('box' type) to prevent horizontal visual overlap 
-        // since vis-timeline correctly stacks 'box' types based on DOM width
         baseItem.type = 'box';
-        baseItem.start = task.dueDate ? this.toDate(task.dueDate) : (task.startDate ? this.toDate(task.startDate) : start);
+        baseItem.start = task.dueDate
+          ? this.toDate(task.dueDate)
+          : task.startDate
+            ? this.toDate(task.startDate)
+            : start;
         baseItem.className = 'vis-item-done';
       } else {
         baseItem.type = 'range';
@@ -199,73 +219,77 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
         baseItem.end = end;
       }
 
-      return baseItem as TimelineItem;
+      return baseItem as AppTimelineItem;
     });
 
     const currentItemIds = this.items.getIds();
-    const itemUpdates = newItems.filter(i => currentItemIds.includes(i.id));
-    const itemAdds = newItems.filter(i => !currentItemIds.includes(i.id));
-    const itemRemoves = currentItemIds.filter((id: any) => !newItems.find(i => i.id === id));
+    const itemUpdates = newItems.filter((i) => currentItemIds.includes(i.id));
+    const itemAdds = newItems.filter((i) => !currentItemIds.includes(i.id));
+    const itemRemoves = currentItemIds.filter((id) => !newItems.find((i) => i.id === id));
 
     if (itemUpdates.length) this.items.update(itemUpdates);
     if (itemAdds.length) this.items.add(itemAdds);
     if (itemRemoves.length) this.items.remove(itemRemoves);
 
     if (this.timeline && (itemAdds.length > 0 || groupAdds.length > 0)) {
-        if (currentItemIds.length === 0) {
-            requestAnimationFrame(() => {
-                if (this.timeline) this.timeline.fit();
-            });
-        }
+      if (currentItemIds.length === 0) {
+        requestAnimationFrame(() => {
+          if (this.timeline) this.timeline.fit();
+        });
+      }
     }
   }
 
-  private async handleTaskMove(item: any) {
+  private async handleTaskMove(item: AppTimelineItem & { end?: Date }) {
     const start = item.start as Date;
     const end = item.end as Date;
     const sectionId = item.group as string;
 
-    const t = this.tasks().find(task => task.id === item.id);
+    const t = this.tasks().find((task) => task.id === item.id);
     if (t) {
-        try {
-            let currentStatus = t.status;
-            let newStatus = currentStatus;
-            if (t.sectionId !== sectionId) {
-                 const targetSection = this.project().sections.find(s => s.id === sectionId);
-                 if (targetSection) {
-                      newStatus = this.getSectionStatus(targetSection);
-                 }
-            }
-            
-            const updates: any = {
-                sectionId: sectionId,
-                status: newStatus
-            };
-
-            if (item.type === 'box' || !end) {
-                updates.dueDate = start;
-            } else {
-                updates.startDate = start;
-                updates.dueDate = end;
-            }
-            
-            await this.taskService.updateTask(t.id, updates);
-        } catch (error) {
-            console.error('Failed to move task:', error);
-            // Revert the item in timeline since it failed
-            this.updateTimelineData(this.tasks(), this.project());
+      try {
+        let currentStatus = t.status;
+        let newStatus = currentStatus;
+        if (t.sectionId !== sectionId) {
+          const targetSection = this.project().sections.find((s) => s.id === sectionId);
+          if (targetSection) {
+            newStatus = this.getSectionStatus(targetSection);
+          }
         }
+
+        const updates: Partial<Task> = {
+          sectionId: sectionId,
+          status: newStatus,
+        };
+
+        if (item.type === 'box' || !end) {
+          updates.dueDate = start;
+        } else {
+          updates.startDate = start;
+          updates.dueDate = end;
+        }
+
+        await this.taskService.updateTask(t.id, updates);
+      } catch (error) {
+        console.error('Failed to move task:', error);
+        this.updateTimelineData(this.tasks(), this.project());
+      }
     }
   }
 
   private escapeHtml(unsafe: string): string {
     return (unsafe || '').replace(/[&<>"']/g, function (m) {
       switch (m) {
-        case '&': return '&amp;';
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '"': return '&quot;';
-        default: return '&#039;';
+        case '&':
+          return '&amp;';
+        case '<':
+          return '&lt;';
+        case '>':
+          return '&gt;';
+        case '"':
+          return '&quot;';
+        default:
+          return '&#039;';
       }
     });
   }
@@ -277,12 +301,15 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     }
     return new Date(dateValue as string | number);
   }
-  
+
   private hexToRgba(hex: string, alpha: number): string {
     const cleanHex = hex.replace(/^#/, '');
     let fullHex = cleanHex;
     if (cleanHex.length === 3) {
-      fullHex = cleanHex.split('').map((char) => char + char).join('');
+      fullHex = cleanHex
+        .split('')
+        .map((char) => char + char)
+        .join('');
     } else if (cleanHex.length !== 6) {
       return `rgba(100, 116, 139, ${alpha})`;
     }
@@ -294,9 +321,11 @@ export class TaskTimelineViewComponent implements AfterViewInit, OnDestroy {
     }
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
-  
-  private getSectionStatus(section: any): 'todo' | 'in-progress' | 'done' {
-    if (section.status) return section.status;
+
+  private getSectionStatus(section: { status?: string; name: string }): 'todo' | 'in-progress' | 'done' {
+    if (section.status === 'todo' || section.status === 'in-progress' || section.status === 'done') {
+      return section.status;
+    }
     const nameLower = section.name.toLowerCase();
     if (nameLower.includes('done') || nameLower.includes('complete')) return 'done';
     if (nameLower.includes('progress') || nameLower.includes('doing')) return 'in-progress';
