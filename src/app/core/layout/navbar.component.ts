@@ -1,6 +1,7 @@
-import { Component, inject, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, computed, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { PermissionsService } from '../services/permissions.service';
 import { SUPER_ADMIN_EMAIL } from '../constants';
@@ -16,6 +17,9 @@ import { SUPER_ADMIN_EMAIL } from '../constants';
 export class NavbarComponent {
   readonly auth = inject(AuthService);
   readonly permissions = inject(PermissionsService);
+  readonly router = inject(Router);
+
+  mobileMenuOpen = signal(false);
 
   /**
    * Admins, the designated super-admin email, and any user flagged
@@ -28,4 +32,30 @@ export class NavbarComponent {
     if (user.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
     return this.permissions.currentPermissions().isSuperAdmin;
   });
+
+  constructor() {
+    // Close on navigation
+    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
+      this.mobileMenuOpen.set(false);
+    });
+
+    // Close on escape
+    effect(() => {
+      const open = this.mobileMenuOpen();
+      if (!open) return;
+      const onKeyDown = (ev: KeyboardEvent) => {
+        if (ev.key === 'Escape') this.mobileMenuOpen.set(false);
+      };
+      window.addEventListener('keydown', onKeyDown);
+      return () => window.removeEventListener('keydown', onKeyDown);
+    });
+  }
+
+  toggleMobileMenu() {
+    this.mobileMenuOpen.update((v) => !v);
+  }
+
+  closeMobileMenu() {
+    this.mobileMenuOpen.set(false);
+  }
 }

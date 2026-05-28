@@ -46,6 +46,35 @@
               </div>
             </div>
 
+            <!-- Mobile hamburger -->
+            <button
+              type="button"
+              class="md:hidden omni-glitch-btn p-2 rounded-lg text-slate-300 hover:text-cyan-300 hover:bg-white/5 transition-colors"
+              [attr.aria-expanded]="mobileMenuOpen()"
+              aria-label="Open menu"
+              (click)="toggleMobileMenu()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                @if (!mobileMenuOpen()) {
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                } @else {
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                }
+              </svg>
+            </button>
+
             <!-- Nav links with solid hover effects -->
             <div class="hidden md:flex items-center gap-1">
               <a
@@ -247,3 +276,104 @@
         </div>
       </div>
     </nav>
+
+    <!-- Mobile menu overlay + drawer -->
+    @if (mobileMenuOpen()) {
+      <div class="fixed inset-0 z-[60] md:hidden">
+        <!-- Backdrop -->
+        <button
+          type="button"
+          class="absolute inset-0 bg-black/60"
+          aria-label="Close menu"
+          (click)="closeMobileMenu()"
+        ></button>
+
+        <!-- Drawer -->
+        <div
+          class="absolute top-0 left-0 h-full w-[85vw] max-w-sm bg-[#050810]/95 border-r border-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.15)] p-4 overflow-auto"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"
+              ></span>
+              <span class="text-xs text-slate-300 font-medium">{{
+                auth.currentUserSig()?.email
+              }}</span>
+            </div>
+            <button
+              type="button"
+              class="omni-glitch-btn p-2 rounded-lg text-slate-300 hover:text-violet-300 hover:bg-white/5 transition-colors"
+              aria-label="Close menu"
+              (click)="closeMobileMenu()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <a
+              routerLink="/"
+              class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-white/5"
+              (click)="closeMobileMenu()"
+              >Dashboard</a
+            >
+            <a
+              routerLink="/projects"
+              class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-white/5"
+              (click)="closeMobileMenu()"
+              >Projects</a
+            >
+            <a
+              routerLink="/workspace"
+              class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-white/5"
+              (click)="closeMobileMenu()"
+              >Workspace</a
+            >
+            <a
+              routerLink="/schedule"
+              class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-white/5"
+              (click)="closeMobileMenu()"
+              >Schedule</a
+            >
+            <a
+              routerLink="/settings"
+              class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-white/5"
+              (click)="closeMobileMenu()"
+              >Settings</a
+            >
+
+            @if (canSeeAdminLink()) {
+              <a
+                routerLink="/admin"
+                class="mt-2 px-3 py-2 rounded-lg text-sm font-semibold text-purple-200 border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20"
+                (click)="closeMobileMenu()"
+                >Admin</a
+              >
+            }
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-white/10">
+            <button
+              type="button"
+              class="w-full omni-glitch-btn px-4 py-2 text-sm font-bold uppercase tracking-wider rounded-lg border border-violet-500/70 bg-[#0a0f1e] text-violet-300 hover:bg-violet-500/10 hover:text-violet-100 hover:shadow-[0_0_14px_rgba(139,92,246,0.5)] transition-all"
+              (click)="auth.logout(); closeMobileMenu()"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    }

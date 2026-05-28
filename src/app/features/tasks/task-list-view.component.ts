@@ -15,7 +15,7 @@ import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { switchMap, of } from 'rxjs';
-import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { MarkdownPipe, MarkdownPlainPipe } from '../../shared/pipes/markdown.pipe';
 import { formatPointValue } from '../../core/utils/point-scale.utils';
 import { PointValueBadgeComponent } from './components/point-value-badge';
@@ -369,7 +369,21 @@ export class TaskListViewComponent {
   }
 
   onDrop(event: CdkDragDrop<TaskListViewNode[]>) {
-    const prevIndex = this.tasks().findIndex((t) => t.id === event.item.data.id);
+    // Dragging within the current list view (single drop list).
+    // Persist order to Firestore using TaskService.reorderTasks().
+    const current = this.tasks();
+    const prevIndex = current.findIndex((t) => t.id === event.item.data.id);
     const newIndex = event.currentIndex;
+    if (prevIndex < 0 || newIndex < 0 || prevIndex === newIndex) return;
+
+    const reordered = [...current];
+    moveItemInArray(reordered, prevIndex, newIndex);
+
+    // Maintain stable ordering by re-spacing order values.
+    // Keep it simple: integers in steps of 1000 (matches typical seed defaults).
+    const ORDER_STEP = 1000;
+    const updates = reordered.map((t, idx) => ({ id: t.id, order: (idx + 1) * ORDER_STEP }));
+
+    void this.taskService.reorderTasks(updates);
   }
 }
