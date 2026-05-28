@@ -42,6 +42,7 @@ export class SettingsComponent {
 
   selectedColor = signal<string>('#8b5cf6');
   displayName = '';
+  emailNotificationsEnabled = true;
   saving = signal(false);
   saveSuccess = signal<boolean | null>(null);
 
@@ -69,6 +70,7 @@ export class SettingsComponent {
 
       this.seededUid = user.uid;
       this.displayName = user.displayName || '';
+      this.emailNotificationsEnabled = user.emailNotificationsEnabled !== false;
       if (user.avatarColor) {
         this.selectedColor.set(user.avatarColor);
       } else {
@@ -171,6 +173,7 @@ export class SettingsComponent {
       await this.authService.updateProfile({
         displayName: this.displayName,
         avatarColor: this.selectedColor(),
+        emailNotificationsEnabled: this.emailNotificationsEnabled,
       });
       this.saveSuccess.set(true);
       setTimeout(() => this.saveSuccess.set(null), 3000);

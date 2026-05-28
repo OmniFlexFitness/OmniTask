@@ -817,7 +817,13 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       try {
         const userDoc = await db.collection('users').doc(actualId).get();
         if (userDoc.exists) {
-          const userData = userDoc.data() as { email?: string };
+          const userData = userDoc.data() as {
+            email?: string;
+            emailNotificationsEnabled?: boolean;
+          };
+          if (userData.emailNotificationsEnabled === false) {
+            return null;
+          }
           if (userData.email) return userData.email;
         }
       } catch (err) {

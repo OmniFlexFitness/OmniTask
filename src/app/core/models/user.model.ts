@@ -77,6 +77,12 @@ export interface UserProfile {
    * not preserved — the dashboard sorts pinned projects alphabetically.
    */
   pinnedProjectIds?: string[];
+
+  /**
+   * When false, the user opts out of assignment/status email notifications.
+   * Undefined is treated as enabled (opt-out model).
+   */
+  emailNotificationsEnabled?: boolean;
 }
 
 /**

@@ -18,31 +18,31 @@ Reference list for open GitHub issues, ordered by impact and dependency. Update 
 
 ## Tier 2 — Critical UX / Accessibility
 
-| Issue | Title | Labels |
+| Issue | Title | Status |
 |-------|-------|--------|
-| [#129](https://github.com/OmniFlexFitness/OmniTask/issues/129) | No mobile navigation — app unusable on small screens | bug, accessibility |
-| [#117](https://github.com/OmniFlexFitness/OmniTask/issues/117) | Task list drag-and-drop reordering broken | bug |
+| [#129](https://github.com/OmniFlexFitness/OmniTask/issues/129) | No mobile navigation — app unusable on small screens | Done (PR #165) |
+| [#117](https://github.com/OmniFlexFitness/OmniTask/issues/117) | Task list drag-and-drop reordering broken | Done (PR #165) |
 
 ---
 
 ## Tier 3 — High-Value Features
 
-| Issue | Title | Labels |
+| Issue | Title | Status |
 |-------|-------|--------|
-| [#130](https://github.com/OmniFlexFitness/OmniTask/issues/130) | Global task search bar (navbar + dashboard) | enhancement, feature |
-| [#131](https://github.com/OmniFlexFitness/OmniTask/issues/131) | Complete Google Tasks API OAuth integration | enhancement |
-| [#133](https://github.com/OmniFlexFitness/OmniTask/issues/133) | Data export/import (CSV/JSON) | enhancement |
-| [#137](https://github.com/OmniFlexFitness/OmniTask/issues/137) | Google Sheets sync field-level merge | enhancement |
+| [#130](https://github.com/OmniFlexFitness/OmniTask/issues/130) | Global task search bar (project list filter; Phase 2: navbar) | Done (PR #165) |
+| [#131](https://github.com/OmniFlexFitness/OmniTask/issues/131) | Complete Google Tasks API OAuth integration | Partial (`/auth/callback` route; real OAuth TBD) |
+| [#133](https://github.com/OmniFlexFitness/OmniTask/issues/133) | Data export/import (CSV/JSON) | Export done (PR #165) |
+| [#137](https://github.com/OmniFlexFitness/OmniTask/issues/137) | Google Sheets sync field-level merge | Done (PR #165) |
 
 ---
 
 ## Tier 4 — Quality of Life
 
-| Issue | Title | Labels |
+| Issue | Title | Status |
 |-------|-------|--------|
-| [#123](https://github.com/OmniFlexFitness/OmniTask/issues/123) | Add 404 Not Found page | enhancement |
-| [#132](https://github.com/OmniFlexFitness/OmniTask/issues/132) | Keyboard shortcuts | enhancement |
-| [#119](https://github.com/OmniFlexFitness/OmniTask/issues/119) | Settings page improvements | enhancement |
+| [#123](https://github.com/OmniFlexFitness/OmniTask/issues/123) | Add 404 Not Found page | Done (PR #165) |
+| [#132](https://github.com/OmniFlexFitness/OmniTask/issues/132) | Keyboard shortcuts (`?`, `Ctrl+K`, `Esc`) | Done (PR #165) |
+| [#119](https://github.com/OmniFlexFitness/OmniTask/issues/119) | Settings page improvements | Done (PR #165) |
 
 ---
 

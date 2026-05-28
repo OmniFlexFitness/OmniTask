@@ -196,6 +196,35 @@
           <app-user-group-manager></app-user-group-manager>
         </section>
 
+        <!-- Preferences -->
+        <section class="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-lg font-semibold text-white mb-4">Preferences</h2>
+
+          <label class="flex items-start gap-3 cursor-pointer mb-4">
+            <input
+              type="checkbox"
+              class="mt-1 h-4 w-4 rounded border-white/20 bg-slate-950 text-purple-600 focus:ring-purple-500"
+              [(ngModel)]="emailNotificationsEnabled"
+            />
+            <span>
+              <span class="block text-sm font-medium text-slate-200">Email notifications</span>
+              <span class="block text-xs text-slate-400 mt-0.5">
+                Receive emails when you are assigned tasks or task status changes (requires SMTP in Firebase).
+              </span>
+            </span>
+          </label>
+
+          <p class="text-sm text-slate-400">
+            Press <kbd class="text-xs text-cyan-200 px-1 py-0.5 rounded bg-slate-800 border border-white/10">?</kbd>
+            anywhere in the app for keyboard shortcuts (<kbd class="text-xs text-cyan-200 px-1 py-0.5 rounded bg-slate-800 border border-white/10">Ctrl+K</kbd>
+            focuses task search on a project board).
+          </p>
+          <p class="mt-2 text-sm text-slate-400">
+            Export project tasks from each project's <strong class="text-slate-200">Settings</strong> tab (CSV/JSON).
+          </p>
+          <p class="mt-3 text-xs text-slate-500">Save profile above to persist notification preference.</p>
+        </section>
+
         <!-- Account Info -->
         <section class="bg-slate-900/50 border border-white/10 rounded-2xl p-6">
           <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">

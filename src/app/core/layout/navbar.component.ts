@@ -34,6 +34,8 @@ export class NavbarComponent {
   });
 
   constructor() {
+    document.addEventListener('ot:escape', () => this.closeMobileMenu());
+
     // Close on navigation
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
       this.mobileMenuOpen.set(false);

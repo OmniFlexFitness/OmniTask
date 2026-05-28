@@ -13,6 +13,13 @@ import { DialogService } from '../../core/services/dialog.service';
 export class DialogComponent {
   readonly dialogService = inject(DialogService);
 
+  onBackdrop(): void {
+    // Only allow backdrop click to dismiss non-confirm dialogs.
+    const d = this.dialogService.dialog();
+    if (d.type === 'confirm') return;
+    this.onCancel();
+  }
+
   onConfirm(): void {
     this.dialogService.confirmAction();
   }
