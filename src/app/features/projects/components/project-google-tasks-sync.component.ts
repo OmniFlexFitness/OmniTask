@@ -9,6 +9,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ProjectService } from '../../../core/services/project.service';
 import { DialogService } from '../../../core/services/dialog.service';
@@ -35,6 +36,7 @@ export class ProjectGoogleTasksSyncComponent implements OnInit {
   private readonly googleTasksService = inject(GoogleTasksService);
   private readonly googleTasksSyncService = inject(GoogleTasksSyncService);
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   project = input.required<Project>();
   projectChanged = output<void>();
@@ -57,6 +59,7 @@ export class ProjectGoogleTasksSyncComponent implements OnInit {
   // Scheduled sync state
   hasOfflineAccess = computed(() => this.authService.hasOfflineAccess());
   enablingScheduledSync = signal(false);
+  revokingScheduledSync = signal(false);
 
   // Computed: Get current linked list name
   currentLinkedListName = computed(() => {
@@ -315,22 +318,41 @@ export class ProjectGoogleTasksSyncComponent implements OnInit {
   async enableScheduledSync() {
     this.enablingScheduledSync.set(true);
     try {
-      const success = await this.authService.requestOfflineAccess();
-      if (success) {
-        this.lastSyncResult.set({
-          success: true,
-          message: 'Scheduled sync enabled! Tasks will sync automatically every 5 minutes.',
-        });
-        setTimeout(() => this.lastSyncResult.set(null), 5000);
-      }
+      // Redirects away — success is shown after OAuth callback returns.
+      await this.authService.requestOfflineAccess(this.router.url);
     } catch (error) {
       console.error('Failed to enable scheduled sync:', error);
       this.lastSyncResult.set({
         success: false,
         message: 'Failed to enable scheduled sync. Please try again.',
       });
-    } finally {
       this.enablingScheduledSync.set(false);
+    }
+  }
+
+  async disableScheduledSync() {
+    const confirmed = await this.dialogService.confirm(
+      'Disable background sync? Cloud Functions will no longer sync this account automatically.',
+      'Disable Scheduled Sync',
+    );
+    if (!confirmed) return;
+
+    this.revokingScheduledSync.set(true);
+    try {
+      await this.authService.revokeOfflineAccess();
+      this.lastSyncResult.set({
+        success: true,
+        message: 'Scheduled sync disabled.',
+      });
+      setTimeout(() => this.lastSyncResult.set(null), 5000);
+    } catch (error) {
+      console.error('Failed to disable scheduled sync:', error);
+      this.lastSyncResult.set({
+        success: false,
+        message: 'Failed to disable scheduled sync. Please try again.',
+      });
+    } finally {
+      this.revokingScheduledSync.set(false);
     }
   }
 }

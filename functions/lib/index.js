@@ -15,26 +15,15 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
+exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.revokeGoogleOfflineAccess = exports.refreshGoogleAccessToken = exports.exchangeGoogleOAuthCode = exports.getGoogleOAuthConfig = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -245,6 +234,7 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -375,20 +365,16 @@ exports.scheduledGoogleTasksSync = (0, scheduler_1.onSchedule)({
     let failed = 0;
     for (const projectDoc of projectsSnapshot.docs) {
         const project = { id: projectDoc.id, ...projectDoc.data() };
-        // Get user's OAuth token (you'd need to implement token storage)
-        const userDoc = await db.collection('users').doc(project.ownerId).get();
-        const userData = userDoc.data();
-        if (!userData?.googleTasksRefreshToken) {
+        const refreshToken = await getStoredRefreshToken(project.ownerId);
+        if (!refreshToken) {
             console.log(`No refresh token for user ${project.ownerId}, skipping project ${project.id}`);
             failed++;
             continue;
         }
         try {
-            // Refresh the access token using the stored refresh token
-            // Access secrets via .value() method
             const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value());
             oauth2Client.setCredentials({
-                refresh_token: userData.googleTasksRefreshToken,
+                refresh_token: refreshToken,
             });
             const tokens = await oauth2Client.refreshAccessToken();
             const accessToken = tokens.credentials.access_token;
@@ -445,6 +431,122 @@ exports.manualGoogleTasksSync = (0, https_1.onCall)({
     // Perform sync
     const result = await syncProject(project, accessToken);
     return result;
+});
+const GOOGLE_OAUTH_SCOPES = [
+    'https://www.googleapis.com/auth/tasks',
+    'https://www.googleapis.com/auth/contacts.readonly',
+    'https://www.googleapis.com/auth/contacts.other.readonly',
+    'https://www.googleapis.com/auth/directory.readonly',
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive.file',
+];
+async function getStoredRefreshToken(uid) {
+    const legacyUser = await db.collection('users').doc(uid).get();
+    const legacyToken = legacyUser.data()?.googleTasksRefreshToken;
+    if (legacyToken)
+        return legacyToken;
+    const privateDoc = await db.collection('users').doc(uid).collection('private').doc('googleOAuth').get();
+    const token = privateDoc.data()?.refreshToken;
+    return typeof token === 'string' && token.length > 0 ? token : null;
+}
+async function storeRefreshToken(uid, refreshToken) {
+    const now = firestore_2.FieldValue.serverTimestamp();
+    await db.collection('users').doc(uid).collection('private').doc('googleOAuth').set({
+        refreshToken,
+        updatedAt: now,
+    }, { merge: true });
+    await db.collection('users').doc(uid).update({
+        hasGoogleTasksOfflineAccess: true,
+        googleTasksOfflineAccessGrantedAt: now,
+        googleTasksRefreshToken: firestore_2.FieldValue.delete(),
+    });
+}
+/**
+ * Returns the public OAuth client ID for the redirect-based offline access flow.
+ */
+exports.getGoogleOAuthConfig = (0, https_1.onCall)({
+    secrets: [googleClientId],
+    memory: '128MiB',
+}, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const clientId = googleClientId.value();
+    if (!clientId) {
+        throw new https_1.HttpsError('failed-precondition', 'Google OAuth client ID is not configured');
+    }
+    return { clientId, scopes: GOOGLE_OAUTH_SCOPES };
+});
+/**
+ * Exchange an authorization code for tokens and store the refresh token server-side.
+ */
+exports.exchangeGoogleOAuthCode = (0, https_1.onCall)({
+    secrets: [googleClientId, googleClientSecret],
+    memory: '256MiB',
+}, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const { code, redirectUri } = request.data ?? {};
+    if (!code || !redirectUri) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing code or redirectUri');
+    }
+    const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value(), redirectUri);
+    const { tokens } = await oauth2Client.getToken(code);
+    if (!tokens.refresh_token) {
+        throw new https_1.HttpsError('failed-precondition', 'Google did not return a refresh token. Revoke prior access and try again with consent.');
+    }
+    if (!tokens.access_token) {
+        throw new https_1.HttpsError('internal', 'Google did not return an access token');
+    }
+    await storeRefreshToken(request.auth.uid, tokens.refresh_token);
+    return {
+        accessToken: tokens.access_token,
+        expiresIn: tokens.expiry_date ?? null,
+    };
+});
+/**
+ * Refresh a short-lived access token using the server-stored refresh token.
+ */
+exports.refreshGoogleAccessToken = (0, https_1.onCall)({
+    secrets: [googleClientId, googleClientSecret],
+    memory: '256MiB',
+}, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    const refreshToken = await getStoredRefreshToken(request.auth.uid);
+    if (!refreshToken) {
+        throw new https_1.HttpsError('failed-precondition', 'No offline Google access configured');
+    }
+    const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value());
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    const tokens = await oauth2Client.refreshAccessToken();
+    const accessToken = tokens.credentials.access_token;
+    if (!accessToken) {
+        throw new https_1.HttpsError('internal', 'Failed to refresh Google access token');
+    }
+    return {
+        accessToken,
+        expiresIn: tokens.credentials.expiry_date ?? null,
+    };
+});
+/**
+ * Revoke stored offline Google access for the signed-in user.
+ */
+exports.revokeGoogleOfflineAccess = (0, https_1.onCall)({
+    memory: '128MiB',
+}, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+    await db.collection('users').doc(request.auth.uid).collection('private').doc('googleOAuth').delete();
+    await db.collection('users').doc(request.auth.uid).update({
+        hasGoogleTasksOfflineAccess: false,
+        googleTasksOfflineAccessGrantedAt: firestore_2.FieldValue.delete(),
+        googleTasksRefreshToken: firestore_2.FieldValue.delete(),
+    });
+    return { success: true };
 });
 /**
  * Callable function to get workspace contacts from Google Directory
@@ -652,6 +754,9 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
             const userDoc = await db.collection('users').doc(actualId).get();
             if (userDoc.exists) {
                 const userData = userDoc.data();
+                if (userData.emailNotificationsEnabled === false) {
+                    return null;
+                }
                 if (userData.email)
                     return userData.email;
             }

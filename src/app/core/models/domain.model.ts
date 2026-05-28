@@ -1,4 +1,5 @@
 import { Timestamp } from '@angular/fire/firestore';
+import type { AutomationRule } from './automation.model';
 
 type FirestoreDate = Timestamp | Date;
 
@@ -182,6 +183,8 @@ export interface Project {
   sheetSyncEnabled?: boolean;
   lastSheetSyncAt?: FirestoreDate;
   sheetSyncStatus?: 'synced' | 'pending' | 'error';
+  /** Client-evaluated automation rules for this project. */
+  automationRules?: AutomationRule[];
 }
 
 export interface Task {

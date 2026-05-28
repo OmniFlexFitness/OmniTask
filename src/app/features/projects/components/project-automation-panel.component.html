@@ -1,0 +1,171 @@
+<div class="space-y-4">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="text-sm font-semibold text-slate-200">Automation Rules</h3>
+      <p class="mt-1 text-xs text-slate-400">
+        When a task field changes to a value, run follow-up actions automatically.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="ofx-ghost-button text-xs"
+      (click)="showAddForm.set(true)"
+      [disabled]="showAddForm()"
+    >
+      + Add Rule
+    </button>
+  </div>
+
+  @if (showAddForm()) {
+    <div class="p-4 bg-slate-800/50 rounded-lg border border-white/10 space-y-3">
+      <input
+        type="text"
+        [(ngModel)]="newName"
+        placeholder="Rule name..."
+        class="ofx-input text-sm"
+      />
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">When field</label>
+          <select
+            [(ngModel)]="newField"
+            (ngModelChange)="onTriggerFieldChange()"
+            class="ofx-input text-sm w-full"
+          >
+            @for (f of fieldOptions; track f) {
+              <option [value]="f">{{ f }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Equals</label>
+          @if (newField === 'status') {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              @for (opt of statusOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          } @else if (newField === 'priority') {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              @for (opt of priorityOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          } @else {
+            <select [(ngModel)]="newValue" class="ofx-input text-sm w-full">
+              <option value="">No Section</option>
+              @for (section of sectionOptions(); track section.id) {
+                <option [value]="section.id">{{ section.name }}</option>
+              }
+            </select>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Then</label>
+        <select [(ngModel)]="newActionType" class="ofx-input text-sm w-full mb-2">
+          <option value="update_field">Update another field</option>
+          <option value="move_section">Move to section</option>
+        </select>
+
+        @if (newActionType === 'update_field') {
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <select
+              [(ngModel)]="newActionField"
+              (ngModelChange)="onActionFieldChange()"
+              class="ofx-input text-sm w-full"
+            >
+              @for (f of fieldOptions; track f) {
+                <option [value]="f">{{ f }}</option>
+              }
+            </select>
+            @if (newActionField === 'status') {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                @for (opt of statusOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            } @else if (newActionField === 'priority') {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                @for (opt of priorityOptions; track opt.value) {
+                  <option [value]="opt.value">{{ opt.label }}</option>
+                }
+              </select>
+            } @else {
+              <select [(ngModel)]="newActionValue" class="ofx-input text-sm w-full">
+                <option value="">No Section</option>
+                @for (section of sectionOptions(); track section.id) {
+                  <option [value]="section.id">{{ section.name }}</option>
+                }
+              </select>
+            }
+          </div>
+        } @else {
+          <select [(ngModel)]="newSectionId" class="ofx-input text-sm w-full">
+            @for (section of sectionOptions(); track section.id) {
+              <option [value]="section.id">{{ section.name }}</option>
+            }
+          </select>
+        }
+      </div>
+
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="ofx-gradient-button text-xs flex-1"
+          [disabled]="!newName.trim() || !newValue.trim() || saving()"
+          (click)="addRule()"
+        >
+          {{ saving() ? 'Saving...' : 'Add Rule' }}
+        </button>
+        <button type="button" class="ofx-ghost-button text-xs" (click)="cancelAdd()">Cancel</button>
+      </div>
+    </div>
+  }
+
+  <ul class="space-y-2">
+    @for (rule of rules(); track rule.id) {
+      <li
+        class="flex items-start justify-between gap-3 p-3 rounded-lg border border-white/10 bg-slate-800/30"
+      >
+        <div class="min-w-0">
+          <div class="text-sm font-medium text-slate-200">{{ rule.name }}</div>
+          <div class="text-xs text-slate-400 mt-1">
+            When {{ rule.field }} = "{{ fieldLabel(rule.field, rule.value) }}" →
+            @for (action of rule.actions; track $index) {
+              @if (action.type === 'move_section') {
+                move to {{ fieldLabel('sectionId', action.sectionId ?? '') }}
+              } @else {
+                set {{ action.field }} to "{{ fieldLabel(action.field ?? 'status', action.value ?? '') }}"
+              }
+            }
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            class="text-xs px-2 py-1 rounded border border-white/10"
+            [class.text-emerald-300]="rule.enabled"
+            [class.text-slate-500]="!rule.enabled"
+            (click)="toggleRule(rule)"
+          >
+            {{ rule.enabled ? 'On' : 'Off' }}
+          </button>
+          <button
+            type="button"
+            class="text-xs text-rose-400 hover:text-rose-200"
+            (click)="deleteRule(rule)"
+          >
+            Delete
+          </button>
+        </div>
+      </li>
+    } @empty {
+      <li class="text-slate-500 text-sm py-4 text-center">
+        No automation rules yet.
+      </li>
+    }
+  </ul>
+</div>

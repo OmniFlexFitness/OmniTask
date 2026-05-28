@@ -20,9 +20,11 @@ import {
 } from '@angular/fire/firestore';
 import { arrayRemove, arrayUnion } from 'firebase/firestore';
 import { Router } from '@angular/router';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { DEFAULT_USER_PERMISSIONS, UserPermissions, UserProfile } from '../models/user.model';
 import { SUPER_ADMIN_EMAIL } from '../constants';
 import { DialogService } from '../services/dialog.service';
+import { GOOGLE_OAUTH_SCOPES, googleOAuthRedirectUri } from './google-oauth.scopes';
 import { switchMap, map } from 'rxjs/operators';
 import { of, from, Observable } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -46,10 +48,7 @@ const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
 const GOOGLE_DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 // Google OAuth configuration for refresh token flow
-// These are public client identifiers (safe to expose in frontend code)
-const GOOGLE_CLIENT_ID = '172130002005-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com';
-const GOOGLE_REDIRECT_URI =
-  typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '';
+// Public client ID is loaded from Cloud Functions (backed by GOOGLE_CLIENT_ID secret).
 
 @Injectable({
   providedIn: 'root',
@@ -59,6 +58,7 @@ export class AuthService {
   private firestore = inject(Firestore);
   private router = inject(Router);
   private dialogService = inject(DialogService);
+  private functions = inject(Functions);
   private destroyRef = inject(DestroyRef);
 
   user$ = user(this.auth);
@@ -92,9 +92,9 @@ export class AuthService {
   constructor() {
     this.userProfile$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((profile) => {
       this.currentUserSig.set(profile);
-      // Check if user has stored refresh token
       if (profile?.hasGoogleTasksOfflineAccess) {
         this.hasOfflineAccess.set(true);
+        void this.tryRestoreGoogleAccessToken();
       }
     });
 
@@ -108,6 +108,8 @@ export class AuthService {
   }
 
   private static readonly GOOGLE_TOKEN_STORAGE_KEY = 'ot.googleAccessToken';
+  private static readonly GOOGLE_OAUTH_STATE_KEY = 'ot.googleOAuthState';
+  private static readonly GOOGLE_OAUTH_RETURN_KEY = 'ot.googleOAuthReturn';
 
   /** Read a previously-stored Google access token from sessionStorage (null if none). */
   private readStoredGoogleToken(): string | null {
@@ -174,13 +176,9 @@ export class AuthService {
 
   /**
    * Request offline access for Google Tasks scheduled sync.
-   * This grants a refresh token that can be used by Cloud Functions
-   * to sync tasks in the background without user interaction.
-   *
-   * Note: This uses a separate OAuth flow that provides a refresh token.
-   * The refresh token is stored securely in Firestore for use by Cloud Functions.
+   * Redirects through Google OAuth so a refresh token can be stored server-side.
    */
-  async requestOfflineAccess(): Promise<boolean> {
+  async requestOfflineAccess(returnUrl = '/settings'): Promise<boolean> {
     const currentUser = this.currentUserSig();
     if (!currentUser) {
       console.error('User must be logged in to request offline access');
@@ -188,42 +186,34 @@ export class AuthService {
     }
 
     try {
-      // Use Google Identity Services for offline access flow
-      // This opens a popup to request additional permissions
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({
-        access_type: 'offline',
-        prompt: 'consent', // Force consent screen to get refresh token
-      });
-      provider.addScope(GOOGLE_TASKS_SCOPE);
-      provider.addScope(GOOGLE_CONTACTS_SCOPE);
-      provider.addScope(GOOGLE_DIRECTORY_SCOPE);
-      provider.addScope(GOOGLE_SHEETS_SCOPE);
-      provider.addScope(GOOGLE_DRIVE_FILE_SCOPE);
+      const configFn = httpsCallable<void, { clientId: string; scopes: string[] }>(
+        this.functions,
+        'getGoogleOAuthConfig',
+      );
+      const config = await configFn();
+      const redirectUri = googleOAuthRedirectUri();
+      const state = crypto.randomUUID();
 
-      const credential = await signInWithPopup(this.auth, provider);
-      const oauthCredential = GoogleAuthProvider.credentialFromResult(credential);
-
-      if (oauthCredential?.accessToken) {
-        this.googleTasksAccessToken.set(oauthCredential.accessToken);
-
-        // Note: Firebase's signInWithPopup doesn't provide refresh tokens directly.
-        // For true offline access with refresh tokens, you would need to:
-        // 1. Use Google Identity Services (GIS) library directly, or
-        // 2. Implement a backend OAuth flow through Cloud Functions
-        //
-        // For now, we mark the user as having granted consent for offline access.
-        // The Cloud Function will use its own service account or stored credentials.
-
-        await this.markOfflineAccessGranted(currentUser.uid);
-        this.hasOfflineAccess.set(true);
-
-        return true;
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem(AuthService.GOOGLE_OAUTH_STATE_KEY, state);
+        window.sessionStorage.setItem(AuthService.GOOGLE_OAUTH_RETURN_KEY, returnUrl);
       }
 
-      return false;
+      const params = new URLSearchParams({
+        client_id: config.data.clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: config.data.scopes.join(' '),
+        access_type: 'offline',
+        prompt: 'consent',
+        include_granted_scopes: 'true',
+        state,
+      });
+
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      return true;
     } catch (error) {
-      console.error('Failed to request offline access:', error);
+      console.error('Failed to start offline access flow:', error);
       this.dialogService
         .alert('Failed to enable scheduled sync. Please try again.', 'Sync Error')
         .catch((err) => console.error('Failed to show error dialog:', err));
@@ -232,14 +222,51 @@ export class AuthService {
   }
 
   /**
-   * Mark user as having granted offline access for Google Tasks
+   * Complete the OAuth redirect flow started by requestOfflineAccess().
    */
-  private async markOfflineAccessGranted(uid: string): Promise<void> {
-    const userRef = doc(this.firestore, `users/${uid}`);
-    await updateDoc(userRef, {
-      hasGoogleTasksOfflineAccess: true,
-      googleTasksOfflineAccessGrantedAt: new Date(),
-    });
+  async completeOAuthCallback(code: string, state: string | null): Promise<void> {
+    const expectedState =
+      typeof window !== 'undefined'
+        ? window.sessionStorage.getItem(AuthService.GOOGLE_OAUTH_STATE_KEY)
+        : null;
+    if (!expectedState || !state || expectedState !== state) {
+      throw new Error('OAuth state mismatch. Please try again.');
+    }
+
+    const redirectUri = googleOAuthRedirectUri();
+    const exchangeFn = httpsCallable<
+      { code: string; redirectUri: string },
+      { accessToken: string; expiresIn: number | null }
+    >(this.functions, 'exchangeGoogleOAuthCode');
+
+    const result = await exchangeFn({ code, redirectUri });
+    this.googleTasksAccessToken.set(result.data.accessToken);
+    this.hasOfflineAccess.set(true);
+
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.removeItem(AuthService.GOOGLE_OAUTH_STATE_KEY);
+    }
+  }
+
+  consumeOAuthReturnUrl(): string {
+    if (typeof window === 'undefined' || !window.sessionStorage) return '/settings';
+    const url = window.sessionStorage.getItem(AuthService.GOOGLE_OAUTH_RETURN_KEY) ?? '/settings';
+    window.sessionStorage.removeItem(AuthService.GOOGLE_OAUTH_RETURN_KEY);
+    return url;
+  }
+
+  private async tryRestoreGoogleAccessToken(): Promise<void> {
+    if (this.googleTasksAccessToken()) return;
+    try {
+      const refreshFn = httpsCallable<void, { accessToken: string }>(
+        this.functions,
+        'refreshGoogleAccessToken',
+      );
+      const result = await refreshFn();
+      this.googleTasksAccessToken.set(result.data.accessToken);
+    } catch (err) {
+      console.warn('Could not restore Google access token from refresh token:', err);
+    }
   }
 
   /**
@@ -249,12 +276,13 @@ export class AuthService {
     const currentUser = this.currentUserSig();
     if (!currentUser) return;
 
-    const userRef = doc(this.firestore, `users/${currentUser.uid}`);
-    await updateDoc(userRef, {
-      hasGoogleTasksOfflineAccess: false,
-      googleTasksRefreshToken: null,
-    });
+    const revokeFn = httpsCallable<void, { success: boolean }>(
+      this.functions,
+      'revokeGoogleOfflineAccess',
+    );
+    await revokeFn();
     this.hasOfflineAccess.set(false);
+    this.googleTasksAccessToken.set(null);
   }
 
   /**

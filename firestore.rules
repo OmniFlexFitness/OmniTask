@@ -76,6 +76,11 @@ service cloud.firestore {
       );
 
       allow delete: if request.auth.uid == userId || isAdmin() || isSuperAdmin();
+
+      // Server-only OAuth secrets (Cloud Functions Admin SDK bypasses rules).
+      match /private/{docId} {
+        allow read, write: if false;
+      }
     }
 
     // User's personal contacts cache - scoped to individual users
@@ -165,6 +170,35 @@ service cloud.firestore {
       allow delete: if isAdmin() || isSuperAdmin() || (
         isAuthenticated() && isProjectMember() && hasPermission('canDeleteTasks')
       );
+
+      function isParentTaskProjectMember() {
+        let task = get(/databases/$(database)/documents/tasks/$(taskId));
+        let project = get(/databases/$(database)/documents/projects/$(task.data.projectId));
+        return project != null && (
+          request.auth.uid == project.data.ownerId ||
+          request.auth.uid in project.data.memberIds
+        );
+      }
+
+      match /comments/{commentId} {
+        allow read: if (isAuthenticated() && isParentTaskProjectMember()) || isAdmin() || isSuperAdmin();
+        allow create: if isAuthenticated() && isParentTaskProjectMember() &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.taskId == taskId;
+        allow delete: if isAuthenticated() && (
+          (isParentTaskProjectMember() && resource.data.authorId == request.auth.uid) ||
+          isAdmin() || isSuperAdmin()
+        );
+        allow update: if false;
+      }
+
+      match /activity/{entryId} {
+        allow read: if (isAuthenticated() && isParentTaskProjectMember()) || isAdmin() || isSuperAdmin();
+        allow create: if isAuthenticated() && isParentTaskProjectMember() &&
+          request.resource.data.actorId == request.auth.uid &&
+          request.resource.data.taskId == taskId;
+        allow update, delete: if false;
+      }
     }
 
     // Invites - created by super-admins, auto-applied on first sign-in of the
