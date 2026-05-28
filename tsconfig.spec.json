@@ -9,5 +9,5 @@
       "@angular/fire/firestore": ["./src/testing/mock-firestore.ts"]
     }
   },
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/test.ts"]
 }

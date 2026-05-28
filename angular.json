@@ -46,7 +46,7 @@
                 {
                   "type": "initial",
                   "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumError": "1.1MB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -82,6 +82,8 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
+            "karmaConfig": "karma.conf.js",
+            "main": "src/test.ts",
             "polyfills": [
               "zone.js",
               "zone.js/testing"

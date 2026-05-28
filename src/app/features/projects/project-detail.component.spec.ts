@@ -5,7 +5,9 @@ import { TaskService } from '../../core/services/task.service';
 import { DialogService } from '../../core/services/dialog.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, BehaviorSubject } from 'rxjs';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
+import { GoogleSheetsAutoSyncService } from '../../core/services/google-sheets-auto-sync.service';
+import { generateMockProject, generateMockTask } from '../../../testing/mock-data';
 
 describe('ProjectDetailComponent', () => {
   let component: ProjectDetailComponent;
@@ -14,6 +16,7 @@ describe('ProjectDetailComponent', () => {
   let mockTaskService: any;
   let mockDialogService: any;
   let mockRouter: any;
+  let mockSheetsAutoSync: jasmine.SpyObj<GoogleSheetsAutoSyncService>;
 
   let paramMapSubject = new BehaviorSubject<{ get: (key: string) => string | null }>({
     get: () => 'p1',
@@ -25,18 +28,27 @@ describe('ProjectDetailComponent', () => {
   beforeEach(async () => {
     mockProjectService = jasmine.createSpyObj('ProjectService', ['getProject$']);
     mockProjectService.getProject$.and.returnValue(
-      of({ id: 'p1', name: 'Project 1', sections: [], ownerId: 'u1', memberIds: [] }),
+      of(generateMockProject({ id: 'p1', name: 'Project 1', ownerId: 'u1', memberIds: ['u1'] })),
     );
-    mockProjectService.selectedProjectId = { set: jasmine.createSpy('set') };
+    mockProjectService.selectedProjectId = signal<string | null>(null);
 
     mockTaskService = jasmine.createSpyObj('TaskService', ['getTasksByProject', 'deleteTask']);
-    mockTaskService.getTasksByProject.and.returnValue(of([{ id: 't1', title: 'Task 1' }]));
+    mockTaskService.getTasksByProject.and.returnValue(
+      of([generateMockTask({ id: 't1', title: 'Task 1', projectId: 'p1' })]),
+    );
     mockTaskService.deleteTask.and.returnValue(Promise.resolve());
 
     mockDialogService = jasmine.createSpyObj('DialogService', ['confirm']);
     mockDialogService.confirm.and.returnValue(Promise.resolve(true));
 
-    mockRouter = jasmine.createSpyObj('Router', ['navigate']);
+    mockRouter = jasmine.createSpyObj('Router', ['navigate'], { url: '/projects/p1' });
+    mockRouter.navigate.and.returnValue(Promise.resolve(true));
+
+    mockSheetsAutoSync = jasmine.createSpyObj('GoogleSheetsAutoSyncService', [
+      'start',
+      'stop',
+      'syncNow',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [ProjectDetailComponent],
@@ -45,11 +57,16 @@ describe('ProjectDetailComponent', () => {
         { provide: TaskService, useValue: mockTaskService },
         { provide: DialogService, useValue: mockDialogService },
         { provide: Router, useValue: mockRouter },
+        { provide: GoogleSheetsAutoSyncService, useValue: mockSheetsAutoSync },
         {
           provide: ActivatedRoute,
           useValue: {
             paramMap: paramMapSubject.asObservable(),
             queryParamMap: queryParamMapSubject.asObservable(),
+            snapshot: {
+              paramMap: { get: (key: string) => (key === 'id' ? 'p1' : null) },
+              queryParamMap: { get: (key: string) => (key === 'tab' ? 'overview' : null) },
+            },
           },
         },
       ],
@@ -74,7 +91,7 @@ describe('ProjectDetailComponent', () => {
     expect(component.activeTab()).toBe('overview');
 
     // Test that the effect syncs the global selected project id
-    expect(mockProjectService.selectedProjectId.set).toHaveBeenCalledWith('p1');
+    expect(mockProjectService.selectedProjectId()).toBe('p1');
   });
 
   it('should go back', () => {

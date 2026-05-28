@@ -5,8 +5,9 @@ import {
   signal,
   effect,
   ChangeDetectionStrategy,
+  Type,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { switchMap, of } from 'rxjs';
@@ -29,7 +30,6 @@ import { CustomFieldManagerComponent } from '../projects/components/custom-field
 import { TaskListViewComponent } from '../tasks/task-list-view.component';
 import { TaskBoardViewComponent } from '../tasks/task-board-view.component';
 import { TaskCalendarViewComponent } from '../tasks/task-calendar-view.component';
-import { TaskTimelineViewComponent } from '../tasks/task-timeline-view.component';
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
 import { DashboardHeaderComponent } from './components/dashboard-header';
@@ -46,7 +46,7 @@ import { ProjectOverviewComponent } from './components/project-overview.componen
     TaskListViewComponent,
     TaskBoardViewComponent,
     TaskCalendarViewComponent,
-    TaskTimelineViewComponent,
+    NgComponentOutlet,
     TaskDetailModalComponent,
     TaskCreateModalComponent,
     CustomFieldManagerComponent,
@@ -72,9 +72,29 @@ export class DashboardComponent {
   syncing = signal(false);
   mobileSidebarOpen = signal(false);
 
+  /** Lazy-loaded when user switches to timeline view (keeps vis-timeline out of dashboard chunk). */
+  timelineComponent = signal<Type<unknown> | null>(null);
+
+  timelineInputs = computed(() => ({
+    tasks: this.tasks(),
+    project: this.currentProject()!,
+  }));
+
+  readonly timelineOutputs = {
+    taskClick: (task: Task) => this.openTaskDetail(task),
+  };
+
   constructor() {
     // Seed sample data if user has no projects
     this.seedSampleDataIfNeeded();
+
+    effect(() => {
+      if (this.viewMode() === 'timeline' && !this.timelineComponent()) {
+        void import('../tasks/task-timeline-view.component').then((m) =>
+          this.timelineComponent.set(m.TaskTimelineViewComponent),
+        );
+      }
+    });
   }
 
   private async seedSampleDataIfNeeded() {
