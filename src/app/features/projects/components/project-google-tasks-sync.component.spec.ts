@@ -229,7 +229,7 @@ describe('ProjectGoogleTasksSyncComponent', () => {
   });
 
   describe('enableScheduledSync', () => {
-    it('should request offline access and not surface a result until the OAuth callback returns', async () => {
+    it('should not surface a result until the OAuth callback returns', async () => {
       // requestOfflineAccess redirects the browser to Google's consent screen;
       // success is only shown after the OAuth callback returns to the app, so the
       // synchronous path must not set lastSyncResult (regression guard for #173).
