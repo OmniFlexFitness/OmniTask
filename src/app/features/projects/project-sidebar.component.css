@@ -1,7 +1,6 @@
 .ofx-sidebar {
-        background: #050810;
+        background: var(--of-color-bg-primary, #050810);
         border-right: 1px solid rgba(0, 210, 255, 0.15);
-        backdrop-filter: blur(16px);
         position: relative;
       }
 

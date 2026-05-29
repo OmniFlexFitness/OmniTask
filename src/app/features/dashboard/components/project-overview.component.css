@@ -6,7 +6,7 @@
 
 /* Small KPI tile used in the hero strip. */
 .kpi {
-  @apply flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-white/5 bg-slate-950/60 backdrop-blur;
+  @apply flex flex-col items-start gap-1 px-3 py-2 rounded-lg border border-white/5 bg-slate-950/90;
   box-shadow:
     inset 0 0 0 1px rgba(0, 210, 255, 0.04),
     0 6px 20px rgba(0, 0, 0, 0.35);
@@ -47,7 +47,7 @@
 /* Tag chip with neon glow */
 .tag-chip {
   @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border;
-  backdrop-filter: blur(6px);
+  background: var(--of-color-bg-surface, rgba(10, 15, 30, 0.92));
 }
 
 .tag-count {

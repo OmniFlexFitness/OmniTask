@@ -61,7 +61,6 @@
   font-size: 0.875rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  backdrop-filter: blur(4px);
 }
 
 .vis-item.vis-selected {
@@ -111,8 +110,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: rgba(15, 15, 15, 0.8);
-  backdrop-filter: blur(12px);
+  background: var(--of-color-bg-surface, rgba(10, 15, 30, 0.92));
   padding: 3rem;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);

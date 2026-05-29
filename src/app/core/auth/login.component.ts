@@ -1,6 +1,9 @@
-import { Component, inject , ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './auth.service';
+import { VersionService } from '../services/version.service';
+import { DEFAULT_VERSION } from '../constants';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,7 +17,12 @@ import { AuthService } from './auth.service';
   styleUrl: './login.component.css',
 })
 export class LoginComponent {
-  authService = inject(AuthService);
+  readonly authService = inject(AuthService);
+  private readonly versionService = inject(VersionService);
+
+  readonly version = toSignal(this.versionService.getVersion(), {
+    initialValue: DEFAULT_VERSION,
+  });
 
   login() {
     this.authService.loginWithGoogle();
