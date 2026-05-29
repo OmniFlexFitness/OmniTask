@@ -229,11 +229,15 @@ describe('ProjectGoogleTasksSyncComponent', () => {
   });
 
   describe('enableScheduledSync', () => {
-    it('should request offline access and show success message', async () => {
+    it('should request offline access and not surface a result until the OAuth callback returns', async () => {
+      // requestOfflineAccess redirects the browser to Google's consent screen;
+      // success is only shown after the OAuth callback returns to the app, so the
+      // synchronous path must not set lastSyncResult (regression guard for #173).
       await component.enableScheduledSync();
 
       expect(mockAuthService.requestOfflineAccess).toHaveBeenCalled();
-      expect(component.lastSyncResult()?.success).toBeTrue();
+      expect(component.lastSyncResult()).toBeNull();
+      expect(component.enablingScheduledSync()).toBeTrue();
     });
 
     it('should handle offline access errors', async () => {
