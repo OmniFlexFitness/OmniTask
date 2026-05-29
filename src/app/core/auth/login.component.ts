@@ -1,4 +1,5 @@
-import { Component, inject, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './auth.service';
 import { VersionService } from '../services/version.service';
@@ -15,15 +16,13 @@ import { DEFAULT_VERSION } from '../constants';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent implements OnInit {
-  authService = inject(AuthService);
+export class LoginComponent {
+  readonly authService = inject(AuthService);
   private readonly versionService = inject(VersionService);
 
-  version = signal<string>(DEFAULT_VERSION);
-
-  ngOnInit() {
-    this.versionService.getVersion().subscribe((v) => this.version.set(v));
-  }
+  readonly version = toSignal(this.versionService.getVersion(), {
+    initialValue: DEFAULT_VERSION,
+  });
 
   login() {
     this.authService.loginWithGoogle();
