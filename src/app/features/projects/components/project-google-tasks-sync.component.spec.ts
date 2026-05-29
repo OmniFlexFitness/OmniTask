@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { ProjectGoogleTasksSyncComponent } from './project-google-tasks-sync.component';
 import { ProjectService } from '../../../core/services/project.service';
 import { DialogService } from '../../../core/services/dialog.service';
@@ -20,6 +21,7 @@ describe('ProjectGoogleTasksSyncComponent', () => {
   let mockGoogleTasksService: jasmine.SpyObj<GoogleTasksService>;
   let mockGoogleTasksSyncService: jasmine.SpyObj<GoogleTasksSyncService>;
   let mockAuthService: jasmine.SpyObj<AuthService>;
+  let mockRouter: { url: string };
 
   const mockProject: Project = {
     id: 'proj1',
@@ -74,6 +76,8 @@ describe('ProjectGoogleTasksSyncComponent', () => {
     mockAuthService.requestOfflineAccess.and.returnValue(Promise.resolve(true));
     mockAuthService.logout.and.returnValue(Promise.resolve());
 
+    mockRouter = { url: '/projects/proj1' };
+
     await TestBed.configureTestingModule({
       imports: [ProjectGoogleTasksSyncComponent],
       providers: [
@@ -82,6 +86,7 @@ describe('ProjectGoogleTasksSyncComponent', () => {
         { provide: GoogleTasksService, useValue: mockGoogleTasksService },
         { provide: GoogleTasksSyncService, useValue: mockGoogleTasksSyncService },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
 
@@ -229,11 +234,12 @@ describe('ProjectGoogleTasksSyncComponent', () => {
   });
 
   describe('enableScheduledSync', () => {
-    it('should request offline access and show success message', async () => {
+    it('should request offline access and start OAuth redirect flow', async () => {
       await component.enableScheduledSync();
 
-      expect(mockAuthService.requestOfflineAccess).toHaveBeenCalled();
-      expect(component.lastSyncResult()?.success).toBeTrue();
+      // Success UI is shown after OAuth callback — not before redirect.
+      expect(mockAuthService.requestOfflineAccess).toHaveBeenCalledWith('/projects/proj1');
+      expect(component.lastSyncResult()).toBeNull();
     });
 
     it('should handle offline access errors', async () => {

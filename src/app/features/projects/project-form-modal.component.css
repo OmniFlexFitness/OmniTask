@@ -1,6 +1,7 @@
 .ofx-modal-overlay {
       @apply fixed inset-0 z-50 flex items-center justify-center p-4;
       background: rgba(0, 0, 0, 0.7);
+      /* Modal scrim — backdrop blur allowed per DS rule 2 (not a card surface) */
       backdrop-filter: blur(4px);
       animation: fadeIn 0.2s ease-out;
     }

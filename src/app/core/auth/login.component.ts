@@ -1,6 +1,8 @@
-import { Component, inject , ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './auth.service';
+import { VersionService } from '../services/version.service';
+import { DEFAULT_VERSION } from '../constants';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -13,8 +15,15 @@ import { AuthService } from './auth.service';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   authService = inject(AuthService);
+  private readonly versionService = inject(VersionService);
+
+  version = signal<string>(DEFAULT_VERSION);
+
+  ngOnInit() {
+    this.versionService.getVersion().subscribe((v) => this.version.set(v));
+  }
 
   login() {
     this.authService.loginWithGoogle();
