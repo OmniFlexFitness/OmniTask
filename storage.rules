@@ -7,6 +7,13 @@ rules_version = '2';
 // user so download URLs work across the app (icons, avatars, attachments are
 // surfaced to anyone who can already see the parent document anyway, and
 // Firestore rules gate the documents themselves).
+//
+// NOTE: `isProjectMember` performs a cross-service Firestore read. This
+// requires the Firebase Storage Service Agent
+// (`service-{PROJECT_NUMBER}@gcp-sa-firebasestorage.iam.gserviceaccount.com`)
+// to hold `roles/datastore.viewer` on the project. Without that IAM grant
+// every project-scoped write/delete fails as `storage/unauthorized` (403)
+// even for the project owner.
 service firebase.storage {
   match /b/{bucket}/o {
 
