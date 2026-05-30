@@ -1,10 +1,9 @@
 /**
- * Resolves a usable GitHub installation token for a connected user, refreshing
- * the user-to-server token from the stored refresh token as needed and marking
- * the connection `needs_reauth` when the token is revoked (spec §10).
+ * Resolves a GitHub installation token for a connected user and marks the
+ * connection `needs_reauth` when the App access is no longer valid (spec §10).
  */
-import { createAppJwt, createInstallationToken, refreshUserToken, GithubApiError } from './app';
-import { getConnection, getUserRefreshToken, storeUserToken, setConnectionState } from './store';
+import { createAppJwt, createInstallationToken, GithubApiError } from './app';
+import { getConnection, setConnectionState } from './store';
 
 export interface AppCredentials {
   appId: string;
@@ -34,20 +33,12 @@ export async function getInstallationTokenForUser(
   const connection = await getConnection(uid);
   if (!connection) throw new ConnectionError('No GitHub connection', 'NOT_CONNECTED');
 
-  // Validate the user token is still good by refreshing it; revocation surfaces here.
-  const refreshToken = await getUserRefreshToken(uid);
-  if (!refreshToken) throw new ConnectionError('No stored token', 'NEEDS_REAUTH');
-
-  try {
-    const refreshed = await refreshUserToken(creds.clientId, creds.clientSecret, refreshToken);
-    if (refreshed.refreshToken) {
-      await storeUserToken(uid, refreshed.refreshToken, connection.installationId);
-    }
-  } catch {
-    await setConnectionState(uid, 'needs_reauth');
-    throw new ConnectionError('GitHub token revoked', 'NEEDS_REAUTH');
-  }
-
+  // Phase 1 sync writes use an *installation* token minted from the App JWT +
+  // installationId — the user-to-server token is not needed here. We deliberately
+  // do NOT refresh the stored user token on this hot path: GitHub rotates
+  // refresh tokens single-use, so refreshing on every sync would race concurrent
+  // syncs and self-revoke. A revoked App / removed installation surfaces below as
+  // a 401/404 on installation-token creation.
   try {
     const appJwt = createAppJwt(creds.appId, creds.privateKey);
     const token = await createInstallationToken(appJwt, connection.installationId);

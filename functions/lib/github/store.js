@@ -164,10 +164,24 @@ async function deleteTaskLink(taskId) {
  * Claim an inbound delivery id. Returns false if already seen (dedupe), true if
  * this call is the first to record it. `github_sync_events/{deliveryId}`.
  */
+/**
+ * Claim an inbound delivery for processing. Returns true if this call should
+ * process the event, false if it's a duplicate of an already-handled delivery.
+ *
+ * Uses a transaction so the claim is atomic. A delivery that previously *failed*
+ * is reclaimable: GitHub re-delivers on our non-2xx/timeout, and a prior failed
+ * attempt must not permanently suppress the retry (otherwise a transient error
+ * during processing loses the event for good). Only `received`/`processed`
+ * states block reprocessing.
+ */
 async function claimDelivery(deliveryId, eventType) {
     const ref = db().collection(exports.COLLECTIONS.syncEvents).doc(deliveryId);
-    try {
-        await ref.create({
+    return db().runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (snap.exists && snap.data()?.status !== 'failed') {
+            return false; // already received or processed — true duplicate
+        }
+        tx.set(ref, {
             deliveryId,
             direction: 'inbound',
             taskId: null,
@@ -178,11 +192,7 @@ async function claimDelivery(deliveryId, eventType) {
             createdAt: firestore_1.FieldValue.serverTimestamp(),
         });
         return true;
-    }
-    catch {
-        // `create` throws ALREADY_EXISTS on a duplicate delivery — that's the dedupe.
-        return false;
-    }
+    });
 }
 async function finishDelivery(deliveryId, patch) {
     await db().collection(exports.COLLECTIONS.syncEvents).doc(deliveryId).set(patch, { merge: true });
