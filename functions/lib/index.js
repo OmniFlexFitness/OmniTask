@@ -15,15 +15,26 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.revokeGoogleOfflineAccess = exports.refreshGoogleAccessToken = exports.exchangeGoogleOAuthCode = exports.getGoogleOAuthConfig = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
+exports.githubWebhook = exports.syncTaskStatusToGithub = exports.retryGithubSync = exports.unlinkTaskFromGithub = exports.linkTaskToGithub = exports.disconnectGithub = exports.getGithubConnection = exports.completeGithubAuth = exports.getGithubOAuthConfig = exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.revokeGoogleOfflineAccess = exports.refreshGoogleAccessToken = exports.exchangeGoogleOAuthCode = exports.getGoogleOAuthConfig = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -234,7 +245,6 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -1336,4 +1346,18 @@ exports.enforceSuperAdmin = (0, firestore_1.onDocumentWritten)({
         permissions: SUPER_ADMIN_PERMISSIONS,
     }, { merge: true });
 });
+// --- GitHub Issues integration (Phase 1) ---
+// Connection, issue create/link, and open/closed bidirectional status sync.
+// Implemented in ./github/* to keep this file focused; re-exported here so the
+// Functions deploy picks them up.
+var functions_1 = require("./github/functions");
+Object.defineProperty(exports, "getGithubOAuthConfig", { enumerable: true, get: function () { return functions_1.getGithubOAuthConfig; } });
+Object.defineProperty(exports, "completeGithubAuth", { enumerable: true, get: function () { return functions_1.completeGithubAuth; } });
+Object.defineProperty(exports, "getGithubConnection", { enumerable: true, get: function () { return functions_1.getGithubConnection; } });
+Object.defineProperty(exports, "disconnectGithub", { enumerable: true, get: function () { return functions_1.disconnectGithub; } });
+Object.defineProperty(exports, "linkTaskToGithub", { enumerable: true, get: function () { return functions_1.linkTaskToGithub; } });
+Object.defineProperty(exports, "unlinkTaskFromGithub", { enumerable: true, get: function () { return functions_1.unlinkTaskFromGithub; } });
+Object.defineProperty(exports, "retryGithubSync", { enumerable: true, get: function () { return functions_1.retryGithubSync; } });
+Object.defineProperty(exports, "syncTaskStatusToGithub", { enumerable: true, get: function () { return functions_1.syncTaskStatusToGithub; } });
+Object.defineProperty(exports, "githubWebhook", { enumerable: true, get: function () { return functions_1.githubWebhook; } });
 //# sourceMappingURL=index.js.map

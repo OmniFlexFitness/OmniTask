@@ -1,7 +1,15 @@
 # GitHub Issues Integration — Phase 1 Plan
 
-> Status: **DRAFT, awaiting approval.** Phase 1 only. Per the build prompt, stop after Phase 1
-> and demo the connection flow + a create→close round-trip before continuing.
+> Status: **Phase 1 IMPLEMENTED** (this PR). Per the build prompt, this is the stopping point —
+> demo the connection flow + a create→close round-trip before continuing to Phase 2.
+>
+> **Implementation note:** GitHub API access uses Node 20 built-ins (`fetch` + `crypto` for the
+> RS256 App JWT and HMAC webhook verification) instead of the `@octokit/*` packages named in the
+> early plan. This keeps `functions/package.json`/lockfile unchanged (CI validates lock sync) and
+> the deploy surface minimal. The spec explicitly allows swapping equivalents — only the data model
+> and flows are fixed. The same applies to the queue: Phase 1 processes webhooks inline (verify →
+> dedupe → return 202 → apply best-effort, recording failures for retry) rather than via Cloud
+> Tasks; a dedicated queue is a Phase 4 observability concern.
 
 ## Decisions locked in (from review)
 

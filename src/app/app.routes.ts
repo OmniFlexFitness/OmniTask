@@ -13,6 +13,11 @@ export const routes: Routes = [
       import('./core/auth/oauth-callback.component').then((m) => m.OAuthCallbackComponent),
   },
   {
+    path: 'auth/github/callback',
+    loadComponent: () =>
+      import('./core/auth/github-callback.component').then((m) => m.GithubCallbackComponent),
+  },
+  {
     path: 'demo/board',
     loadComponent: () =>
       import('./features/demo/board-demo.component').then((m) => m.BoardDemoComponent),
