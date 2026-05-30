@@ -79,7 +79,7 @@ Richer statuses driving a Project "Status" field is a Phase 3 concern.
 
 **Modified:**
 - `firestore.rules` — rules for new collections (read own connection state; `private` token doc denied
-  to all clients; link/field/event docs written only by Functions).
+  to all clients; `task_github_links`, `github_issue_links`, field/event docs written only by Functions).
 - `firestore.indexes.json` — indexes for `github_sync_events` (delivery_id) and task-link lookups.
 - `functions/package.json` — add `@octokit/rest`, `@octokit/auth-app`, `@octokit/graphql`,
   `@octokit/webhooks-methods`, `@google-cloud/tasks`.
@@ -92,9 +92,17 @@ Top-level collections (named to match the prompt's table list; final fields pend
   (`'user' | 'org'`), `scopes`, `capabilities` (cached), `state`
   (`'connected' | 'needs_reauth' | 'error'`), timestamps. **Token material is NOT here** — it lives in
   `users/{uid}/private/githubOAuth` (admin-SDK only), mirroring `googleOAuth`.
-- `tasks/{taskId}` links via `task_github_links/{taskId}` (doc id = taskId enforces the UNIQUE 1:1):
-  `repoOwner`, `repoName`, `issueNumber`, `issueNodeId`, `htmlUrl`, `state`, `lastSyncedAt`,
-  `syncState` (`'synced' | 'pending' | 'error' | 'conflict'`), `lastError`.
+- `tasks/{taskId}` links via `task_github_links/{taskId}` (doc id = taskId enforces the UNIQUE 1:1
+  on the *task* side): `repoOwner`, `repoName`, `issueNumber`, `issueNodeId`, `htmlUrl`, `state`,
+  `lastSyncedAt`, `syncState` (`'synced' | 'pending' | 'error' | 'conflict'`), `lastError`.
+  - **Reverse uniqueness (issue side):** doc-id = taskId stops one task having many links, but it does
+    **not** stop two tasks linking the same `repoOwner/repoName/issueNumber`. Without a guard, the
+    link-existing path or a concurrent create lets one GitHub issue attach to multiple tasks — so a
+    `closed`/`reopened` webhook would fan out to the wrong task set and cause outbound conflicts.
+    Guard with a second collection `github_issue_links/{owner}__{repo}__{number}` (deterministic
+    issue-keyed doc id) written **in the same Firestore transaction** as `task_github_links/{taskId}`:
+    create-if-absent fails the link when the issue is already bound to another task. This is the
+    issue-side analog of the `github_sync_events/{deliveryId}` idempotency trick.
 - `task_github_field_values/{...}` — flexible field storage (Phase 2; stubbed schema only now).
 - `task_github_relationships/{...}` — Phase 2.
 - `task_github_actors/{...}` — Phase 2.
@@ -105,8 +113,11 @@ Top-level collections (named to match the prompt's table list; final fields pend
 ## Implementation steps (Phase 1)
 
 1. Add deps to `functions/package.json`; `npm ci` in `functions/`.
-2. `docs/github-app-setup.md`: App creation, permissions (Issues RW, Contents RW for branches later,
-   Metadata RO), webhook URL + secret, user-to-server callback. List required secrets.
+2. `docs/github-app-setup.md`: App creation, **Phase 1 permissions = Issues RW + Metadata RO only**
+   (least privilege — Phase 1 creates/links issues and syncs open/closed state; it never writes repo
+   code). `Contents RW` is **deferred to Phase 3** when `createLinkedBranch` actually needs it, so the
+   App holds no code-write scope until that feature ships. Also: webhook URL + secret,
+   user-to-server callback. List required secrets.
 3. `github/app.ts` + secrets (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`,
    `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) via `defineSecret`.
 4. Connection callables + token storage in `users/{uid}/private/githubOAuth`.
