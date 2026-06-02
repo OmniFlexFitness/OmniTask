@@ -1723,3 +1723,19 @@ export const enforceSuperAdmin = onDocumentWritten(
       );
   },
 );
+
+// --- GitHub Issues integration (Phase 1) ---
+// Connection, issue create/link, and open/closed bidirectional status sync.
+// Implemented in ./github/* to keep this file focused; re-exported here so the
+// Functions deploy picks them up.
+export {
+  getGithubOAuthConfig,
+  completeGithubAuth,
+  getGithubConnection,
+  disconnectGithub,
+  linkTaskToGithub,
+  unlinkTaskFromGithub,
+  retryGithubSync,
+  syncTaskStatusToGithub,
+  githubWebhook,
+} from './github/functions';

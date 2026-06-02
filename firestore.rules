@@ -263,5 +263,31 @@ service cloud.firestore {
       allow read: if isAuthenticated() && resource.data.recipientEmail == request.auth.token.email;
       allow write: if false; // Only Cloud Functions can write
     }
+
+    // GitHub integration — all writes go through Cloud Functions (admin SDK
+    // bypasses rules). Clients may read only their own connection state; token
+    // material lives under users/{uid}/private and is never client-readable.
+
+    // Per-user connection status (no tokens here).
+    match /github_connections/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      allow write: if false; // Cloud Functions only
+    }
+
+    // Task↔issue links. Readable by the OmniTask owner of the link so the UI can
+    // render sync state; all mutations are server-side.
+    match /task_github_links/{taskId} {
+      allow read: if isAuthenticated() && resource.data.ownerUserId == request.auth.uid;
+      allow write: if false; // Cloud Functions only
+    }
+
+    // Issue-side uniqueness guard and audit/idempotency log — server-only, no
+    // client read (they carry no user-facing data beyond what the link exposes).
+    match /github_issue_links/{key} {
+      allow read, write: if false;
+    }
+    match /github_sync_events/{eventId} {
+      allow read, write: if false;
+    }
   }
 }
