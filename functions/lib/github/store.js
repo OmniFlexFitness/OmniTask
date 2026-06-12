@@ -1,24 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LinkError = exports.COLLECTIONS = void 0;
-exports.storeUserToken = storeUserToken;
-exports.getUserRefreshToken = getUserRefreshToken;
-exports.deleteUserToken = deleteUserToken;
-exports.upsertConnection = upsertConnection;
-exports.setConnectionState = setConnectionState;
-exports.getConnection = getConnection;
-exports.deleteConnection = deleteConnection;
-exports.taskLinkRef = taskLinkRef;
-exports.getTaskLink = getTaskLink;
-exports.findLinkByIssue = findLinkByIssue;
-exports.createLinkTransactional = createLinkTransactional;
-exports.claimIssueGuard = claimIssueGuard;
-exports.updateTaskLink = updateTaskLink;
-exports.recordOutboundSync = recordOutboundSync;
-exports.deleteTaskLink = deleteTaskLink;
-exports.claimDelivery = claimDelivery;
-exports.finishDelivery = finishDelivery;
-exports.recordOutboundEvent = recordOutboundEvent;
+exports.LinkError = exports.deleteTaskRelationship = exports.upsertTaskRelationship = exports.upsertTaskFieldValue = exports.deleteTaskActors = exports.upsertTaskActor = exports.recordOutboundEvent = exports.finishDelivery = exports.claimDelivery = exports.deleteTaskLink = exports.recordOutboundSync = exports.updateTaskLink = exports.claimIssueGuard = exports.createLinkTransactional = exports.findLinkByIssue = exports.getTaskLink = exports.taskLinkRef = exports.deleteConnection = exports.updateConnectionSettings = exports.getConnection = exports.setConnectionState = exports.updateFieldDefinitionCache = exports.upsertConnection = exports.deleteUserToken = exports.getUserRefreshToken = exports.storeUserToken = exports.COLLECTIONS = void 0;
 /**
  * Firestore access for the GitHub integration. Centralizes collection names and
  * the transactional reverse-uniqueness guard so the rest of the code never
@@ -32,6 +14,9 @@ exports.COLLECTIONS = {
     taskLinks: 'task_github_links',
     issueLinks: 'github_issue_links',
     syncEvents: 'github_sync_events',
+    fieldValues: 'task_github_field_values',
+    relationships: 'task_github_relationships',
+    actors: 'task_github_actors',
 };
 const tokenDocRef = (uid) => db().collection('users').doc(uid).collection('private').doc('githubOAuth');
 // --- Tokens (admin-only; never client-readable) ---
@@ -43,14 +28,17 @@ async function storeUserToken(uid, refreshToken, installationId) {
     };
     await tokenDocRef(uid).set(payload, { merge: true });
 }
+exports.storeUserToken = storeUserToken;
 async function getUserRefreshToken(uid) {
     const snap = await tokenDocRef(uid).get();
     const token = snap.data()?.refreshToken;
     return typeof token === 'string' && token.length > 0 ? token : null;
 }
+exports.getUserRefreshToken = getUserRefreshToken;
 async function deleteUserToken(uid) {
     await tokenDocRef(uid).delete();
 }
+exports.deleteUserToken = deleteUserToken;
 // --- Connection ---
 async function upsertConnection(uid, data) {
     await db()
@@ -63,27 +51,47 @@ async function upsertConnection(uid, data) {
         createdAt: firestore_1.FieldValue.serverTimestamp(),
     }, { merge: true });
 }
+exports.upsertConnection = upsertConnection;
+async function updateFieldDefinitionCache(uid, cache) {
+    await db()
+        .collection(exports.COLLECTIONS.connections)
+        .doc(uid)
+        .set({ fieldDefinitionCache: cache, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+}
+exports.updateFieldDefinitionCache = updateFieldDefinitionCache;
 async function setConnectionState(uid, state) {
     await db()
         .collection(exports.COLLECTIONS.connections)
         .doc(uid)
         .set({ state, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
 }
+exports.setConnectionState = setConnectionState;
 async function getConnection(uid) {
     const snap = await db().collection(exports.COLLECTIONS.connections).doc(uid).get();
     return snap.exists ? snap.data() : null;
 }
+exports.getConnection = getConnection;
+async function updateConnectionSettings(uid, settings) {
+    await db()
+        .collection(exports.COLLECTIONS.connections)
+        .doc(uid)
+        .set({ ...settings, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
+}
+exports.updateConnectionSettings = updateConnectionSettings;
 async function deleteConnection(uid) {
     await db().collection(exports.COLLECTIONS.connections).doc(uid).delete();
 }
+exports.deleteConnection = deleteConnection;
 // --- Task links ---
 function taskLinkRef(taskId) {
     return db().collection(exports.COLLECTIONS.taskLinks).doc(taskId);
 }
+exports.taskLinkRef = taskLinkRef;
 async function getTaskLink(taskId) {
     const snap = await taskLinkRef(taskId).get();
     return snap.exists ? snap.data() : null;
 }
+exports.getTaskLink = getTaskLink;
 async function findLinkByIssue(owner, repo, issueNumber) {
     const guard = await db()
         .collection(exports.COLLECTIONS.issueLinks)
@@ -92,6 +100,7 @@ async function findLinkByIssue(owner, repo, issueNumber) {
     const taskId = guard.data()?.taskId;
     return typeof taskId === 'string' ? getTaskLink(taskId) : null;
 }
+exports.findLinkByIssue = findLinkByIssue;
 /**
  * Create a task↔issue link inside a transaction that also claims the issue-side
  * uniqueness guard (spec data-model §5 + plan). Throws `LINK_EXISTS` if the task is
@@ -128,6 +137,7 @@ async function createLinkTransactional(link) {
         }
     });
 }
+exports.createLinkTransactional = createLinkTransactional;
 /** Claim the issue-side guard after an issue number is known (create-new path). */
 async function claimIssueGuard(taskId, owner, repo, issueNumber) {
     await db()
@@ -135,9 +145,11 @@ async function claimIssueGuard(taskId, owner, repo, issueNumber) {
         .doc((0, sync_logic_1.issueLinkKey)(owner, repo, issueNumber))
         .set({ taskId, repoOwner: owner, repoName: repo, issueNumber, createdAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
 }
+exports.claimIssueGuard = claimIssueGuard;
 async function updateTaskLink(taskId, patch) {
     await taskLinkRef(taskId).set({ ...patch, updatedAt: firestore_1.FieldValue.serverTimestamp() }, { merge: true });
 }
+exports.updateTaskLink = updateTaskLink;
 async function recordOutboundSync(taskId, issueState, githubUpdatedAt) {
     await updateTaskLink(taskId, {
         issueState,
@@ -148,6 +160,7 @@ async function recordOutboundSync(taskId, issueState, githubUpdatedAt) {
         githubUpdatedAt,
     });
 }
+exports.recordOutboundSync = recordOutboundSync;
 async function deleteTaskLink(taskId) {
     const link = await getTaskLink(taskId);
     const batch = db().batch();
@@ -159,6 +172,7 @@ async function deleteTaskLink(taskId) {
     }
     await batch.commit();
 }
+exports.deleteTaskLink = deleteTaskLink;
 // --- Sync events (idempotency + audit) ---
 /**
  * Claim an inbound delivery id. Returns false if already seen (dedupe), true if
@@ -194,9 +208,11 @@ async function claimDelivery(deliveryId, eventType) {
         return true;
     });
 }
+exports.claimDelivery = claimDelivery;
 async function finishDelivery(deliveryId, patch) {
     await db().collection(exports.COLLECTIONS.syncEvents).doc(deliveryId).set(patch, { merge: true });
 }
+exports.finishDelivery = finishDelivery;
 async function recordOutboundEvent(taskId, eventType, status, error) {
     await db().collection(exports.COLLECTIONS.syncEvents).add({
         deliveryId: null,
@@ -209,6 +225,52 @@ async function recordOutboundEvent(taskId, eventType, status, error) {
         createdAt: firestore_1.FieldValue.serverTimestamp(),
     });
 }
+exports.recordOutboundEvent = recordOutboundEvent;
+// --- Phase 2 metadata (field values, relationships, assignees) ---
+async function upsertTaskActor(taskId, login, avatarUrl) {
+    const docId = `${taskId}__${login.toLowerCase()}`;
+    const payload = {
+        taskId,
+        login,
+        avatarUrl,
+        role: 'assignee',
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    };
+    await db().collection(exports.COLLECTIONS.actors).doc(docId).set(payload, { merge: true });
+}
+exports.upsertTaskActor = upsertTaskActor;
+async function deleteTaskActors(taskId, login) {
+    await db()
+        .collection(exports.COLLECTIONS.actors)
+        .doc(`${taskId}__${login.toLowerCase()}`)
+        .delete();
+}
+exports.deleteTaskActors = deleteTaskActors;
+async function upsertTaskFieldValue(taskId, field) {
+    const docId = `${taskId}__${field.fieldId}`;
+    const payload = {
+        taskId,
+        ...field,
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    };
+    await db().collection(exports.COLLECTIONS.fieldValues).doc(docId).set(payload, { merge: true });
+}
+exports.upsertTaskFieldValue = upsertTaskFieldValue;
+async function upsertTaskRelationship(taskId, kind, related) {
+    const docId = `${taskId}__${kind}__${related.relatedRepoOwner}__${related.relatedRepoName}__${related.relatedIssueNumber}`;
+    const payload = {
+        taskId,
+        kind,
+        ...related,
+        createdAt: firestore_1.FieldValue.serverTimestamp(),
+    };
+    await db().collection(exports.COLLECTIONS.relationships).doc(docId).set(payload, { merge: true });
+}
+exports.upsertTaskRelationship = upsertTaskRelationship;
+async function deleteTaskRelationship(docId) {
+    await db().collection(exports.COLLECTIONS.relationships).doc(docId).delete();
+}
+exports.deleteTaskRelationship = deleteTaskRelationship;
 class LinkError extends Error {
     constructor(code) {
         super(code);

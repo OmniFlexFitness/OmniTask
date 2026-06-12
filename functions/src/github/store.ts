@@ -11,6 +11,10 @@ import type {
   TaskGithubLink,
   GithubSyncEvent,
   IssueState,
+  GithubFieldDefinitionCache,
+  TaskGithubFieldValue,
+  TaskGithubRelationship,
+  TaskGithubActor,
 } from './types';
 
 const db = () => getFirestore();
@@ -20,6 +24,9 @@ export const COLLECTIONS = {
   taskLinks: 'task_github_links',
   issueLinks: 'github_issue_links',
   syncEvents: 'github_sync_events',
+  fieldValues: 'task_github_field_values',
+  relationships: 'task_github_relationships',
+  actors: 'task_github_actors',
 } as const;
 
 const tokenDocRef = (uid: string) =>
@@ -57,7 +64,7 @@ export async function upsertConnection(
   data: Pick<
     GithubConnection,
     'accountLogin' | 'accountType' | 'installationId' | 'capabilities' | 'state'
-  >,
+  > & { fieldDefinitionCache?: GithubFieldDefinitionCache | null },
 ): Promise<void> {
   await db()
     .collection(COLLECTIONS.connections)
@@ -73,6 +80,16 @@ export async function upsertConnection(
     );
 }
 
+export async function updateFieldDefinitionCache(
+  uid: string,
+  cache: GithubFieldDefinitionCache,
+): Promise<void> {
+  await db()
+    .collection(COLLECTIONS.connections)
+    .doc(uid)
+    .set({ fieldDefinitionCache: cache, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
 export async function setConnectionState(
   uid: string,
   state: GithubConnection['state'],
@@ -86,6 +103,16 @@ export async function setConnectionState(
 export async function getConnection(uid: string): Promise<GithubConnection | null> {
   const snap = await db().collection(COLLECTIONS.connections).doc(uid).get();
   return snap.exists ? (snap.data() as GithubConnection) : null;
+}
+
+export async function updateConnectionSettings(
+  uid: string,
+  settings: Pick<GithubConnection, 'defaultProjectNodeId' | 'createLinkedBranchOnLink'>,
+): Promise<void> {
+  await db()
+    .collection(COLLECTIONS.connections)
+    .doc(uid)
+    .set({ ...settings, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 }
 
 export async function deleteConnection(uid: string): Promise<void> {
@@ -270,6 +297,66 @@ export async function recordOutboundEvent(
     error,
     createdAt: FieldValue.serverTimestamp(),
   } satisfies GithubSyncEvent);
+}
+
+// --- Phase 2 metadata (field values, relationships, assignees) ---
+
+export async function upsertTaskActor(
+  taskId: string,
+  login: string,
+  avatarUrl: string | null,
+): Promise<void> {
+  const docId = `${taskId}__${login.toLowerCase()}`;
+  const payload: TaskGithubActor = {
+    taskId,
+    login,
+    avatarUrl,
+    role: 'assignee',
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  await db().collection(COLLECTIONS.actors).doc(docId).set(payload, { merge: true });
+}
+
+export async function deleteTaskActors(taskId: string, login: string): Promise<void> {
+  await db()
+    .collection(COLLECTIONS.actors)
+    .doc(`${taskId}__${login.toLowerCase()}`)
+    .delete();
+}
+
+export async function upsertTaskFieldValue(
+  taskId: string,
+  field: Pick<TaskGithubFieldValue, 'fieldId' | 'fieldName' | 'dataType' | 'optionId' | 'textValue' | 'numberValue'>,
+): Promise<void> {
+  const docId = `${taskId}__${field.fieldId}`;
+  const payload: TaskGithubFieldValue = {
+    taskId,
+    ...field,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  await db().collection(COLLECTIONS.fieldValues).doc(docId).set(payload, { merge: true });
+}
+
+export async function upsertTaskRelationship(
+  taskId: string,
+  kind: TaskGithubRelationship['kind'],
+  related: Pick<
+    TaskGithubRelationship,
+    'relatedIssueNumber' | 'relatedIssueNodeId' | 'relatedRepoOwner' | 'relatedRepoName'
+  >,
+): Promise<void> {
+  const docId = `${taskId}__${kind}__${related.relatedRepoOwner}__${related.relatedRepoName}__${related.relatedIssueNumber}`;
+  const payload: TaskGithubRelationship = {
+    taskId,
+    kind,
+    ...related,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  await db().collection(COLLECTIONS.relationships).doc(docId).set(payload, { merge: true });
+}
+
+export async function deleteTaskRelationship(docId: string): Promise<void> {
+  await db().collection(COLLECTIONS.relationships).doc(docId).delete();
 }
 
 export class LinkError extends Error {

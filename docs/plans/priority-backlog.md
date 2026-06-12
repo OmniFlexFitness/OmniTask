@@ -59,16 +59,32 @@ Reference list for open GitHub issues, ordered by impact and dependency. Update 
 
 ## Tier 6 — Ops
 
-| Issue | Title | Labels |
+| Issue | Title | Status |
 |-------|-------|--------|
-| [#91](https://github.com/OmniFlexFitness/OmniTask/issues/91) | Configure Firebase SMTP Secrets | enhancement |
+| [#91](https://github.com/OmniFlexFitness/OmniTask/issues/91) | Configure Firebase SMTP Secrets | Open — assigned @bkenol; manual GCP Secret Manager step |
+
+---
+
+## Tier 7 — GitHub Integration (sequential)
+
+| Issue | Title | Depends on | Branch prefix |
+|-------|-------|------------|---------------|
+| [#179](https://github.com/OmniFlexFitness/OmniTask/issues/179) | Phase 1 — connect + bidirectional status sync | — | **Done** (merged to `live`) |
+| [#182](https://github.com/OmniFlexFitness/OmniTask/issues/182) | Phase 2 — Issue Types, Fields, sub-issues, dependencies | #179 | **Done** (local; deploy pending) |
+| [#183](https://github.com/OmniFlexFitness/OmniTask/issues/183) | Phase 3 — Projects v2 + linked branches / PR status | #182 | **Done** (local; deploy pending) |
+| [#184](https://github.com/OmniFlexFitness/OmniTask/issues/184) | Phase 4 — conflict UI, participants, Cloud Tasks, security alerts | #183 | **Partial** — conflict resolution UI + callable; Cloud Tasks / security alerts TBD |
+
+See `docs/plans/github-issues-integration.md` for architecture notes.
 
 ---
 
 ## Recently completed (context)
 
+- **#179** — GitHub Issues Phase 1 (`56d7a26b` on `live`)
+- **#182–#184** — GitHub Phases 2–4 implemented locally (field mirror, Projects v2 settings, conflict resolution UI); deploy + live webhook verification pending
+- **Google Calendar sync** — project settings + task CRUD hooks wired locally; manual OAuth/calendar E2E pending
+- **Drag-to-create subtask** — list/board views with cycle guard
 - PRs #158–#164 merged (pin projects, mobile scaffold, email markdown, CODEOWNERS, auth pin state)
-- 0 open PRs as of 2026-05-27
 
 ---
 

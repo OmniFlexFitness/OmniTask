@@ -18,6 +18,8 @@ export interface CreateIssueInput {
   assignees?: string[];
   /** Issue Type name (org-only); silently ignored by GitHub on personal repos. */
   type?: string | null;
+  /** Label names applied on create (degradation fallback for personal repos). */
+  labels?: string[];
 }
 
 function composeBody(input: CreateIssueInput): string {
@@ -38,6 +40,7 @@ export async function createIssue(
   if (input.milestone != null) body.milestone = input.milestone;
   if (input.assignees?.length) body.assignees = input.assignees;
   if (input.type) body.type = input.type;
+  if (input.labels?.length) body.labels = input.labels;
 
   const res = await githubRequest<GithubIssuePayload>(
     `/repos/${input.owner}/${input.repo}/issues`,

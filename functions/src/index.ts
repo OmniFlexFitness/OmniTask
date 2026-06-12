@@ -1109,7 +1109,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       port: 465,
       secure: true,
       auth: {
-        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
+        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -1207,7 +1207,7 @@ export const checkScheduledReminders = onSchedule(
       port: 465,
       secure: true,
       auth: {
-        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
+        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -1736,6 +1736,9 @@ export {
   linkTaskToGithub,
   unlinkTaskFromGithub,
   retryGithubSync,
+  refreshGithubFieldConfig,
+  updateGithubConnectionSettings,
+  resolveGithubConflict,
   syncTaskStatusToGithub,
   githubWebhook,
 } from './github/functions';

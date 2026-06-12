@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { GithubService } from '../../core/services/github.service';
 
 /**
@@ -15,7 +16,7 @@ import { GithubService } from '../../core/services/github.service';
 @Component({
   selector: 'app-github-connection',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-6">
@@ -44,6 +45,22 @@ import { GithubService } from '../../core/services/github.service';
           } @else {
             <span class="text-xs text-slate-500">Issue Types unavailable on this account</span>
           }
+          @if (status()?.capabilities?.issueFields) {
+            <span class="text-xs text-slate-400">Project fields available</span>
+          }
+          @if (status()?.fieldDefinitionCache?.fetchedAt) {
+            <span class="text-xs text-slate-500">
+              Field config cached
+            </span>
+          }
+          <button
+            type="button"
+            class="rounded-lg border border-white/10 px-3 py-1.5 text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="refreshFields()"
+          >
+            Refresh fields
+          </button>
           <button
             type="button"
             class="ml-auto rounded-lg border border-white/10 px-3 py-1.5 text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
@@ -53,6 +70,43 @@ import { GithubService } from '../../core/services/github.service';
             {{ busy() ? 'Disconnecting…' : 'Disconnect' }}
           </button>
         </div>
+
+        @if (status()?.capabilities?.projects) {
+          <div class="mt-6 rounded-xl border border-white/10 bg-slate-950/40 p-4 space-y-3">
+            <h3 class="text-sm font-medium text-white">Projects &amp; branches (Phase 3)</h3>
+            <p class="text-xs text-slate-500">
+              New issues created from OmniTask can be added to a GitHub Project board and optionally
+              get a linked branch (requires Contents write on the repo).
+            </p>
+            <label class="block text-xs text-slate-400">
+              Default Project v2 node ID
+              <input
+                type="text"
+                class="mt-1 w-full rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-white font-mono"
+                placeholder="PVT_kwDO..."
+                [ngModel]="defaultProjectNodeId()"
+                (ngModelChange)="defaultProjectNodeId.set($event)"
+              />
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input
+                type="checkbox"
+                class="rounded border-white/20"
+                [ngModel]="createLinkedBranchOnLink()"
+                (ngModelChange)="createLinkedBranchOnLink.set($event)"
+              />
+              Create linked branch when creating an issue
+            </label>
+            <button
+              type="button"
+              class="rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+              [disabled]="busy()"
+              (click)="saveSettings()"
+            >
+              Save GitHub automation settings
+            </button>
+          </div>
+        }
       } @else if (status()?.state === 'needs_reauth') {
         <div class="flex flex-wrap items-center gap-3">
           <span class="inline-flex items-center gap-2 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 text-sm">
@@ -91,10 +145,13 @@ export class GithubConnectionComponent implements OnInit {
   readonly loading = this.github.loading;
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly defaultProjectNodeId = signal('');
+  readonly createLinkedBranchOnLink = signal(false);
 
   async ngOnInit(): Promise<void> {
     try {
-      await this.github.loadConnection();
+      const status = await this.github.loadConnection();
+      this.syncSettingsFromStatus(status);
     } catch (err) {
       this.error.set(this.message(err, 'Could not load GitHub connection.'));
     }
@@ -122,6 +179,42 @@ export class GithubConnectionComponent implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  async refreshFields(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const status = await this.github.refreshFieldConfig();
+      this.syncSettingsFromStatus(status);
+    } catch (err) {
+      this.error.set(this.message(err, 'Could not refresh GitHub field config.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async saveSettings(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      await this.github.updateConnectionSettings({
+        defaultProjectNodeId: this.defaultProjectNodeId().trim() || null,
+        createLinkedBranchOnLink: this.createLinkedBranchOnLink(),
+      });
+    } catch (err) {
+      this.error.set(this.message(err, 'Could not save GitHub settings.'));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private syncSettingsFromStatus(status: {
+    defaultProjectNodeId?: string | null;
+    createLinkedBranchOnLink?: boolean;
+  }): void {
+    this.defaultProjectNodeId.set(status.defaultProjectNodeId ?? '');
+    this.createLinkedBranchOnLink.set(status.createLinkedBranchOnLink ?? false);
   }
 
   private message(err: unknown, fallback: string): string {

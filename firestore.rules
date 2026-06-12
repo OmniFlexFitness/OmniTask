@@ -318,5 +318,21 @@ service cloud.firestore {
     match /github_sync_events/{eventId} {
       allow read, write: if false;
     }
+
+    match /task_github_field_values/{docId} {
+      allow read: if isAuthenticated() && resource.data.taskId != null
+        && get(/databases/$(database)/documents/task_github_links/$(resource.data.taskId)).data.ownerUserId == request.auth.uid;
+      allow write: if false;
+    }
+    match /task_github_relationships/{docId} {
+      allow read: if isAuthenticated() && resource.data.taskId != null
+        && get(/databases/$(database)/documents/task_github_links/$(resource.data.taskId)).data.ownerUserId == request.auth.uid;
+      allow write: if false;
+    }
+    match /task_github_actors/{docId} {
+      allow read: if isAuthenticated() && resource.data.taskId != null
+        && get(/databases/$(database)/documents/task_github_links/$(resource.data.taskId)).data.ownerUserId == request.auth.uid;
+      allow write: if false;
+    }
   }
 }

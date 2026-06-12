@@ -124,3 +124,22 @@ export function parseOmnitaskMarker(body: string | null): string | null {
   const match = body.match(/<!-- omnitask:task:([A-Za-z0-9_-]+) -->/);
   return match ? match[1] : null;
 }
+
+/** Normalize Firestore Timestamp / Date / ISO string to epoch ms for conflict checks. */
+export function taskUpdatedAtToMs(updatedAt: unknown): number {
+  if (!updatedAt) return 0;
+  if (updatedAt instanceof Date) return updatedAt.getTime();
+  if (typeof updatedAt === 'object' && updatedAt !== null && 'toMillis' in updatedAt) {
+    const ms = (updatedAt as { toMillis: () => number }).toMillis();
+    return typeof ms === 'number' ? ms : 0;
+  }
+  if (typeof updatedAt === 'object' && updatedAt !== null && 'toDate' in updatedAt) {
+    const d = (updatedAt as { toDate: () => Date }).toDate();
+    return d instanceof Date ? d.getTime() : 0;
+  }
+  if (typeof updatedAt === 'string') {
+    const ms = Date.parse(updatedAt);
+    return Number.isNaN(ms) ? 0 : ms;
+  }
+  return 0;
+}

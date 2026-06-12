@@ -1,13 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.taskStatusToIssueState = taskStatusToIssueState;
-exports.issueStateToTaskStatus = issueStateToTaskStatus;
-exports.issueLinkKey = issueLinkKey;
-exports.decideInbound = decideInbound;
-exports.resolveConflict = resolveConflict;
-exports.verifyWebhookSignature = verifyWebhookSignature;
-exports.omnitaskMarker = omnitaskMarker;
-exports.parseOmnitaskMarker = parseOmnitaskMarker;
+exports.taskUpdatedAtToMs = exports.parseOmnitaskMarker = exports.omnitaskMarker = exports.verifyWebhookSignature = exports.resolveConflict = exports.decideInbound = exports.issueLinkKey = exports.issueStateToTaskStatus = exports.taskStatusToIssueState = void 0;
 /**
  * Pure sync logic — no Firestore, no network. Unit-tested in isolation.
  *
@@ -20,6 +13,7 @@ const crypto_1 = require("crypto");
 function taskStatusToIssueState(status) {
     return status === 'done' ? 'closed' : 'open';
 }
+exports.taskStatusToIssueState = taskStatusToIssueState;
 /**
  * GitHub issue state → OmniTask status, given the current local status.
  *
@@ -33,10 +27,12 @@ function issueStateToTaskStatus(state, current) {
         return 'done';
     return current === 'done' ? 'todo' : current;
 }
+exports.issueStateToTaskStatus = issueStateToTaskStatus;
 /** Deterministic doc id for the issue-side uniqueness guard. */
 function issueLinkKey(owner, repo, issueNumber) {
     return `${owner.toLowerCase()}__${repo.toLowerCase()}__${issueNumber}`;
 }
+exports.issueLinkKey = issueLinkKey;
 /**
  * Decide what to do with an inbound webhook (spec §9.3).
  *
@@ -62,6 +58,7 @@ function decideInbound(input) {
     }
     return { kind: 'apply' };
 }
+exports.decideInbound = decideInbound;
 /**
  * Resolve a true conflict: both GitHub and OmniTask changed since last sync.
  * Last-writer-wins by timestamp; ties and unparseable timestamps favor the remote
@@ -73,6 +70,7 @@ function resolveConflict(incomingUpdatedAt, localUpdatedAtMs) {
         return { winner: 'github', flagConflict: true };
     return { winner: incoming >= localUpdatedAtMs ? 'github' : 'omnitask', flagConflict: true };
 }
+exports.resolveConflict = resolveConflict;
 /**
  * Verify a GitHub webhook signature (spec §9.1 / §12).
  * Constant-time compare of HMAC-SHA256(rawBody, secret) against `X-Hub-Signature-256`.
@@ -88,10 +86,12 @@ function verifyWebhookSignature(rawBody, signatureHeader, secret) {
         return false;
     return (0, crypto_1.timingSafeEqual)(a, b);
 }
+exports.verifyWebhookSignature = verifyWebhookSignature;
 /** Hidden body marker so inbound webhooks and humans can trace origin (spec §8.1). */
 function omnitaskMarker(taskId) {
     return `<!-- omnitask:task:${taskId} -->`;
 }
+exports.omnitaskMarker = omnitaskMarker;
 /** Extract a task id from an issue body marker, if present. */
 function parseOmnitaskMarker(body) {
     if (!body)
@@ -99,4 +99,26 @@ function parseOmnitaskMarker(body) {
     const match = body.match(/<!-- omnitask:task:([A-Za-z0-9_-]+) -->/);
     return match ? match[1] : null;
 }
+exports.parseOmnitaskMarker = parseOmnitaskMarker;
+/** Normalize Firestore Timestamp / Date / ISO string to epoch ms for conflict checks. */
+function taskUpdatedAtToMs(updatedAt) {
+    if (!updatedAt)
+        return 0;
+    if (updatedAt instanceof Date)
+        return updatedAt.getTime();
+    if (typeof updatedAt === 'object' && updatedAt !== null && 'toMillis' in updatedAt) {
+        const ms = updatedAt.toMillis();
+        return typeof ms === 'number' ? ms : 0;
+    }
+    if (typeof updatedAt === 'object' && updatedAt !== null && 'toDate' in updatedAt) {
+        const d = updatedAt.toDate();
+        return d instanceof Date ? d.getTime() : 0;
+    }
+    if (typeof updatedAt === 'string') {
+        const ms = Date.parse(updatedAt);
+        return Number.isNaN(ms) ? 0 : ms;
+    }
+    return 0;
+}
+exports.taskUpdatedAtToMs = taskUpdatedAtToMs;
 //# sourceMappingURL=sync-logic.js.map

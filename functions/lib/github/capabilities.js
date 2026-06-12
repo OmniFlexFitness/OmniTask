@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.detectCapabilities = detectCapabilities;
+exports.detectCapabilities = void 0;
 /**
  * Capability detection (spec §6). Phase 1 probes and caches; the linking UI
  * reads only from the cached result so it renders instantly and never offers
@@ -17,14 +17,14 @@ async function detectCapabilities(installationToken, accountLogin, accountType) 
         // Issue Types and Issue Fields are organization-only (spec §3).
         return { issueTypes: false, issueFields: false, projects: await probeProjects(installationToken, accountLogin) };
     }
-    const [issueTypes, projects] = await Promise.all([
+    const [issueTypes, issueFields, projects] = await Promise.all([
         probe(() => (0, app_1.githubRequest)(`/orgs/${accountLogin}/issue-types`, { token: installationToken })),
+        probe(() => (0, app_1.githubRequest)(`/orgs/${accountLogin}/issue-fields`, { token: installationToken })),
         probeProjects(installationToken, accountLogin),
     ]);
-    // Issue Fields shares org-settings access with Issue Types in Phase 1's coarse probe;
-    // the fine-grained field-definition cache lands in Phase 2.
-    return { issueTypes, issueFields: issueTypes, projects };
+    return { issueTypes, issueFields, projects };
 }
+exports.detectCapabilities = detectCapabilities;
 async function probe(fn) {
     try {
         await fn();

@@ -40,6 +40,7 @@ import { TaskTagsComponent } from './components/task-tags';
 import { TaskAiActionsComponent } from './components/task-ai-actions';
 import { TaskPointValueInputComponent } from './components/task-point-value-input';
 import { TaskCollaborationPanelComponent } from './components/task-collaboration-panel.component';
+import { TaskGithubLinkComponent } from './components/task-github-link.component';
 
 @Component({
   selector: 'app-task-detail-modal',
@@ -57,6 +58,7 @@ import { TaskCollaborationPanelComponent } from './components/task-collaboration
     TaskAiActionsComponent,
     TaskPointValueInputComponent,
     TaskCollaborationPanelComponent,
+    TaskGithubLinkComponent,
   ],
   templateUrl: './task-detail-modal.component.html',
   styleUrls: ['./task-detail-modal.component.css'],
