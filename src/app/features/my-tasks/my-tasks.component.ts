@@ -17,7 +17,7 @@ import { DialogService } from '../../core/services/dialog.service';
 import { MyTasksSheetSyncService } from '../../core/services/my-tasks-sheet-sync.service';
 import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { Project, Task } from '../../core/models/domain.model';
-import { UserProfile } from '../../core/models/user.model';
+import { UserProfile, resolveDashboardSettings } from '../../core/models/user.model';
 
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
@@ -68,9 +68,31 @@ export class MyTasksComponent {
     () => this.currentUser()?.pinnedProjectIds ?? [],
   );
 
-  // Active top-level pane. Overview is the default entry because it answers
-  // "what's going on with me?" at a glance.
-  viewMode = signal<MyTasksViewMode>('overview');
+  /** The user's resolved dashboard settings (default view, density, accent). */
+  readonly dashboardSettings = computed(() =>
+    resolveDashboardSettings(this.currentUser()),
+  );
+
+  /** Personal accent color, exposed to the template as a CSS custom property. */
+  readonly accentColor = computed(() => this.dashboardSettings().accentColor);
+
+  /** Compact density toggle for dashboard lists. */
+  readonly compactMode = computed(() => this.dashboardSettings().compactMode);
+
+  /**
+   * The pane the user explicitly picked this session (null until they switch
+   * tabs). Kept separate from the configured default so a manual choice wins
+   * and isn't reset when the user profile re-emits.
+   */
+  private readonly userSelectedView = signal<MyTasksViewMode | null>(null);
+
+  /**
+   * Active top-level pane: the user's explicit choice when they've made one,
+   * otherwise their configured default landing pane (Overview when unset).
+   */
+  readonly viewMode = computed<MyTasksViewMode>(
+    () => this.userSelectedView() ?? this.dashboardSettings().defaultMyTasksView,
+  );
 
   // Modal state — reuse the same detail/create modals the project dashboard uses.
   openTask = signal<Task | null>(null);
@@ -134,6 +156,11 @@ export class MyTasksComponent {
   listCount = computed(() => this.myTasks().filter((t) => t.status !== 'done').length);
 
   // --------- Actions ---------
+
+  /** Switch the active pane, recording it as an explicit user override. */
+  selectView(view: MyTasksViewMode): void {
+    this.userSelectedView.set(view);
+  }
 
   /**
    * Open the task detail modal for a task in any of the user's projects.

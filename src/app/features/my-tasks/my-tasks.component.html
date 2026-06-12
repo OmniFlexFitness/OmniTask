@@ -1,4 +1,8 @@
-<div class="h-screen flex flex-col overflow-hidden bg-[#050810]">
+<div
+  class="h-screen flex flex-col overflow-hidden bg-[#050810]"
+  [class.mytasks-compact]="compactMode()"
+  [style.--ot-accent]="accentColor()"
+>
   <!-- Background grid overlay, cyberpunk theme matching the project dashboard -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
     <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>
@@ -58,14 +62,14 @@
       <button
         class="mytasks-tab"
         [class.active]="viewMode() === 'overview'"
-        (click)="viewMode.set('overview')"
+        (click)="selectView('overview')"
       >
         Overview
       </button>
       <button
         class="mytasks-tab"
         [class.active]="viewMode() === 'list'"
-        (click)="viewMode.set('list')"
+        (click)="selectView('list')"
       >
         My Tasks
         <span class="mytasks-tab-count">{{ listCount() }}</span>
@@ -73,7 +77,7 @@
       <button
         class="mytasks-tab"
         [class.active]="viewMode() === 'available'"
-        (click)="viewMode.set('available')"
+        (click)="selectView('available')"
       >
         Available
         <span class="mytasks-tab-count">{{ availableCount() }}</span>
@@ -94,7 +98,7 @@
             [pinnedProjectIds]="pinnedProjectIds()"
             (taskClick)="openTaskDetail($event)"
             (createTask)="openCreateForProject($event)"
-            (viewChange)="viewMode.set($event)"
+            (viewChange)="selectView($event)"
             (reportsToChange)="saveReportsTo($event)"
             (togglePin)="togglePinProject($event)"
           ></app-my-tasks-overview>

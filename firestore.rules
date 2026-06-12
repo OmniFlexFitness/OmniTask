@@ -104,17 +104,46 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
+      // The signed-in user is the project owner.
+      function isProjectOwner(resourceData) {
+        return isAuthenticated() && request.auth.uid == resourceData.ownerId;
+      }
+
+      // The signed-in user can manage the project: the owner, or a member
+      // granted project-admin rights via the `adminIds` array. Use get() with
+      // a default so projects created before `adminIds` existed (field absent)
+      // evaluate cleanly instead of erroring on a missing-field access.
+      function isProjectAdmin(resourceData) {
+        return isProjectOwner(resourceData) || (
+          isAuthenticated() &&
+          resourceData.get('adminIds', []) is list &&
+          request.auth.uid in resourceData.get('adminIds', [])
+        );
+      }
+
+      // True when the incoming update touches any of the given keys.
+      function projectChanges(keys) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasAny(keys);
+      }
+
       allow create: if isAdmin() || isSuperAdmin() || (
         isAuthenticated() && hasPermission('canCreateProjects')
       );
       allow read: if isMember(resource.data) || isAdmin() || isSuperAdmin();
-      // Members can update project fields freely, but changing `memberIds`
-      // additionally requires the `canInviteMembers` permission so the invite
-      // flag is actually enforced. Admins/super-admins bypass this.
+      // Members can update non-sensitive project fields freely. Sensitive
+      // changes are gated by per-project role:
+      //  - `ownerId` (ownership transfer): current owner only.
+      //  - `adminIds` (grant/revoke project admins): current owner only.
+      //  - `memberIds` (add/remove members): project admin (owner or in
+      //    adminIds) plus the global `canInviteMembers` permission.
+      // Global admins/super-admins bypass all of this.
       allow update: if isAdmin() || isSuperAdmin() || (
-        isMember(resource.data) && (
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberIds']) ||
-          hasPermission('canInviteMembers')
+        isMember(resource.data) &&
+        (!projectChanges(['ownerId']) || isProjectOwner(resource.data)) &&
+        (!projectChanges(['adminIds']) || isProjectOwner(resource.data)) &&
+        (
+          !projectChanges(['memberIds']) ||
+          (isProjectAdmin(resource.data) && hasPermission('canInviteMembers'))
         )
       );
       allow delete: if isAdmin() || isSuperAdmin() || (

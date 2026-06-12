@@ -32,6 +32,32 @@ export const DEFAULT_USER_PERMISSIONS: UserPermissions = {
   isSuperAdmin: false,
 };
 
+/**
+ * Per-user customization of the personal "My Tasks" dashboard. Distinct from
+ * the per-project `DashboardPreferences` (which an owner/admin sets for a whole
+ * project) — these settings only affect what the signed-in user sees on their
+ * own landing page. Every field is optional in storage; `resolveDashboardSettings`
+ * fills in defaults so consumers always get a fully-populated object.
+ */
+export interface UserDashboardSettings {
+  /** Which My Tasks pane opens by default when the user lands on the dashboard. */
+  defaultMyTasksView: 'overview' | 'list' | 'available';
+  /** Tighten vertical spacing on dashboard lists for denser layouts. */
+  compactMode: boolean;
+  /** Personal accent color (hex) used for dashboard highlights. */
+  accentColor: string;
+}
+
+/**
+ * Defaults applied when a user has not customized their dashboard. Centralized
+ * so the settings form and the dashboard rendering stay in sync.
+ */
+export const DEFAULT_DASHBOARD_SETTINGS: UserDashboardSettings = {
+  defaultMyTasksView: 'overview',
+  compactMode: false,
+  accentColor: '#00d2ff',
+};
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -44,6 +70,21 @@ export interface UserProfile {
   permissions?: UserPermissions;
   createdAt: Date;
   lastLoginAt: Date;
+
+  // --- Individual profile details (all optional, user-editable) ---
+  /** Short role/title shown on the user's profile and dashboard header. */
+  jobTitle?: string;
+  /** Free-text "about me" blurb. */
+  bio?: string;
+  /** IANA timezone identifier (e.g. "America/New_York"), for future scheduling UX. */
+  timezone?: string;
+
+  /**
+   * Per-user dashboard configuration (default view, density, accent). Stored
+   * as a partial so older documents and forward-compatible additions resolve
+   * through `resolveDashboardSettings`.
+   */
+  dashboardSettings?: Partial<UserDashboardSettings>;
 
   // Google Tasks scheduled sync fields
   hasGoogleTasksOfflineAccess?: boolean;
@@ -91,4 +132,14 @@ export interface UserProfile {
  */
 export function resolvePermissions(user?: UserProfile | null): UserPermissions {
   return { ...DEFAULT_USER_PERMISSIONS, ...(user?.permissions ?? {}) };
+}
+
+/**
+ * Resolve a user's effective dashboard settings, applying defaults for any
+ * unset field. Accepts null/undefined and returns a fully populated object.
+ */
+export function resolveDashboardSettings(
+  user?: UserProfile | null,
+): UserDashboardSettings {
+  return { ...DEFAULT_DASHBOARD_SETTINGS, ...(user?.dashboardSettings ?? {}) };
 }

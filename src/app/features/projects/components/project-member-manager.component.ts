@@ -5,10 +5,12 @@ import { ProjectService } from '../../../core/services/project.service';
 import { ContactsService } from '../../../core/services/contacts.service';
 import { Contact } from '../../../core/models/contact.model';
 import { DialogService } from '../../../core/services/dialog.service';
-import { Project } from '../../../core/models/domain.model';
+import { AuthService } from '../../../core/auth/auth.service';
+import { PermissionsService } from '../../../core/services/permissions.service';
+import { Project, getProjectRole, isProjectManager } from '../../../core/models/domain.model';
 import { UserGroupMember } from '../../../core/models/user-group.model';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, switchMap, map, startWith } from 'rxjs';
+import { debounceTime, switchMap, startWith } from 'rxjs';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { GroupPickerComponent } from '../../../shared/components/group-picker/group-picker.component';
 
@@ -25,6 +27,8 @@ export class ProjectMemberManagerComponent {
   projectService = inject(ProjectService);
   contactsService = inject(ContactsService);
   dialogService = inject(DialogService);
+  private readonly auth = inject(AuthService);
+  private readonly permissions = inject(PermissionsService);
 
   applyingGroup = signal(false);
 
@@ -45,18 +49,45 @@ export class ProjectMemberManagerComponent {
     { initialValue: [] },
   );
 
-  // Computed Lists based on Project Data and All Contacts
-  admins = computed(() => {
+  /** UID of the signed-in user. */
+  private readonly currentUserId = computed(() => this.auth.currentUserSig()?.uid ?? null);
+
+  /** Global super-admins manage every project regardless of project role. */
+  private readonly isGlobalAdmin = computed(
+    () => this.permissions.currentPermissions().isSuperAdmin,
+  );
+
+  /** The signed-in user's role in this project ('owner' | 'admin' | 'member' | null). */
+  readonly myRole = computed(() => getProjectRole(this.project(), this.currentUserId()));
+
+  /** Owner-only capabilities: appoint/remove admins, transfer ownership, etc. */
+  readonly isOwner = computed(() => this.myRole() === 'owner' || this.isGlobalAdmin());
+
+  /** Manager capabilities: add/remove members and appear in admin controls. */
+  readonly canManageMembers = computed(
+    () => isProjectManager(this.project(), this.currentUserId()) || this.isGlobalAdmin(),
+  );
+
+  // Owner contact (project creator / current owner).
+  owner = computed(() => {
     const p = this.project();
-    const contacts = this.allContacts();
-    return contacts.filter((c) => c.id === p.ownerId);
+    return this.allContacts().filter((c) => c.id === p.ownerId);
   });
 
+  // Project admins (granted elevated rights) — excludes the owner.
+  admins = computed(() => {
+    const p = this.project();
+    const adminIds = new Set(p.adminIds ?? []);
+    return this.allContacts().filter((c) => c.id !== p.ownerId && adminIds.has(c.id));
+  });
+
+  // Plain members: in memberIds but neither owner nor admin.
   members = computed(() => {
     const p = this.project();
-    const contacts = this.allContacts();
-    // Members are in memberIds but NOT the owner
-    return contacts.filter((c) => p.memberIds.includes(c.id) && c.id !== p.ownerId);
+    const adminIds = new Set(p.adminIds ?? []);
+    return this.allContacts().filter(
+      (c) => p.memberIds.includes(c.id) && c.id !== p.ownerId && !adminIds.has(c.id),
+    );
   });
 
   isMember(userId: string): boolean {
@@ -71,6 +102,7 @@ export class ProjectMemberManagerComponent {
       await this.projectService.addMember(this.project().id, user.id);
     } catch (err) {
       console.error('Failed to add member', err);
+      await this.dialogService.alert(this.friendlyError(err), 'Could not add member');
     }
   }
 
@@ -113,7 +145,79 @@ export class ProjectMemberManagerComponent {
       await this.projectService.removeMember(this.project().id, userId);
     } catch (err) {
       console.error('Failed to remove member', err);
+      await this.dialogService.alert(this.friendlyError(err), 'Could not remove member');
     }
+  }
+
+  /** Grant a member project-admin rights (owner only). */
+  async makeAdmin(member: Contact) {
+    if (
+      !(await this.dialogService.confirm(
+        `Give ${member.displayName || member.email} admin rights on this project? ` +
+          `They will be able to manage members and edit project settings.`,
+        'Make Project Admin',
+      ))
+    )
+      return;
+    try {
+      await this.projectService.setProjectAdmin(this.project().id, member.id, true);
+    } catch (err) {
+      console.error('Failed to grant project admin', err);
+      await this.dialogService.alert(this.friendlyError(err), 'Could not update role');
+    }
+  }
+
+  /** Revoke a member's project-admin rights (owner only). */
+  async removeAdmin(member: Contact) {
+    if (
+      !(await this.dialogService.confirm(
+        `Remove ${member.displayName || member.email}'s admin rights? ` +
+          `They will remain a project member.`,
+        'Remove Admin Rights',
+      ))
+    )
+      return;
+    try {
+      await this.projectService.setProjectAdmin(this.project().id, member.id, false);
+    } catch (err) {
+      console.error('Failed to revoke project admin', err);
+      await this.dialogService.alert(this.friendlyError(err), 'Could not update role');
+    }
+  }
+
+  /** Transfer project ownership to another member (owner only). */
+  async makeOwner(member: Contact) {
+    if (
+      !(await this.dialogService.confirm(
+        `Transfer ownership of this project to ${member.displayName || member.email}? ` +
+          `You will become a project admin and lose owner-only rights ` +
+          `(deleting the project and transferring ownership).`,
+        'Transfer Ownership',
+      ))
+    )
+      return;
+    try {
+      await this.projectService.transferOwnership(this.project().id, member.id);
+    } catch (err) {
+      console.error('Failed to transfer ownership', err);
+      await this.dialogService.alert(this.friendlyError(err), 'Could not transfer ownership');
+    }
+  }
+
+  /** Surface a friendly message; never leak raw SDK/internal error text. */
+  private friendlyError(err: unknown): string {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/permission|insufficient|PERMISSION_DENIED/i.test(message)) {
+      return 'You do not have permission to perform this action on this project.';
+    }
+    // Surface our own validated, user-facing messages (thrown from the service
+    // layer); generic-ize anything that looks like an internal/SDK error so raw
+    // Firestore or network details never reach the user.
+    const isInternal = /firebase|firestore|internal|unavailable|network/i.test(message);
+    if (err instanceof Error && !isInternal) {
+      return message;
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   /**

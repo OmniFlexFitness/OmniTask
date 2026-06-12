@@ -158,6 +158,13 @@ export interface Project {
   coverImage?: string; // Project cover image URL (Firebase Storage)
   ownerId: string;
   memberIds: string[];
+  /**
+   * Members granted elevated "project admin" rights for this project: they can
+   * manage members and edit project settings without being the owner. Always a
+   * subset of `memberIds`. The owner is implicitly an admin and is never listed
+   * here. Absent on projects created before per-project admins existed.
+   */
+  adminIds?: string[];
   sections: Section[]; // Kanban columns
   customFieldIds?: string[]; // References to global CustomFieldDefinitions
   tags?: Tag[]; // Defined tags for this project
@@ -185,6 +192,44 @@ export interface Project {
   sheetSyncStatus?: 'synced' | 'pending' | 'error';
   /** Client-evaluated automation rules for this project. */
   automationRules?: AutomationRule[];
+}
+
+/**
+ * A user's role within a single project. `owner` outranks `admin`, which
+ * outranks `member`. `null` means the user is not part of the project at all.
+ */
+export type ProjectRole = 'owner' | 'admin' | 'member';
+
+/** Fields needed to determine a user's role in a project. */
+type ProjectRoleSource = Pick<Project, 'ownerId' | 'memberIds' | 'adminIds'>;
+
+/**
+ * Resolve a user's role within a project. Owner takes precedence over an
+ * admin grant, which takes precedence over plain membership. Returns `null`
+ * for users who are neither owner, admin, nor member.
+ */
+export function getProjectRole(
+  project: ProjectRoleSource,
+  uid: string | null | undefined,
+): ProjectRole | null {
+  if (!uid) return null;
+  if (project.ownerId === uid) return 'owner';
+  if (project.adminIds?.includes(uid)) return 'admin';
+  if (project.memberIds?.includes(uid)) return 'member';
+  return null;
+}
+
+/**
+ * True when the user can manage a project (owner or project admin): manage
+ * members and edit project settings. Owner-only actions (delete, transfer,
+ * change the admin roster) are checked separately against `getProjectRole`.
+ */
+export function isProjectManager(
+  project: ProjectRoleSource,
+  uid: string | null | undefined,
+): boolean {
+  const role = getProjectRole(project, uid);
+  return role === 'owner' || role === 'admin';
 }
 
 export interface Task {

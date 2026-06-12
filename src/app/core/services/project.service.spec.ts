@@ -331,4 +331,105 @@ describe('ProjectService', () => {
       expect(service.updateProject).toHaveBeenCalled();
     });
   });
+
+  describe('project roles & ownership', () => {
+    let mockProject: Partial<Project>;
+
+    beforeEach(() => {
+      mockProject = {
+        id: 'proj-1',
+        ownerId: 'user-1',
+        memberIds: ['user-1', 'member-1', 'member-2'],
+        adminIds: ['member-1'],
+      };
+      spyOn(service, 'getProject').and.returnValue(Promise.resolve(mockProject as Project));
+      spyOn(service, 'updateProject').and.returnValue(Promise.resolve());
+      authServiceMock.currentUserSig.set({ uid: 'user-1' } as any);
+    });
+
+    // --- setProjectAdmin ---
+    it('should grant project-admin rights to a member', async () => {
+      await service.setProjectAdmin('proj-1', 'member-2', true);
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].adminIds).toContain('member-2');
+      expect(args[1].adminIds).toContain('member-1');
+    });
+
+    it('should revoke project-admin rights from an admin', async () => {
+      await service.setProjectAdmin('proj-1', 'member-1', false);
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].adminIds).not.toContain('member-1');
+    });
+
+    it('should refuse to make the owner an admin', async () => {
+      await expectAsync(service.setProjectAdmin('proj-1', 'user-1', true)).toBeRejectedWithError(
+        /owner already has/i,
+      );
+      expect(service.updateProject).not.toHaveBeenCalled();
+    });
+
+    it('should refuse to make a non-member an admin', async () => {
+      await expectAsync(service.setProjectAdmin('proj-1', 'stranger', true)).toBeRejectedWithError(
+        /before making them an admin/i,
+      );
+      expect(service.updateProject).not.toHaveBeenCalled();
+    });
+
+    it('should no-op when granting admin to an existing admin', async () => {
+      await service.setProjectAdmin('proj-1', 'member-1', true);
+      expect(service.updateProject).not.toHaveBeenCalled();
+    });
+
+    // --- transferOwnership ---
+    it('should transfer ownership and demote the prior owner to admin', async () => {
+      await service.transferOwnership('proj-1', 'member-2');
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].ownerId).toBe('member-2');
+      expect(args[1].adminIds).toContain('user-1');
+      expect(args[1].adminIds).not.toContain('member-2');
+    });
+
+    it('should remove the new owner from the admin list on transfer', async () => {
+      await service.transferOwnership('proj-1', 'member-1');
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].ownerId).toBe('member-1');
+      expect(args[1].adminIds).not.toContain('member-1');
+      expect(args[1].adminIds).toContain('user-1');
+    });
+
+    it('should refuse transfer when the current user is not the owner', async () => {
+      authServiceMock.currentUserSig.set({ uid: 'member-1' } as any);
+      await expectAsync(service.transferOwnership('proj-1', 'member-2')).toBeRejectedWithError(
+        /only the project owner/i,
+      );
+      expect(service.updateProject).not.toHaveBeenCalled();
+    });
+
+    it('should refuse transfer to a non-member', async () => {
+      await expectAsync(service.transferOwnership('proj-1', 'stranger')).toBeRejectedWithError(
+        /current project member/i,
+      );
+    });
+
+    it('should refuse transfer to the current owner', async () => {
+      await expectAsync(service.transferOwnership('proj-1', 'user-1')).toBeRejectedWithError(
+        /already owns/i,
+      );
+    });
+
+    // --- removeMember admin cleanup ---
+    it('should drop the admin grant when removing an admin member', async () => {
+      await service.removeMember('proj-1', 'member-1');
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].memberIds).not.toContain('member-1');
+      expect(args[1].adminIds).not.toContain('member-1');
+    });
+
+    it('should not touch adminIds when removing a non-admin member', async () => {
+      await service.removeMember('proj-1', 'member-2');
+      const args = (service.updateProject as jasmine.Spy).calls.mostRecent().args;
+      expect(args[1].memberIds).not.toContain('member-2');
+      expect('adminIds' in args[1]).toBe(false);
+    });
+  });
 });

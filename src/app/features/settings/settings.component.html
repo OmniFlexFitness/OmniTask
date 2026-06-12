@@ -136,6 +136,36 @@
             />
           </div>
 
+          <!-- Job Title -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+              Job Title
+              <span class="text-slate-500 font-normal ml-2">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              [(ngModel)]="jobTitle"
+              maxlength="80"
+              placeholder="e.g. Product Manager"
+              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
+            />
+          </div>
+
+          <!-- Bio -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+              Bio
+              <span class="text-slate-500 font-normal ml-2">(Optional)</span>
+            </label>
+            <textarea
+              [(ngModel)]="bio"
+              rows="3"
+              maxlength="280"
+              placeholder="A short blurb about you and what you work on."
+              class="w-full bg-slate-950/50 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors resize-none"
+            ></textarea>
+          </div>
+
           <!-- Save Button -->
           <button
             (click)="saveProfile()"
@@ -189,6 +219,109 @@
           } @else if (saveSuccess() === false) {
             <p class="mt-3 text-sm text-red-400">Failed to save profile. Please try again.</p>
           }
+        </section>
+
+        <!-- Dashboard Settings -->
+        <section class="bg-slate-900/50 border border-white/10 rounded-2xl p-6 mb-6">
+          <h2 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 text-cyan-400"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+              />
+            </svg>
+            <span>Dashboard</span>
+          </h2>
+          <p class="text-sm text-slate-400 mb-6">
+            Customize how your personal My Tasks dashboard opens and looks.
+          </p>
+
+          <!-- Default View -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-2">Default view</label>
+            <div class="flex flex-wrap gap-2">
+              @for (view of dashboardViews; track view.value) {
+                <button
+                  type="button"
+                  (click)="defaultMyTasksView = view.value"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors"
+                  [class.bg-cyan-500/15]="defaultMyTasksView === view.value"
+                  [class.border-cyan-500/50]="defaultMyTasksView === view.value"
+                  [class.text-cyan-200]="defaultMyTasksView === view.value"
+                  [class.bg-slate-950/40]="defaultMyTasksView !== view.value"
+                  [class.border-white/10]="defaultMyTasksView !== view.value"
+                  [class.text-slate-400]="defaultMyTasksView !== view.value"
+                >
+                  {{ view.label }}
+                </button>
+              }
+            </div>
+            <p class="mt-2 text-xs text-slate-500">
+              Which pane opens first when you land on My Tasks.
+            </p>
+          </div>
+
+          <!-- Accent Color -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-slate-300 mb-3">Accent color</label>
+            <div class="flex flex-wrap gap-3">
+              @for (color of avatarColors; track color.value) {
+                <button
+                  type="button"
+                  (click)="selectAccentColor(color.value)"
+                  class="w-10 h-10 rounded-full transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900"
+                  [class.ring-2]="accentColor() === color.value"
+                  [class.ring-white]="accentColor() === color.value"
+                  [class.ring-offset-2]="accentColor() === color.value"
+                  [class.ring-offset-slate-900]="accentColor() === color.value"
+                  [style.background-color]="color.value"
+                  [title]="color.name"
+                >
+                  @if (accentColor() === color.value) {
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5 text-white mx-auto"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  }
+                </button>
+              }
+            </div>
+            <p class="mt-2 text-xs text-slate-500">
+              Highlights the active tab and accents on your dashboard.
+            </p>
+          </div>
+
+          <!-- Compact Mode -->
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-1 h-4 w-4 rounded border-white/20 bg-slate-950 text-cyan-600 focus:ring-cyan-500"
+              [(ngModel)]="compactMode"
+            />
+            <span>
+              <span class="block text-sm font-medium text-slate-200">Compact mode</span>
+              <span class="block text-xs text-slate-400 mt-0.5">
+                Tighten spacing so more fits on screen at once.
+              </span>
+            </span>
+          </label>
+
+          <p class="mt-5 text-xs text-slate-500">
+            Use <span class="text-slate-300 font-medium">Save Changes</span> in the Profile section
+            above to apply dashboard settings.
+          </p>
         </section>
 
         <!-- GitHub Issues integration -->

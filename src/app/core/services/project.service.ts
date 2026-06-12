@@ -361,7 +361,9 @@ export class ProjectService {
   }
 
   /**
-   * Remove a member from a project
+   * Remove a member from a project. If the member also held a project-admin
+   * grant, that grant is revoked in the same write so we never leave a
+   * dangling admin id pointing at a non-member.
    */
   async removeMember(projectId: string, userId: string): Promise<void> {
     this.permissions.requirePermission('canInviteMembers');
@@ -374,7 +376,81 @@ export class ProjectService {
     }
 
     const updatedMemberIds = (project.memberIds || []).filter((id) => id !== userId);
-    await this.updateProject(projectId, { memberIds: updatedMemberIds });
+    const patch: Partial<Project> = { memberIds: updatedMemberIds };
+
+    // Only touch adminIds when the removed member actually had the grant —
+    // changing adminIds is owner-restricted by the rules, so we avoid an
+    // unnecessary (and potentially denied) write for a plain member.
+    if ((project.adminIds || []).includes(userId)) {
+      patch.adminIds = (project.adminIds || []).filter((id) => id !== userId);
+    }
+
+    await this.updateProject(projectId, patch);
+  }
+
+  /**
+   * Grant or revoke project-admin rights for a member. Only the project owner
+   * (or a global admin/super-admin) may do this; the Firestore rules enforce
+   * the owner restriction server-side. An admin must already be a project
+   * member, and the owner can't be listed as an admin (they outrank one).
+   */
+  async setProjectAdmin(projectId: string, userId: string, makeAdmin: boolean): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    if (userId === project.ownerId) {
+      throw new Error('The project owner already has full admin rights.');
+    }
+
+    const admins = new Set(project.adminIds || []);
+    if (makeAdmin) {
+      if (!(project.memberIds || []).includes(userId)) {
+        throw new Error('Add this person to the project before making them an admin.');
+      }
+      if (admins.has(userId)) return; // Already an admin — no-op.
+      admins.add(userId);
+    } else {
+      if (!admins.has(userId)) return; // Not an admin — no-op.
+      admins.delete(userId);
+    }
+
+    await this.updateProject(projectId, { adminIds: Array.from(admins) });
+  }
+
+  /**
+   * Transfer ownership of a project to another current member. The previous
+   * owner stays on as a project admin so they keep elevated access; the new
+   * owner is removed from the admin list (they now sit above it). Only the
+   * current owner (or a global admin/super-admin) may transfer; the rules
+   * enforce this server-side.
+   */
+  async transferOwnership(projectId: string, newOwnerId: string): Promise<void> {
+    const project = await this.getProject(projectId);
+    if (!project) throw new Error('Project not found');
+
+    const currentUser = this.auth.currentUserSig();
+    if (!currentUser) throw new Error('Not authenticated');
+
+    const isGlobalAdmin = this.permissions.currentPermissions().isSuperAdmin;
+    if (project.ownerId !== currentUser.uid && !isGlobalAdmin) {
+      throw new Error('Only the project owner can transfer ownership.');
+    }
+    if (newOwnerId === project.ownerId) {
+      throw new Error('This person already owns the project.');
+    }
+    if (!(project.memberIds || []).includes(newOwnerId)) {
+      throw new Error('You can only transfer ownership to a current project member.');
+    }
+
+    const previousOwnerId = project.ownerId;
+    const admins = new Set(project.adminIds || []);
+    admins.delete(newOwnerId); // New owner outranks the admin list.
+    admins.add(previousOwnerId); // Previous owner keeps elevated access.
+
+    await this.updateProject(projectId, {
+      ownerId: newOwnerId,
+      adminIds: Array.from(admins),
+    });
   }
 
   /**

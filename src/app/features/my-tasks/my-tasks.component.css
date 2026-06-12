@@ -4,6 +4,16 @@
   height: 100%;
 }
 
+/*
+ * Personal accent color. Defaults to the cyber-blue the dashboard has always
+ * used; overridden per-user via the inline `--ot-accent` custom property set
+ * from the user's dashboard settings.
+ */
+.mytasks-compact,
+:host {
+  --ot-accent: #00d2ff;
+}
+
 /* Top navigation pills that switch between Overview / My Tasks / Available. */
 .mytasks-tab {
   display: inline-flex;
@@ -23,14 +33,14 @@
 
 .mytasks-tab:hover {
   color: rgb(226, 232, 240);
-  border-color: rgba(0, 210, 255, 0.35);
+  border-color: color-mix(in srgb, var(--ot-accent) 35%, transparent);
 }
 
 .mytasks-tab.active {
   color: #e6f8ff;
-  border-color: rgba(0, 210, 255, 0.55);
-  background: rgba(0, 210, 255, 0.1);
-  box-shadow: 0 0 14px rgba(0, 210, 255, 0.25);
+  border-color: color-mix(in srgb, var(--ot-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--ot-accent) 12%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ot-accent) 28%, transparent);
 }
 
 /* Count pill rendered next to the tab label. */
@@ -44,6 +54,21 @@
   border-radius: 9999px;
   font-size: 0.65rem;
   font-weight: 700;
-  background: rgba(0, 210, 255, 0.18);
+  background: color-mix(in srgb, var(--ot-accent) 18%, transparent);
   color: rgb(125, 232, 255);
 }
+
+/*
+ * Compact density: tighten the vertical rhythm of the dashboard so more
+ * content is visible at once. Opt-in via the user's dashboard settings.
+ */
+.mytasks-compact main {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.mytasks-compact .mytasks-tab {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
