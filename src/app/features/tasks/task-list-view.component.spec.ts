@@ -6,6 +6,8 @@ import { ComponentRef } from '@angular/core';
 import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { of } from 'rxjs';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { Task } from '../../core/models/domain.model';
 
 describe('TaskListViewComponent', () => {
   let component: TaskListViewComponent;
@@ -20,7 +22,9 @@ describe('TaskListViewComponent', () => {
       'bulkUpdateTasks',
       'completeTask',
       'reopenTask',
+      'setTaskParent',
     ]);
+    mockTaskService.setTaskParent.and.returnValue(Promise.resolve());
 
     mockProjectService = jasmine.createSpyObj('ProjectService', ['getProject$']);
     mockProjectService.getProject$.and.returnValue(of({ id: 'p1', customFieldIds: [] }));
@@ -171,6 +175,66 @@ describe('TaskListViewComponent', () => {
       expect(args[1].completedAt).toBeNull();
       expect(component.selectedTaskIds().size).toBe(0);
     }));
+  });
+
+  describe('drag-to-nest subtask', () => {
+    it('wouldCreateParentCycle detects direct and transitive cycles', () => {
+      componentRef.setInput('tasks', [
+        generateMockTask({ id: 'parent', parentId: null }),
+        generateMockTask({ id: 'child', parentId: 'parent' }),
+        generateMockTask({ id: 'grandchild', parentId: 'child' }),
+      ]);
+      fixture.detectChanges();
+
+      // Args: (draggedTaskId, targetParentId) — cycle if target is under dragged.
+      expect(component.wouldCreateParentCycle('parent', 'child')).toBeTrue();
+      expect(component.wouldCreateParentCycle('parent', 'grandchild')).toBeTrue();
+      expect(component.wouldCreateParentCycle('child', 'parent')).toBeFalse();
+    });
+
+    it('onNestDrop calls setTaskParent and expands parent', fakeAsync(() => {
+      const parent = generateMockTask({ id: 'p1', title: 'Parent' });
+      const child = generateMockTask({ id: 'c1', title: 'Child', parentId: null });
+      componentRef.setInput('tasks', [parent, child]);
+      fixture.detectChanges();
+
+      const event = {
+        previousContainer: { id: 'task-list-main' },
+        container: { id: 'task-nest-p1' },
+        item: { data: child },
+      } as unknown as CdkDragDrop<Task[]>;
+
+      component.onNestDrop(event, parent);
+      tick();
+
+      expect(mockTaskService.setTaskParent).toHaveBeenCalledWith('c1', 'p1');
+      expect(component.expandedTaskIds().has('p1')).toBeTrue();
+    }));
+
+    it('onNestDrop rejects self-nest and cycles', () => {
+      const parent = generateMockTask({ id: 'parent', parentId: null });
+      const child = generateMockTask({ id: 'child', parentId: 'parent' });
+      componentRef.setInput('tasks', [parent, child]);
+      fixture.detectChanges();
+
+      const selfEvent = {
+        previousContainer: { id: 'task-list-main' },
+        container: { id: 'task-nest-parent' },
+        item: { data: parent },
+      } as unknown as CdkDragDrop<Task[]>;
+
+      component.onNestDrop(selfEvent, parent);
+      expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();
+
+      const cycleEvent = {
+        previousContainer: { id: 'task-list-main' },
+        container: { id: 'task-nest-child' },
+        item: { data: parent },
+      } as unknown as CdkDragDrop<Task[]>;
+
+      component.onNestDrop(cycleEvent, child);
+      expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();
+    });
   });
 
   describe('single actions', () => {

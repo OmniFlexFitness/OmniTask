@@ -321,7 +321,9 @@
       <!-- Task List -->
       <div
         cdkDropList
+        [id]="mainDropListId"
         [cdkDropListData]="sortedTasks()"
+        [cdkDropListConnectedTo]="nestDropListIds()"
         (cdkDropListDropped)="onDrop($event)"
         class="flex-1 divide-y divide-cyan-500/5 pb-8"
       >
@@ -356,9 +358,29 @@
 
         @for (task of sortedTasks(); track task.id) {
           <div
+            class="relative group/task-row"
+            [class.nest-drop-active]="isDragging() && nestDropTargetId() === task.id"
+          >
+            @if (isDragging() && !selectionMode()) {
+              <div
+                cdkDropList
+                [id]="nestDropListId(task.id)"
+                [cdkDropListData]="nestDropData"
+                [cdkDropListConnectedTo]="[mainDropListId]"
+                [cdkDropListSortingDisabled]="true"
+                (cdkDropListEntered)="onNestEntered(task)"
+                (cdkDropListExited)="onNestExited(task)"
+                (cdkDropListDropped)="onNestDrop($event, task)"
+                class="nest-drop-zone"
+                [attr.aria-label]="'Drop to make subtask of ' + task.title"
+              ></div>
+            }
+          <div
             cdkDrag
             [cdkDragData]="task"
             [cdkDragDisabled]="selectionMode()"
+            (cdkDragStarted)="onDragStarted()"
+            (cdkDragEnded)="onDragEnded()"
             [class.opacity-50]="task.status === 'done'"
             [class.bg-purple-500/5]="isSelected(task.id)"
             [class.border-purple-500/30]="isSelected(task.id)"
@@ -582,6 +604,7 @@
                 }
               </div>
             }
+          </div>
           </div>
         }
       </div>

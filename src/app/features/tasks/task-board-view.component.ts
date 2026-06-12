@@ -65,8 +65,17 @@ export class TaskBoardViewComponent {
   menuTriggerRect = signal<DOMRect | null>(null);
   columnDisplaySettings = signal<Record<string, ColumnDisplaySettings>>({});
 
-  // Computed: Get all section IDs for drag-drop connection
-  connectedDropLists = computed(() => this.project().sections.map((s) => s.id));
+  // Computed: Get all section IDs for drag-drop connection (+ per-card nest targets)
+  connectedDropLists = computed(() => [
+    ...this.project().sections.map((s) => s.id),
+    ...this.nestDropListIds(),
+  ]);
+
+  nestDropListIds = computed(() => this.tasks().map((t) => this.nestDropListId(t.id)));
+
+  isDragging = signal(false);
+  nestDropTargetId = signal<string | null>(null);
+  readonly nestDropData: Task[] = [];
 
   projectSections = computed(() => this.project().sections.sort((a, b) => a.order - b.order));
 
@@ -218,9 +227,64 @@ export class TaskBoardViewComponent {
   }
 
   onDrop(event: CdkDragDrop<Task[]>, targetSectionId: string) {
-    // For both same-column and cross-column drops, logic is identical!
+    if (
+      event.previousContainer !== event.container &&
+      event.container.id.startsWith('board-nest-')
+    ) {
+      // Card nest targets handle this in onNestDrop.
+      return;
+    }
+
     const task = event.item.data as Task;
     this.reorderTask(task, event.currentIndex, targetSectionId, event.container.data);
+  }
+
+  nestDropListId(taskId: string): string {
+    return `board-nest-${taskId}`;
+  }
+
+  wouldCreateParentCycle(ancestorId: string, nodeId: string): boolean {
+    let current: string | null = nodeId;
+    const visited = new Set<string>();
+    const allTasks = this.tasks();
+    while (current) {
+      if (current === ancestorId) return true;
+      if (visited.has(current)) return false;
+      visited.add(current);
+      const doc = allTasks.find((t) => t.id === current);
+      current = doc?.parentId ?? null;
+    }
+    return false;
+  }
+
+  onDragStarted() {
+    this.isDragging.set(true);
+  }
+
+  onDragEnded() {
+    this.isDragging.set(false);
+    this.nestDropTargetId.set(null);
+  }
+
+  onNestEntered(parentTask: Task) {
+    this.nestDropTargetId.set(parentTask.id);
+  }
+
+  onNestExited(parentTask: Task) {
+    if (this.nestDropTargetId() === parentTask.id) {
+      this.nestDropTargetId.set(null);
+    }
+  }
+
+  onNestDrop(event: CdkDragDrop<Task[]>, parentTask: Task) {
+    if (event.previousContainer === event.container) return;
+
+    const child = event.item.data as Task;
+    if (!child?.id || child.id === parentTask.id) return;
+    if (this.wouldCreateParentCycle(child.id, parentTask.id)) return;
+
+    void this.taskService.setTaskParent(child.id, parentTask.id);
+    this.onDragEnded();
   }
 
   private reorderTask(movedTask: Task, newIndex: number, sectionId: string, siblingTasks: Task[]) {

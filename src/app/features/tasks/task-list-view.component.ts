@@ -66,6 +66,16 @@ export class TaskListViewComponent {
   // Expanding/collapsing tree nodes
   expandedTaskIds = signal<Set<string>>(new Set());
 
+  /** True while any task row is being dragged (shows nest drop targets). */
+  isDragging = signal(false);
+
+  /** Row highlighted as the current nest drop target. */
+  nestDropTargetId = signal<string | null>(null);
+
+  readonly mainDropListId = 'task-list-main';
+  /** Empty placeholder list data for per-row nest drop zones. */
+  readonly nestDropData: Task[] = [];
+
   project = toSignal(
     toObservable(this.projectId).pipe(
       switchMap((id) => (id ? this.projectService.getProject$(id) : of(null))),
@@ -384,7 +394,71 @@ export class TaskListViewComponent {
     }
   }
 
+  nestDropListId(taskId: string): string {
+    return `task-nest-${taskId}`;
+  }
+
+  nestDropListIds = computed(() =>
+    this.sortedTasks().map((t) => this.nestDropListId(t.id)),
+  );
+
+  /** Sync check using in-memory tasks (no Firestore round-trip during drag). */
+  wouldCreateParentCycle(ancestorId: string, nodeId: string): boolean {
+    let current: string | null = nodeId;
+    const visited = new Set<string>();
+    const allTasks = this.tasks();
+    while (current) {
+      if (current === ancestorId) return true;
+      if (visited.has(current)) return false;
+      visited.add(current);
+      const doc = allTasks.find((t) => t.id === current);
+      current = doc?.parentId ?? null;
+    }
+    return false;
+  }
+
+  onDragStarted() {
+    this.isDragging.set(true);
+  }
+
+  onDragEnded() {
+    this.isDragging.set(false);
+    this.nestDropTargetId.set(null);
+  }
+
+  onNestEntered(parentTask: Task) {
+    this.nestDropTargetId.set(parentTask.id);
+  }
+
+  onNestExited(parentTask: Task) {
+    if (this.nestDropTargetId() === parentTask.id) {
+      this.nestDropTargetId.set(null);
+    }
+  }
+
+  onNestDrop(event: CdkDragDrop<Task[]>, parentTask: Task) {
+    if (event.previousContainer === event.container) return;
+
+    const child = event.item.data as Task;
+    if (!child?.id || child.id === parentTask.id) return;
+    if (this.wouldCreateParentCycle(child.id, parentTask.id)) return;
+
+    void this.taskService.setTaskParent(child.id, parentTask.id).then(() => {
+      this.expandedTaskIds.update((set) => {
+        const next = new Set(set);
+        next.add(parentTask.id);
+        return next;
+      });
+    });
+    this.onDragEnded();
+  }
+
   onDrop(event: CdkDragDrop<TaskListViewNode[]>) {
+    if (event.previousContainer !== event.container) {
+      // Handled by onNestDrop on the row-level nest target.
+      return;
+    }
+
     const visible = event.container.data ?? this.sortedTasks();
     const prevIndex = event.previousIndex;
     const newIndex = event.currentIndex;
@@ -400,5 +474,6 @@ export class TaskListViewComponent {
     }));
 
     void this.taskService.reorderTasks(updates);
+    this.onDragEnded();
   }
 }
