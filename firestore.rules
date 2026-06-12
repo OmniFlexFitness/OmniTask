@@ -110,12 +110,14 @@ service cloud.firestore {
       }
 
       // The signed-in user can manage the project: the owner, or a member
-      // granted project-admin rights via the `adminIds` array.
+      // granted project-admin rights via the `adminIds` array. Use get() with
+      // a default so projects created before `adminIds` existed (field absent)
+      // evaluate cleanly instead of erroring on a missing-field access.
       function isProjectAdmin(resourceData) {
         return isProjectOwner(resourceData) || (
           isAuthenticated() &&
-          resourceData.adminIds is list &&
-          request.auth.uid in resourceData.adminIds
+          resourceData.get('adminIds', []) is list &&
+          request.auth.uid in resourceData.get('adminIds', [])
         );
       }
 

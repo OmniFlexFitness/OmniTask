@@ -2,7 +2,6 @@ import {
   Component,
   ChangeDetectionStrategy,
   computed,
-  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -80,24 +79,20 @@ export class MyTasksComponent {
   /** Compact density toggle for dashboard lists. */
   readonly compactMode = computed(() => this.dashboardSettings().compactMode);
 
-  // Active top-level pane. Defaults to the user's configured landing pane
-  // (seeded once below); Overview is the fallback when unset.
-  viewMode = signal<MyTasksViewMode>('overview');
+  /**
+   * The pane the user explicitly picked this session (null until they switch
+   * tabs). Kept separate from the configured default so a manual choice wins
+   * and isn't reset when the user profile re-emits.
+   */
+  private readonly userSelectedView = signal<MyTasksViewMode | null>(null);
 
-  /** Guards the one-time seed of `viewMode` from the user's saved preference. */
-  private viewSeeded = false;
-
-  constructor() {
-    // Seed the active pane from the user's dashboard settings the first time
-    // their profile resolves. After that, manual tab switches win — we don't
-    // want a later profile refresh to yank the user back to their default.
-    effect(() => {
-      const user = this.currentUser();
-      if (!user || this.viewSeeded) return;
-      this.viewSeeded = true;
-      this.viewMode.set(resolveDashboardSettings(user).defaultMyTasksView);
-    });
-  }
+  /**
+   * Active top-level pane: the user's explicit choice when they've made one,
+   * otherwise their configured default landing pane (Overview when unset).
+   */
+  readonly viewMode = computed<MyTasksViewMode>(
+    () => this.userSelectedView() ?? this.dashboardSettings().defaultMyTasksView,
+  );
 
   // Modal state — reuse the same detail/create modals the project dashboard uses.
   openTask = signal<Task | null>(null);
@@ -161,6 +156,11 @@ export class MyTasksComponent {
   listCount = computed(() => this.myTasks().filter((t) => t.status !== 'done').length);
 
   // --------- Actions ---------
+
+  /** Switch the active pane, recording it as an explicit user override. */
+  selectView(view: MyTasksViewMode): void {
+    this.userSelectedView.set(view);
+  }
 
   /**
    * Open the task detail modal for a task in any of the user's projects.

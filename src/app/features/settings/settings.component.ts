@@ -63,12 +63,14 @@ export class SettingsComponent {
 
   // --- Dashboard settings (per-user My Tasks customization) ---
   /** Available default-view options for the My Tasks dashboard. */
-  readonly dashboardViews: { value: UserDashboardSettings['defaultMyTasksView']; label: string }[] =
-    [
-      { value: 'overview', label: 'Overview' },
-      { value: 'list', label: 'My Tasks list' },
-      { value: 'available', label: 'Available to pick up' },
-    ];
+  readonly dashboardViews: {
+    value: UserDashboardSettings['defaultMyTasksView'];
+    label: string;
+  }[] = [
+    { value: 'overview', label: 'Overview' },
+    { value: 'list', label: 'My Tasks list' },
+    { value: 'available', label: 'Available to pick up' },
+  ];
   defaultMyTasksView: UserDashboardSettings['defaultMyTasksView'] = 'overview';
   compactMode = false;
   accentColor = signal<string>('#00d2ff');

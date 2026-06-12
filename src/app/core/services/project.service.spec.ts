@@ -333,7 +333,7 @@ describe('ProjectService', () => {
   });
 
   describe('project roles & ownership', () => {
-    let mockProject: any;
+    let mockProject: Partial<Project>;
 
     beforeEach(() => {
       mockProject = {
@@ -342,7 +342,7 @@ describe('ProjectService', () => {
         memberIds: ['user-1', 'member-1', 'member-2'],
         adminIds: ['member-1'],
       };
-      spyOn(service, 'getProject').and.returnValue(Promise.resolve(mockProject));
+      spyOn(service, 'getProject').and.returnValue(Promise.resolve(mockProject as Project));
       spyOn(service, 'updateProject').and.returnValue(Promise.resolve());
       authServiceMock.currentUserSig.set({ uid: 'user-1' } as any);
     });

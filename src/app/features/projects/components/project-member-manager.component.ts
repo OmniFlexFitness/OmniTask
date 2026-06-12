@@ -27,8 +27,8 @@ export class ProjectMemberManagerComponent {
   projectService = inject(ProjectService);
   contactsService = inject(ContactsService);
   dialogService = inject(DialogService);
-  private auth = inject(AuthService);
-  private permissions = inject(PermissionsService);
+  private readonly auth = inject(AuthService);
+  private readonly permissions = inject(PermissionsService);
 
   applyingGroup = signal(false);
 
@@ -53,7 +53,9 @@ export class ProjectMemberManagerComponent {
   private readonly currentUserId = computed(() => this.auth.currentUserSig()?.uid ?? null);
 
   /** Global super-admins manage every project regardless of project role. */
-  private readonly isGlobalAdmin = computed(() => this.permissions.currentPermissions().isSuperAdmin);
+  private readonly isGlobalAdmin = computed(
+    () => this.permissions.currentPermissions().isSuperAdmin,
+  );
 
   /** The signed-in user's role in this project ('owner' | 'admin' | 'member' | null). */
   readonly myRole = computed(() => getProjectRole(this.project(), this.currentUserId()));
@@ -202,13 +204,20 @@ export class ProjectMemberManagerComponent {
     }
   }
 
-  /** Surface a friendly message for permission-denied and known errors. */
+  /** Surface a friendly message; never leak raw SDK/internal error text. */
   private friendlyError(err: unknown): string {
     const message = err instanceof Error ? err.message : String(err);
     if (/permission|insufficient|PERMISSION_DENIED/i.test(message)) {
       return 'You do not have permission to perform this action on this project.';
     }
-    return message || 'Something went wrong. Please try again.';
+    // Surface our own validated, user-facing messages (thrown from the service
+    // layer); generic-ize anything that looks like an internal/SDK error so raw
+    // Firestore or network details never reach the user.
+    const isInternal = /firebase|firestore|internal|unavailable|network/i.test(message);
+    if (err instanceof Error && !isInternal) {
+      return message;
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   /**
