@@ -190,6 +190,11 @@ export interface Project {
   sheetSyncEnabled?: boolean;
   lastSheetSyncAt?: FirestoreDate;
   sheetSyncStatus?: 'synced' | 'pending' | 'error';
+  /** Google Calendar sync fields (Phase 3). */
+  googleCalendarId?: string;
+  calendarSyncEnabled?: boolean;
+  lastCalendarSyncAt?: FirestoreDate;
+  calendarSyncStatus?: 'synced' | 'pending' | 'error';
   /** Client-evaluated automation rules for this project. */
   automationRules?: AutomationRule[];
 }
@@ -282,6 +287,10 @@ export interface Task {
    */
   sheetLastSyncedRow?: string[];
   sheetLastSyncedAt?: FirestoreDate;
+  /** Google Calendar mirror fields (Phase 3). */
+  googleCalendarId?: string;
+  googleCalendarEventId?: string;
+  isGoogleCalendarEvent?: boolean;
 }
 
 /**

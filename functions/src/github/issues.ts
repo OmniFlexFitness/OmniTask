@@ -84,6 +84,31 @@ export interface IssueRef {
 }
 
 /** Parse an issue reference from a full URL or `owner/repo#number` shorthand. */
+export async function createIssueComment(
+  token: string,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  body: string,
+): Promise<void> {
+  await githubRequest(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+    method: 'POST',
+    token,
+    body: { body },
+  });
+}
+
+/** GitHub security alert URLs we allow referencing from OmniTask (spec §8.6). */
+export function isValidSecurityAlertUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'github.com') return false;
+    return /\/security\/(dependabot|advisories|code-scanning)\//.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function parseIssueRef(input: string): IssueRef | null {
   const trimmed = input.trim();
   const urlMatch = trimmed.match(

@@ -79,6 +79,12 @@
 
   <hr class="border-white/10" />
 
+  <!-- Google Calendar Integration (Phase 3) -->
+  <app-project-google-calendar-sync [project]="project()" (projectChanged)="projectChanged.emit()">
+  </app-project-google-calendar-sync>
+
+  <hr class="border-white/10" />
+
   <!-- Export -->
   <section class="ofx-settings-section">
     <h3 class="ofx-section-title">Export</h3>

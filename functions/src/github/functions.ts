@@ -44,7 +44,9 @@ import {
   ConnectionError,
   type AppCredentials,
 } from './auth-helper';
-import { createIssue, getIssue, setIssueState, parseIssueRef } from './issues';
+import { createIssue, getIssue, setIssueState, parseIssueRef, createIssueComment, isValidSecurityAlertUrl } from './issues';
+import { mirrorIssueActorsToTask } from './actors';
+import { processGithubWebhookJob } from './webhook-queue';
 import {
   decideInbound,
   issueStateToTaskStatus,
@@ -141,7 +143,7 @@ function mapConnectionError(err: unknown): never {
 // --- Connection callables ---
 
 export const getGithubOAuthConfig = onCall<void>(
-  { secrets: [githubClientId], memory: '128MiB' },
+  { secrets: [githubClientId], memory: '256MiB' },
   async (request) => {
     requireAuth(request.auth?.uid);
     const clientId = githubClientId.value();
@@ -205,7 +207,7 @@ export const completeGithubAuth = onCall<{ code: string; redirectUri: string }>(
   },
 );
 
-export const getGithubConnection = onCall<void>({ memory: '128MiB' }, async (request) => {
+export const getGithubConnection = onCall<void>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
   const connection = await getConnection(request.auth.uid);
   if (!connection) return { connected: false };
@@ -224,7 +226,7 @@ export const getGithubConnection = onCall<void>({ memory: '128MiB' }, async (req
 export const updateGithubConnectionSettings = onCall<{
   defaultProjectNodeId?: string | null;
   createLinkedBranchOnLink?: boolean;
-}>({ memory: '128MiB' }, async (request) => {
+}>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
   const uid = request.auth.uid;
   const connection = await getConnection(uid);
@@ -273,7 +275,7 @@ export const refreshGithubFieldConfig = onCall<void>(
   },
 );
 
-export const disconnectGithub = onCall<void>({ memory: '128MiB' }, async (request) => {
+export const disconnectGithub = onCall<void>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
   await deleteUserToken(request.auth.uid);
   await deleteConnection(request.auth.uid);
@@ -352,6 +354,7 @@ async function linkExisting(uid: string, token: string, data: LinkInput) {
     lastOutboundState: null,
   });
   await recordOutboundEvent(data.taskId, 'link_existing', 'processed', null);
+  await mirrorIssueActorsToTask(token, data.taskId, ref.owner, ref.repo, issue.number);
   return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
 }
 
@@ -438,6 +441,13 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
       });
     }
     await applyPhase3Enrichment(token, connection, data, issue);
+    await mirrorIssueActorsToTask(
+      token,
+      data.taskId,
+      data.repoOwner,
+      data.repoName,
+      issue.number,
+    );
     await recordOutboundEvent(data.taskId, 'create_issue', 'processed', null);
     return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
   } catch (err) {
@@ -543,7 +553,7 @@ export const resolveGithubConflict = onCall<{
 );
 
 export const unlinkTaskFromGithub = onCall<{ taskId: string }>(
-  { memory: '128MiB' },
+  { memory: '256MiB' },
   async (request) => {
     requireAuth(request.auth?.uid);
     const taskId = request.data?.taskId;
@@ -576,6 +586,46 @@ export const retryGithubSync = onCall<{ taskId: string }>(
     } catch (err) {
       mapConnectionError(err);
     }
+  },
+);
+
+/** Post a GitHub security alert URL as an issue comment and store it on the link (spec §8.6). */
+export const addGithubSecurityAlertReference = onCall<{ taskId: string; alertUrl: string }>(
+  { secrets: ALL_SECRETS, memory: '256MiB' },
+  async (request) => {
+    requireAuth(request.auth?.uid);
+    const uid = request.auth.uid;
+    const taskId = request.data?.taskId;
+    const alertUrl = request.data?.alertUrl?.trim();
+    if (!taskId || !alertUrl) {
+      throw new HttpsError('invalid-argument', 'taskId and alertUrl required');
+    }
+    if (!isValidSecurityAlertUrl(alertUrl)) {
+      throw new HttpsError(
+        'invalid-argument',
+        'URL must be a GitHub Dependabot, advisory, or code scanning alert',
+      );
+    }
+
+    const link = await getTaskLink(taskId);
+    if (!link || link.issueNumber == null) {
+      throw new HttpsError('failed-precondition', 'Task is not linked to a GitHub issue');
+    }
+    if (link.ownerUserId !== uid) {
+      throw new HttpsError('permission-denied', 'Not your link');
+    }
+
+    let token: string;
+    try {
+      ({ token } = await getInstallationTokenForUser(uid, creds()));
+    } catch (err) {
+      mapConnectionError(err);
+    }
+
+    const commentBody = `Security alert reference from OmniTask:\n${alertUrl}`;
+    await createIssueComment(token, link.repoOwner, link.repoName, link.issueNumber, commentBody);
+    await updateTaskLink(taskId, { securityAlertUrl: alertUrl });
+    return { success: true, securityAlertUrl: alertUrl };
   },
 );
 
@@ -649,18 +699,20 @@ export const githubWebhook = onRequest(
     res.status(202).send('accepted');
 
     try {
-      if (shouldRefreshFieldCache(eventType)) {
-        await refreshFieldCacheForWebhook(req.body);
-      } else if (isRelationshipWebhook(eventType, (req.body as { action?: string }).action ?? '')) {
-        await handleRelationshipEvent(
-          eventType,
-          req.body as RelationshipWebhookPayload,
-        );
-      } else if (eventType === 'pull_request') {
-        await handlePullRequestEvent(req.body as PullRequestWebhookPayload);
-      } else if (eventType === 'issues') {
-        await handleIssuesEvent(req.body as GithubIssuesWebhook);
-      }
+      await processGithubWebhookJob(async () => {
+        if (shouldRefreshFieldCache(eventType)) {
+          await refreshFieldCacheForWebhook(req.body);
+        } else if (isRelationshipWebhook(eventType, (req.body as { action?: string }).action ?? '')) {
+          await handleRelationshipEvent(
+            eventType,
+            req.body as RelationshipWebhookPayload,
+          );
+        } else if (eventType === 'pull_request') {
+          await handlePullRequestEvent(req.body as PullRequestWebhookPayload);
+        } else if (eventType === 'issues') {
+          await handleIssuesEvent(req.body as GithubIssuesWebhook);
+        }
+      });
       await finishDelivery(deliveryId, { status: 'processed' });
     } catch (err) {
       await finishDelivery(deliveryId, {
@@ -711,9 +763,19 @@ async function handleIssuesEvent(payload: GithubIssuesWebhook): Promise<void> {
   if (action === 'assigned' || action === 'unassigned') {
     const login = extractAssigneeLogin(payload);
     if (login) {
-      await upsertTaskActor(link.taskId, login, null);
+      await upsertTaskActor(link.taskId, login, null, 'assignee');
     } else if (payload.assignee?.login) {
       await deleteTaskActors(link.taskId, payload.assignee.login);
+    }
+    return;
+  }
+
+  if (action === 'edited') {
+    try {
+      const { token } = await getInstallationTokenForUser(link.ownerUserId, creds());
+      await mirrorIssueActorsToTask(token, link.taskId, owner, repo, issue.number);
+    } catch {
+      // Best-effort participant refresh; webhook delivery already accepted.
     }
     return;
   }

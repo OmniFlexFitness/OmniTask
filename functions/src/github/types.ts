@@ -101,6 +101,8 @@ export interface TaskGithubLink {
   lastOutboundState: IssueState | null;
   /** Linked branch name when createLinkedBranchOnLink succeeded (Phase 3). */
   linkedBranchName?: string | null;
+  /** Last Dependabot/advisory URL posted as a reference comment (Phase 4). */
+  securityAlertUrl?: string | null;
   createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
 }
@@ -173,10 +175,12 @@ export interface TaskGithubRelationship {
   createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
 }
 
+export type GithubActorRole = 'assignee' | 'participant';
+
 export interface TaskGithubActor {
   taskId: string;
   login: string;
   avatarUrl: string | null;
-  role: 'assignee';
+  role: GithubActorRole;
   updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
 }

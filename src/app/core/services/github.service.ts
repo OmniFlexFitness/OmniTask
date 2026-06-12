@@ -158,6 +158,19 @@ export class GithubService {
     await fn({ taskId });
   }
 
+  /** Post a security alert URL as a GitHub issue comment and store on the link (§8.6). */
+  async addSecurityAlertReference(
+    taskId: string,
+    alertUrl: string,
+  ): Promise<{ securityAlertUrl: string }> {
+    const fn = httpsCallable<
+      { taskId: string; alertUrl: string },
+      { success: boolean; securityAlertUrl: string }
+    >(this.functions, 'addGithubSecurityAlertReference');
+    const result = await fn({ taskId, alertUrl });
+    return { securityAlertUrl: result.data.securityAlertUrl };
+  }
+
   /** Refresh org issue types + project fields from GitHub (Phase 2). */
   async refreshFieldConfig(): Promise<GithubConnectionStatus> {
     const fn = httpsCallable<void, { refreshed?: boolean; fieldDefinitionCache?: GithubConnectionStatus['fieldDefinitionCache'] }>(

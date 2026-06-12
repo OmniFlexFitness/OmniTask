@@ -301,20 +301,39 @@ export async function recordOutboundEvent(
 
 // --- Phase 2 metadata (field values, relationships, assignees) ---
 
+export type GithubActorRole = TaskGithubActor['role'];
+
 export async function upsertTaskActor(
   taskId: string,
   login: string,
   avatarUrl: string | null,
+  role: GithubActorRole = 'assignee',
 ): Promise<void> {
   const docId = `${taskId}__${login.toLowerCase()}`;
   const payload: TaskGithubActor = {
     taskId,
     login,
     avatarUrl,
-    role: 'assignee',
+    role,
     updatedAt: FieldValue.serverTimestamp(),
   };
   await db().collection(COLLECTIONS.actors).doc(docId).set(payload, { merge: true });
+}
+
+export async function replaceTaskActorsForIssue(
+  taskId: string,
+  actors: Array<{ login: string; avatarUrl: string | null; role: GithubActorRole }>,
+): Promise<void> {
+  const keep = new Set(actors.map((a) => a.login.toLowerCase()));
+  await Promise.all(
+    actors.map((a) => upsertTaskActor(taskId, a.login, a.avatarUrl, a.role)),
+  );
+  const snap = await db().collection(COLLECTIONS.actors).where('taskId', '==', taskId).get();
+  await Promise.all(
+    snap.docs
+      .filter((doc) => !keep.has(String(doc.data().login ?? '').toLowerCase()))
+      .map((doc) => doc.ref.delete()),
+  );
 }
 
 export async function deleteTaskActors(taskId: string, login: string): Promise<void> {

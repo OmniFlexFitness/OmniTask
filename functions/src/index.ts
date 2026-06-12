@@ -552,6 +552,7 @@ const GOOGLE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/directory.readonly',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
 async function getStoredRefreshToken(uid: string): Promise<string | null> {
@@ -586,7 +587,7 @@ async function storeRefreshToken(uid: string, refreshToken: string): Promise<voi
 export const getGoogleOAuthConfig = onCall<void>(
   {
     secrets: [googleClientId],
-    memory: '128MiB',
+    memory: '256MiB',
   },
   async (request) => {
     if (!request.auth) {
@@ -686,7 +687,7 @@ export const refreshGoogleAccessToken = onCall<void>(
  */
 export const revokeGoogleOfflineAccess = onCall<void>(
   {
-    memory: '128MiB',
+    memory: '256MiB',
   },
   async (request) => {
     if (!request.auth) {
@@ -1736,6 +1737,7 @@ export {
   linkTaskToGithub,
   unlinkTaskFromGithub,
   retryGithubSync,
+  addGithubSecurityAlertReference,
   refreshGithubFieldConfig,
   updateGithubConnectionSettings,
   resolveGithubConflict,

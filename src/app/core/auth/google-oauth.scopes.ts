@@ -6,6 +6,7 @@ export const GOOGLE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/directory.readonly',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.events',
 ] as const;
 
 export function googleOAuthRedirectUri(): string {

@@ -74,6 +74,8 @@ export interface TaskGithubLink {
   lastError: string | null;
   githubUpdatedAt: string | null;
   linkedBranchName?: string | null;
+  /** GitHub security alert URL referenced on the issue (spec §8.6). */
+  securityAlertUrl?: string | null;
 }
 
 export interface TaskGithubFieldValue {
@@ -104,5 +106,5 @@ export interface TaskGithubActor {
   taskId: string;
   login: string;
   avatarUrl: string | null;
-  role: 'assignee';
+  role: 'assignee' | 'participant';
 }

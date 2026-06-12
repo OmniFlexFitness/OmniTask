@@ -47,6 +47,7 @@ export class TaskGithubLinkComponent {
   issueRef = signal('');
   issueType = signal<string | null>(null);
   linkMode = signal<'create' | 'existing'>('create');
+  securityAlertUrl = signal('');
 
   connected = computed(() => this.github.connection()?.connected ?? false);
   issueTypes = computed(
@@ -123,6 +124,22 @@ export class TaskGithubLinkComponent {
 
   async resolveConflict(resolution: 'prefer_local' | 'prefer_github'): Promise<void> {
     await this.run(() => this.github.resolveConflict(this.task().id, resolution));
+  }
+
+  async addSecurityAlert(): Promise<void> {
+    const url = this.securityAlertUrl().trim();
+    if (!url) {
+      this.error.set('Enter a GitHub security alert URL');
+      return;
+    }
+    await this.run(async () => {
+      await this.github.addSecurityAlertReference(this.task().id, url);
+      this.securityAlertUrl.set('');
+    });
+  }
+
+  actorRoleLabel(role: TaskGithubActor['role']): string {
+    return role === 'participant' ? 'Participant' : 'Assignee';
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {
