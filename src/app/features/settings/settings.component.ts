@@ -14,6 +14,10 @@ import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angula
 import { UserGroupManagerComponent } from '../user-groups/user-group-manager.component';
 import { DataExportImportComponent } from './data-export-import.component';
 import { GithubConnectionComponent } from './github-connection.component';
+import {
+  UserDashboardSettings,
+  resolveDashboardSettings,
+} from '../../core/models/user.model';
 
 const AVATAR_COLORS = [
   { name: 'Purple', value: '#8b5cf6' },
@@ -51,9 +55,23 @@ export class SettingsComponent {
 
   selectedColor = signal<string>('#8b5cf6');
   displayName = '';
+  jobTitle = '';
+  bio = '';
   emailNotificationsEnabled = true;
   saving = signal(false);
   saveSuccess = signal<boolean | null>(null);
+
+  // --- Dashboard settings (per-user My Tasks customization) ---
+  /** Available default-view options for the My Tasks dashboard. */
+  readonly dashboardViews: { value: UserDashboardSettings['defaultMyTasksView']; label: string }[] =
+    [
+      { value: 'overview', label: 'Overview' },
+      { value: 'list', label: 'My Tasks list' },
+      { value: 'available', label: 'Available to pick up' },
+    ];
+  defaultMyTasksView: UserDashboardSettings['defaultMyTasksView'] = 'overview';
+  compactMode = false;
+  accentColor = signal<string>('#00d2ff');
 
   // Profile photo upload state
   uploadingPhoto = signal(false);
@@ -79,7 +97,15 @@ export class SettingsComponent {
 
       this.seededUid = user.uid;
       this.displayName = user.displayName || '';
+      this.jobTitle = user.jobTitle || '';
+      this.bio = user.bio || '';
       this.emailNotificationsEnabled = user.emailNotificationsEnabled !== false;
+
+      const dashboard = resolveDashboardSettings(user);
+      this.defaultMyTasksView = dashboard.defaultMyTasksView;
+      this.compactMode = dashboard.compactMode;
+      this.accentColor.set(dashboard.accentColor);
+
       if (user.avatarColor) {
         this.selectedColor.set(user.avatarColor);
       } else {
@@ -94,6 +120,10 @@ export class SettingsComponent {
 
   selectColor(color: string): void {
     this.selectedColor.set(color);
+  }
+
+  selectAccentColor(color: string): void {
+    this.accentColor.set(color);
   }
 
   /**
@@ -179,10 +209,18 @@ export class SettingsComponent {
     this.saving.set(true);
     this.saveSuccess.set(null);
     try {
+      const dashboardSettings: UserDashboardSettings = {
+        defaultMyTasksView: this.defaultMyTasksView,
+        compactMode: this.compactMode,
+        accentColor: this.accentColor(),
+      };
       await this.authService.updateProfile({
         displayName: this.displayName,
+        jobTitle: this.jobTitle.trim(),
+        bio: this.bio.trim(),
         avatarColor: this.selectedColor(),
         emailNotificationsEnabled: this.emailNotificationsEnabled,
+        dashboardSettings,
       });
       this.saveSuccess.set(true);
       setTimeout(() => this.saveSuccess.set(null), 3000);

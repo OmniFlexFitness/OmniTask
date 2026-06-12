@@ -1,4 +1,8 @@
-<div class="h-screen flex flex-col overflow-hidden bg-[#050810]">
+<div
+  class="h-screen flex flex-col overflow-hidden bg-[#050810]"
+  [class.mytasks-compact]="compactMode()"
+  [style.--ot-accent]="accentColor()"
+>
   <!-- Background grid overlay, cyberpunk theme matching the project dashboard -->
   <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
     <div class="absolute inset-0 cyber-grid-bg opacity-40"></div>

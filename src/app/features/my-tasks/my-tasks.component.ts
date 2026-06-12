@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -17,7 +18,7 @@ import { DialogService } from '../../core/services/dialog.service';
 import { MyTasksSheetSyncService } from '../../core/services/my-tasks-sheet-sync.service';
 import { GoogleSheetsService } from '../../core/services/google-sheets.service';
 import { Project, Task } from '../../core/models/domain.model';
-import { UserProfile } from '../../core/models/user.model';
+import { UserProfile, resolveDashboardSettings } from '../../core/models/user.model';
 
 import { TaskDetailModalComponent } from '../tasks/task-detail-modal.component';
 import { TaskCreateModalComponent } from '../tasks/task-create-modal.component';
@@ -68,9 +69,35 @@ export class MyTasksComponent {
     () => this.currentUser()?.pinnedProjectIds ?? [],
   );
 
-  // Active top-level pane. Overview is the default entry because it answers
-  // "what's going on with me?" at a glance.
+  /** The user's resolved dashboard settings (default view, density, accent). */
+  readonly dashboardSettings = computed(() =>
+    resolveDashboardSettings(this.currentUser()),
+  );
+
+  /** Personal accent color, exposed to the template as a CSS custom property. */
+  readonly accentColor = computed(() => this.dashboardSettings().accentColor);
+
+  /** Compact density toggle for dashboard lists. */
+  readonly compactMode = computed(() => this.dashboardSettings().compactMode);
+
+  // Active top-level pane. Defaults to the user's configured landing pane
+  // (seeded once below); Overview is the fallback when unset.
   viewMode = signal<MyTasksViewMode>('overview');
+
+  /** Guards the one-time seed of `viewMode` from the user's saved preference. */
+  private viewSeeded = false;
+
+  constructor() {
+    // Seed the active pane from the user's dashboard settings the first time
+    // their profile resolves. After that, manual tab switches win — we don't
+    // want a later profile refresh to yank the user back to their default.
+    effect(() => {
+      const user = this.currentUser();
+      if (!user || this.viewSeeded) return;
+      this.viewSeeded = true;
+      this.viewMode.set(resolveDashboardSettings(user).defaultMyTasksView);
+    });
+  }
 
   // Modal state — reuse the same detail/create modals the project dashboard uses.
   openTask = signal<Task | null>(null);
