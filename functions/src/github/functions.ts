@@ -72,6 +72,20 @@ const ALL_SECRETS = [
   githubWebhookSecret,
 ];
 
+/**
+ * Value the deploy workflow (.github/workflows/deploy-cloudrun.yml) seeds for
+ * any GITHUB_* secret that hasn't been configured yet, so a non-interactive
+ * `firebase deploy` doesn't fail on a missing secret. Treat it as "not
+ * configured" so the connect flow surfaces a clear error instead of redirecting
+ * to GitHub with a bogus client id. Keep in sync with that workflow.
+ */
+const UNCONFIGURED_SECRET_VALUE = 'placeholder';
+
+/** A secret is usable only when it's set and not the deploy placeholder. */
+function isSecretConfigured(value: string | undefined): boolean {
+  return !!value && value !== UNCONFIGURED_SECRET_VALUE;
+}
+
 /** Bot identity that authors our own outbound writes — used for echo suppression. */
 const BOT_LOGIN = 'omnitask-sync[bot]';
 
@@ -107,7 +121,9 @@ export const getGithubOAuthConfig = onCall<void>(
   async (request) => {
     requireAuth(request.auth?.uid);
     const clientId = githubClientId.value();
-    if (!clientId) throw new HttpsError('failed-precondition', 'GitHub client id not configured');
+    if (!isSecretConfigured(clientId)) {
+      throw new HttpsError('failed-precondition', 'GitHub client id not configured');
+    }
     return { clientId };
   },
 );
