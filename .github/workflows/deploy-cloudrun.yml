@@ -122,6 +122,33 @@ jobs:
       - name: Enable Required APIs for Firebase Extensions
         run: gcloud services enable firebaseinstallations.googleapis.com aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
 
+      - name: Ensure Functions secrets exist
+        # The GitHub Issues integration functions bind these secrets via
+        # defineSecret(). `firebase deploy --non-interactive` aborts the whole
+        # deploy if any bound secret is missing in Secret Manager
+        # ("have no value for the secret: GITHUB_APP_ID"), which blocks every
+        # push to live. Create an empty placeholder for any that don't exist
+        # yet so the deploy proceeds. Set real values later (without code
+        # changes) via: firebase functions:secrets:set <NAME> --project <id>.
+        # Existing secrets are never overwritten — the describe check skips them.
+        run: |
+          for SECRET in \
+            GITHUB_APP_ID \
+            GITHUB_APP_PRIVATE_KEY \
+            GITHUB_CLIENT_ID \
+            GITHUB_CLIENT_SECRET \
+            GITHUB_WEBHOOK_SECRET; do
+            if gcloud secrets describe "$SECRET" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
+              echo "Secret $SECRET already exists; leaving it untouched."
+            else
+              echo "Creating placeholder for missing secret: $SECRET"
+              printf 'placeholder' | gcloud secrets create "$SECRET" \
+                --data-file=- \
+                --replication-policy=automatic \
+                --project "${{ env.PROJECT_ID }}"
+            fi
+          done
+
       - name: Deploy to Firebase (Hosting, Firestore, Functions)
         run: npx firebase-tools deploy --only hosting,firestore,functions --project ${{ env.PROJECT_ID }} --non-interactive --force
 
