@@ -586,7 +586,7 @@ async function storeRefreshToken(uid: string, refreshToken: string): Promise<voi
 export const getGoogleOAuthConfig = onCall<void>(
   {
     secrets: [googleClientId],
-    memory: '128MiB',
+    memory: '256MiB',
   },
   async (request) => {
     if (!request.auth) {
@@ -686,7 +686,7 @@ export const refreshGoogleAccessToken = onCall<void>(
  */
 export const revokeGoogleOfflineAccess = onCall<void>(
   {
-    memory: '128MiB',
+    memory: '256MiB',
   },
   async (request) => {
     if (!request.auth) {
