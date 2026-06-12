@@ -117,7 +117,7 @@ function mapConnectionError(err: unknown): never {
 // --- Connection callables ---
 
 export const getGithubOAuthConfig = onCall<void>(
-  { secrets: [githubClientId], memory: '128MiB' },
+  { secrets: [githubClientId], memory: '256MiB' },
   async (request) => {
     requireAuth(request.auth?.uid);
     const clientId = githubClientId.value();
@@ -175,7 +175,7 @@ export const completeGithubAuth = onCall<{ code: string; redirectUri: string }>(
   },
 );
 
-export const getGithubConnection = onCall<void>({ memory: '128MiB' }, async (request) => {
+export const getGithubConnection = onCall<void>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
   const connection = await getConnection(request.auth.uid);
   if (!connection) return { connected: false };
@@ -188,7 +188,7 @@ export const getGithubConnection = onCall<void>({ memory: '128MiB' }, async (req
   };
 });
 
-export const disconnectGithub = onCall<void>({ memory: '128MiB' }, async (request) => {
+export const disconnectGithub = onCall<void>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
   await deleteUserToken(request.auth.uid);
   await deleteConnection(request.auth.uid);
@@ -325,7 +325,7 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
 }
 
 export const unlinkTaskFromGithub = onCall<{ taskId: string }>(
-  { memory: '128MiB' },
+  { memory: '256MiB' },
   async (request) => {
     requireAuth(request.auth?.uid);
     const taskId = request.data?.taskId;
