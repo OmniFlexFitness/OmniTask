@@ -8,6 +8,7 @@ import { ContactsService } from '../../core/services/contacts.service';
 import { VertexAiService } from '../../core/services/vertex-ai.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
 import { TaskDependencyService } from '../../core/services/task-dependency.service';
+import { GithubService } from '../../core/services/github.service';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 
@@ -22,6 +23,7 @@ describe('TaskDetailModalComponent', () => {
   let mockVertexAiService: any;
   let mockCustomFieldService: any;
   let mockTaskDependencyService: any;
+  let mockGithubService: any;
 
   beforeEach(async () => {
     mockTaskService = jasmine.createSpyObj('TaskService', [
@@ -70,6 +72,20 @@ describe('TaskDetailModalComponent', () => {
     mockTaskDependencyService.addDependency.and.returnValue(Promise.resolve());
     mockTaskDependencyService.removeDependency.and.returnValue(Promise.resolve());
 
+    mockGithubService = jasmine.createSpyObj('GithubService', [
+      'loadConnection',
+      'watchTaskLink',
+      'watchTaskFieldValues',
+      'watchTaskActors',
+      'watchTaskRelationships',
+    ]);
+    mockGithubService.connection = signal({ connected: false });
+    mockGithubService.loadConnection.and.returnValue(Promise.resolve({ connected: false }));
+    mockGithubService.watchTaskLink.and.returnValue(of(null));
+    mockGithubService.watchTaskFieldValues.and.returnValue(of([]));
+    mockGithubService.watchTaskActors.and.returnValue(of([]));
+    mockGithubService.watchTaskRelationships.and.returnValue(of([]));
+
     await TestBed.configureTestingModule({
       imports: [TaskDetailModalComponent],
       providers: [
@@ -81,6 +97,7 @@ describe('TaskDetailModalComponent', () => {
         { provide: VertexAiService, useValue: mockVertexAiService },
         { provide: CustomFieldService, useValue: mockCustomFieldService },
         { provide: TaskDependencyService, useValue: mockTaskDependencyService },
+        { provide: GithubService, useValue: mockGithubService },
       ],
     }).compileComponents();
 

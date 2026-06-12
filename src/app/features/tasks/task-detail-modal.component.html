@@ -166,6 +166,7 @@
       ></app-task-tags>
 
       @if (task()?.id) {
+        <app-task-github-link [task]="task()!" />
         <app-task-collaboration-panel [taskId]="task()!.id"></app-task-collaboration-panel>
       }
 

@@ -200,3 +200,26 @@ The `mobile/` directory holds the OmniTask iOS + Android companion app, built wi
 Stack: Flutter 3.27+ stable, Riverpod 2.x, `go_router`, FlutterFire (core/auth/firestore/functions/storage/messaging/app_check), `google_sign_in`, design system at `mobile/packages/omniflex_design_system/`.
 
 When a task references mobile-specific work, operate inside `mobile/` and follow the Flutter side of the OmniFlex code-review checklist (`AsyncValue` handling, `OmniFlexColors`/`Typography`/`Spacing`/`Effects`, `go_router` routes, no `print`, no App Check bypass). The Cloud Run web deploy chain ignores `mobile/` (see `.dockerignore`); pushes to `mobile/**` should not be sent to `live` until web parity is intentional.
+
+---
+
+## Learned User Preferences
+
+- Do not create git commits unless the user explicitly asks
+- When scoping OmniTask engineering work, ignore content/marketing tasks on other OmniTask projects (e.g. Zenith Pre-Workout Launch, Fitness Content Calendar)
+- Current engineering priority order: GitHub #91 SMTP secrets, drag-to-create subtask, GitHub #182 → #183 → #184, then Google Calendar sync
+- Run `ng test --watch=false --browsers=ChromeHeadless` and `ng build --configuration production` before declaring frontend work complete
+- Use `npm install --legacy-peer-deps` when npm reports peer dependency conflicts
+- Jonny Terrero develops in Cursor; local GitHub CLI auth is typically `jonnyterrero`
+
+---
+
+## Learned Workspace Facts
+
+- Cursor workspace root is `Omniflexfitness/`; the OmniTask app repo is cloned at `OmniTask/` (GitHub `OmniFlexFitness/OmniTask`, production branch `live`, Firebase `omnitask-475422`)
+- Production app URL: https://task.omniflexfitness.com (Firebase Hosting behind Cloudflare; project data requires auth)
+- Pre-existing production bundle budget failure (~1.20 MB initial vs 1.10 MB limit); treat as known baseline, not a regression from recent agent changes
+- Firebase Console browser login does not authenticate Firebase CLI or MCP; GitHub web login does not authenticate local `gh` until `gh auth login`
+- GitHub integration backlog is sequential: #179 done, then #182 → #183 → #184 (see `docs/plans/priority-backlog.md` and `docs/plans/github-issues-integration.md`)
+- #91 SMTP ops: `scripts/inject-smtp-secrets.ps1` and `docs/runbooks/configure-firebase-smtp-secrets.md`; requires `gcloud auth login` plus a Gmail App Password (Secret Manager secrets `EXT_MAIL_SMTP_*`, optional `NODEMAILER_SMTP_PASSWORD`)
+- `firestore-send-email` extension is deployed and ACTIVE on `omnitask-475422`

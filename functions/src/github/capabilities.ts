@@ -21,14 +21,13 @@ export async function detectCapabilities(
     return { issueTypes: false, issueFields: false, projects: await probeProjects(installationToken, accountLogin) };
   }
 
-  const [issueTypes, projects] = await Promise.all([
+  const [issueTypes, issueFields, projects] = await Promise.all([
     probe(() => githubRequest(`/orgs/${accountLogin}/issue-types`, { token: installationToken })),
+    probe(() => githubRequest(`/orgs/${accountLogin}/issue-fields`, { token: installationToken })),
     probeProjects(installationToken, accountLogin),
   ]);
 
-  // Issue Fields shares org-settings access with Issue Types in Phase 1's coarse probe;
-  // the fine-grained field-definition cache lands in Phase 2.
-  return { issueTypes, issueFields: issueTypes, projects };
+  return { issueTypes, issueFields, projects };
 }
 
 async function probe(fn: () => Promise<unknown>): Promise<boolean> {

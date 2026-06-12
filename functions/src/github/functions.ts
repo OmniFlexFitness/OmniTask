@@ -15,7 +15,7 @@
 import { onCall, HttpsError, onRequest } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 import {
   exchangeUserCode,
@@ -24,16 +24,35 @@ import {
   findUserInstallation,
 } from './app';
 import { detectCapabilities } from './capabilities';
+import { fetchFieldDefinitionCache } from './field-definitions';
+import { mergeLabels, planIssueTypeCreate, planPriorityCreate } from './degradation';
+import {
+  extractAssigneeLogin,
+  extractMilestoneTitle,
+  extractRelationshipFromPayload,
+  isExtendedIssuesAction,
+  isRelationshipAddAction,
+  isRelationshipWebhook,
+  relationshipDocId,
+  shouldRefreshFieldCache,
+  type RelationshipWebhookPayload,
+} from './inbound-webhooks';
+import { applyPriorityFieldValue } from './issue-fields';
+import { addIssueToProjectV2, createLinkedBranch, suggestLinkedBranchName } from './graphql';
 import {
   getInstallationTokenForUser,
   ConnectionError,
   type AppCredentials,
 } from './auth-helper';
-import { createIssue, getIssue, setIssueState, parseIssueRef } from './issues';
+import { createIssue, getIssue, setIssueState, parseIssueRef, createIssueComment, isValidSecurityAlertUrl } from './issues';
+import { mirrorIssueActorsToTask } from './actors';
+import { processGithubWebhookJob } from './webhook-queue';
 import {
   decideInbound,
   issueStateToTaskStatus,
+  resolveConflict,
   taskStatusToIssueState,
+  taskUpdatedAtToMs,
   verifyWebhookSignature,
   parseOmnitaskMarker,
   type TaskStatus,
@@ -49,14 +68,21 @@ import {
   getTaskLink,
   findLinkByIssue,
   updateTaskLink,
+  updateFieldDefinitionCache,
   recordOutboundSync,
+  updateConnectionSettings,
   deleteTaskLink,
   claimDelivery,
   finishDelivery,
   recordOutboundEvent,
+  upsertTaskActor,
+  deleteTaskActors,
+  upsertTaskFieldValue,
+  upsertTaskRelationship,
+  deleteTaskRelationship,
   LinkError,
 } from './store';
-import type { GithubIssuesWebhook, TaskGithubLink } from './types';
+import type { GithubConnection, GithubIssuesWebhook, TaskGithubLink } from './types';
 
 const githubAppId = defineSecret('GITHUB_APP_ID');
 const githubAppPrivateKey = defineSecret('GITHUB_APP_PRIVATE_KEY');
@@ -163,15 +189,21 @@ export const completeGithubAuth = onCall<{ code: string; redirectUri: string }>(
       installation.accountType,
     );
 
+    const fieldDefinitionCache =
+      installation.accountType === 'Organization'
+        ? await fetchFieldDefinitionCache(installationToken, installation.accountLogin)
+        : null;
+
     await upsertConnection(uid, {
       accountLogin: installation.accountLogin,
       accountType: installation.accountType,
       installationId: installation.installationId,
       capabilities,
+      fieldDefinitionCache,
       state: 'connected',
     });
 
-    return { accountLogin: installation.accountLogin, capabilities };
+    return { accountLogin: installation.accountLogin, capabilities, fieldDefinitionCache };
   },
 );
 
@@ -185,8 +217,63 @@ export const getGithubConnection = onCall<void>({ memory: '256MiB' }, async (req
     accountLogin: connection.accountLogin,
     accountType: connection.accountType,
     capabilities: connection.capabilities,
+    fieldDefinitionCache: connection.fieldDefinitionCache ?? null,
+    defaultProjectNodeId: connection.defaultProjectNodeId ?? null,
+    createLinkedBranchOnLink: connection.createLinkedBranchOnLink ?? false,
   };
 });
+
+export const updateGithubConnectionSettings = onCall<{
+  defaultProjectNodeId?: string | null;
+  createLinkedBranchOnLink?: boolean;
+}>({ memory: '256MiB' }, async (request) => {
+  requireAuth(request.auth?.uid);
+  const uid = request.auth.uid;
+  const connection = await getConnection(uid);
+  if (!connection || connection.state !== 'connected') {
+    throw new HttpsError('failed-precondition', 'GitHub not connected');
+  }
+
+  const patch: Pick<GithubConnection, 'defaultProjectNodeId' | 'createLinkedBranchOnLink'> = {};
+  if (request.data?.defaultProjectNodeId !== undefined) {
+    patch.defaultProjectNodeId = request.data.defaultProjectNodeId || null;
+  }
+  if (request.data?.createLinkedBranchOnLink !== undefined) {
+    patch.createLinkedBranchOnLink = Boolean(request.data.createLinkedBranchOnLink);
+  }
+  if (!Object.keys(patch).length) {
+    throw new HttpsError('invalid-argument', 'No settings to update');
+  }
+
+  await updateConnectionSettings(uid, patch);
+  return { success: true, ...patch };
+});
+
+export const refreshGithubFieldConfig = onCall<void>(
+  { secrets: ALL_SECRETS, memory: '256MiB' },
+  async (request) => {
+    requireAuth(request.auth?.uid);
+    const uid = request.auth.uid;
+    const connection = await getConnection(uid);
+    if (!connection || connection.state !== 'connected') {
+      throw new HttpsError('failed-precondition', 'GitHub not connected');
+    }
+    if (connection.accountType !== 'Organization') {
+      return { refreshed: false, reason: 'personal_account' };
+    }
+
+    let token: string;
+    try {
+      ({ token } = await getInstallationTokenForUser(uid, creds()));
+    } catch (err) {
+      mapConnectionError(err);
+    }
+
+    const cache = await fetchFieldDefinitionCache(token, connection.accountLogin);
+    await updateFieldDefinitionCache(uid, cache);
+    return { refreshed: true, fieldDefinitionCache: cache };
+  },
+);
 
 export const disconnectGithub = onCall<void>({ memory: '256MiB' }, async (request) => {
   requireAuth(request.auth?.uid);
@@ -207,6 +294,7 @@ interface LinkInput {
   backlinkUrl?: string;
   issueRef?: string;
   type?: string | null;
+  priority?: string | null;
 }
 
 export const linkTaskToGithub = onCall<LinkInput>(
@@ -266,6 +354,7 @@ async function linkExisting(uid: string, token: string, data: LinkInput) {
     lastOutboundState: null,
   });
   await recordOutboundEvent(data.taskId, 'link_existing', 'processed', null);
+  await mirrorIssueActorsToTask(token, data.taskId, ref.owner, ref.repo, issue.number);
   return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
 }
 
@@ -273,6 +362,18 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
   if (!data.repoOwner || !data.repoName || !data.title) {
     throw new HttpsError('invalid-argument', 'repoOwner, repoName, and title required');
   }
+
+  const connection = await getConnection(uid);
+  const capabilities = connection?.capabilities ?? {
+    issueTypes: false,
+    issueFields: false,
+    projects: false,
+  };
+  const accountType = connection?.accountType ?? 'User';
+
+  const typePlan = planIssueTypeCreate(accountType, capabilities, data.type ?? null);
+  const priorityPlan = planPriorityCreate(capabilities, data.priority ?? null);
+  const labels = mergeLabels(typePlan.labels, priorityPlan.priorityLabel ? [priorityPlan.priorityLabel] : []);
 
   // Reserve the task-side link first (empty issue), so a failed create still leaves a
   // recoverable, retryable record rather than orphaning an issue (spec §11).
@@ -285,7 +386,7 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
     issueNodeId: null,
     issueUrl: null,
     issueState: null,
-    issueType: data.type ?? null,
+    issueType: typePlan.type ?? data.type ?? null,
     syncState: 'pending',
     lastError: null,
     lastSyncedAt: null,
@@ -301,7 +402,8 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
       taskId: data.taskId,
       body: data.body,
       backlinkUrl: data.backlinkUrl,
-      type: data.type,
+      type: typePlan.type,
+      labels,
     });
     await claimIssueGuard(data.taskId, data.repoOwner, data.repoName, issue.number);
     await updateTaskLink(data.taskId, {
@@ -314,6 +416,38 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
       githubUpdatedAt: issue.updated_at,
       lastOutboundState: issue.state,
     });
+    if (priorityPlan.useIssueFields && data.priority && connection?.fieldDefinitionCache) {
+      try {
+        await applyPriorityFieldValue(
+          token,
+          data.repoOwner,
+          data.repoName,
+          issue.number,
+          connection.fieldDefinitionCache,
+          data.priority,
+        );
+      } catch {
+        /* label fallback already applied */
+      }
+    }
+    if (data.priority) {
+      await upsertTaskFieldValue(data.taskId, {
+        fieldId: -2,
+        fieldName: 'priority',
+        dataType: 'single_select',
+        optionId: null,
+        textValue: data.priority,
+        numberValue: null,
+      });
+    }
+    await applyPhase3Enrichment(token, connection, data, issue);
+    await mirrorIssueActorsToTask(
+      token,
+      data.taskId,
+      data.repoOwner,
+      data.repoName,
+      issue.number,
+    );
     await recordOutboundEvent(data.taskId, 'create_issue', 'processed', null);
     return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
   } catch (err) {
@@ -323,6 +457,100 @@ async function linkCreate(uid: string, token: string, data: LinkInput) {
     throw new HttpsError('internal', message);
   }
 }
+
+async function applyPhase3Enrichment(
+  token: string,
+  connection: GithubConnection | null,
+  data: LinkInput,
+  issue: { node_id?: string | null },
+): Promise<void> {
+  if (!issue.node_id) return;
+
+  if (connection?.defaultProjectNodeId && connection.capabilities?.projects) {
+    try {
+      await addIssueToProjectV2(token, connection.defaultProjectNodeId, issue.node_id);
+    } catch {
+      /* non-fatal — project board may be misconfigured */
+    }
+  }
+
+  if (connection?.createLinkedBranchOnLink) {
+    try {
+      const branchName = suggestLinkedBranchName(data.taskId, data.title ?? 'task');
+      const name = await createLinkedBranch(token, issue.node_id, branchName);
+      if (name) {
+        await updateTaskLink(data.taskId, { linkedBranchName: name });
+      }
+    } catch {
+      /* requires Contents write permission on the repo */
+    }
+  }
+}
+
+export const resolveGithubConflict = onCall<{
+  taskId: string;
+  resolution: 'prefer_local' | 'prefer_github';
+}>(
+  { secrets: ALL_SECRETS, memory: '256MiB' },
+  async (request) => {
+    requireAuth(request.auth?.uid);
+    const uid = request.auth.uid;
+    const taskId = request.data?.taskId;
+    const resolution = request.data?.resolution;
+    if (!taskId || !resolution) {
+      throw new HttpsError('invalid-argument', 'taskId and resolution required');
+    }
+    if (resolution !== 'prefer_local' && resolution !== 'prefer_github') {
+      throw new HttpsError('invalid-argument', 'resolution must be prefer_local or prefer_github');
+    }
+
+    const link = await getTaskLink(taskId);
+    if (!link) throw new HttpsError('not-found', 'No link for task');
+    if (link.ownerUserId !== uid) throw new HttpsError('permission-denied', 'Not your link');
+    if (link.syncState !== 'conflict') {
+      throw new HttpsError('failed-precondition', 'Task is not in conflict state');
+    }
+    if (link.issueNumber == null) {
+      throw new HttpsError('failed-precondition', 'Issue not created yet');
+    }
+
+    let token: string;
+    try {
+      ({ token } = await getInstallationTokenForUser(uid, creds()));
+    } catch (err) {
+      mapConnectionError(err);
+    }
+
+    if (resolution === 'prefer_local') {
+      const task = await getFirestore().collection('tasks').doc(taskId).get();
+      const status = (task.data()?.status as TaskStatus) ?? 'todo';
+      await pushStatus(uid, link, status);
+      await updateTaskLink(taskId, { syncState: 'synced', lastError: null });
+      return { success: true, resolution };
+    }
+
+    const issue = await getIssue(token, link.repoOwner, link.repoName, link.issueNumber);
+    const taskRef = getFirestore().collection('tasks').doc(taskId);
+    const snap = await taskRef.get();
+    const currentStatus = (snap.data()?.status as TaskStatus) ?? 'todo';
+    const nextStatus = issueStateToTaskStatus(issue.state, currentStatus);
+    if (nextStatus !== currentStatus) {
+      await taskRef.set(
+        { status: nextStatus, ...(nextStatus === 'done' ? { completedAt: new Date() } : {}) },
+        { merge: true },
+      );
+    }
+    await updateTaskLink(taskId, {
+      issueState: issue.state,
+      githubUpdatedAt: issue.updated_at,
+      syncState: 'synced',
+      lastError: null,
+      lastSyncedAt: Timestamp.now(),
+      lastOutboundState: issue.state,
+    });
+    return { success: true, resolution };
+  },
+);
 
 export const unlinkTaskFromGithub = onCall<{ taskId: string }>(
   { memory: '256MiB' },
@@ -358,6 +586,46 @@ export const retryGithubSync = onCall<{ taskId: string }>(
     } catch (err) {
       mapConnectionError(err);
     }
+  },
+);
+
+/** Post a GitHub security alert URL as an issue comment and store it on the link (spec §8.6). */
+export const addGithubSecurityAlertReference = onCall<{ taskId: string; alertUrl: string }>(
+  { secrets: ALL_SECRETS, memory: '256MiB' },
+  async (request) => {
+    requireAuth(request.auth?.uid);
+    const uid = request.auth.uid;
+    const taskId = request.data?.taskId;
+    const alertUrl = request.data?.alertUrl?.trim();
+    if (!taskId || !alertUrl) {
+      throw new HttpsError('invalid-argument', 'taskId and alertUrl required');
+    }
+    if (!isValidSecurityAlertUrl(alertUrl)) {
+      throw new HttpsError(
+        'invalid-argument',
+        'URL must be a GitHub Dependabot, advisory, or code scanning alert',
+      );
+    }
+
+    const link = await getTaskLink(taskId);
+    if (!link || link.issueNumber == null) {
+      throw new HttpsError('failed-precondition', 'Task is not linked to a GitHub issue');
+    }
+    if (link.ownerUserId !== uid) {
+      throw new HttpsError('permission-denied', 'Not your link');
+    }
+
+    let token: string;
+    try {
+      ({ token } = await getInstallationTokenForUser(uid, creds()));
+    } catch (err) {
+      mapConnectionError(err);
+    }
+
+    const commentBody = `Security alert reference from OmniTask:\n${alertUrl}`;
+    await createIssueComment(token, link.repoOwner, link.repoName, link.issueNumber, commentBody);
+    await updateTaskLink(taskId, { securityAlertUrl: alertUrl });
+    return { success: true, securityAlertUrl: alertUrl };
   },
 );
 
@@ -431,9 +699,20 @@ export const githubWebhook = onRequest(
     res.status(202).send('accepted');
 
     try {
-      if (eventType === 'issues') {
-        await handleIssuesEvent(req.body as GithubIssuesWebhook);
-      }
+      await processGithubWebhookJob(async () => {
+        if (shouldRefreshFieldCache(eventType)) {
+          await refreshFieldCacheForWebhook(req.body);
+        } else if (isRelationshipWebhook(eventType, (req.body as { action?: string }).action ?? '')) {
+          await handleRelationshipEvent(
+            eventType,
+            req.body as RelationshipWebhookPayload,
+          );
+        } else if (eventType === 'pull_request') {
+          await handlePullRequestEvent(req.body as PullRequestWebhookPayload);
+        } else if (eventType === 'issues') {
+          await handleIssuesEvent(req.body as GithubIssuesWebhook);
+        }
+      });
       await finishDelivery(deliveryId, { status: 'processed' });
     } catch (err) {
       await finishDelivery(deliveryId, {
@@ -444,10 +723,31 @@ export const githubWebhook = onRequest(
   },
 );
 
+async function refreshFieldCacheForWebhook(body: unknown): Promise<void> {
+  const payload = body as {
+    organization?: { login?: string };
+    installation?: { id?: number };
+  };
+  const orgLogin = payload.organization?.login;
+  const installationId = payload.installation?.id;
+  if (!orgLogin || !installationId) return;
+
+  const snap = await getFirestore()
+    .collection('github_connections')
+    .where('accountLogin', '==', orgLogin)
+    .limit(10)
+    .get();
+  if (snap.empty) return;
+
+  const appJwt = createAppJwt(creds().appId, creds().privateKey);
+  const installationToken = await createInstallationToken(appJwt, installationId);
+  const cache = await fetchFieldDefinitionCache(installationToken, orgLogin);
+  await Promise.all(snap.docs.map((doc) => updateFieldDefinitionCache(doc.id, cache)));
+}
+
 async function handleIssuesEvent(payload: GithubIssuesWebhook): Promise<void> {
   if (!payload?.issue) return;
   const { action, issue, repository, sender } = payload;
-  if (action !== 'closed' && action !== 'reopened') return; // Phase 1: state only
 
   const owner = repository.owner.login;
   const repo = repository.name;
@@ -459,6 +759,53 @@ async function handleIssuesEvent(payload: GithubIssuesWebhook): Promise<void> {
     if (taskId) link = await getTaskLink(taskId);
   }
   if (!link) return;
+
+  if (action === 'assigned' || action === 'unassigned') {
+    const login = extractAssigneeLogin(payload);
+    if (login) {
+      await upsertTaskActor(link.taskId, login, null, 'assignee');
+    } else if (payload.assignee?.login) {
+      await deleteTaskActors(link.taskId, payload.assignee.login);
+    }
+    return;
+  }
+
+  if (action === 'edited') {
+    try {
+      const { token } = await getInstallationTokenForUser(link.ownerUserId, creds());
+      await mirrorIssueActorsToTask(token, link.taskId, owner, repo, issue.number);
+    } catch {
+      // Best-effort participant refresh; webhook delivery already accepted.
+    }
+    return;
+  }
+
+  if (action === 'typed' || action === 'untyped') {
+    await updateTaskLink(link.taskId, {
+      issueType: issue.type?.name ?? null,
+      githubUpdatedAt: issue.updated_at,
+    });
+    return;
+  }
+
+  if (action === 'milestoned' || action === 'demilestoned') {
+    const milestone = extractMilestoneTitle(payload);
+    await upsertTaskFieldValue(link.taskId, {
+      fieldId: -1,
+      fieldName: 'milestone',
+      dataType: 'text',
+      optionId: null,
+      textValue: milestone,
+      numberValue: payload.milestone?.number ?? null,
+    });
+    return;
+  }
+
+  if (isExtendedIssuesAction(action) && action !== 'closed' && action !== 'reopened') {
+    return;
+  }
+
+  if (action !== 'closed' && action !== 'reopened') return;
 
   const decision = decideInbound({
     incomingUpdatedAt: issue.updated_at,
@@ -472,8 +819,28 @@ async function handleIssuesEvent(payload: GithubIssuesWebhook): Promise<void> {
   const taskRef = getFirestore().collection('tasks').doc(link.taskId);
   const snap = await taskRef.get();
   if (!snap.exists) return;
-  const currentStatus = (snap.data()?.status as TaskStatus) ?? 'todo';
+  const taskData = snap.data();
+  const currentStatus = (taskData?.status as TaskStatus) ?? 'todo';
   const nextStatus = issueStateToTaskStatus(issue.state, currentStatus);
+
+  const localUpdatedMs = taskUpdatedAtToMs(taskData?.updatedAt);
+  const lastSyncedMs =
+    link.lastSyncedAt && typeof link.lastSyncedAt === 'object' && 'toMillis' in link.lastSyncedAt
+      ? (link.lastSyncedAt as { toMillis: () => number }).toMillis()
+      : 0;
+
+  if (localUpdatedMs > lastSyncedMs && nextStatus !== currentStatus) {
+    const { winner } = resolveConflict(issue.updated_at, localUpdatedMs);
+    if (winner === 'omnitask') {
+      await updateTaskLink(link.taskId, {
+        syncState: 'conflict',
+        githubUpdatedAt: issue.updated_at,
+        lastError:
+          'Local edits are newer than the last sync — review before accepting GitHub changes.',
+      });
+      return;
+    }
+  }
 
   if (nextStatus !== currentStatus) {
     await taskRef.set(
@@ -481,12 +848,81 @@ async function handleIssuesEvent(payload: GithubIssuesWebhook): Promise<void> {
       { merge: true },
     );
   }
-  // Record the remote state so the echo of our own resulting write is suppressed.
   await updateTaskLink(link.taskId, {
     issueState: issue.state,
     lastOutboundState: issue.state,
     githubUpdatedAt: issue.updated_at,
-    syncState: 'synced',
-    lastError: null,
+    syncState: localUpdatedMs > lastSyncedMs ? 'conflict' : 'synced',
+    lastError: localUpdatedMs > lastSyncedMs ? 'Applied GitHub change with concurrent local edits' : null,
   });
+}
+
+interface PullRequestWebhookPayload {
+  action?: string;
+  pull_request?: { merged?: boolean; html_url?: string; merged_at?: string | null };
+  issue?: { number: number };
+  repository?: { owner: { login: string }; name: string };
+}
+
+/** Phase 3: record merged PR metadata on the linked issue task. */
+async function handlePullRequestEvent(payload: PullRequestWebhookPayload): Promise<void> {
+  if (payload.action !== 'closed' || !payload.pull_request?.merged) return;
+  const owner = payload.repository?.owner.login;
+  const repo = payload.repository?.name;
+  const issueNumber = payload.issue?.number;
+  if (!owner || !repo || issueNumber == null) return;
+
+  const link = await findLinkByIssue(owner, repo, issueNumber);
+  if (!link) return;
+
+  await upsertTaskFieldValue(link.taskId, {
+    fieldId: -3,
+    fieldName: 'pull_request',
+    dataType: 'text',
+    optionId: null,
+    textValue: payload.pull_request.html_url ?? 'merged',
+    numberValue: null,
+  });
+}
+
+async function handleRelationshipEvent(
+  eventType: string,
+  payload: RelationshipWebhookPayload,
+): Promise<void> {
+  const action = payload.action ?? '';
+  if (!payload.issue) return;
+
+  const owner =
+    payload.repository?.owner.login ?? payload.issue.repository?.owner?.login ?? null;
+  const repo = payload.repository?.name ?? payload.issue.repository?.name ?? null;
+  if (!owner || !repo) return;
+
+  let link = await findLinkByIssue(owner, repo, payload.issue.number);
+  if (!link) {
+    const taskId = parseOmnitaskMarker((payload.issue as { body?: string }).body ?? null);
+    if (taskId) link = await getTaskLink(taskId);
+  }
+  if (!link) return;
+
+  const rel = extractRelationshipFromPayload(eventType, payload);
+  if (!rel) return;
+
+  const docId = relationshipDocId(
+    link.taskId,
+    rel.kind,
+    rel.relatedRepoOwner,
+    rel.relatedRepoName,
+    rel.relatedIssueNumber,
+  );
+
+  if (isRelationshipAddAction(eventType, action)) {
+    await upsertTaskRelationship(link.taskId, rel.kind, {
+      relatedIssueNumber: rel.relatedIssueNumber,
+      relatedIssueNodeId: rel.relatedIssueNodeId,
+      relatedRepoOwner: rel.relatedRepoOwner,
+      relatedRepoName: rel.relatedRepoName,
+    });
+  } else {
+    await deleteTaskRelationship(docId);
+  }
 }

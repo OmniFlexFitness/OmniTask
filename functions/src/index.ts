@@ -552,6 +552,7 @@ const GOOGLE_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/directory.readonly',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
 async function getStoredRefreshToken(uid: string): Promise<string | null> {
@@ -1109,7 +1110,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
       port: 465,
       secure: true,
       auth: {
-        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
+        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -1207,7 +1208,7 @@ export const checkScheduledReminders = onSchedule(
       port: 465,
       secure: true,
       auth: {
-        user: process.env.NODEMAILER_SMTP_USER || 'admin@omniflexfitness.com',
+        user: process.env.NODEMAILER_SMTP_USER || 'bertin.kenol@omniflexfitness.com',
         pass: nodemailerSmtpPassword.value(),
       },
     });
@@ -1736,6 +1737,10 @@ export {
   linkTaskToGithub,
   unlinkTaskFromGithub,
   retryGithubSync,
+  addGithubSecurityAlertReference,
+  refreshGithubFieldConfig,
+  updateGithubConnectionSettings,
+  resolveGithubConflict,
   syncTaskStatusToGithub,
   githubWebhook,
 } from './github/functions';

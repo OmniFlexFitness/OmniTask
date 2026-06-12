@@ -18,6 +18,8 @@ export interface CreateIssueInput {
   assignees?: string[];
   /** Issue Type name (org-only); silently ignored by GitHub on personal repos. */
   type?: string | null;
+  /** Label names applied on create (degradation fallback for personal repos). */
+  labels?: string[];
 }
 
 function composeBody(input: CreateIssueInput): string {
@@ -38,6 +40,7 @@ export async function createIssue(
   if (input.milestone != null) body.milestone = input.milestone;
   if (input.assignees?.length) body.assignees = input.assignees;
   if (input.type) body.type = input.type;
+  if (input.labels?.length) body.labels = input.labels;
 
   const res = await githubRequest<GithubIssuePayload>(
     `/repos/${input.owner}/${input.repo}/issues`,
@@ -81,6 +84,31 @@ export interface IssueRef {
 }
 
 /** Parse an issue reference from a full URL or `owner/repo#number` shorthand. */
+export async function createIssueComment(
+  token: string,
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  body: string,
+): Promise<void> {
+  await githubRequest(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+    method: 'POST',
+    token,
+    body: { body },
+  });
+}
+
+/** GitHub security alert URLs we allow referencing from OmniTask (spec §8.6). */
+export function isValidSecurityAlertUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'github.com') return false;
+    return /\/security\/(dependabot|advisories|code-scanning)\//.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function parseIssueRef(input: string): IssueRef | null {
   const trimmed = input.trim();
   const urlMatch = trimmed.match(

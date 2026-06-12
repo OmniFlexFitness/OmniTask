@@ -9,6 +9,7 @@ import { ProjectBasicInfoComponent } from './project-basic-info.component';
 import { ProjectDangerZoneComponent } from './project-danger-zone.component';
 import { ProjectGoogleTasksSyncComponent } from './project-google-tasks-sync.component';
 import { ProjectGoogleSheetsSyncComponent } from './project-google-sheets-sync.component';
+import { ProjectGoogleCalendarSyncComponent } from './project-google-calendar-sync.component';
 import { PointScaleManagerComponent } from './point-scale-manager.component';
 import { ProjectAutomationPanelComponent } from './project-automation-panel.component';
 import { TaskService } from '../../../core/services/task.service';
@@ -31,6 +32,7 @@ import { downloadTextFile, toCsv } from '../../../core/utils/download.utils';
     ProjectDangerZoneComponent,
     ProjectGoogleTasksSyncComponent,
     ProjectGoogleSheetsSyncComponent,
+    ProjectGoogleCalendarSyncComponent,
     PointScaleManagerComponent,
     ProjectAutomationPanelComponent,
   ],

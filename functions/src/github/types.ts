@@ -6,6 +6,46 @@
  */
 
 /** Per-user GitHub App connection. Stored at `github_connections/{uid}`. */
+/** Cached org issue-type + issue-field definitions (Phase 2, spec §6). */
+export interface GithubFieldDefinitionCache {
+  issueTypes: GithubIssueTypeDefinition[];
+  issueFields: GithubIssueFieldDefinition[];
+  /** ISO-8601 timestamp of the last successful fetch. */
+  fetchedAt: string;
+}
+
+export interface GithubIssueTypeDefinition {
+  id: number;
+  nodeId: string;
+  name: string;
+  description: string | null;
+  isEnabled: boolean;
+}
+
+/** Single-select option on an org Issue Field. */
+export interface GithubIssueFieldOption {
+  id: number;
+  name: string;
+}
+
+export type GithubIssueFieldDataType =
+  | 'single_select'
+  | 'text'
+  | 'number'
+  | 'date'
+  | 'iteration'
+  | string;
+
+export interface GithubIssueFieldDefinition {
+  id: number;
+  nodeId: string;
+  name: string;
+  dataType: GithubIssueFieldDataType;
+  /** Issue type IDs this field is pinned to (empty = all types). */
+  pinnedToIssueTypeIds: number[];
+  options: GithubIssueFieldOption[];
+}
+
 export interface GithubConnection {
   omnitaskUserId: string;
   accountLogin: string;
@@ -13,6 +53,12 @@ export interface GithubConnection {
   installationId: number;
   /** Detected org-gated features. Phase 1 only probes; Phase 2 consumes. */
   capabilities: GithubCapabilities;
+  /** Org issue-type/field metadata for progressive linking UI (Phase 2). */
+  fieldDefinitionCache?: GithubFieldDefinitionCache | null;
+  /** GitHub Projects v2 node id — new issues are added to this board (Phase 3). */
+  defaultProjectNodeId?: string | null;
+  /** When true, create a linked branch on issue create (Phase 3; needs Contents RW). */
+  createLinkedBranchOnLink?: boolean;
   state: 'connected' | 'needs_reauth' | 'error';
   createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
@@ -53,6 +99,10 @@ export interface TaskGithubLink {
   githubUpdatedAt: string | null;
   /** Echo-loop guard: the value we last wrote outbound, so its echo webhook no-ops. */
   lastOutboundState: IssueState | null;
+  /** Linked branch name when createLinkedBranchOnLink succeeded (Phase 3). */
+  linkedBranchName?: string | null;
+  /** Last Dependabot/advisory URL posted as a reference comment (Phase 4). */
+  securityAlertUrl?: string | null;
   createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
 }
@@ -94,6 +144,43 @@ export interface GithubIssuePayload {
 export interface GithubIssuesWebhook {
   action: string;
   issue: GithubIssuePayload;
-  repository: { name: string; owner: { login: string } };
+  repository: { name: string; owner: { login: string; type?: string } };
   sender: { login: string; type: string };
+  assignee?: { login: string } | null;
+  milestone?: { title: string; number: number } | null;
+}
+
+/** Flexible Issue Field value stored per linked task (Phase 2). */
+export interface TaskGithubFieldValue {
+  taskId: string;
+  fieldId: number;
+  fieldName: string;
+  dataType: GithubIssueFieldDataType;
+  /** Single-select option id, when applicable. */
+  optionId: number | null;
+  textValue: string | null;
+  numberValue: number | null;
+  updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+}
+
+export type GithubRelationshipKind = 'sub_issue' | 'blocked_by' | 'blocking';
+
+export interface TaskGithubRelationship {
+  taskId: string;
+  kind: GithubRelationshipKind;
+  relatedIssueNumber: number;
+  relatedIssueNodeId: string | null;
+  relatedRepoOwner: string;
+  relatedRepoName: string;
+  createdAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
+}
+
+export type GithubActorRole = 'assignee' | 'participant';
+
+export interface TaskGithubActor {
+  taskId: string;
+  login: string;
+  avatarUrl: string | null;
+  role: GithubActorRole;
+  updatedAt: FirebaseFirestore.FieldValue | FirebaseFirestore.Timestamp;
 }

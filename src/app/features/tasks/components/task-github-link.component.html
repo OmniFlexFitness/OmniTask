@@ -1,0 +1,273 @@
+<section class="mb-6 rounded-xl border border-white/10 bg-slate-900/40 p-4">
+  <div class="mb-3 flex items-center justify-between gap-2">
+    <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+      <svg class="h-4 w-4 text-purple-400" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path
+          d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+        />
+      </svg>
+      GitHub Issue
+    </h3>
+    @if (link()?.issueUrl) {
+      <a
+        [href]="link()!.issueUrl!"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-xs text-purple-300 hover:text-purple-200"
+      >
+        Open on GitHub ↗
+      </a>
+    }
+  </div>
+
+  @if (!connected()) {
+    <p class="text-sm text-slate-400">
+      Connect GitHub in Settings to link this task to an issue.
+    </p>
+  } @else if (link()?.issueNumber) {
+    @if (hasConflict()) {
+      <div
+        class="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200"
+      >
+        Sync conflict — local and GitHub both changed. Choose which side wins or retry sync.
+        @if (link()?.lastError) {
+          <span class="mt-1 block text-xs text-amber-300/80">{{ link()!.lastError }}</span>
+        }
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-amber-500/40 px-2 py-1 text-xs text-amber-100 hover:bg-amber-500/10 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="resolveConflict('prefer_local')"
+          >
+            Keep OmniTask status
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border border-amber-500/40 px-2 py-1 text-xs text-amber-100 hover:bg-amber-500/10 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="resolveConflict('prefer_github')"
+          >
+            Accept GitHub status
+          </button>
+        </div>
+      </div>
+    } @else if (syncError()) {
+      <div class="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+        Sync error: {{ link()?.lastError || 'Unknown error' }}
+      </div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+      <span class="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 font-mono text-xs">
+        {{ link()!.repoOwner }}/{{ link()!.repoName }}#{{ link()!.issueNumber }}
+      </span>
+      <span
+        class="rounded-full px-2 py-0.5 text-xs"
+        [class.bg-emerald-500/10]="link()!.issueState === 'open'"
+        [class.text-emerald-300]="link()!.issueState === 'open'"
+        [class.bg-slate-500/10]="link()!.issueState === 'closed'"
+        [class.text-slate-400]="link()!.issueState === 'closed'"
+      >
+        {{ link()!.issueState }}
+      </span>
+      @if (link()!.issueType) {
+        <span class="text-xs text-slate-500">{{ link()!.issueType }}</span>
+      }
+      @if (link()?.linkedBranchName) {
+        <span class="font-mono text-xs text-slate-500">branch: {{ link()!.linkedBranchName }}</span>
+      }
+      <span class="text-xs text-slate-500">sync: {{ link()!.syncState }}</span>
+    </div>
+
+    @if (actors().length) {
+      <div class="mt-3">
+        <p class="mb-1 text-xs font-medium text-slate-500">People on GitHub</p>
+        <ul class="flex flex-wrap gap-2">
+          @for (a of actors(); track a.login) {
+            <li class="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-300">
+              @if (a.avatarUrl) {
+                <img [src]="a.avatarUrl" [alt]="a.login" class="h-4 w-4 rounded-full" />
+              }
+              {{ a.login }}
+              <span class="text-slate-500">· {{ actorRoleLabel(a.role) }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+
+    <div class="mt-3">
+      <p class="mb-1 text-xs font-medium text-slate-500">Security alert reference</p>
+      @if (link()?.securityAlertUrl) {
+        <a
+          [href]="link()!.securityAlertUrl!"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs text-purple-300 hover:text-purple-200 break-all"
+        >
+          {{ link()!.securityAlertUrl }} ↗
+        </a>
+      }
+      <div class="mt-2 flex flex-wrap gap-2">
+        <input
+          type="url"
+          placeholder="https://github.com/.../security/dependabot/..."
+          class="min-w-[12rem] flex-1 rounded-lg border border-white/10 bg-slate-800/80 px-3 py-1.5 text-xs text-white"
+          [ngModel]="securityAlertUrl()"
+          (ngModelChange)="securityAlertUrl.set($event)"
+        />
+        <button
+          type="button"
+          class="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:opacity-50"
+          [disabled]="busy()"
+          (click)="addSecurityAlert()"
+        >
+          Post to issue
+        </button>
+      </div>
+    </div>
+
+    @if (relationships().length) {
+      <ul class="mt-3 space-y-1 text-xs text-slate-400">
+        @for (rel of relationships(); track rel.id ?? rel.relatedIssueNumber) {
+          <li>{{ relationshipLabel(rel) }}</li>
+        }
+      </ul>
+    }
+
+    @if (fieldValues().length) {
+      <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        @for (fv of fieldValues(); track fv.fieldId) {
+          <dt class="text-slate-500">{{ fv.fieldName }}</dt>
+          <dd class="text-slate-300">{{ fv.textValue ?? fv.numberValue ?? '—' }}</dd>
+        }
+      </dl>
+    }
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:opacity-50"
+        [disabled]="busy()"
+        (click)="retrySync()"
+      >
+        Retry sync
+      </button>
+      <button
+        type="button"
+        class="rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10 disabled:opacity-50"
+        [disabled]="busy()"
+        (click)="unlink()"
+      >
+        Unlink
+      </button>
+    </div>
+  } @else {
+    @if (!showCreateForm()) {
+      <button
+        type="button"
+        class="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-sm text-purple-200 hover:bg-purple-500/20 disabled:opacity-50"
+        [disabled]="busy()"
+        (click)="toggleCreate()"
+      >
+        Link to GitHub issue
+      </button>
+    } @else {
+      <div class="space-y-3">
+        <div class="flex gap-2 text-xs">
+          <button
+            type="button"
+            class="rounded px-2 py-1"
+            [class.bg-purple-600]="linkMode() === 'create'"
+            [class.text-white]="linkMode() === 'create'"
+            [class.text-slate-400]="linkMode() !== 'create'"
+            (click)="linkMode.set('create')"
+          >
+            Create new
+          </button>
+          <button
+            type="button"
+            class="rounded px-2 py-1"
+            [class.bg-purple-600]="linkMode() === 'existing'"
+            [class.text-white]="linkMode() === 'existing'"
+            [class.text-slate-400]="linkMode() !== 'existing'"
+            (click)="linkMode.set('existing')"
+          >
+            Link existing
+          </button>
+        </div>
+
+        @if (linkMode() === 'create') {
+          <div class="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              placeholder="Owner (org or user)"
+              class="rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-white"
+              [ngModel]="repoOwner()"
+              (ngModelChange)="repoOwner.set($event)"
+            />
+            <input
+              type="text"
+              placeholder="Repository name"
+              class="rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-white"
+              [ngModel]="repoName()"
+              (ngModelChange)="repoName.set($event)"
+            />
+          </div>
+          @if (issueTypes().length) {
+            <select
+              class="w-full rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-white"
+              [ngModel]="issueType()"
+              (ngModelChange)="issueType.set($event || null)"
+            >
+              <option [ngValue]="null">Default issue type</option>
+              @for (t of issueTypes(); track t.id) {
+                <option [ngValue]="t.name">{{ t.name }}</option>
+              }
+            </select>
+          }
+          <p class="text-xs text-slate-500">
+            Priority "{{ task().priority }}" will sync to GitHub when supported.
+          </p>
+          <button
+            type="button"
+            class="rounded-lg bg-purple-600 px-3 py-1.5 text-sm text-white hover:bg-purple-500 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="linkCreate()"
+          >
+            Create &amp; link issue
+          </button>
+        } @else {
+          <input
+            type="text"
+            placeholder="https://github.com/owner/repo/issues/42 or owner/repo#42"
+            class="w-full rounded-lg border border-white/10 bg-slate-800/80 px-3 py-2 text-sm text-white"
+            [ngModel]="issueRef()"
+            (ngModelChange)="issueRef.set($event)"
+          />
+          <button
+            type="button"
+            class="rounded-lg bg-purple-600 px-3 py-1.5 text-sm text-white hover:bg-purple-500 disabled:opacity-50"
+            [disabled]="busy()"
+            (click)="linkExisting()"
+          >
+            Link existing issue
+          </button>
+        }
+
+        <button
+          type="button"
+          class="text-xs text-slate-500 hover:text-slate-300"
+          (click)="toggleCreate()"
+        >
+          Cancel
+        </button>
+      </div>
+    }
+  }
+
+  @if (error()) {
+    <p class="mt-2 text-sm text-rose-400">{{ error() }}</p>
+  }
+</section>

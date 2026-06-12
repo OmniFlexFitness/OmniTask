@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConnectionError = void 0;
-exports.getInstallationTokenForUser = getInstallationTokenForUser;
+exports.getInstallationTokenForUser = exports.ConnectionError = void 0;
 /**
  * Resolves a GitHub installation token for a connected user and marks the
  * connection `needs_reauth` when the App access is no longer valid (spec §10).
@@ -43,4 +42,5 @@ async function getInstallationTokenForUser(uid, creds) {
         throw err;
     }
 }
+exports.getInstallationTokenForUser = getInstallationTokenForUser;
 //# sourceMappingURL=auth-helper.js.map

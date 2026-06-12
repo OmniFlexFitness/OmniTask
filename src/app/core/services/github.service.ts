@@ -1,8 +1,22 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import {
+  Firestore,
+  collection,
+  collectionData,
+  doc,
+  docData,
+  query,
+  where,
+} from '@angular/fire/firestore';
+import { map, Observable } from 'rxjs';
+import {
   GithubConnectionStatus,
   GithubLinkResult,
+  TaskGithubActor,
+  TaskGithubFieldValue,
+  TaskGithubLink,
+  TaskGithubRelationship,
 } from '../models/github.model';
 
 /**
@@ -13,6 +27,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class GithubService {
   private readonly functions = inject(Functions);
+  private readonly firestore = inject(Firestore);
 
   private static readonly STATE_KEY = 'omnitask.github.oauth.state';
   private static readonly RETURN_KEY = 'omnitask.github.oauth.return';
@@ -107,6 +122,7 @@ export class GithubService {
     body?: string;
     backlinkUrl?: string;
     type?: string | null;
+    priority?: string | null;
   }): Promise<GithubLinkResult> {
     const fn = httpsCallable<Record<string, unknown>, GithubLinkResult>(
       this.functions,
@@ -140,5 +156,102 @@ export class GithubService {
       'retryGithubSync',
     );
     await fn({ taskId });
+  }
+
+  /** Post a security alert URL as a GitHub issue comment and store on the link (§8.6). */
+  async addSecurityAlertReference(
+    taskId: string,
+    alertUrl: string,
+  ): Promise<{ securityAlertUrl: string }> {
+    const fn = httpsCallable<
+      { taskId: string; alertUrl: string },
+      { success: boolean; securityAlertUrl: string }
+    >(this.functions, 'addGithubSecurityAlertReference');
+    const result = await fn({ taskId, alertUrl });
+    return { securityAlertUrl: result.data.securityAlertUrl };
+  }
+
+  /** Refresh org issue types + project fields from GitHub (Phase 2). */
+  async refreshFieldConfig(): Promise<GithubConnectionStatus> {
+    const fn = httpsCallable<void, { refreshed?: boolean; fieldDefinitionCache?: GithubConnectionStatus['fieldDefinitionCache'] }>(
+      this.functions,
+      'refreshGithubFieldConfig',
+    );
+    const result = await fn();
+    const current = this.connection();
+    const next: GithubConnectionStatus = {
+      connected: current?.connected ?? true,
+      state: current?.state,
+      accountLogin: current?.accountLogin,
+      accountType: current?.accountType,
+      capabilities: current?.capabilities,
+      fieldDefinitionCache: result.data.fieldDefinitionCache ?? current?.fieldDefinitionCache ?? null,
+      defaultProjectNodeId: current?.defaultProjectNodeId ?? null,
+      createLinkedBranchOnLink: current?.createLinkedBranchOnLink ?? false,
+    };
+    this.connection.set(next);
+    return next;
+  }
+
+  async updateConnectionSettings(settings: {
+    defaultProjectNodeId?: string | null;
+    createLinkedBranchOnLink?: boolean;
+  }): Promise<void> {
+    const fn = httpsCallable<
+      { defaultProjectNodeId?: string | null; createLinkedBranchOnLink?: boolean },
+      { success: boolean; defaultProjectNodeId?: string | null; createLinkedBranchOnLink?: boolean }
+    >(this.functions, 'updateGithubConnectionSettings');
+    const result = await fn(settings);
+    const current = this.connection();
+    if (current) {
+      this.connection.set({
+        ...current,
+        defaultProjectNodeId:
+          result.data.defaultProjectNodeId ?? settings.defaultProjectNodeId ?? current.defaultProjectNodeId,
+        createLinkedBranchOnLink:
+          result.data.createLinkedBranchOnLink ?? settings.createLinkedBranchOnLink ?? current.createLinkedBranchOnLink,
+      });
+    }
+  }
+
+  async resolveConflict(
+    taskId: string,
+    resolution: 'prefer_local' | 'prefer_github',
+  ): Promise<void> {
+    const fn = httpsCallable<
+      { taskId: string; resolution: 'prefer_local' | 'prefer_github' },
+      { success: boolean }
+    >(this.functions, 'resolveGithubConflict');
+    await fn({ taskId, resolution });
+  }
+
+  watchTaskLink(taskId: string): Observable<TaskGithubLink | null> {
+    return docData(doc(this.firestore, 'task_github_links', taskId)).pipe(
+      map((data) => (data ? ({ taskId, ...data } as TaskGithubLink) : null)),
+    );
+  }
+
+  watchTaskFieldValues(taskId: string): Observable<TaskGithubFieldValue[]> {
+    const q = query(
+      collection(this.firestore, 'task_github_field_values'),
+      where('taskId', '==', taskId),
+    );
+    return collectionData(q, { idField: 'id' }) as Observable<TaskGithubFieldValue[]>;
+  }
+
+  watchTaskActors(taskId: string): Observable<TaskGithubActor[]> {
+    const q = query(
+      collection(this.firestore, 'task_github_actors'),
+      where('taskId', '==', taskId),
+    );
+    return collectionData(q, { idField: 'id' }) as Observable<TaskGithubActor[]>;
+  }
+
+  watchTaskRelationships(taskId: string): Observable<TaskGithubRelationship[]> {
+    const q = query(
+      collection(this.firestore, 'task_github_relationships'),
+      where('taskId', '==', taskId),
+    );
+    return collectionData(q, { idField: 'id' }) as Observable<TaskGithubRelationship[]>;
   }
 }
