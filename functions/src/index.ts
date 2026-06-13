@@ -3,13 +3,12 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
-import { google, tasks_v1 } from 'googleapis';
+import type { tasks_v1, people_v1 } from 'googleapis';
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
-import { VertexAI } from '@google-cloud/vertexai';
-import * as nodemailer from 'nodemailer';
-import { marked, Renderer } from 'marked';
+import type { GenerativeModel } from '@google-cloud/vertexai';
+import type { Transporter } from 'nodemailer';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -23,10 +22,34 @@ const nodemailerSmtpPassword = defineSecret('NODEMAILER_SMTP_PASSWORD');
 // Sender email address for task notifications (configurable via environment variable)
 // (Now managed by firestore-send-email extension DEFAULT_FROM)
 
-// Google Tasks API client
-const tasksApi = google.tasks('v1');
-// Google People API client (for directory contacts)
-const peopleApi = google.people('v1');
+// --- Lazy SDK loaders --------------------------------------------------------
+// Firebase 2nd-gen bundles every function in this codebase into a single
+// container that must require() this whole module before it can listen on
+// PORT 8080. googleapis, @google-cloud/vertexai, nodemailer, and marked are
+// heavy (multi-second) to load; importing them eagerly pushed the lightweight
+// functions past the Cloud Run startup-healthcheck window and produced the
+// intermittent gen2 "container failed to start" deploy failures. Loading each
+// SDK on first use keeps cold-start fast; only the functions that need a given
+// SDK pay its cost, and only on their first invocation.
+type GoogleNamespace = typeof import('googleapis').google;
+let _google: GoogleNamespace | undefined;
+function getGoogle(): GoogleNamespace {
+  return (_google ??= (require('googleapis') as typeof import('googleapis')).google);
+}
+
+let _tasksApi: tasks_v1.Tasks | undefined;
+function getTasksApi(): tasks_v1.Tasks {
+  return (_tasksApi ??= getGoogle().tasks('v1'));
+}
+
+let _peopleApi: people_v1.People | undefined;
+function getPeopleApi(): people_v1.People {
+  return (_peopleApi ??= getGoogle().people('v1'));
+}
+
+function getNodemailer(): typeof import('nodemailer') {
+  return require('nodemailer') as typeof import('nodemailer');
+}
 
 // Email template cache (loaded once for performance)
 let emailTemplateCache: string | null = null;
@@ -51,6 +74,7 @@ function escapeHtml(text: string): string {
  * Uses marked with a custom renderer for email-safe output.
  */
 function markdownToEmailHtml(markdown: string): string {
+  const { marked, Renderer } = require('marked') as typeof import('marked');
   const renderer = new Renderer();
 
   renderer.heading = function ({ tokens, depth }) {
@@ -224,14 +248,26 @@ function populateEmailTemplate(data: {
   return html;
 }
 
-// Initialize Vertex AI with Gemini 1.5 Flash (cost-effective model)
-const vertexAI = new VertexAI({
-  project: 'omnitask-475422',
-  location: 'us-east1',
-});
-const geminiModel = vertexAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
-});
+// Vertex AI (Gemini 1.5 Flash) — constructed lazily on first use so the heavy
+// @google-cloud/vertexai module stays out of container cold-start (see the lazy
+// SDK loaders above).
+let _geminiModel: GenerativeModel | undefined;
+function getGeminiModel(): GenerativeModel {
+  let model = _geminiModel;
+  if (!model) {
+    const { VertexAI } =
+      require('@google-cloud/vertexai') as typeof import('@google-cloud/vertexai');
+    const vertexAI = new VertexAI({
+      project: 'omnitask-475422',
+      location: 'us-east1',
+    });
+    model = vertexAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+    });
+    _geminiModel = model;
+  }
+  return model;
+}
 
 /**
  * Contact interface for workspace contacts
@@ -332,11 +368,11 @@ async function syncProject(
 
   try {
     // Set up authenticated client
-    const oauth2Client = new google.auth.OAuth2();
+    const oauth2Client = new (getGoogle().auth.OAuth2)();
     oauth2Client.setCredentials({ access_token: accessToken });
 
     // Fetch tasks from Google
-    const googleResponse = await tasksApi.tasks.list({
+    const googleResponse = await getTasksApi().tasks.list({
       tasklist: project.googleTaskListId,
       showCompleted: true,
       showHidden: true,
@@ -464,7 +500,7 @@ export const scheduledGoogleTasksSync = onSchedule(
       }
 
       try {
-        const oauth2Client = new google.auth.OAuth2(
+        const oauth2Client = new (getGoogle().auth.OAuth2)(
           googleClientId.value(),
           googleClientSecret.value(),
         );
@@ -619,7 +655,7 @@ export const exchangeGoogleOAuthCode = onCall<{ code: string; redirectUri: strin
       throw new HttpsError('invalid-argument', 'Missing code or redirectUri');
     }
 
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new (getGoogle().auth.OAuth2)(
       googleClientId.value(),
       googleClientSecret.value(),
       redirectUri,
@@ -663,7 +699,7 @@ export const refreshGoogleAccessToken = onCall<void>(
       throw new HttpsError('failed-precondition', 'No offline Google access configured');
     }
 
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new (getGoogle().auth.OAuth2)(
       googleClientId.value(),
       googleClientSecret.value(),
     );
@@ -728,11 +764,11 @@ export const getWorkspaceContacts = onCall<{ accessToken: string; pageSize?: num
 
     try {
       // Set up authenticated client
-      const oauth2Client = new google.auth.OAuth2();
+      const oauth2Client = new (getGoogle().auth.OAuth2)();
       oauth2Client.setCredentials({ access_token: accessToken });
 
       // Fetch directory people using People API
-      const response = await peopleApi.people.listDirectoryPeople({
+      const response = await getPeopleApi().people.listDirectoryPeople({
         readMask: 'names,emailAddresses,photos',
         sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
         pageSize: Math.min(pageSize, 1000),
@@ -824,11 +860,11 @@ export const searchWorkspaceContacts = onCall<{
 
     try {
       // Set up authenticated client
-      const oauth2Client = new google.auth.OAuth2();
+      const oauth2Client = new (getGoogle().auth.OAuth2)();
       oauth2Client.setCredentials({ access_token: accessToken });
 
       // Search directory people using People API
-      const response = await peopleApi.people.searchDirectoryPeople({
+      const response = await getPeopleApi().people.searchDirectoryPeople({
         query: query.trim(),
         readMask: 'names,emailAddresses,photos',
         sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
@@ -1105,7 +1141,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
     }
 
     // Configure nodemailer with SMTP Password
-    const transporter = nodemailer.createTransport({
+    const transporter = getNodemailer().createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
@@ -1154,7 +1190,7 @@ export const sendTaskAssignmentEmail = onDocumentWritten(
 
 // Helper to send reminder emails
 async function sendReminderEmail(
-  transporter: nodemailer.Transporter,
+  transporter: Transporter,
   email: string,
   title: string,
   description: string,
@@ -1203,7 +1239,7 @@ export const checkScheduledReminders = onSchedule(
       return;
     }
 
-    const transporter = nodemailer.createTransport({
+    const transporter = getNodemailer().createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
@@ -1432,7 +1468,7 @@ Only return the JSON array, no other text or markdown formatting.
 Example: [{"title": "Research options", "completed": false}, {"title": "Draft proposal", "completed": false}]`;
 
   try {
-    const result = await geminiModel.generateContent(prompt);
+    const result = await getGeminiModel().generateContent(prompt);
     const response = result.response;
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
 
@@ -1501,7 +1537,7 @@ Only return the JSON object, no other text or markdown formatting.
 Example: {"priority": "high", "reasoning": "Contains urgent deadline and critical business impact."}`;
 
   try {
-    const result = await geminiModel.generateContent(prompt);
+    const result = await getGeminiModel().generateContent(prompt);
     const response = result.response;
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
@@ -1573,7 +1609,7 @@ Only return the JSON object, no other text or markdown formatting.
 Example: {"dueDate": "2026-02-05", "estimatedDays": 7, "reasoning": "Medium complexity task typically requires about a week."}`;
 
   try {
-    const result = await geminiModel.generateContent(prompt);
+    const result = await getGeminiModel().generateContent(prompt);
     const response = result.response;
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
@@ -1641,7 +1677,7 @@ Return a JSON object with:
 Only return the JSON object, no other text or markdown formatting around the JSON.`;
 
   try {
-    const result = await geminiModel.generateContent(prompt);
+    const result = await getGeminiModel().generateContent(prompt);
     const response = result.response;
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
 
