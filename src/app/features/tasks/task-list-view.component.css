@@ -46,3 +46,29 @@
         padding: 0.35rem 0.5rem;
         margin: 0.25rem 0;
       }
+
+      .nest-drop-zone {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        pointer-events: auto;
+      }
+
+      .group\/task-row.nest-drop-active .nest-drop-zone {
+        background: rgba(34, 211, 238, 0.08);
+        outline: 2px dashed rgba(34, 211, 238, 0.45);
+        outline-offset: -2px;
+      }
+
+      .group\/task-row.nest-drop-active .nest-drop-zone::after {
+        content: 'Drop to make subtask';
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: rgba(34, 211, 238, 0.85);
+        pointer-events: none;
+      }

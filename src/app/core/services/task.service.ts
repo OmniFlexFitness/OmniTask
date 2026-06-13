@@ -663,6 +663,34 @@ export class TaskService {
   }
 
   /**
+   * Assign or clear a task's parent (drag-to-create subtask). Rejects self-nesting
+   * and parentId cycles using the same BFS guard as deleteTask.
+   */
+  async setTaskParent(childId: string, parentId: string | null): Promise<void> {
+    if (childId === parentId) {
+      throw new Error('A task cannot be its own parent');
+    }
+    if (parentId && (await this.isDescendantOf(childId, parentId))) {
+      throw new Error('Cannot nest: would create a parent cycle');
+    }
+    await this.updateTask(childId, { parentId });
+  }
+
+  /** Walk up parentId from `nodeId`; true if `ancestorId` appears in the chain. */
+  async isDescendantOf(ancestorId: string, nodeId: string): Promise<boolean> {
+    let current: string | null = nodeId;
+    const visited = new Set<string>();
+    while (current) {
+      if (current === ancestorId) return true;
+      if (visited.has(current)) return false;
+      visited.add(current);
+      const doc = await this.getTask(current);
+      current = doc?.parentId ?? null;
+    }
+    return false;
+  }
+
+  /**
    * Delete a task and all of its subtasks using batch deletion.
    * Uses BFS with a visited-set to prevent infinite loops from parentId cycles.
    */

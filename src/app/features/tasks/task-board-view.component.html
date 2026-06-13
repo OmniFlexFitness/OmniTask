@@ -389,9 +389,29 @@
               >
                 @for (task of getFilteredTasksForSection(section.id); track task.id) {
                   <div
+                    class="relative group/board-card"
+                    [class.nest-drop-active]="isDragging() && nestDropTargetId() === task.id"
+                  >
+                    @if (isDragging() && !selectionMode()) {
+                      <div
+                        cdkDropList
+                        [id]="nestDropListId(task.id)"
+                        [cdkDropListData]="nestDropData"
+                        [cdkDropListConnectedTo]="connectedDropLists()"
+                        [cdkDropListSortingDisabled]="true"
+                        (cdkDropListEntered)="onNestEntered(task)"
+                        (cdkDropListExited)="onNestExited(task)"
+                        (cdkDropListDropped)="onNestDrop($event, task)"
+                        class="board-nest-drop-zone"
+                        [attr.aria-label]="'Drop to make subtask of ' + task.title"
+                      ></div>
+                    }
+                  <div
                     cdkDrag
                     [cdkDragData]="task"
                     [cdkDragDisabled]="selectionMode()"
+                    (cdkDragStarted)="onDragStarted()"
+                    (cdkDragEnded)="onDragEnded()"
                     class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden z-0"
                     [class.p-4]="!getColumnSettings(section.id).compactMode"
                     [class.p-2]="getColumnSettings(section.id).compactMode"
@@ -577,6 +597,7 @@
                         ></app-point-value-badge>
                       }
                     </div>
+                  </div>
                   </div>
                 }
 
