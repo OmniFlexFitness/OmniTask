@@ -392,7 +392,7 @@
                     class="relative group/board-card"
                     [class.nest-drop-active]="isDragging() && nestDropTargetId() === task.id"
                   >
-                    @if (isDragging() && !selectionMode()) {
+                    @if (!selectionMode()) {
                       <div
                         cdkDropList
                         [id]="nestDropListId(task.id)"
@@ -403,16 +403,18 @@
                         (cdkDropListExited)="onNestExited(task)"
                         (cdkDropListDropped)="onNestDrop($event, task)"
                         class="board-nest-drop-zone"
+                        [class.board-nest-drop-zone--idle]="!isDragging()"
+                        [attr.aria-hidden]="!isDragging()"
                         [attr.aria-label]="'Drop to make subtask of ' + task.title"
                       ></div>
                     }
-                  <div
-                    cdkDrag
-                    [cdkDragData]="task"
-                    [cdkDragDisabled]="selectionMode()"
-                    (cdkDragStarted)="onDragStarted()"
-                    (cdkDragEnded)="onDragEnded()"
-                    class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden z-0"
+                    <div
+                      cdkDrag
+                      [cdkDragData]="task"
+                      [cdkDragDisabled]="selectionMode()"
+                      (cdkDragStarted)="onDragStarted()"
+                      (cdkDragEnded)="onDragEnded()"
+                      class="ofx-task-card rounded-lg border shadow-sm transition-all cursor-pointer group relative overflow-hidden z-0"
                     [class.p-4]="!getColumnSettings(section.id).compactMode"
                     [class.p-2]="getColumnSettings(section.id).compactMode"
                     [class.bg-slate-800]="task.status !== 'done' && !isSelected(task.id)"
@@ -600,8 +602,6 @@
                   </div>
                   </div>
                 }
-
-                <!-- Add Task Button -->
                 <button
                   class="w-full py-2 rounded-lg border border-dashed border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-500 hover:bg-white/5 transition-all text-sm flex items-center justify-center gap-2"
                   (click)="quickAdd.emit(section.id)"

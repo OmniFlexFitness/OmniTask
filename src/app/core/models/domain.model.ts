@@ -293,6 +293,24 @@ export interface Task {
   isGoogleCalendarEvent?: boolean;
 }
 
+/** Sync parent-cycle check using in-memory tasks (e.g. during drag-and-drop). */
+export function wouldCreateTaskParentCycle(
+  ancestorId: string,
+  nodeId: string,
+  tasks: Pick<Task, 'id' | 'parentId'>[],
+): boolean {
+  let current: string | null = nodeId;
+  const visited = new Set<string>();
+  while (current) {
+    if (current === ancestorId) return true;
+    if (visited.has(current)) return false;
+    visited.add(current);
+    const taskDoc = tasks.find((t) => t.id === current);
+    current = taskDoc?.parentId ?? null;
+  }
+  return false;
+}
+
 /**
  * A task that recurs every day at a specific time.
  * Stored in users/{uid}/recurringTasks subcollection.

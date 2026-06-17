@@ -186,7 +186,6 @@ describe('TaskListViewComponent', () => {
       ]);
       fixture.detectChanges();
 
-      // Args: (draggedTaskId, targetParentId) — cycle if target is under dragged.
       expect(component.wouldCreateParentCycle('parent', 'child')).toBeTrue();
       expect(component.wouldCreateParentCycle('parent', 'grandchild')).toBeTrue();
       expect(component.wouldCreateParentCycle('child', 'parent')).toBeFalse();
