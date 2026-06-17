@@ -1,17 +1,25 @@
 import { Injectable, inject, computed } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { AuthService } from '../auth/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 /** Google Calendar API event (subset). */
 export interface GoogleCalendarEvent {
   id?: string;
   summary?: string;
   description?: string;
+  status?: 'confirmed' | 'tentative' | 'cancelled' | string;
   start?: { dateTime?: string; date?: string; timeZone?: string };
   end?: { dateTime?: string; date?: string; timeZone?: string };
-  status?: 'confirmed' | 'tentative' | 'cancelled';
   updated?: string;
+  extendedProperties?: {
+    private?: Record<string, string>;
+  };
+}
+
+export interface GoogleCalendarEventsResponse {
+  items?: GoogleCalendarEvent[];
+  nextPageToken?: string;
 }
 
 export interface GoogleCalendarListEntry {
@@ -33,10 +41,10 @@ export class GoogleCalendarService {
   private readonly API_BASE_URL = 'https://www.googleapis.com/calendar/v3';
 
   /** Reuses the shared Google OAuth access token (same as Tasks/Sheets). */
-  isAuthenticated = computed(() => !!this.authService.googleTasksAccessToken());
+  isAuthenticated = computed(() => !!this.authService.googleTaskAccessToken());
 
   private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.googleTasksAccessToken();
+    const token = this.authService.googleTaskAccessToken();
     if (!token) {
       throw new Error('Google Calendar not authenticated. Reconnect Google to grant calendar access.');
     }
@@ -59,7 +67,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const encodedCalendar = encodeURIComponent(calendarId);
+    const embeddedCalendar = encodeURIComponent(calendarId);
     return this.http.get<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       { headers: this.getAuthHeaders() },
@@ -70,7 +78,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const encodedCalendar = encodeURIComponent(calendarId);
+    const embeddedCalendar = encodeURIComponent(calendarId);
     return this.http.post<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events`,
       event,
@@ -86,7 +94,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const encodedCalendar = encodeURIComponent(calendarId);
+    const embeddedCalendar = encodeURIComponent(calendarId);
     return this.http.patch<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       event,
@@ -98,10 +106,29 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const encodedCalendar = encodeURIComponent(calendarId);
+    const embeddedCalendar = encodeURIComponent(calendarId);
     return this.http.delete<void>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       { headers: this.getAuthHeaders() },
+    );
+  }
+
+  /** List events carrying OmniTask extended property (for inbound due-date sync). */
+  listEvents(calendarId: string): Observable<GoogleCalendarEventsResponse> {
+    if (!this.isAuthenticated()) {
+      return throwError(() => new Error('Google Calendar not authenticated'));
+    }
+    const embeddedCalendar = encodeURIComponent(calendarId);
+    return this.http.get<GoogleCalendarEventsResponse>(
+      `${this.API_BASE_URL}/calendars/${encodedCalendar}/events`,
+      {
+        headers: this.getAuthHeaders(),
+        params: {
+          privateExtendedProperty: 'omniTaskId',
+          showDeleted: 'true',
+          maxResults: '250',
+        },
+      },
     );
   }
 }

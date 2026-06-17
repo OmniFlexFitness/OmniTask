@@ -23,6 +23,7 @@ import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { GoogleTasksService, GoogleTask } from './google-tasks.service';
 import { GoogleTasksSyncService } from './google-tasks-sync.service';
+import { GoogleCalendarSyncService } from './google-calendar-sync.service';
 import { GoogleSheetsSyncService } from './google-sheets-sync.service';
 import { ProjectService } from './project.service';
 import { PermissionsService } from './permissions.service';
@@ -37,6 +38,7 @@ export class TaskService {
   private auth = inject(AuthService);
   private googleTasksService = inject(GoogleTasksService);
   private googleTasksSyncService = inject(GoogleTasksSyncService);
+  private googleCalendarSyncService = inject(GoogleCalendarSyncService);
   private googleSheetsSyncService = inject(GoogleSheetsSyncService);
   private projectService = inject(ProjectService);
   private permissions = inject(PermissionsService);
@@ -543,6 +545,9 @@ export class TaskService {
       // Optional Google Sheets push — never blocks the create
       void this.pushTaskToSheet(result.id);
 
+      const createdTask = { ...reconciled, id: result.id } as Task;
+      void this.googleCalendarSyncService.syncTaskOutbound(createdTask);
+
       // Auto-add assignees to project members
       if (task.assigneeIds?.length) {
         for (const uid of task.assigneeIds) {
@@ -616,6 +621,11 @@ export class TaskService {
 
       // Optional Google Sheets push — never blocks the update
       void this.pushTaskToSheet(id);
+
+      if (taskDoc) {
+        const updatedTask = { ...taskDoc, ...reconciled, id } as Task;
+        void this.googleCalendarSyncService.syncTaskOutbound(updatedTask);
+      }
 
       if (taskDoc && this.sideEffectsDepth === 0) {
         const updatedTask = { ...taskDoc, ...reconciled } as Task;
@@ -736,6 +746,7 @@ export class TaskService {
             console.warn('Google Tasks sync failed for task', task.id, err);
           }
         }
+        void this.googleCalendarSyncService.deleteTaskFromCalendar(task);
       }
 
       // Best-effort Google Sheets cleanup — clear each task's row in its project's sheet
