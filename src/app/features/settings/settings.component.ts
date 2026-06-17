@@ -14,6 +14,7 @@ import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angula
 import { UserGroupManagerComponent } from '../user-groups/user-group-manager.component';
 import { DataExportImportComponent } from './data-export-import.component';
 import { GithubConnectionComponent } from './github-connection.component';
+import { SettingsGoogleCalendarSyncComponent } from './settings-google-calendar-sync.component';
 import {
   UserDashboardSettings,
   resolveDashboardSettings,
@@ -43,6 +44,7 @@ const AVATAR_COLORS = [
     UserGroupManagerComponent,
     DataExportImportComponent,
     GithubConnectionComponent,
+    SettingsGoogleCalendarSyncComponent,
   ],
   templateUrl: './settings.component.html',
 })
