@@ -15,27 +15,34 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.githubWebhook = exports.syncTaskStatusToGithub = exports.resolveGithubConflict = exports.updateGithubConnectionSettings = exports.refreshGithubFieldConfig = exports.retryGithubSync = exports.unlinkTaskFromGithub = exports.linkTaskToGithub = exports.disconnectGithub = exports.getGithubConnection = exports.completeGithubAuth = exports.getGithubOAuthConfig = exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.revokeGoogleOfflineAccess = exports.refreshGoogleAccessToken = exports.exchangeGoogleOAuthCode = exports.getGoogleOAuthConfig = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = exports.omniStatusToGoogleStatus = void 0;
+exports.githubWebhook = exports.syncTaskStatusToGithub = exports.resolveGithubConflict = exports.updateGithubConnectionSettings = exports.refreshGithubFieldConfig = exports.addGithubSecurityAlertReference = exports.retryGithubSync = exports.unlinkTaskFromGithub = exports.linkTaskToGithub = exports.disconnectGithub = exports.getGithubConnection = exports.completeGithubAuth = exports.getGithubOAuthConfig = exports.enforceSuperAdmin = exports.enhanceTaskDescription = exports.suggestDueDate = exports.suggestTaskPriority = exports.generateSubtasks = exports.syncWeeklyBlockReminders = exports.syncRecurringTaskReminders = exports.checkScheduledReminders = exports.sendTaskAssignmentEmail = exports.searchWorkspaceContacts = exports.getWorkspaceContacts = exports.revokeGoogleOfflineAccess = exports.refreshGoogleAccessToken = exports.exchangeGoogleOAuthCode = exports.getGoogleOAuthConfig = exports.manualGoogleTasksSync = exports.scheduledGoogleTasksSync = void 0;
+exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 const admin = __importStar(require("firebase-admin"));
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const params_1 = require("firebase-functions/params");
-const googleapis_1 = require("googleapis");
 const firestore_2 = require("firebase-admin/firestore");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const vertexai_1 = require("@google-cloud/vertexai");
-const nodemailer = __importStar(require("nodemailer"));
-const marked_1 = require("marked");
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = (0, firestore_2.getFirestore)();
@@ -43,12 +50,21 @@ const db = (0, firestore_2.getFirestore)();
 const googleClientId = (0, params_1.defineSecret)('GOOGLE_CLIENT_ID');
 const googleClientSecret = (0, params_1.defineSecret)('GOOGLE_CLIENT_SECRET');
 const nodemailerSmtpPassword = (0, params_1.defineSecret)('NODEMAILER_SMTP_PASSWORD');
-// Sender email address for task notifications (configurable via environment variable)
-// (Now managed by firestore-send-email extension DEFAULT_FROM)
-// Google Tasks API client
-const tasksApi = googleapis_1.google.tasks('v1');
-// Google People API client (for directory contacts)
-const peopleApi = googleapis_1.google.people('v1');
+let _google;
+function getGoogle() {
+    return (_google ?? (_google = require('googleapis').google));
+}
+let _tasksApi;
+function getTasksApi() {
+    return (_tasksApi ?? (_tasksApi = getGoogle().tasks('v1')));
+}
+let _peopleApi;
+function getPeopleApi() {
+    return (_peopleApi ?? (_peopleApi = getGoogle().people('v1')));
+}
+function getNodemailer() {
+    return require('nodemailer');
+}
 // Email template cache (loaded once for performance)
 let emailTemplateCache = null;
 /**
@@ -70,7 +86,8 @@ function escapeHtml(text) {
  * Uses marked with a custom renderer for email-safe output.
  */
 function markdownToEmailHtml(markdown) {
-    const renderer = new marked_1.Renderer();
+    const { marked, Renderer } = require('marked');
+    const renderer = new Renderer();
     renderer.heading = function ({ tokens, depth }) {
         const sizes = {
             1: '22px', 2: '19px', 3: '16px', 4: '14px', 5: '13px', 6: '12px',
@@ -155,7 +172,7 @@ function markdownToEmailHtml(markdown) {
     renderer.br = function () {
         return '<br>';
     };
-    return marked_1.marked.parse(markdown, { renderer, async: false });
+    return marked.parse(markdown, { renderer, async: false });
 }
 /**
  * Load email template from file (cached for performance)
@@ -213,14 +230,25 @@ function populateEmailTemplate(data) {
     html = html.replace(/{{TASK_URL}}/g, data.taskUrl);
     return html;
 }
-// Initialize Vertex AI with Gemini 1.5 Flash (cost-effective model)
-const vertexAI = new vertexai_1.VertexAI({
-    project: 'omnitask-475422',
-    location: 'us-east1',
-});
-const geminiModel = vertexAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-});
+// Vertex AI (Gemini 1.5 Flash) — constructed lazily on first use so the heavy
+// @google-cloud/vertexai module stays out of container cold-start (see the lazy
+// SDK loaders above).
+let _geminiModel;
+function getGeminiModel() {
+    let model = _geminiModel;
+    if (!model) {
+        const { VertexAI } = require('@google-cloud/vertexai');
+        const vertexAI = new VertexAI({
+            project: 'omnitask-475422',
+            location: 'us-east1',
+        });
+        model = vertexAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+        });
+        _geminiModel = model;
+    }
+    return model;
+}
 /**
  * Convert Google Task status to OmniTask status
  */
@@ -234,7 +262,6 @@ function googleStatusToOmniStatus(googleStatus) {
 function omniStatusToGoogleStatus(omniStatus) {
     return omniStatus === 'done' ? 'completed' : 'needsAction';
 }
-exports.omniStatusToGoogleStatus = omniStatusToGoogleStatus;
 /**
  * Transform a Google Task to OmniTask format
  */
@@ -265,10 +292,10 @@ async function syncProject(project, accessToken) {
     }
     try {
         // Set up authenticated client
-        const oauth2Client = new googleapis_1.google.auth.OAuth2();
+        const oauth2Client = new (getGoogle().auth.OAuth2)();
         oauth2Client.setCredentials({ access_token: accessToken });
         // Fetch tasks from Google
-        const googleResponse = await tasksApi.tasks.list({
+        const googleResponse = await getTasksApi().tasks.list({
             tasklist: project.googleTaskListId,
             showCompleted: true,
             showHidden: true,
@@ -372,7 +399,7 @@ exports.scheduledGoogleTasksSync = (0, scheduler_1.onSchedule)({
             continue;
         }
         try {
-            const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value());
+            const oauth2Client = new (getGoogle().auth.OAuth2)(googleClientId.value(), googleClientSecret.value());
             oauth2Client.setCredentials({
                 refresh_token: refreshToken,
             });
@@ -439,6 +466,7 @@ const GOOGLE_OAUTH_SCOPES = [
     'https://www.googleapis.com/auth/directory.readonly',
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/calendar.events',
 ];
 async function getStoredRefreshToken(uid) {
     const legacyUser = await db.collection('users').doc(uid).get();
@@ -466,7 +494,7 @@ async function storeRefreshToken(uid, refreshToken) {
  */
 exports.getGoogleOAuthConfig = (0, https_1.onCall)({
     secrets: [googleClientId],
-    memory: '128MiB',
+    memory: '256MiB',
 }, async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
@@ -491,7 +519,7 @@ exports.exchangeGoogleOAuthCode = (0, https_1.onCall)({
     if (!code || !redirectUri) {
         throw new https_1.HttpsError('invalid-argument', 'Missing code or redirectUri');
     }
-    const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value(), redirectUri);
+    const oauth2Client = new (getGoogle().auth.OAuth2)(googleClientId.value(), googleClientSecret.value(), redirectUri);
     const { tokens } = await oauth2Client.getToken(code);
     if (!tokens.refresh_token) {
         throw new https_1.HttpsError('failed-precondition', 'Google did not return a refresh token. Revoke prior access and try again with consent.');
@@ -519,7 +547,7 @@ exports.refreshGoogleAccessToken = (0, https_1.onCall)({
     if (!refreshToken) {
         throw new https_1.HttpsError('failed-precondition', 'No offline Google access configured');
     }
-    const oauth2Client = new googleapis_1.google.auth.OAuth2(googleClientId.value(), googleClientSecret.value());
+    const oauth2Client = new (getGoogle().auth.OAuth2)(googleClientId.value(), googleClientSecret.value());
     oauth2Client.setCredentials({ refresh_token: refreshToken });
     const tokens = await oauth2Client.refreshAccessToken();
     const accessToken = tokens.credentials.access_token;
@@ -535,7 +563,7 @@ exports.refreshGoogleAccessToken = (0, https_1.onCall)({
  * Revoke stored offline Google access for the signed-in user.
  */
 exports.revokeGoogleOfflineAccess = (0, https_1.onCall)({
-    memory: '128MiB',
+    memory: '256MiB',
 }, async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
@@ -566,10 +594,10 @@ exports.getWorkspaceContacts = (0, https_1.onCall)({
     }
     try {
         // Set up authenticated client
-        const oauth2Client = new googleapis_1.google.auth.OAuth2();
+        const oauth2Client = new (getGoogle().auth.OAuth2)();
         oauth2Client.setCredentials({ access_token: accessToken });
         // Fetch directory people using People API
-        const response = await peopleApi.people.listDirectoryPeople({
+        const response = await getPeopleApi().people.listDirectoryPeople({
             readMask: 'names,emailAddresses,photos',
             sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
             pageSize: Math.min(pageSize, 1000),
@@ -633,10 +661,10 @@ exports.searchWorkspaceContacts = (0, https_1.onCall)({
     }
     try {
         // Set up authenticated client
-        const oauth2Client = new googleapis_1.google.auth.OAuth2();
+        const oauth2Client = new (getGoogle().auth.OAuth2)();
         oauth2Client.setCredentials({ access_token: accessToken });
         // Search directory people using People API
-        const response = await peopleApi.people.searchDirectoryPeople({
+        const response = await getPeopleApi().people.searchDirectoryPeople({
             query: query.trim(),
             readMask: 'names,emailAddresses,photos',
             sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
@@ -866,7 +894,7 @@ exports.sendTaskAssignmentEmail = (0, firestore_1.onDocumentWritten)({
         emailSubject = `📋 Task update: ${safeTitle || 'Task'}`;
     }
     // Configure nodemailer with SMTP Password
-    const transporter = nodemailer.createTransport({
+    const transporter = getNodemailer().createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
@@ -941,7 +969,7 @@ exports.checkScheduledReminders = (0, scheduler_1.onSchedule)({
         console.log('No reminders to send.');
         return;
     }
-    const transporter = nodemailer.createTransport({
+    const transporter = getNodemailer().createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
@@ -1108,7 +1136,7 @@ Return a JSON array of subtask objects. Each object should have:
 Only return the JSON array, no other text or markdown formatting.
 Example: [{"title": "Research options", "completed": false}, {"title": "Draft proposal", "completed": false}]`;
     try {
-        const result = await geminiModel.generateContent(prompt);
+        const result = await getGeminiModel().generateContent(prompt);
         const response = result.response;
         const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
         // Clean the response - remove markdown code blocks if present
@@ -1162,7 +1190,7 @@ Return a JSON object with:
 Only return the JSON object, no other text or markdown formatting.
 Example: {"priority": "high", "reasoning": "Contains urgent deadline and critical business impact."}`;
     try {
-        const result = await geminiModel.generateContent(prompt);
+        const result = await getGeminiModel().generateContent(prompt);
         const response = result.response;
         const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         const cleanedText = text
@@ -1219,7 +1247,7 @@ Return a JSON object with:
 Only return the JSON object, no other text or markdown formatting.
 Example: {"dueDate": "2026-02-05", "estimatedDays": 7, "reasoning": "Medium complexity task typically requires about a week."}`;
     try {
-        const result = await geminiModel.generateContent(prompt);
+        const result = await getGeminiModel().generateContent(prompt);
         const response = result.response;
         const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         const cleanedText = text
@@ -1273,7 +1301,7 @@ Return a JSON object with:
 
 Only return the JSON object, no other text or markdown formatting around the JSON.`;
     try {
-        const result = await geminiModel.generateContent(prompt);
+        const result = await getGeminiModel().generateContent(prompt);
         const response = result.response;
         const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         const cleanedText = text
@@ -1348,6 +1376,7 @@ Object.defineProperty(exports, "disconnectGithub", { enumerable: true, get: func
 Object.defineProperty(exports, "linkTaskToGithub", { enumerable: true, get: function () { return functions_1.linkTaskToGithub; } });
 Object.defineProperty(exports, "unlinkTaskFromGithub", { enumerable: true, get: function () { return functions_1.unlinkTaskFromGithub; } });
 Object.defineProperty(exports, "retryGithubSync", { enumerable: true, get: function () { return functions_1.retryGithubSync; } });
+Object.defineProperty(exports, "addGithubSecurityAlertReference", { enumerable: true, get: function () { return functions_1.addGithubSecurityAlertReference; } });
 Object.defineProperty(exports, "refreshGithubFieldConfig", { enumerable: true, get: function () { return functions_1.refreshGithubFieldConfig; } });
 Object.defineProperty(exports, "updateGithubConnectionSettings", { enumerable: true, get: function () { return functions_1.updateGithubConnectionSettings; } });
 Object.defineProperty(exports, "resolveGithubConflict", { enumerable: true, get: function () { return functions_1.resolveGithubConflict; } });
