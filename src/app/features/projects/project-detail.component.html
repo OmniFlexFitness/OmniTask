@@ -7,67 +7,66 @@
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/30"></div>
 
-          <div class="px-6 py-2">
-            <!-- Breadcrumbs / Back -->
-            <button
-              (click)="goBack()"
-              class="omni-glitch-btn flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          <div class="px-4 py-1.5">
+            <!-- Compact header: back + title -->
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                (click)="goBack()"
+                class="omni-glitch-btn flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                title="Back to Projects"
+                aria-label="Back to Projects"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              Back to Projects
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
 
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <!-- Icon/Color Box -->
                 <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
+                  class="w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center shadow-lg"
                   [style.background-color]="(project.color || '#6366f1') + '18'"
                   [style.border]="'1px solid ' + (project.color || '#6366f1') + '55'"
                   [style.box-shadow]="'0 0 14px ' + (project.color || '#6366f1') + '40'"
                 >
-                  <span class="text-xl font-bold" [style.color]="project.color || '#6366f1'">
+                  <span class="text-base font-bold" [style.color]="project.color || '#6366f1'">
                     {{ project.name.charAt(0).toUpperCase() }}
                   </span>
                 </div>
-                <div>
-                  <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span>{{ project.name }}</span>
+                <div class="min-w-0 flex-1">
+                  <h1 class="text-base sm:text-lg font-bold text-white truncate flex items-center gap-2">
+                    <span class="truncate">{{ project.name }}</span>
                     @if (project.status === 'archived') {
                       <span
-                        class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
+                        class="flex-shrink-0 px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
                       >
                         Archived
                       </span>
                     }
                   </h1>
-                  <p class="text-xs text-slate-400 max-w-2xl line-clamp-1">
+                  <p class="hidden text-xs text-slate-400 max-w-2xl line-clamp-1">
                     {{ project.description || 'No description provided.' }}
                   </p>
                 </div>
               </div>
-
-              <!-- Primary Actions can go here -->
             </div>
 
             <!-- Navigation Tabs -->
-            <div class="flex items-center gap-1 mt-3 border-b border-white/5 overflow-x-auto hide-scrollbar">
+            <div class="flex items-center gap-1 mt-1.5 border-b border-white/5 overflow-x-auto hide-scrollbar">
               <!-- Overview Tab (Cyan) -->
               <button
-                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1 text-sm font-medium transition-all group"
                 [class.text-cyan-400]="activeTab() === 'overview'"
                 [class.text-slate-400]="activeTab() !== 'overview'"
                 [class.hover:text-cyan-200]="activeTab() !== 'overview'"
@@ -90,7 +89,7 @@
 
               <!-- Tasks Tab (Emerald) -->
               <button
-                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1 text-sm font-medium transition-all group"
                 [class.text-emerald-400]="activeTab() === 'tasks'"
                 [class.text-slate-400]="activeTab() !== 'tasks'"
                 [class.hover:text-emerald-200]="activeTab() !== 'tasks'"
@@ -113,7 +112,7 @@
 
               <!-- Settings Tab (Fuchsia) -->
               <button
-                class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
+                class="omni-glitch-btn relative px-3 py-1 text-sm font-medium transition-all group"
                 [class.text-violet-400]="activeTab() === 'settings'"
                 [class.text-slate-400]="activeTab() !== 'settings'"
                 [class.hover:text-violet-200]="activeTab() !== 'settings'"
@@ -139,12 +138,12 @@
 
         <!-- Main Content -->
         <main
-          class="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          class="flex-1 min-h-0 flex flex-col overflow-hidden px-4 py-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
         >
           @switch (activeTab()) {
             @case ('overview') {
               <div
-                class="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                class="flex-1 min-h-0 overflow-y-auto max-w-7xl mx-auto w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
               >
                 <!-- Stats -->
                 <section>
@@ -252,7 +251,7 @@
             @case ('tasks') {
               <div class="h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
                 <!-- Task View Controls -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 flex-shrink-0">
                   <div class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]">
                     <button
                       class="omni-glitch-btn flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
@@ -330,11 +329,11 @@
             }
 
             @case ('settings') {
-              <div class="max-w-4xl mx-auto pb-12 animate-in slide-in-from-right-4 duration-300">
+              <div class="flex-1 min-h-0 overflow-y-auto max-w-4xl mx-auto w-full pb-6 animate-in slide-in-from-right-4 duration-300">
                 <div
                   class="bg-slate-900/80 rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
                 >
-                  <div class="p-8">
+                  <div class="p-5">
                     <h2 class="text-xl font-bold text-white mb-6">Project Settings</h2>
                     <app-project-settings-panel
                       [project]="project"
