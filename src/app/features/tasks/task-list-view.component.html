@@ -323,7 +323,8 @@
         cdkDropList
         [id]="mainDropListId"
         [cdkDropListData]="sortedTasks()"
-        [cdkDropListConnectedTo]="nestDropListIds()"
+        [cdkDropListConnectedTo]="connectedDropLists()"
+        [cdkDropListDisabled]="selectionMode()"
         (cdkDropListDropped)="onDrop($event)"
         class="flex-1 divide-y divide-cyan-500/5 pb-8"
       >
@@ -361,32 +362,34 @@
             class="relative group/task-row"
             [class.nest-drop-active]="isDragging() && nestDropTargetId() === task.id"
           >
-            @if (isDragging() && !selectionMode()) {
+            @if (!selectionMode()) {
               <div
                 cdkDropList
                 [id]="nestDropListId(task.id)"
                 [cdkDropListData]="nestDropData"
-                [cdkDropListConnectedTo]="[mainDropListId]"
+                [cdkDropListConnectedTo]="connectedDropLists()"
                 [cdkDropListSortingDisabled]="true"
                 (cdkDropListEntered)="onNestEntered(task)"
                 (cdkDropListExited)="onNestExited(task)"
                 (cdkDropListDropped)="onNestDrop($event, task)"
                 class="nest-drop-zone"
+                [class.nest-drop-zone--idle]="!isDragging()"
+                [attr.aria-hidden]="!isDragging()"
                 [attr.aria-label]="'Drop to make subtask of ' + task.title"
               ></div>
             }
-          <div
-            cdkDrag
-            [cdkDragData]="task"
-            [cdkDragDisabled]="selectionMode()"
-            (cdkDragStarted)="onDragStarted()"
-            (cdkDragEnded)="onDragEnded()"
-            [class.opacity-50]="task.status === 'done'"
-            [class.bg-purple-500/5]="isSelected(task.id)"
-            [class.border-purple-500/30]="isSelected(task.id)"
-            class="group hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
-            (click)="selectionMode() ? toggleTaskSelection(task.id) : taskClick.emit(task)"
-          >
+            <div
+              cdkDrag
+              [cdkDragData]="task"
+              [cdkDragDisabled]="selectionMode()"
+              (cdkDragStarted)="onDragStarted()"
+              (cdkDragEnded)="onDragEnded()"
+              [class.opacity-50]="task.status === 'done'"
+              [class.bg-purple-500/5]="isSelected(task.id)"
+              [class.border-purple-500/30]="isSelected(task.id)"
+              class="group hover:bg-cyan-500/5 transition-all cursor-pointer bg-[#0a0f1e]/80 border-l-2 border-transparent hover:border-cyan-500/50"
+              (click)="selectionMode() ? toggleTaskSelection(task.id) : taskClick.emit(task)"
+            >
             <!-- Custom Drag Preview -->
             <div
               *cdkDragPreview
@@ -604,7 +607,7 @@
                 }
               </div>
             }
-          </div>
+            </div>
           </div>
         }
       </div>

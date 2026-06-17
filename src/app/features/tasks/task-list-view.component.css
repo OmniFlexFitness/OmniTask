@@ -54,6 +54,11 @@
         pointer-events: auto;
       }
 
+      .nest-drop-zone--idle {
+        pointer-events: none;
+        z-index: 0;
+      }
+
       .group\/task-row.nest-drop-active .nest-drop-zone {
         background: rgba(34, 211, 238, 0.08);
         outline: 2px dashed rgba(34, 211, 238, 0.45);

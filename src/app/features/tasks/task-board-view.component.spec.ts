@@ -11,8 +11,8 @@ import { Task } from '../../core/models/domain.model';
 describe('TaskBoardViewComponent', () => {
   let component: TaskBoardViewComponent;
   let fixture: ComponentFixture<TaskBoardViewComponent>;
-  let mockTaskService: any;
-  let mockProjectService: any;
+  let mockTaskService: jasmine.SpyObj<TaskService>;
+  let mockProjectService: jasmine.SpyObj<ProjectService>;
 
   beforeEach(async () => {
     mockTaskService = jasmine.createSpyObj('TaskService', [
@@ -40,7 +40,6 @@ describe('TaskBoardViewComponent', () => {
     fixture = TestBed.createComponent(TaskBoardViewComponent);
     component = fixture.componentInstance;
 
-    // Set required inputs
     fixture.componentRef.setInput('tasks', [
       {
         id: 't1',

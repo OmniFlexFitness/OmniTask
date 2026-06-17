@@ -226,6 +226,11 @@
         border-radius: 0.5rem;
       }
 
+      .board-nest-drop-zone--idle {
+        pointer-events: none;
+        z-index: 0;
+      }
+
       .group\/board-card.nest-drop-active .board-nest-drop-zone {
         background: rgba(34, 211, 238, 0.1);
         outline: 2px dashed rgba(34, 211, 238, 0.5);

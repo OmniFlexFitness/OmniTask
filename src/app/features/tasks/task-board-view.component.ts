@@ -6,7 +6,7 @@ import {
   moveItemInArray,
   transferArrayItem,
 } from '@angular/cdk/drag-drop';
-import { Task, Section, Project } from '../../core/models/domain.model';
+import { Task, Section, Project, wouldCreateTaskParentCycle } from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { hexToRgba, getColorWithOpacity } from '../../core/utils/color.utils';
@@ -65,7 +65,7 @@ export class TaskBoardViewComponent {
   menuTriggerRect = signal<DOMRect | null>(null);
   columnDisplaySettings = signal<Record<string, ColumnDisplaySettings>>({});
 
-  // Computed: Get all section IDs for drag-drop connection (+ per-card nest targets)
+  // Computed: section columns + per-card nest targets while dragging
   connectedDropLists = computed(() => [
     ...this.project().sections.map((s) => s.id),
     ...this.nestDropListIds(),
@@ -226,15 +226,7 @@ export class TaskBoardViewComponent {
     });
   }
 
-  onDrop(event: CdkDragDrop<Task[]>, targetSectionId: string) {
-    if (
-      event.previousContainer !== event.container &&
-      event.container.id.startsWith('board-nest-')
-    ) {
-      // Card nest targets handle this in onNestDrop.
-      return;
-    }
-
+  onDrop(event: CdkDragDrop<Task[]>, targetSectionId: string): void {
     const task = event.item.data as Task;
     this.reorderTask(task, event.currentIndex, targetSectionId, event.container.data);
   }
@@ -244,46 +236,38 @@ export class TaskBoardViewComponent {
   }
 
   wouldCreateParentCycle(ancestorId: string, nodeId: string): boolean {
-    let current: string | null = nodeId;
-    const visited = new Set<string>();
-    const allTasks = this.tasks();
-    while (current) {
-      if (current === ancestorId) return true;
-      if (visited.has(current)) return false;
-      visited.add(current);
-      const doc = allTasks.find((t) => t.id === current);
-      current = doc?.parentId ?? null;
-    }
-    return false;
+    return wouldCreateTaskParentCycle(ancestorId, nodeId, this.tasks());
   }
 
-  onDragStarted() {
+  onDragStarted(): void {
     this.isDragging.set(true);
   }
 
-  onDragEnded() {
+  onDragEnded(): void {
     this.isDragging.set(false);
     this.nestDropTargetId.set(null);
   }
 
-  onNestEntered(parentTask: Task) {
+  onNestEntered(parentTask: Task): void {
     this.nestDropTargetId.set(parentTask.id);
   }
 
-  onNestExited(parentTask: Task) {
+  onNestExited(parentTask: Task): void {
     if (this.nestDropTargetId() === parentTask.id) {
       this.nestDropTargetId.set(null);
     }
   }
 
-  onNestDrop(event: CdkDragDrop<Task[]>, parentTask: Task) {
+  onNestDrop(event: CdkDragDrop<Task[]>, parentTask: Task): void {
     if (event.previousContainer === event.container) return;
 
     const child = event.item.data as Task;
     if (!child?.id || child.id === parentTask.id) return;
     if (this.wouldCreateParentCycle(child.id, parentTask.id)) return;
 
-    void this.taskService.setTaskParent(child.id, parentTask.id);
+    void this.taskService.setTaskParent(child.id, parentTask.id).catch((err) => {
+      console.warn('Failed to nest task:', err);
+    });
     this.onDragEnded();
   }
 

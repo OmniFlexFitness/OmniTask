@@ -9,7 +9,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Task, CustomFieldDefinition } from '../../core/models/domain.model';
+import {
+  Task,
+  CustomFieldDefinition,
+  wouldCreateTaskParentCycle,
+} from '../../core/models/domain.model';
 import { TaskService } from '../../core/services/task.service';
 import { ProjectService } from '../../core/services/project.service';
 import { CustomFieldService } from '../../core/services/custom-field.service';
@@ -398,45 +402,35 @@ export class TaskListViewComponent {
     return `task-nest-${taskId}`;
   }
 
-  nestDropListIds = computed(() =>
-    this.sortedTasks().map((t) => this.nestDropListId(t.id)),
-  );
+  nestDropListIds = computed(() => this.sortedTasks().map((t) => this.nestDropListId(t.id)));
+
+  connectedDropLists = computed(() => [this.mainDropListId, ...this.nestDropListIds()]);
 
   /** Sync check using in-memory tasks (no Firestore round-trip during drag). */
   wouldCreateParentCycle(ancestorId: string, nodeId: string): boolean {
-    let current: string | null = nodeId;
-    const visited = new Set<string>();
-    const allTasks = this.tasks();
-    while (current) {
-      if (current === ancestorId) return true;
-      if (visited.has(current)) return false;
-      visited.add(current);
-      const doc = allTasks.find((t) => t.id === current);
-      current = doc?.parentId ?? null;
-    }
-    return false;
+    return wouldCreateTaskParentCycle(ancestorId, nodeId, this.tasks());
   }
 
-  onDragStarted() {
+  onDragStarted(): void {
     this.isDragging.set(true);
   }
 
-  onDragEnded() {
+  onDragEnded(): void {
     this.isDragging.set(false);
     this.nestDropTargetId.set(null);
   }
 
-  onNestEntered(parentTask: Task) {
+  onNestEntered(parentTask: Task): void {
     this.nestDropTargetId.set(parentTask.id);
   }
 
-  onNestExited(parentTask: Task) {
+  onNestExited(parentTask: Task): void {
     if (this.nestDropTargetId() === parentTask.id) {
       this.nestDropTargetId.set(null);
     }
   }
 
-  onNestDrop(event: CdkDragDrop<Task[]>, parentTask: Task) {
+  onNestDrop(event: CdkDragDrop<TaskListViewNode[]>, parentTask: Task): void {
     if (event.previousContainer === event.container) return;
 
     const child = event.item.data as Task;
@@ -449,16 +443,13 @@ export class TaskListViewComponent {
         next.add(parentTask.id);
         return next;
       });
+    }).catch((err) => {
+      console.warn('Failed to nest task:', err);
     });
     this.onDragEnded();
   }
 
-  onDrop(event: CdkDragDrop<TaskListViewNode[]>) {
-    if (event.previousContainer !== event.container) {
-      // Handled by onNestDrop on the row-level nest target.
-      return;
-    }
-
+  onDrop(event: CdkDragDrop<TaskListViewNode[]>): void {
     const visible = event.container.data ?? this.sortedTasks();
     const prevIndex = event.previousIndex;
     const newIndex = event.currentIndex;
