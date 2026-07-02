@@ -27,5 +27,9 @@
         "firebase-functions-test": "^3.3.0",
         "typescript": "~5.4.0"
     },
+    "overrides": {
+        "protobufjs": "^7.6.3",
+        "fast-xml-parser": "^5.7.0"
+    },
     "private": true
 }
