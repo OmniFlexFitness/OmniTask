@@ -40,8 +40,8 @@ This updates `EXT_MAIL_SMTP_CONNECTION_URI`, `EXT_MAIL_SMTP_PASSWORD`, optionall
 
 ```powershell
 cd functions
-$env:GOOGLE_CLOUD_PROJECT = 'omnitask-475422'
-node scripts/send-mail-test.js dijinvestments3@gmail.com
+node test-email.js
+node check-mail.js
 ```
 
 - Expect `delivery.state: SUCCESS` on the new `mail` document within ~15s.

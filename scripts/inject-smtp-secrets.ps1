@@ -84,4 +84,4 @@ if ($DeployExtension) {
 
 Write-Host ''
 Write-Host 'Done. Next: run a mail test.' -ForegroundColor Green
-Write-Host '  cd functions && set GOOGLE_CLOUD_PROJECT=omnitask-475422 && node scripts/send-mail-test.js' -ForegroundColor Cyan
+Write-Host '  cd functions && node test-email.js && node check-mail.js' -ForegroundColor Cyan
