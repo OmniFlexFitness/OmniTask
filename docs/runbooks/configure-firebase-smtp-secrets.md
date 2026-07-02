@@ -13,33 +13,44 @@ The `firestore-send-email` extension is wired in `extensions/firestore-send-emai
 
 1. Generate a Google App Password for the `omnitask@omniflexfitness.com` alias via a Workspace admin account (currently `bertin.kenol@omniflexfitness.com`).
 
-2. **Automated (recommended)** — requires `gcloud auth login`:
-
-   ```powershell
-   .\scripts\inject-smtp-secrets.ps1
-   # optional: also update NODEMAILER_SMTP_PASSWORD for Cloud Functions nodemailer
-   .\scripts\inject-smtp-secrets.ps1 -IncludeNodemailer
+2. Open [Secret Manager](https://console.cloud.google.com/security/secret-manager?project=omnitask-475422).
+3. Update `EXT_MAIL_SMTP_CONNECTION_URI` in Secret Manager (not the committed `.env` file) to the account that owns the App Password:
    ```
-
-3. **Manual alternative** — [Secret Manager](https://console.cloud.google.com/security/secret-manager?project=omnitask-475422):
-
-   - Update `EXT_MAIL_SMTP_CONNECTION_URI` (not the committed `.env` file) to the account that owns the App Password:
-     ```
-     smtps://bertin.kenol%40omniflexfitness.com@smtp.gmail.com:465
-     ```
-     Keep `DEFAULT_FROM` as `OmniTask <omnitask@omniflexfitness.com>` — the SMTP username is for authentication only.
-   - Update `EXT_MAIL_SMTP_PASSWORD` with the 16-character App Password.
-
-4. Deploy extensions:
+   smtps://bertin.kenol%40omniflexfitness.com@smtp.gmail.com:465
+   ```
+   Keep `DEFAULT_FROM` as `OmniTask <omnitask@omniflexfitness.com>` — the SMTP username is for authentication only.
+4. Update `EXT_MAIL_SMTP_PASSWORD` with the 16-character App Password.
+5. Deploy extensions:
    ```bash
-   npx firebase-tools deploy --only extensions
+   npx firebase-tools deploy --only extensions:firestore-send-email --project omnitask-475422
    ```
    Or trigger the GitHub Actions deploy workflow on `live`.
 
+### CLI shortcut (after installing [Google Cloud SDK](https://cloud.google.com/sdk/docs/install))
+
+From repo root, with `gcloud auth login` completed:
+
+```powershell
+.\scripts\inject-smtp-secrets.ps1 -AppPassword 'YOUR16CHARPASSWORD' -DeployExtension -UpdateNodemailerSecret
+```
+
+This updates `EXT_MAIL_SMTP_CONNECTION_URI`, `EXT_MAIL_SMTP_PASSWORD`, optionally `NODEMAILER_SMTP_PASSWORD`, and redeploys the extension.
+
 ## Verification
 
-- Add a document to the `mail` collection (or trigger a notification flow) and confirm delivery.
-- Check Cloud Functions logs for the `firestore-send-email` extension if send fails.
+```powershell
+cd functions
+node test-email.js
+node check-mail.js
+```
+
+- Expect `delivery.state: SUCCESS` on the new `mail` document within ~15s.
+- Or trigger a task assignment and check the `notifications` collection via `node check-mail.js`.
+- Check Cloud Functions logs for `ext-firestore-send-email-processQueue` if send fails.
+
+## Cloud Functions path (same App Password)
+
+Task assignment and reminder emails use `NODEMAILER_SMTP_PASSWORD` in Cloud Functions (`functions/src/index.ts`), not the Firestore extension. After injecting secrets, also set runtime env `NODEMAILER_SMTP_USER=bertin.kenol@omniflexfitness.com` and redeploy functions if not already configured.
 
 ## Repo config reference
 
