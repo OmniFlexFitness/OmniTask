@@ -1,7 +1,7 @@
 import { Injectable, inject, computed } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService } from '../auth/auth.service';
 
 /** Google Calendar API event (subset). */
 export interface GoogleCalendarEvent {
@@ -41,10 +41,10 @@ export class GoogleCalendarService {
   private readonly API_BASE_URL = 'https://www.googleapis.com/calendar/v3';
 
   /** Reuses the shared Google OAuth access token (same as Tasks/Sheets). */
-  isAuthenticated = computed(() => !!this.authService.googleTaskAccessToken());
+  isAuthenticated = computed(() => !!this.authService.googleTasksAccessToken());
 
   private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.googleTaskAccessToken();
+    const token = this.authService.googleTasksAccessToken();
     if (!token) {
       throw new Error('Google Calendar not authenticated. Reconnect Google to grant calendar access.');
     }
@@ -67,7 +67,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const embeddedCalendar = encodeURIComponent(calendarId);
+    const encodedCalendar = encodeURIComponent(calendarId);
     return this.http.get<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       { headers: this.getAuthHeaders() },
@@ -78,7 +78,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const embeddedCalendar = encodeURIComponent(calendarId);
+    const encodedCalendar = encodeURIComponent(calendarId);
     return this.http.post<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events`,
       event,
@@ -94,7 +94,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const embeddedCalendar = encodeURIComponent(calendarId);
+    const encodedCalendar = encodeURIComponent(calendarId);
     return this.http.patch<GoogleCalendarEvent>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       event,
@@ -106,7 +106,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const embeddedCalendar = encodeURIComponent(calendarId);
+    const encodedCalendar = encodeURIComponent(calendarId);
     return this.http.delete<void>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events/${eventId}`,
       { headers: this.getAuthHeaders() },
@@ -118,7 +118,7 @@ export class GoogleCalendarService {
     if (!this.isAuthenticated()) {
       return throwError(() => new Error('Google Calendar not authenticated'));
     }
-    const embeddedCalendar = encodeURIComponent(calendarId);
+    const encodedCalendar = encodeURIComponent(calendarId);
     return this.http.get<GoogleCalendarEventsResponse>(
       `${this.API_BASE_URL}/calendars/${encodedCalendar}/events`,
       {

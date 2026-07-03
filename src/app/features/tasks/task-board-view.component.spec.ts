@@ -23,7 +23,7 @@ describe('TaskBoardViewComponent', () => {
     ]);
     mockTaskService.updateTask.and.returnValue(Promise.resolve());
     mockTaskService.setTaskParent.and.returnValue(Promise.resolve());
-    mockTaskService.reorderTasks.and.returnValue(undefined);
+    mockTaskService.reorderTasks.and.returnValue(Promise.resolve());
 
     mockProjectService = jasmine.createSpyObj('ProjectService', ['updateProject']);
     mockProjectService.updateProject.and.returnValue(Promise.resolve());
@@ -98,7 +98,7 @@ describe('TaskBoardViewComponent', () => {
         previousContainer: { id: 's1' },
         container: { id: 'board-nest-p1' },
         item: { data: child },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(event, parent);
       tick();
@@ -118,7 +118,7 @@ describe('TaskBoardViewComponent', () => {
         previousContainer: { id: 's1' },
         container: { id: 'board-nest-parent' },
         item: { data: parent },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(selfEvent, parent);
       expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ describe('TaskBoardViewComponent', () => {
         previousContainer: { id: 's1' },
         container: { id: 'board-nest-child' },
         item: { data: parent },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(cycleEvent, child);
       expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();

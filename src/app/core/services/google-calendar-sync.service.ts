@@ -72,12 +72,12 @@ export class GoogleCalendarSyncService {
   }
 
   private resolveCalendarId(preferred?: string | null): string {
-    const user = this.authService.currentUserSig();
+    const user = this.authService.currentUserSig() as any;
     return preferred ?? user?.googleCalendarId ?? 'primary';
   }
 
   private isSyncEnabled(): boolean {
-    return !!this.authService.currentUserSig()?.googleCalendarSyncEnabled;
+    return !!(this.authService.currentUserSig() as any)?.googleCalendarSyncEnabled;
   }
 
   async syncTaskOutbound(task: Task): Promise<void> {
@@ -115,7 +115,7 @@ export class GoogleCalendarSyncService {
     }
   }
 
-  async pushAllDue Tasks(): Promise<{ pushed: number }> {
+  async pushAllDueTasks(): Promise<{ pushed: number }> {
     if (!this.isSyncEnabled() || !this.calendarService.isAuthenticated()) {
       return { pushed: 0 };
     }
@@ -137,7 +137,7 @@ export class GoogleCalendarSyncService {
     await this.authService.updateProfile({
       lastCalendarSyncAt: new Date(),
       calendarSyncStatus: 'synced',
-    });
+    } as any);
 
     return { pushed };
   }
@@ -171,7 +171,7 @@ export class GoogleCalendarSyncService {
     await this.authService.updateProfile({
       lastCalendarSyncAt: new Date(),
       calendarSyncStatus: 'synced',
-    });
+    } as any);
 
     return { updated };
   }
