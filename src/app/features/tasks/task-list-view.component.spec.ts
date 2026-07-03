@@ -201,7 +201,7 @@ describe('TaskListViewComponent', () => {
         previousContainer: { id: 'task-list-main' },
         container: { id: 'task-nest-p1' },
         item: { data: child },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(event, parent);
       tick();
@@ -220,7 +220,7 @@ describe('TaskListViewComponent', () => {
         previousContainer: { id: 'task-list-main' },
         container: { id: 'task-nest-parent' },
         item: { data: parent },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(selfEvent, parent);
       expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();
@@ -229,7 +229,7 @@ describe('TaskListViewComponent', () => {
         previousContainer: { id: 'task-list-main' },
         container: { id: 'task-nest-child' },
         item: { data: parent },
-      } as unknown as CdkDragDrop<Task[]>;
+      } as unknown as CdkDragDrop<any>;
 
       component.onNestDrop(cycleEvent, child);
       expect(mockTaskService.setTaskParent).not.toHaveBeenCalled();
