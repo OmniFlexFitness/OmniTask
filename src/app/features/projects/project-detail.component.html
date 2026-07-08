@@ -48,7 +48,7 @@
 
               <h1
                 class="text-lg font-bold text-white flex items-center gap-2 min-w-0"
-                [title]="project.description || project.name"
+                [attr.title]="project.name"
               >
                 <span class="truncate">{{ project.name }}</span>
                 @if (project.status === 'archived') {
@@ -62,7 +62,7 @@
             </div>
 
             <!-- Navigation Tabs -->
-            <div class="flex items-center gap-1 -mr-1 overflow-x-auto hide-scrollbar">
+            <div class="flex items-center gap-1 -mr-1 overflow-x-auto hide-scrollbar flex-shrink-0">
               <!-- Overview Tab (Cyan) -->
               <button
                 class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
