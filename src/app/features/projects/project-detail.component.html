@@ -7,64 +7,62 @@
           <!-- Top glow line -->
           <div class="absolute top-0 left-0 right-0 h-px bg-cyan-500/30"></div>
 
-          <div class="px-6 py-2">
-            <!-- Breadcrumbs / Back -->
-            <button
-              (click)="goBack()"
-              class="omni-glitch-btn flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-cyan-400 mb-2 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          <div
+            class="px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5"
+          >
+            <!-- Identity: back + icon + name -->
+            <div class="flex items-center gap-2.5 min-w-0">
+              <button
+                (click)="goBack()"
+                class="omni-glitch-btn flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-cyan-400 hover:bg-white/5 transition-colors"
+                aria-label="Back to projects"
+                title="Back to projects"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              Back to Projects
-            </button>
-
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-center gap-3">
-                <!-- Icon/Color Box -->
-                <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center shadow-lg"
-                  [style.background-color]="(project.color || '#6366f1') + '18'"
-                  [style.border]="'1px solid ' + (project.color || '#6366f1') + '55'"
-                  [style.box-shadow]="'0 0 14px ' + (project.color || '#6366f1') + '40'"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
                 >
-                  <span class="text-xl font-bold" [style.color]="project.color || '#6366f1'">
-                    {{ project.name.charAt(0).toUpperCase() }}
-                  </span>
-                </div>
-                <div>
-                  <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span>{{ project.name }}</span>
-                    @if (project.status === 'archived') {
-                      <span
-                        class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
-                      >
-                        Archived
-                      </span>
-                    }
-                  </h1>
-                  <p class="text-xs text-slate-400 max-w-2xl line-clamp-1">
-                    {{ project.description || 'No description provided.' }}
-                  </p>
-                </div>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
+
+              <!-- Icon/Color Box -->
+              <div
+                class="w-9 h-9 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0"
+                [style.background-color]="(project.color || '#6366f1') + '18'"
+                [style.border]="'1px solid ' + (project.color || '#6366f1') + '55'"
+                [style.box-shadow]="'0 0 14px ' + (project.color || '#6366f1') + '40'"
+              >
+                <span class="text-lg font-bold" [style.color]="project.color || '#6366f1'">
+                  {{ project.name.charAt(0).toUpperCase() }}
+                </span>
               </div>
 
-              <!-- Primary Actions can go here -->
+              <h1
+                class="text-lg font-bold text-white flex items-center gap-2 min-w-0"
+                [title]="project.description || project.name"
+              >
+                <span class="truncate">{{ project.name }}</span>
+                @if (project.status === 'archived') {
+                  <span
+                    class="flex-shrink-0 px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider bg-amber-500/20 text-amber-500 rounded-full border border-amber-500/20"
+                  >
+                    Archived
+                  </span>
+                }
+              </h1>
             </div>
 
             <!-- Navigation Tabs -->
-            <div class="flex items-center gap-1 mt-3 border-b border-white/5 overflow-x-auto hide-scrollbar">
+            <div class="flex items-center gap-1 -mr-1 overflow-x-auto hide-scrollbar">
               <!-- Overview Tab (Cyan) -->
               <button
                 class="omni-glitch-btn relative px-3 py-1.5 text-sm font-medium transition-all group"
@@ -139,12 +137,12 @@
 
         <!-- Main Content -->
         <main
-          class="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+          class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
         >
           @switch (activeTab()) {
             @case ('overview') {
               <div
-                class="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                class="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
               >
                 <!-- Stats -->
                 <section>
@@ -252,7 +250,7 @@
             @case ('tasks') {
               <div class="h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
                 <!-- Task View Controls -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 flex-shrink-0">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 flex-shrink-0">
                   <div class="flex bg-[#0a0f1e] w-full sm:w-auto overflow-x-auto gap-1 p-1 rounded-lg border border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]">
                     <button
                       class="omni-glitch-btn flex-1 whitespace-nowrap px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200"
