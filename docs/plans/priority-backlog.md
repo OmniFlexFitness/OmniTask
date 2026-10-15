@@ -1,95 +1,56 @@
 # OmniTask Priority Backlog
 
-Reference list for open GitHub issues, ordered by impact and dependency. Update status in issue comments when work starts or completes.
-
+**Canonical tracker:** GitHub Projects (OmniFlexFitness org) — OmniTask Issues are largely closed/migrated.  
 **Repo:** [OmniFlexFitness/OmniTask](https://github.com/OmniFlexFitness/OmniTask)  
 **Production branch:** `live`
 
----
-
-## Tier 1 — Production Blockers
-
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#125](https://github.com/OmniFlexFitness/OmniTask/issues/125) | Production build fails — bundle size exceeds 1 MB budget | Done (PR pending) |
-| [#126](https://github.com/OmniFlexFitness/OmniTask/issues/126) | 30 npm audit vulnerabilities (1 critical handlebars) | Done (PR pending) |
+> Local `gh` needs `read:project` to list Projects cards. See `../../docs/omniflex-phase4-tracker.md` in the parent omniflexfitness workspace (or refresh scopes with `gh auth refresh -s read:project,project`).
 
 ---
 
-## Tier 2 — Critical UX / Accessibility
+## Maintenance mode (2026-10-15)
 
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#129](https://github.com/OmniFlexFitness/OmniTask/issues/129) | No mobile navigation — app unusable on small screens | Done (PR #165) |
-| [#117](https://github.com/OmniFlexFitness/OmniTask/issues/117) | Task list drag-and-drop reordering broken | Done (PR #165) |
+OmniTask is in **maintenance** after the ecosystem triage-merge. Feature work is paused pending GCP billing restore and business priority (website + MindMap fork).
 
----
+### Shipped this triage
 
-## Tier 3 — High-Value Features
+| PR | Title | Notes |
+|----|-------|-------|
+| [#204](https://github.com/OmniFlexFitness/OmniTask/pull/204) | CI baseline unblock | Merged |
+| [#206](https://github.com/OmniFlexFitness/OmniTask/pull/206) | Dependabot batches 1+2 (v2) | Merged (included batch 1 commits) |
+| [#209](https://github.com/OmniFlexFitness/OmniTask/pull/209) | Dependabot batch 3 (v2, rebased) | Merged |
+| [#199](https://github.com/OmniFlexFitness/OmniTask/pull/199) | SMTP secrets runbook | Merged |
 
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#130](https://github.com/OmniFlexFitness/OmniTask/issues/130) | Global task search bar (project list filter; Phase 2: navbar) | Done (PR #165) |
-| [#131](https://github.com/OmniFlexFitness/OmniTask/issues/131) | Complete Google Tasks API OAuth integration | Partial (`/auth/callback` route; real OAuth TBD) |
-| [#133](https://github.com/OmniFlexFitness/OmniTask/issues/133) | Data export/import (CSV/JSON) | Export done (PR #165) |
-| [#137](https://github.com/OmniFlexFitness/OmniTask/issues/137) | Google Sheets sync field-level merge | Done (PR #165) |
+Closed as stale/duplicate: #200–#203 (v1 security batches), #208 (duplicate of #193).
 
----
+### Deploy blocker
 
-## Tier 4 — Quality of Life
+`Deploy to Cloud Run & Firebase` fails at **Push Docker image**: GCP project billing disabled on `omnitask-475422`.  
+Bertin/ops must re-enable billing, then re-run the latest deploy workflow on `live`.
 
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#123](https://github.com/OmniFlexFitness/OmniTask/issues/123) | Add 404 Not Found page | Done (PR #165) |
-| [#132](https://github.com/OmniFlexFitness/OmniTask/issues/132) | Keyboard shortcuts (`?`, `Ctrl+K`, `Esc`) | Done (PR #165) |
-| [#119](https://github.com/OmniFlexFitness/OmniTask/issues/119) | Settings page improvements | Done (PR #165) |
+Production Hosting URLs still respond 200 with the last successful image:
 
----
+- https://task.omniflexfitness.com
+- https://omnitask-475422.web.app
 
-## Tier 5 — Tech Debt / Cleanup
+### Ops still open
 
-| Issue | Title | Labels |
-|-------|-------|--------|
-| [#121](https://github.com/OmniFlexFitness/OmniTask/issues/121) | Add ESLint configuration | tech-debt |
-| [#122](https://github.com/OmniFlexFitness/OmniTask/issues/122) | Remove console.log from production | cleanup |
-| [#124](https://github.com/OmniFlexFitness/OmniTask/issues/124) | Remove deprecated `allowSignalWrites` | good first issue |
-| [#118](https://github.com/OmniFlexFitness/OmniTask/issues/118) | Demo board event handlers are stubs | good first issue |
+| Item | Status |
+|------|--------|
+| [#91](https://github.com/OmniFlexFitness/OmniTask/issues/91) SMTP secrets | Manual `gcloud` + Gmail App Password — see `docs/runbooks/configure-firebase-smtp-secrets.md` |
 
 ---
 
-## Tier 6 — Ops
+## Historical tiers (archived reference)
 
-| Issue | Title | Status |
-|-------|-------|--------|
-| [#91](https://github.com/OmniFlexFitness/OmniTask/issues/91) | Configure Firebase SMTP Secrets | Open — assigned @bkenol; manual GCP Secret Manager step |
+Older issue-driven tiers (#125–#184, GitHub integration phases) are documented in git history and closed PRs. Do not reopen large feature streams until billing + Projects board triage are done.
 
----
-
-## Tier 7 — GitHub Integration (sequential)
-
-| Issue | Title | Depends on | Branch prefix |
-|-------|-------|------------|---------------|
-| [#179](https://github.com/OmniFlexFitness/OmniTask/issues/179) | Phase 1 — connect + bidirectional status sync | — | **Done** (merged to `live`) |
-| [#182](https://github.com/OmniFlexFitness/OmniTask/issues/182) | Phase 2 — Issue Types, Fields, sub-issues, dependencies | #179 | **Done** (local; deploy pending) |
-| [#183](https://github.com/OmniFlexFitness/OmniTask/issues/183) | Phase 3 — Projects v2 + linked branches / PR status | #182 | **Done** (local; deploy pending) |
-| [#184](https://github.com/OmniFlexFitness/OmniTask/issues/184) | Phase 4 — conflict UI, participants, Cloud Tasks, security alerts | #183 | **Partial** — conflict resolution UI + callable; Cloud Tasks / security alerts TBD |
-
-See `docs/plans/github-issues-integration.md` for architecture notes.
-
----
-
-## Recently completed (context)
-
-- **#179** — GitHub Issues Phase 1 (`56d7a26b` on `live`)
-- **#182–#184** — GitHub Phases 2–4 implemented locally (field mirror, Projects v2 settings, conflict resolution UI); deploy + live webhook verification pending
-- **Google Calendar sync** — project settings + task CRUD hooks wired locally; manual OAuth/calendar E2E pending
-- **Drag-to-create subtask** — list/board views with cycle guard
-- PRs #158–#164 merged (pin projects, mobile scaffold, email markdown, CODEOWNERS, auth pin state)
+See also: `docs/plans/github-issues-integration.md`.
 
 ---
 
 ## Workflow notes
 
-- Branch from `live` for production fixes: `fix/`, `feat/`, `chore/` prefixes
-- Run `ng build --configuration production` and `ng test` before PR
+- Branch from `live`: `fix/`, `feat/`, `chore/`
+- Run `ng build --configuration production` and `ng test --watch=false --browsers=ChromeHeadless` before PR
 - See [CONTRIBUTING.md](../../CONTRIBUTING.md) and [AGENTS.md](../../AGENTS.md)
