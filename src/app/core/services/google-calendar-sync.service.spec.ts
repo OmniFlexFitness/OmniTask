@@ -38,7 +38,7 @@ describe('GoogleCalendarSyncService', () => {
     expect(event.summary).toBe('Ship feature');
     expect(event.start?.date).toBe('2026-06-12');
     expect(event.end?.date).toBe('2026-06-13');
-    expect(event.extendedProperties?.private?.omniTaskId).toBe('t1');
+    expect(event.extendedProperties?.private?.['omniTaskId']).toBe('t1');
   });
 
   it('calendarEventDueDate reads all-day start date', () => {

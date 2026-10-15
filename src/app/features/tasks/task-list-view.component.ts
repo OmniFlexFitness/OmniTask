@@ -430,7 +430,7 @@ export class TaskListViewComponent {
     }
   }
 
-  onNestDrop(event: CdkDragDrop<TaskListViewNode[]>, parentTask: Task): void {
+  onNestDrop(event: CdkDragDrop<any>, parentTask: Task): void {
     if (event.previousContainer === event.container) return;
 
     const child = event.item.data as Task;

@@ -9,13 +9,13 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../../core/auth/auth.service';
-import { DialogService } from '../../../core/services/dialog.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { DialogService } from '../../core/services/dialog.service';
 import {
   GoogleCalendarService,
   GoogleCalendarListEntry,
-} from '../../../core/services/google-calendar.service';
-import { GoogleCalendarSyncService } from '../../../core/services/google-calendar-sync.service';
+} from '../../core/services/google-calendar.service';
+import { GoogleCalendarSyncService } from '../../core/services/google-calendar-sync.service';
 
 @Component({
   selector: 'app-settings-google-calendar-sync',
@@ -31,7 +31,7 @@ export class SettingsGoogleCalendarSyncComponent implements OnInit {
   private readonly calendarSyncService = inject(GoogleCalendarSyncService);
   private readonly router = inject(Router);
 
-  currentUser = this.authService.currentUserSig;
+  currentUser = this.authService.currentUserSig as unknown as () => any;
 
   calendarAuthenticated = computed(() => this.calendarService.isAuthenticated());
   syncEnabled = computed(() => !!this.currentUser()?.googleCalendarSyncEnabled);
@@ -71,7 +71,7 @@ export class SettingsGoogleCalendarSyncComponent implements OnInit {
       await this.authService.updateProfile({
         googleCalendarSyncEnabled: next,
         calendarSyncStatus: next ? 'pending' : undefined,
-      });
+      } as any);
       if (next && this.calendarAuthenticated()) {
         await this.loadCalendars();
       }
@@ -85,7 +85,7 @@ export class SettingsGoogleCalendarSyncComponent implements OnInit {
       await this.authService.updateProfile({
         googleCalendarId: calendarId,
         calendarSyncStatus: 'pending',
-      });
+      } as any);
     } catch (err) {
       console.error('Failed to select calendar:', err);
     }
@@ -101,7 +101,7 @@ export class SettingsGoogleCalendarSyncComponent implements OnInit {
       });
     } catch (err) {
       console.error('Calendar pull failed:', err);
-      await this.authService.updateProfile({ calendarSyncStatus: 'error' });
+      await this.authService.updateProfile({ calendarSyncStatus: 'error' } as any);
       this.lastSyncResult.set({
         success: false,
         message: 'Calendar sync failed. Reconnect Google and try again.',
