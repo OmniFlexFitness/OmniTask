@@ -9,13 +9,13 @@ import {
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '../../../core/auth/auth.service';
-import { DialogService } from '../../../core/services/dialog.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { DialogService } from '../../core/services/dialog.service';
 import {
   GoogleCalendarService,
   GoogleCalendarListEntry,
-} from '../../../core/services/google-calendar.service';
-import { GoogleCalendarSyncService } from '../../../core/services/google-calendar-sync.service';
+} from '../../core/services/google-calendar.service';
+import { GoogleCalendarSyncService } from '../../core/services/google-calendar-sync.service';
 
 @Component({
   selector: 'app-settings-google-calendar-sync',

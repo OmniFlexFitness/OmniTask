@@ -124,6 +124,13 @@ export interface UserProfile {
    * Undefined is treated as enabled (opt-out model).
    */
   emailNotificationsEnabled?: boolean;
+
+  /** Google Calendar used for due-date sync. `primary` when unset. */
+  googleCalendarId?: string;
+  /** When true, task due dates sync with the selected Google Calendar. */
+  googleCalendarSyncEnabled?: boolean;
+  lastCalendarSyncAt?: Date;
+  calendarSyncStatus?: 'synced' | 'pending' | 'error';
 }
 
 /**

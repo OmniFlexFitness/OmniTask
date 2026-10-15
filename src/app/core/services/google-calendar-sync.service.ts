@@ -115,7 +115,7 @@ export class GoogleCalendarSyncService {
     }
   }
 
-  async pushAllDue Tasks(): Promise<{ pushed: number }> {
+  async pushAllDueTasks(): Promise<{ pushed: number }> {
     if (!this.isSyncEnabled() || !this.calendarService.isAuthenticated()) {
       return { pushed: 0 };
     }

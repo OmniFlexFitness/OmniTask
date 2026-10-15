@@ -23,7 +23,7 @@ describe('TaskBoardViewComponent', () => {
     ]);
     mockTaskService.updateTask.and.returnValue(Promise.resolve());
     mockTaskService.setTaskParent.and.returnValue(Promise.resolve());
-    mockTaskService.reorderTasks.and.returnValue(undefined);
+    mockTaskService.reorderTasks.and.returnValue(Promise.resolve());
 
     mockProjectService = jasmine.createSpyObj('ProjectService', ['updateProject']);
     mockProjectService.updateProject.and.returnValue(Promise.resolve());

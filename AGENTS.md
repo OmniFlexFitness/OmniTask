@@ -203,6 +203,16 @@ When a task references mobile-specific work, operate inside `mobile/` and follow
 
 ---
 
+## Cursor Cloud Agents
+
+The Angular app is installed with Yarn 1.22 from the committed `yarn.lock` (`yarn install --frozen-lockfile`). `package-lock.json` is gitignored. Cloud Functions are a separate package: `npm ci --prefix functions` (the functions `engines` field says Node 20; CI and this environment use Node 22, which prints an `EBADENGINE` warning and still installs).
+
+Dev server: `yarn start -- --host 0.0.0.0 --port 4200` (http://localhost:4200). Sign-in is Google OAuth against Firebase project `omnitask-475422`. Routes that do not need an account: `/login` and `/demo/board` (local demo board; Add Task updates in-memory state only).
+
+`yarn.lock` resolves `vite` to 6.4.2, including the `vite@7.3.2` request from `@angular/build`. That client's overlay hint is split across lines, and `@angular/build` asserts it can delete a one-line copy, so `ng serve` returns 500 for `/@vite/client` until that hint is joined onto one line. Cloud Agent install does that rewrite in `node_modules` after `yarn install`. Do not commit `node_modules`.
+
+`functions/node_modules` is committed. `npm ci` rewrites it; do not commit that diff. Flutter under `mobile/` is not required to run the web app.
+
 ## Learned User Preferences
 
 - Do not create git commits unless the user explicitly asks
