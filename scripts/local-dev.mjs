@@ -194,24 +194,39 @@ function preflight() {
   }
 }
 
+const PROXY_VARS = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'];
+const proxyConfigured = () => PROXY_VARS.some((k) => process.env[k]);
+
 /**
- * Environment for child processes. If a corporate HTTP proxy is configured,
- * make sure loopback traffic bypasses it: the Firebase CLI talks to the
- * emulators over 127.0.0.1 and a proxy in the middle breaks trigger
- * registration with "Unable to parse JSON ... upstream" errors.
+ * Environment for the emulator process. The Firebase CLI routes every request,
+ * including its own loopback calls to the emulators, through HTTP(S)_PROXY and
+ * ignores NO_PROXY, so behind a corporate proxy trigger registration fails
+ * with "Unable to parse JSON ... upstream". The emulator binaries are
+ * downloaded beforehand (see ensureEmulatorBinaries), so the proxy variables
+ * are dropped for the emulator process itself.
  */
-function childEnv(extra = {}) {
+function emulatorEnv(extra = {}) {
   const env = { ...process.env, ...extra };
-  const proxied = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'].some((k) => env[k]);
-  if (proxied) {
-    const current = env.NO_PROXY ?? env.no_proxy ?? '';
-    const needed = ['127.0.0.1', 'localhost'].filter((h) => !current.split(',').includes(h));
-    if (needed.length) {
-      env.NO_PROXY = [current, ...needed].filter(Boolean).join(',');
-      env.no_proxy = env.NO_PROXY;
-    }
+  if (proxyConfigured()) {
+    for (const k of PROXY_VARS) delete env[k];
   }
   return env;
+}
+
+/**
+ * Behind a proxy, fetch the emulator JARs/UI with the proxy still set
+ * (cached under ~/.cache/firebase/emulators, so this is a no-op after the
+ * first run). Without a proxy, emulators:start downloads them itself.
+ */
+function ensureEmulatorBinaries(firebase) {
+  if (!proxyConfigured()) return;
+  warn(
+    'HTTP proxy detected. Pre-downloading emulator binaries through it, then starting the emulators\n' +
+      '  without the proxy variables (the Firebase CLI would otherwise proxy its own loopback calls).',
+  );
+  for (const target of ['firestore', 'storage', 'ui']) {
+    run(firebase.cmd, [...firebase.prefix, `setup:emulators:${target}`], { cwd: ROOT });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +264,9 @@ async function main() {
   run(process.execPath, [TSC_BIN, '-p', FUNCTIONS_DIR]);
   start('tsc --watch (functions)', process.execPath, [TSC_BIN, '--watch', '--preserveWatchOutput', '-p', FUNCTIONS_DIR]);
 
-  const { cmd, prefix } = firebaseCommand();
+  const firebase = firebaseCommand();
+  const { cmd, prefix } = firebase;
+  ensureEmulatorBinaries(firebase);
   const emulatorArgs = [
     ...prefix,
     'emulators:start',
@@ -270,7 +287,7 @@ async function main() {
   log(`Starting Firebase emulators (${EMULATORS}) for project ${LOCAL_PROJECT_ID}...`);
   start('Firebase emulators', cmd, emulatorArgs, {
     cwd: ROOT,
-    env: childEnv({ FORCE_COLOR: '1' }),
+    env: emulatorEnv({ FORCE_COLOR: '1' }),
   });
 
   log('Waiting for the emulators to come up (first run downloads the emulator JARs)...');

@@ -169,6 +169,6 @@ used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 | AI button says the model is not available | Your key cannot use `claude-opus-5-5`; locally set `ANTHROPIC_MODEL` in `functions/.env.local`, in production change `DEFAULT_CLAUDE_MODEL` |
 | AI button says the input is too long | Titles are capped at 300 characters and descriptions at 8,000 for AI calls; shorten the text |
 | Emulators start but the app shows production data | You ran `yarn start` instead of `yarn start:local` / `yarn dev:local` |
-| `Error adding firestore function: ... Unable to parse JSON ... upstream` | An HTTP proxy is intercepting loopback traffic. `yarn dev:local` sets `NO_PROXY=127.0.0.1,localhost` for you; set it yourself when running `yarn emulators` directly |
+| `Error adding firestore function: ... Unable to parse JSON ... upstream` | The Firebase CLI sends even its loopback calls through `HTTP(S)_PROXY` and ignores `NO_PROXY`. `yarn dev:local` / `yarn emulators` handle this: they download the emulator binaries through the proxy, then start the emulators with the proxy variables removed. If you run `firebase emulators:start` by hand behind a proxy, unset `HTTP_PROXY`/`HTTPS_PROXY` for that command |
 | `Unable to access secret environment variables from Google Cloud Secret Manager` | A value in `functions/.secret.local` is blank. Use `placeholder` for anything you do not have |
 | Weird template or schema errors after a big refactor | `rm -rf .angular/cache` |
