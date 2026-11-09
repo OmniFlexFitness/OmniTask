@@ -9,7 +9,10 @@ on:
 env:
   NODE_VERSION: "22"
   # Secrets cannot be referenced in `if:` directly; mirror presence into env.
-  HAS_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+  # Prefer a dedicated, low-limit CI key (ANTHROPIC_API_KEY_CI) so the key that
+  # runs on PR-authored code is not the one the deploy seeds into production;
+  # fall back to ANTHROPIC_API_KEY so the smoke test still runs without it.
+  HAS_ANTHROPIC_KEY: ${{ (secrets.ANTHROPIC_API_KEY_CI || secrets.ANTHROPIC_API_KEY) != '' }}
 
 jobs:
   validate:
@@ -63,12 +66,12 @@ jobs:
 
       # One real Claude request through functions/src/ai/claude.ts. Verifies
       # the model ID and request parameters against the live API, which the
-      # emulator and unit tests cannot. Skipped when the secret is absent
-      # (e.g. PRs from forks).
+      # emulator and unit tests cannot. Skipped when no secret is present
+      # (e.g. PRs from forks). Uses ANTHROPIC_API_KEY_CI when set (see env above).
       - name: Claude AI smoke test
         if: ${{ env.HAS_ANTHROPIC_KEY == 'true' }}
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY_CI || secrets.ANTHROPIC_API_KEY }}
         run: |
           cd functions
           node scripts/ai-smoke.mjs

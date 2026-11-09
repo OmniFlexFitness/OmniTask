@@ -136,7 +136,11 @@ jobs:
         # GitHub repository secret of the same name when it is set, so the AI
         # callables work right after the first deploy; otherwise it gets the
         # same placeholder and the callables return "AI features are not
-        # configured" until the secret is set.
+        # configured" until the secret is set. If an earlier deploy left the
+        # placeholder and the GitHub secret is set now, a new version is added
+        # so adding the GitHub secret later still takes effect. A real value
+        # already in Secret Manager is never overwritten from here; rotate it
+        # with `firebase functions:secrets:set ANTHROPIC_API_KEY`.
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -148,7 +152,15 @@ jobs:
             GITHUB_WEBHOOK_SECRET \
             ANTHROPIC_API_KEY; do
             if gcloud secrets describe "$SECRET" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
-              echo "Secret $SECRET already exists; leaving it untouched."
+              if [ "$SECRET" = "ANTHROPIC_API_KEY" ] && [ -n "$ANTHROPIC_API_KEY" ] && \
+                 [ "$(gcloud secrets versions access latest --secret "$SECRET" --project "${{ env.PROJECT_ID }}" 2>/dev/null)" = "placeholder" ]; then
+                echo "Secret $SECRET holds the deploy placeholder; adding a version from the GitHub repository secret"
+                printf '%s' "$ANTHROPIC_API_KEY" | gcloud secrets versions add "$SECRET" \
+                  --data-file=- \
+                  --project "${{ env.PROJECT_ID }}"
+              else
+                echo "Secret $SECRET already exists; leaving it untouched."
+              fi
             elif [ "$SECRET" = "ANTHROPIC_API_KEY" ] && [ -n "$ANTHROPIC_API_KEY" ]; then
               echo "Creating $SECRET from the GitHub repository secret"
               printf '%s' "$ANTHROPIC_API_KEY" | gcloud secrets create "$SECRET" \

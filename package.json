@@ -6,7 +6,7 @@
     "start": "ng serve",
     "start:local": "ng serve --configuration local",
     "dev:local": "node scripts/local-dev.mjs",
-    "emulators": "npx --yes firebase-tools@15 emulators:start --project demo-omnitask --only auth,firestore,functions,storage --export-on-exit .emulator-data",
+    "emulators": "node scripts/local-dev.mjs --emulators-only",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

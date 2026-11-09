@@ -10,8 +10,10 @@
  * Usage (after `npm run build`):
  *   ANTHROPIC_API_KEY=sk-ant-... node scripts/ai-smoke.mjs
  *
- * Runs in CI (.github/workflows/pr-validation.yml, job "ai-smoke") when the
- * ANTHROPIC_API_KEY repository secret is set. Costs a fraction of a cent.
+ * Runs in CI as the "Claude AI smoke test" step of the `validate` job in
+ * .github/workflows/pr-validation.yml when the ANTHROPIC_API_KEY_CI (or, as a
+ * fallback, ANTHROPIC_API_KEY) repository secret is set; skipped on fork PRs.
+ * Costs a fraction of a cent.
  */
 import { createRequire } from 'node:module';
 
@@ -33,6 +35,7 @@ try {
   const result = await generateJson({
     task: 'ai-smoke',
     effort: 'low',
+    maxTokens: 1024,
     system: 'You are a test fixture. Answer exactly as the schema requires.',
     prompt: '<task_title>\nSmoke test: reply with ok=true and one word in note.\n</task_title>',
     schema: {

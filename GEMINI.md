@@ -320,5 +320,5 @@ yarn emulators   # auth, firestore, functions, storage under project demo-omnita
 ### AI Features (Claude)
 The four AI callables (`generateSubtasks`, `suggestTaskPriority`, `suggestDueDate`,
 `enhanceTaskDescription`) call the Claude API through `functions/src/ai/claude.ts`.
-Model: `claude-opus-5-5` (override with `ANTHROPIC_MODEL`). Secret: `ANTHROPIC_API_KEY`
+Model: `claude-opus-5-5` (`DEFAULT_CLAUDE_MODEL`; `ANTHROPIC_MODEL` in `functions/.env.local` overrides it in the emulator only). Secret: `ANTHROPIC_API_KEY`
 (Secret Manager in production, `functions/.secret.local` in the emulator).

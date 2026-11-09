@@ -22,7 +22,11 @@ const https_1 = require("firebase-functions/v2/https");
 const params_1 = require("firebase-functions/params");
 /** Set via `firebase functions:secrets:set ANTHROPIC_API_KEY` (prod) or functions/.secret.local (emulator). */
 exports.anthropicApiKey = (0, params_1.defineSecret)('ANTHROPIC_API_KEY');
-/** Default model. Override with ANTHROPIC_MODEL in functions/.env (prod) or functions/.env.local (emulator). */
+/**
+ * Model used in production. To change it, edit this constant and deploy.
+ * ANTHROPIC_MODEL (read by claudeModel()) is an emulator-only override set in
+ * functions/.env.local; .env files are gitignored and never reach the CI deploy.
+ */
 exports.DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 /**
  * Models that accept `output_config.effort`. Unknown/older models (e.g.
@@ -55,11 +59,21 @@ function isFunctionsEmulator() {
     return process.env.FUNCTIONS_EMULATOR === 'true';
 }
 exports.isFunctionsEmulator = isFunctionsEmulator;
-/** Model used for AI features: ANTHROPIC_MODEL if set, else the default. */
+/** Model used for AI features: ANTHROPIC_MODEL (emulator override) if set, else the default. */
 function claudeModel() {
     return process.env.ANTHROPIC_MODEL?.trim() || exports.DEFAULT_CLAUDE_MODEL;
 }
 exports.claudeModel = claudeModel;
+let _warnedEffortDropped = false;
+/** Whether to send output_config.effort for this model; logs once when it is dropped. */
+function supportsEffort(model) {
+    const ok = EFFORT_CAPABLE_MODELS.has(model);
+    if (!ok && !_warnedEffortDropped) {
+        _warnedEffortDropped = true;
+        console.warn(`[claude] Model ${model} is not in the effort-capable list; per-task effort settings are not sent.`);
+    }
+    return ok;
+}
 let _sdk;
 function getSdk() {
     return (_sdk ?? (_sdk = require('@anthropic-ai/sdk')));
@@ -69,9 +83,10 @@ let _clientApiKey;
 function getClient(apiKey) {
     if (!_client || _clientApiKey !== apiKey) {
         const { Anthropic: AnthropicClient } = getSdk();
-        // Callables time out at 120s (see AI_CALLABLE_OPTIONS in index.ts). 55s x
-        // (1 + 1 retry) keeps the worst case inside that window while still
-        // retrying one 429/5xx/timeout.
+        // Budget: 55s x (1 + 1 retry) + backoff ~= 111s. The binding constraint is
+        // the web client's callable deadline, which VertexAiService sets to 120s to
+        // match timeoutSeconds in AI_CALLABLE_OPTIONS (index.ts); the Firebase
+        // default of 70s would give up before a retried request could finish.
         _client = new AnthropicClient({ apiKey, timeout: 55000, maxRetries: 1 });
         _clientApiKey = apiKey;
     }
@@ -97,7 +112,7 @@ function toHttpsError(error, task) {
         return notConfiguredError();
     }
     if (error instanceof sdk.NotFoundError) {
-        return new https_1.HttpsError('failed-precondition', `The configured Claude model (${claudeModel()}) is not available to this API key. Check ANTHROPIC_MODEL.`);
+        return new https_1.HttpsError('failed-precondition', `The configured Claude model (${claudeModel()}) is not available to this API key. Ask an admin to change the model.`);
     }
     if (error instanceof sdk.RateLimitError) {
         return new https_1.HttpsError('resource-exhausted', 'Claude is handling too many requests right now. Wait a moment and try again.');
@@ -128,12 +143,12 @@ async function generateJson(request) {
     const model = claudeModel();
     const params = {
         model,
-        max_tokens: 16000,
+        max_tokens: request.maxTokens,
         system: request.system,
         messages: [{ role: 'user', content: request.prompt }],
         output_config: {
             format: { type: 'json_schema', schema: request.schema },
-            ...(EFFORT_CAPABLE_MODELS.has(model) ? { effort: request.effort } : {}),
+            ...(supportsEffort(model) ? { effort: request.effort } : {}),
         },
     };
     if (FALLBACK_CAPABLE_MODELS.has(model)) {

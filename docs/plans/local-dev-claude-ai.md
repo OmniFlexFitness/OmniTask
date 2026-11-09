@@ -38,7 +38,9 @@ first-time package downloads; nothing else touches production.
 1. **Claude everywhere, one code path.** The four AI functions call Claude in
    both production and the emulator. Local and prod behave identically, and
    the retired Gemini dependency goes away.
-2. **Model**: `claude-opus-5-5` by default, overridable with `ANTHROPIC_MODEL`.
+2. **Model**: `claude-opus-5-5` (`DEFAULT_CLAUDE_MODEL` in code; `ANTHROPIC_MODEL`
+   in `functions/.env.local` overrides it in the emulator only, since `.env`
+   files are gitignored and never reach the CI deploy).
    - Effort tuned per task: `low` for classification-style suggestions
      (priority, due date), `medium` for generation (subtasks, description).
    - **Structured outputs** (`output_config.format` JSON schema) guarantee

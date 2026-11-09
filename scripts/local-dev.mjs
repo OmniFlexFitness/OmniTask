@@ -2,13 +2,15 @@
 /**
  * OmniTask one-command local stack.
  *
- *   yarn dev:local
+ *   yarn dev:local                      # emulators + functions + ng serve
+ *   yarn emulators                      # = node scripts/local-dev.mjs --emulators-only
  *
  * Starts, in order:
  *   1. Preflight: Node/Java checks, dependency install, functions/.secret.local
  *   2. Cloud Functions build + `tsc --watch`
  *   3. Firebase emulators (Auth, Firestore, Functions, Storage) under the
- *      offline-only project `demo-omnitask`, persisting data to .emulator-data/
+ *      offline-only project `demo-omnitask`, importing and persisting data in
+ *      .emulator-data/
  *   4. `ng serve --configuration local` (points the app at the emulators)
  *
  * Ctrl+C stops everything; the emulators export their data on exit.
@@ -23,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FUNCTIONS_DIR = join(ROOT, 'functions');
 const IS_WINDOWS = process.platform === 'win32';
+const EMULATORS_ONLY = process.argv.includes('--emulators-only');
 
 /** Must match src/environments/environment.local.ts (demo- prefix = offline only). */
 const LOCAL_PROJECT_ID = 'demo-omnitask';
@@ -34,6 +37,10 @@ const FIREBASE_TOOLS_SPEC = 'firebase-tools@15';
 const EMULATOR_HUB_URL = 'http://127.0.0.1:4400/emulators';
 const EXPORT_DIR = '.emulator-data';
 
+/** JS entry points run directly with the current Node binary (no npm/yarn wrapper). */
+const TSC_BIN = join(FUNCTIONS_DIR, 'node_modules', 'typescript', 'bin', 'tsc');
+const NG_BIN = join(ROOT, 'node_modules', '@angular', 'cli', 'bin', 'ng.js');
+
 const children = new Set();
 let shuttingDown = false;
 
@@ -44,24 +51,41 @@ const fail = (msg) => {
   shutdown(1);
 };
 
+/**
+ * Build spawn arguments. Node 24 deprecates passing an args array together
+ * with `shell: true` (DEP0190), so on Windows, where .cmd shims need a shell,
+ * the command is a single pre-built string. All arguments used here are fixed
+ * literals without spaces, so plain joining is safe.
+ */
+function spawnArgs(cmd, args) {
+  return IS_WINDOWS ? [[cmd, ...args].join(' '), [], { shell: true }] : [cmd, args, { shell: false }];
+}
+
 /** Run a command to completion, inheriting stdio. Throws on non-zero exit. */
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, {
-    stdio: 'inherit',
-    shell: IS_WINDOWS, // resolves npm/yarn/npx .cmd shims on Windows
-    ...opts,
-  });
+  const [file, argv, shellOpt] = spawnArgs(cmd, args);
+  const result = spawnSync(file, argv, { stdio: 'inherit', ...shellOpt, ...opts });
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`${cmd} ${args.join(' ')} exited with code ${result.status}`);
   }
 }
 
-/** Start a long-running child and track it for shutdown. */
+/**
+ * Start a long-running child and track it for shutdown.
+ *
+ * On POSIX each child gets its own process group (`detached`), so shutdown()
+ * can signal the whole tree with kill(-pid): `npx firebase-tools` is a
+ * wrapper around the real CLI, and signaling only the wrapper would orphan
+ * the emulators without an export. On Windows the tree is ended with
+ * `taskkill /T`.
+ */
 function start(name, cmd, args, opts = {}) {
-  const child = spawn(cmd, args, {
+  const [file, argv, shellOpt] = spawnArgs(cmd, args);
+  const child = spawn(file, argv, {
     stdio: 'inherit',
-    shell: IS_WINDOWS,
+    detached: !IS_WINDOWS,
+    ...shellOpt,
     ...opts,
   });
   children.add(child);
@@ -74,19 +98,31 @@ function start(name, cmd, args, opts = {}) {
   return child;
 }
 
+/** Deliver SIGINT (or the Windows equivalent) to a child's whole process tree. */
+function stopTree(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (IS_WINDOWS) {
+    // Ctrl+C in the console already reaches every process in the console group,
+    // so this path is mostly for "one child died, stop the rest".
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+  try {
+    process.kill(-child.pid, 'SIGINT'); // whole process group
+  } catch {
+    child.kill('SIGINT');
+  }
+}
+
 function shutdown(exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
   log('Shutting down...');
-  for (const child of children) {
-    // SIGINT lets the emulators export .emulator-data before exiting.
-    child.kill('SIGINT');
-  }
-  // Give the emulators a moment to flush, then exit.
-  setTimeout(() => process.exit(exitCode), children.size ? 8000 : 0).unref();
-  Promise.all(
-    [...children].map((c) => new Promise((res) => c.once('exit', res))),
-  ).then(() => process.exit(exitCode));
+  for (const child of children) stopTree(child);
+  // Emulators export .emulator-data on SIGINT; give them time to flush, then exit.
+  const pending = [...children].map((c) => new Promise((res) => c.once('exit', res)));
+  const deadline = new Promise((res) => setTimeout(res, 15_000).unref());
+  Promise.race([Promise.all(pending), deadline]).then(() => process.exit(exitCode));
 }
 
 process.on('SIGINT', () => shutdown(0));
@@ -96,7 +132,8 @@ process.on('SIGTERM', () => shutdown(0));
 // Preflight
 // ---------------------------------------------------------------------------
 function versionOf(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: 'utf8', shell: IS_WINDOWS });
+  const [file, argv, shellOpt] = spawnArgs(cmd, args);
+  const r = spawnSync(file, argv, { encoding: 'utf8', ...shellOpt });
   if (r.error || r.status !== 0) return null;
   return `${r.stdout}${r.stderr}`.trim();
 }
@@ -108,22 +145,21 @@ function preflight() {
   }
 
   // The Firestore and Storage emulators are Java programs.
-  const java = versionOf('java', ['-version']);
-  if (!java) {
+  if (!versionOf('java', ['-version'])) {
     throw new Error(
       'Java (JDK 21+) is required by the Firestore and Storage emulators but was not found on PATH.\n' +
         '  Install Temurin: https://adoptium.net/temurin/releases/  then reopen your terminal.',
     );
   }
 
-  if (!existsSync(join(ROOT, 'node_modules', '@angular', 'cli'))) {
+  if (!EMULATORS_ONLY && !existsSync(NG_BIN)) {
     log('Installing web app dependencies (yarn install)...');
     run('yarn', ['install', '--frozen-lockfile'], { cwd: ROOT });
   }
 
-  // functions/node_modules must contain the Anthropic SDK and, on macOS/Linux,
-  // an executable firebase-functions binary (the emulator spawns it). A stale
-  // or Windows-copied tree fails both checks; `npm ci` fixes it.
+  // functions/node_modules is not tracked in git (see #212); install it when
+  // missing or stale. The emulator spawns .bin/firebase-functions, so on
+  // macOS/Linux it must also be executable.
   const fnBin = join(FUNCTIONS_DIR, 'node_modules', '.bin', 'firebase-functions');
   let fnBinOk = existsSync(fnBin);
   if (fnBinOk && !IS_WINDOWS) {
@@ -134,7 +170,7 @@ function preflight() {
     }
   }
   const sdkOk = existsSync(join(FUNCTIONS_DIR, 'node_modules', '@anthropic-ai', 'sdk'));
-  if (!fnBinOk || !sdkOk) {
+  if (!fnBinOk || !sdkOk || !existsSync(TSC_BIN)) {
     log('Installing Cloud Functions dependencies (npm ci in functions/)...');
     run('npm', ['ci'], { cwd: FUNCTIONS_DIR });
   }
@@ -210,10 +246,8 @@ async function main() {
   preflight();
 
   log('Building Cloud Functions...');
-  run('npm', ['run', 'build'], { cwd: FUNCTIONS_DIR });
-  start('tsc --watch (functions)', 'npm', ['run', 'build:watch', '--silent'], {
-    cwd: FUNCTIONS_DIR,
-  });
+  run(process.execPath, [TSC_BIN, '-p', FUNCTIONS_DIR]);
+  start('tsc --watch (functions)', process.execPath, [TSC_BIN, '--watch', '--preserveWatchOutput', '-p', FUNCTIONS_DIR]);
 
   const { cmd, prefix } = firebaseCommand();
   const emulatorArgs = [
@@ -226,6 +260,8 @@ async function main() {
     '--export-on-exit',
     EXPORT_DIR,
   ];
+  // firebase-tools errors on --import of a missing directory, so only import
+  // once a previous run has exported something.
   if (existsSync(join(ROOT, EXPORT_DIR))) {
     emulatorArgs.push('--import', EXPORT_DIR);
   } else {
@@ -244,14 +280,23 @@ async function main() {
     return;
   }
 
+  if (EMULATORS_ONLY) {
+    console.log(`
+\x1b[32mEmulators are up.\x1b[0m  Emulator UI: http://127.0.0.1:4000
+  Run \`yarn start:local\` in another terminal for the app. Ctrl+C stops and exports to ${EXPORT_DIR}/.
+`);
+    return;
+  }
+
   log('Starting Angular dev server (ng serve --configuration local)...');
-  start('ng serve', 'yarn', ['ng', 'serve', '--configuration', 'local'], { cwd: ROOT });
+  start('ng serve', process.execPath, [NG_BIN, 'serve', '--configuration', 'local'], { cwd: ROOT });
 
   console.log(`
 \x1b[32mOmniTask local stack is up.\x1b[0m
   App:          http://localhost:4200
   Emulator UI:  http://127.0.0.1:4000  (Auth users, Firestore data, function logs)
-  Sign in with any email/password or the fake Google popup; both are local-only.
+  Sign in with "Continue with Google": the Auth emulator shows a fake popup where
+  any email works. Accounts are local-only.
   Press Ctrl+C to stop (emulator data is saved to ${EXPORT_DIR}/).
 `);
 }

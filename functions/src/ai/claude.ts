@@ -22,7 +22,11 @@ import type Anthropic from '@anthropic-ai/sdk';
 /** Set via `firebase functions:secrets:set ANTHROPIC_API_KEY` (prod) or functions/.secret.local (emulator). */
 export const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY');
 
-/** Default model. Override with ANTHROPIC_MODEL in functions/.env (prod) or functions/.env.local (emulator). */
+/**
+ * Model used in production. To change it, edit this constant and deploy.
+ * ANTHROPIC_MODEL (read by claudeModel()) is an emulator-only override set in
+ * functions/.env.local; .env files are gitignored and never reach the CI deploy.
+ */
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 
 /**
@@ -68,6 +72,11 @@ export interface ClaudeJsonRequest {
   schema: Record<string, unknown>;
   /** Thinking depth: `low` for classification-style calls, `medium` for generation. */
   effort: ClaudeEffort;
+  /**
+   * Output ceiling for this call (thinking tokens count toward it). Size per
+   * task so a runaway response cannot bill the full default budget.
+   */
+  maxTokens: number;
 }
 
 /** True when running inside the Firebase Functions emulator. */
@@ -75,9 +84,22 @@ export function isFunctionsEmulator(): boolean {
   return process.env.FUNCTIONS_EMULATOR === 'true';
 }
 
-/** Model used for AI features: ANTHROPIC_MODEL if set, else the default. */
+/** Model used for AI features: ANTHROPIC_MODEL (emulator override) if set, else the default. */
 export function claudeModel(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_CLAUDE_MODEL;
+}
+
+let _warnedEffortDropped = false;
+/** Whether to send output_config.effort for this model; logs once when it is dropped. */
+function supportsEffort(model: string): boolean {
+  const ok = EFFORT_CAPABLE_MODELS.has(model);
+  if (!ok && !_warnedEffortDropped) {
+    _warnedEffortDropped = true;
+    console.warn(
+      `[claude] Model ${model} is not in the effort-capable list; per-task effort settings are not sent.`,
+    );
+  }
+  return ok;
 }
 
 type AnthropicModule = typeof import('@anthropic-ai/sdk');
@@ -91,9 +113,10 @@ let _clientApiKey: string | undefined;
 function getClient(apiKey: string): Anthropic {
   if (!_client || _clientApiKey !== apiKey) {
     const { Anthropic: AnthropicClient } = getSdk();
-    // Callables time out at 120s (see AI_CALLABLE_OPTIONS in index.ts). 55s x
-    // (1 + 1 retry) keeps the worst case inside that window while still
-    // retrying one 429/5xx/timeout.
+    // Budget: 55s x (1 + 1 retry) + backoff ~= 111s. The binding constraint is
+    // the web client's callable deadline, which VertexAiService sets to 120s to
+    // match timeoutSeconds in AI_CALLABLE_OPTIONS (index.ts); the Firebase
+    // default of 70s would give up before a retried request could finish.
     _client = new AnthropicClient({ apiKey, timeout: 55_000, maxRetries: 1 });
     _clientApiKey = apiKey;
   }
@@ -129,7 +152,7 @@ function toHttpsError(error: unknown, task: string): HttpsError {
   if (error instanceof sdk.NotFoundError) {
     return new HttpsError(
       'failed-precondition',
-      `The configured Claude model (${claudeModel()}) is not available to this API key. Check ANTHROPIC_MODEL.`,
+      `The configured Claude model (${claudeModel()}) is not available to this API key. Ask an admin to change the model.`,
     );
   }
   if (error instanceof sdk.RateLimitError) {
@@ -172,12 +195,12 @@ export async function generateJson<T>(request: ClaudeJsonRequest): Promise<T> {
   const model = claudeModel();
   const params: Anthropic.Beta.MessageCreateParamsNonStreaming = {
     model,
-    max_tokens: 16000,
+    max_tokens: request.maxTokens,
     system: request.system,
     messages: [{ role: 'user', content: request.prompt }],
     output_config: {
       format: { type: 'json_schema', schema: request.schema },
-      ...(EFFORT_CAPABLE_MODELS.has(model) ? { effort: request.effort } : {}),
+      ...(supportsEffort(model) ? { effort: request.effort } : {}),
     },
   };
   if (FALLBACK_CAPABLE_MODELS.has(model)) {

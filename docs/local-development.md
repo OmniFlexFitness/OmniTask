@@ -59,9 +59,11 @@ Open:
 - **Emulator UI:** <http://127.0.0.1:4000> (browse Firestore data, Auth users,
   function logs)
 
-Sign in with any email and password, or use the fake Google sign-in popup the
-Auth emulator provides. Accounts exist only in the emulator. The dashboard
-seeds sample projects for a new user on first load.
+Click **Continue with Google**. Because the app is connected to the Auth
+emulator, the popup is the emulator's fake Google sign-in: enter any email or
+auto-generate a user; no real Google account or password is involved.
+Accounts exist only in the emulator. The dashboard seeds sample projects for
+a new user on first load.
 
 Ctrl+C stops everything. Firestore and Auth data is exported to
 `.emulator-data/` (gitignored) and imported again on the next start, so your
@@ -85,8 +87,15 @@ The four AI callables (`generateSubtasks`, `suggestTaskPriority`,
 and call Claude through `functions/src/ai/claude.ts`. The same code runs
 locally and in production.
 
-- **Model:** `claude-opus-5-5` by default. Override with `ANTHROPIC_MODEL` in
-  `functions/.env.local` (local) or `functions/.env` (production).
+- **Model:** `claude-opus-5-5` (`DEFAULT_CLAUDE_MODEL` in
+  `functions/src/ai/claude.ts`). Locally you can override it with
+  `ANTHROPIC_MODEL` in `functions/.env.local`. That override does not reach
+  production: `.env` files are gitignored and the deploy runs from a clean
+  checkout, so to change the production model, edit the constant and deploy.
+- **Limits:** titles up to 300 characters, descriptions and project context up
+  to 8,000; longer input is rejected with a clear message before any Claude
+  call. Output is capped per task (4k tokens for suggestions, 8k for
+  description rewrites).
 - **Structured outputs** guarantee the JSON shape, so there is no response
   parsing to go wrong.
 - **No key:** the buttons return "AI features are not configured" instead of
@@ -103,7 +112,7 @@ real mail from the emulator, set `EMULATOR_SEND_REAL_EMAIL=true` in
 ## Running pieces separately
 
 ```bash
-yarn emulators     # emulators only (same flags as dev:local, no import)
+yarn emulators     # emulators only; imports/exports .emulator-data like dev:local
 yarn start:local   # ng serve against already-running emulators
 yarn start         # ng serve against PRODUCTION Firebase (the old default)
 cd functions && npm run build:watch
@@ -122,23 +131,32 @@ the local stack. The UI still shows them; they fail with a clear error.
   `.secret.local` only if you need to debug these flows.
 - **GitHub Issues integration**: needs the GitHub App secrets.
 - **Scheduled functions** (`scheduledGoogleTasksSync`,
-  `checkScheduledReminders`): the emulator does not fire schedules. Trigger
-  them from the Emulator UI if needed.
+  `checkScheduledReminders`): not loaded, because the Pub/Sub emulator is not
+  started (the log says `function ignored because the pubsub emulator does not
+  exist`). To exercise one, add `pubsub` to `EMULATORS` in
+  `scripts/local-dev.mjs` and publish an empty message to the topic
+  `firebase-schedule-<functionName>` on the Pub/Sub emulator, or call it from
+  `firebase functions:shell`.
 - **Mobile (Flutter) app**: not yet wired to the emulators.
 
 ## Production secret
 
 Production reads `ANTHROPIC_API_KEY` from Google Cloud Secret Manager. The
-deploy workflow seeds it from the GitHub repository secret of the same name on
-first deploy. To set or rotate it by hand:
+deploy workflow creates it from the GitHub repository secret of the same name
+when it does not exist yet, and upgrades a deploy-time `placeholder` value
+when the GitHub secret is added later. A real value already in Secret Manager
+is never overwritten by the deploy; to set or rotate it by hand:
 
 ```bash
 firebase functions:secrets:set ANTHROPIC_API_KEY --project omnitask-475422
 firebase deploy --only functions --project omnitask-475422
 ```
 
-Use a separate key for production (for example an `omnitask-prod` key on the
-`omnitask` service account) so the laptop key can be revoked independently.
+Use separate keys so each can be revoked independently: one for your laptop
+(`.secret.local`), one for production (for example `omnitask-prod` on the
+`omnitask` service account, in Secret Manager / the `ANTHROPIC_API_KEY` GitHub
+secret), and a low-limit one for CI (`ANTHROPIC_API_KEY_CI` GitHub secret,
+used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 
 ## Troubleshooting
 
@@ -148,7 +166,8 @@ Use a separate key for production (for example an `omnitask-prod` key on the
 | `spawn .../functions/node_modules/.bin/firebase-functions EACCES` | `cd functions && npm ci` (the launcher does this when it detects the problem) |
 | Port already in use (`4200`, `5001`, `8080`, `9099`, `9199`, `4000`) | Stop the other process, or change the port in both `firebase.json` and `src/environments/environment.local.ts` |
 | AI button says "not configured" | Add `ANTHROPIC_API_KEY` to `functions/.secret.local`, restart `yarn dev:local` |
-| AI button says the model is not available | Your key cannot use `claude-opus-5-5`; set `ANTHROPIC_MODEL` in `functions/.env.local` |
+| AI button says the model is not available | Your key cannot use `claude-opus-5-5`; locally set `ANTHROPIC_MODEL` in `functions/.env.local`, in production change `DEFAULT_CLAUDE_MODEL` |
+| AI button says the input is too long | Titles are capped at 300 characters and descriptions at 8,000 for AI calls; shorten the text |
 | Emulators start but the app shows production data | You ran `yarn start` instead of `yarn start:local` / `yarn dev:local` |
 | `Error adding firestore function: ... Unable to parse JSON ... upstream` | An HTTP proxy is intercepting loopback traffic. `yarn dev:local` sets `NO_PROXY=127.0.0.1,localhost` for you; set it yourself when running `yarn emulators` directly |
 | `Unable to access secret environment variables from Google Cloud Secret Manager` | A value in `functions/.secret.local` is blank. Use `placeholder` for anything you do not have |
