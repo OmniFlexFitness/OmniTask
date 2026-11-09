@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.mergeLabels = exports.planPriorityCreate = exports.planIssueTypeCreate = exports.priorityLabelFor = void 0;
+exports.priorityLabelFor = priorityLabelFor;
+exports.planIssueTypeCreate = planIssueTypeCreate;
+exports.planPriorityCreate = planPriorityCreate;
+exports.mergeLabels = mergeLabels;
 const PRIORITY_LABEL = {
     urgent: 'priority: urgent',
     high: 'priority: high',
@@ -12,7 +15,6 @@ function priorityLabelFor(priority) {
     const key = priority.toLowerCase();
     return PRIORITY_LABEL[key] ?? `priority: ${key}`;
 }
-exports.priorityLabelFor = priorityLabelFor;
 /**
  * Decide how to represent issue type on create: native `type` vs label fallback.
  */
@@ -28,7 +30,6 @@ function planIssueTypeCreate(accountType, capabilities, requestedType) {
     }
     return { type: null, labels: [] };
 }
-exports.planIssueTypeCreate = planIssueTypeCreate;
 /**
  * Decide whether Priority/Effort go through Issue Fields or label fallback.
  */
@@ -41,7 +42,6 @@ function planPriorityCreate(capabilities, priority) {
     }
     return { useIssueFields: false, priorityLabel: priorityLabelFor(priority) };
 }
-exports.planPriorityCreate = planPriorityCreate;
 /** Merge label arrays without duplicates. */
 function mergeLabels(...groups) {
     const seen = new Set();
@@ -57,5 +57,4 @@ function mergeLabels(...groups) {
     }
     return out;
 }
-exports.mergeLabels = mergeLabels;
 //# sourceMappingURL=degradation.js.map

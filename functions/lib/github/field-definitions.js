@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchFieldDefinitionCache = void 0;
+exports.fetchFieldDefinitionCache = fetchFieldDefinitionCache;
 /**
  * Org Issue Type + Issue Field definition cache (spec §6).
  * Fetched after connect and refreshed when org config webhooks fire.
@@ -21,7 +21,6 @@ async function fetchFieldDefinitionCache(installationToken, orgLogin) {
         fetchedAt: new Date().toISOString(),
     };
 }
-exports.fetchFieldDefinitionCache = fetchFieldDefinitionCache;
 async function fetchIssueTypes(token, orgLogin) {
     try {
         const res = await (0, app_1.githubRequest)(`/orgs/${orgLogin}/issue-types`, { token });

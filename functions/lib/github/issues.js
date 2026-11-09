@@ -1,6 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseIssueRef = exports.setIssueState = exports.getIssue = exports.createIssue = void 0;
+exports.createIssue = createIssue;
+exports.getIssue = getIssue;
+exports.setIssueState = setIssueState;
+exports.createIssueComment = createIssueComment;
+exports.isValidSecurityAlertUrl = isValidSecurityAlertUrl;
+exports.parseIssueRef = parseIssueRef;
 /**
  * Issue REST operations (spec §8.1, §8.7, §15). Phase 1: create, patch state,
  * patch title/body, and read a single issue.
@@ -30,19 +35,35 @@ async function createIssue(token, input) {
     const res = await (0, app_1.githubRequest)(`/repos/${input.owner}/${input.repo}/issues`, { method: 'POST', token, body });
     return res.data;
 }
-exports.createIssue = createIssue;
 async function getIssue(token, owner, repo, issueNumber) {
     const res = await (0, app_1.githubRequest)(`/repos/${owner}/${repo}/issues/${issueNumber}`, { token });
     return res.data;
 }
-exports.getIssue = getIssue;
 /** PATCH only the issue state (close/reopen) — the Phase 1 outbound diff. */
 async function setIssueState(token, owner, repo, issueNumber, state) {
     const res = await (0, app_1.githubRequest)(`/repos/${owner}/${repo}/issues/${issueNumber}`, { method: 'PATCH', token, body: { state } });
     return res.data;
 }
-exports.setIssueState = setIssueState;
 /** Parse an issue reference from a full URL or `owner/repo#number` shorthand. */
+async function createIssueComment(token, owner, repo, issueNumber, body) {
+    await (0, app_1.githubRequest)(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+        method: 'POST',
+        token,
+        body: { body },
+    });
+}
+/** GitHub security alert URLs we allow referencing from OmniTask (spec §8.6). */
+function isValidSecurityAlertUrl(url) {
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname !== 'github.com')
+            return false;
+        return /\/security\/(dependabot|advisories|code-scanning)\//.test(parsed.pathname);
+    }
+    catch {
+        return false;
+    }
+}
 function parseIssueRef(input) {
     const trimmed = input.trim();
     const urlMatch = trimmed.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/i);
@@ -55,5 +76,4 @@ function parseIssueRef(input) {
     }
     return null;
 }
-exports.parseIssueRef = parseIssueRef;
 //# sourceMappingURL=issues.js.map

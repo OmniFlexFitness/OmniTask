@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.githubWebhook = exports.syncTaskStatusToGithub = exports.retryGithubSync = exports.unlinkTaskFromGithub = exports.resolveGithubConflict = exports.linkTaskToGithub = exports.disconnectGithub = exports.refreshGithubFieldConfig = exports.updateGithubConnectionSettings = exports.getGithubConnection = exports.completeGithubAuth = exports.getGithubOAuthConfig = void 0;
+exports.githubWebhook = exports.syncTaskStatusToGithub = exports.addGithubSecurityAlertReference = exports.retryGithubSync = exports.unlinkTaskFromGithub = exports.resolveGithubConflict = exports.linkTaskToGithub = exports.disconnectGithub = exports.refreshGithubFieldConfig = exports.updateGithubConnectionSettings = exports.getGithubConnection = exports.completeGithubAuth = exports.getGithubOAuthConfig = void 0;
 /**
  * Cloud Functions entry points for the GitHub integration.
  *
@@ -28,6 +28,8 @@ const issue_fields_1 = require("./issue-fields");
 const graphql_1 = require("./graphql");
 const auth_helper_1 = require("./auth-helper");
 const issues_1 = require("./issues");
+const actors_1 = require("./actors");
+const webhook_queue_1 = require("./webhook-queue");
 const sync_logic_1 = require("./sync-logic");
 const store_1 = require("./store");
 const githubAppId = (0, params_1.defineSecret)('GITHUB_APP_ID');
@@ -77,7 +79,7 @@ function mapConnectionError(err) {
         : new https_1.HttpsError('internal', 'Unexpected error');
 }
 // --- Connection callables ---
-exports.getGithubOAuthConfig = (0, https_1.onCall)({ secrets: [githubClientId], memory: '128MiB' }, async (request) => {
+exports.getGithubOAuthConfig = (0, https_1.onCall)({ secrets: [githubClientId], memory: '256MiB' }, async (request) => {
     requireAuth(request.auth?.uid);
     const clientId = githubClientId.value();
     if (!isSecretConfigured(clientId)) {
@@ -119,7 +121,7 @@ exports.completeGithubAuth = (0, https_1.onCall)({ secrets: ALL_SECRETS, memory:
     });
     return { accountLogin: installation.accountLogin, capabilities, fieldDefinitionCache };
 });
-exports.getGithubConnection = (0, https_1.onCall)({ memory: '128MiB' }, async (request) => {
+exports.getGithubConnection = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
     requireAuth(request.auth?.uid);
     const connection = await (0, store_1.getConnection)(request.auth.uid);
     if (!connection)
@@ -135,7 +137,7 @@ exports.getGithubConnection = (0, https_1.onCall)({ memory: '128MiB' }, async (r
         createLinkedBranchOnLink: connection.createLinkedBranchOnLink ?? false,
     };
 });
-exports.updateGithubConnectionSettings = (0, https_1.onCall)({ memory: '128MiB' }, async (request) => {
+exports.updateGithubConnectionSettings = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
     requireAuth(request.auth?.uid);
     const uid = request.auth.uid;
     const connection = await (0, store_1.getConnection)(uid);
@@ -176,7 +178,7 @@ exports.refreshGithubFieldConfig = (0, https_1.onCall)({ secrets: ALL_SECRETS, m
     await (0, store_1.updateFieldDefinitionCache)(uid, cache);
     return { refreshed: true, fieldDefinitionCache: cache };
 });
-exports.disconnectGithub = (0, https_1.onCall)({ memory: '128MiB' }, async (request) => {
+exports.disconnectGithub = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
     requireAuth(request.auth?.uid);
     await (0, store_1.deleteUserToken)(request.auth.uid);
     await (0, store_1.deleteConnection)(request.auth.uid);
@@ -234,6 +236,7 @@ async function linkExisting(uid, token, data) {
         lastOutboundState: null,
     });
     await (0, store_1.recordOutboundEvent)(data.taskId, 'link_existing', 'processed', null);
+    await (0, actors_1.mirrorIssueActorsToTask)(token, data.taskId, ref.owner, ref.repo, issue.number);
     return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
 }
 async function linkCreate(uid, token, data) {
@@ -309,6 +312,7 @@ async function linkCreate(uid, token, data) {
             });
         }
         await applyPhase3Enrichment(token, connection, data, issue);
+        await (0, actors_1.mirrorIssueActorsToTask)(token, data.taskId, data.repoOwner, data.repoName, issue.number);
         await (0, store_1.recordOutboundEvent)(data.taskId, 'create_issue', 'processed', null);
         return { issueNumber: issue.number, issueUrl: issue.html_url, issueState: issue.state };
     }
@@ -397,7 +401,7 @@ exports.resolveGithubConflict = (0, https_1.onCall)({ secrets: ALL_SECRETS, memo
     });
     return { success: true, resolution };
 });
-exports.unlinkTaskFromGithub = (0, https_1.onCall)({ memory: '128MiB' }, async (request) => {
+exports.unlinkTaskFromGithub = (0, https_1.onCall)({ memory: '256MiB' }, async (request) => {
     requireAuth(request.auth?.uid);
     const taskId = request.data?.taskId;
     if (!taskId)
@@ -429,6 +433,37 @@ exports.retryGithubSync = (0, https_1.onCall)({ secrets: ALL_SECRETS, memory: '2
     catch (err) {
         mapConnectionError(err);
     }
+});
+/** Post a GitHub security alert URL as an issue comment and store it on the link (spec §8.6). */
+exports.addGithubSecurityAlertReference = (0, https_1.onCall)({ secrets: ALL_SECRETS, memory: '256MiB' }, async (request) => {
+    requireAuth(request.auth?.uid);
+    const uid = request.auth.uid;
+    const taskId = request.data?.taskId;
+    const alertUrl = request.data?.alertUrl?.trim();
+    if (!taskId || !alertUrl) {
+        throw new https_1.HttpsError('invalid-argument', 'taskId and alertUrl required');
+    }
+    if (!(0, issues_1.isValidSecurityAlertUrl)(alertUrl)) {
+        throw new https_1.HttpsError('invalid-argument', 'URL must be a GitHub Dependabot, advisory, or code scanning alert');
+    }
+    const link = await (0, store_1.getTaskLink)(taskId);
+    if (!link || link.issueNumber == null) {
+        throw new https_1.HttpsError('failed-precondition', 'Task is not linked to a GitHub issue');
+    }
+    if (link.ownerUserId !== uid) {
+        throw new https_1.HttpsError('permission-denied', 'Not your link');
+    }
+    let token;
+    try {
+        ({ token } = await (0, auth_helper_1.getInstallationTokenForUser)(uid, creds()));
+    }
+    catch (err) {
+        mapConnectionError(err);
+    }
+    const commentBody = `Security alert reference from OmniTask:\n${alertUrl}`;
+    await (0, issues_1.createIssueComment)(token, link.repoOwner, link.repoName, link.issueNumber, commentBody);
+    await (0, store_1.updateTaskLink)(taskId, { securityAlertUrl: alertUrl });
+    return { success: true, securityAlertUrl: alertUrl };
 });
 // --- Outbound trigger: task status → issue state ---
 exports.syncTaskStatusToGithub = (0, firestore_1.onDocumentWritten)({ document: 'tasks/{taskId}', secrets: ALL_SECRETS, memory: '256MiB' }, async (event) => {
@@ -488,18 +523,20 @@ exports.githubWebhook = (0, https_1.onRequest)({ secrets: [githubWebhookSecret],
     }
     res.status(202).send('accepted');
     try {
-        if ((0, inbound_webhooks_1.shouldRefreshFieldCache)(eventType)) {
-            await refreshFieldCacheForWebhook(req.body);
-        }
-        else if ((0, inbound_webhooks_1.isRelationshipWebhook)(eventType, req.body.action ?? '')) {
-            await handleRelationshipEvent(eventType, req.body);
-        }
-        else if (eventType === 'pull_request') {
-            await handlePullRequestEvent(req.body);
-        }
-        else if (eventType === 'issues') {
-            await handleIssuesEvent(req.body);
-        }
+        await (0, webhook_queue_1.processGithubWebhookJob)(async () => {
+            if ((0, inbound_webhooks_1.shouldRefreshFieldCache)(eventType)) {
+                await refreshFieldCacheForWebhook(req.body);
+            }
+            else if ((0, inbound_webhooks_1.isRelationshipWebhook)(eventType, req.body.action ?? '')) {
+                await handleRelationshipEvent(eventType, req.body);
+            }
+            else if (eventType === 'pull_request') {
+                await handlePullRequestEvent(req.body);
+            }
+            else if (eventType === 'issues') {
+                await handleIssuesEvent(req.body);
+            }
+        });
         await (0, store_1.finishDelivery)(deliveryId, { status: 'processed' });
     }
     catch (err) {
@@ -545,10 +582,20 @@ async function handleIssuesEvent(payload) {
     if (action === 'assigned' || action === 'unassigned') {
         const login = (0, inbound_webhooks_1.extractAssigneeLogin)(payload);
         if (login) {
-            await (0, store_1.upsertTaskActor)(link.taskId, login, null);
+            await (0, store_1.upsertTaskActor)(link.taskId, login, null, 'assignee');
         }
         else if (payload.assignee?.login) {
             await (0, store_1.deleteTaskActors)(link.taskId, payload.assignee.login);
+        }
+        return;
+    }
+    if (action === 'edited') {
+        try {
+            const { token } = await (0, auth_helper_1.getInstallationTokenForUser)(link.ownerUserId, creds());
+            await (0, actors_1.mirrorIssueActorsToTask)(token, link.taskId, owner, repo, issue.number);
+        }
+        catch {
+            // Best-effort participant refresh; webhook delivery already accepted.
         }
         return;
     }
