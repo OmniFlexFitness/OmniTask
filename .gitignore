@@ -53,11 +53,6 @@ Thumbs.db
 .secret.local
 .emulator-data/
 
-# functions/node_modules is installed by `npm ci` (CI, deploy, and
-# scripts/local-dev.mjs). Legacy copies are still tracked; this stops new
-# installs from adding more.
-/functions/node_modules/
-
 # Service account keys and env variables (sensitive - never commit)
 .env*
 *-key.json

@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findFieldByName = findFieldByName;
-exports.priorityOptionId = priorityOptionId;
-exports.applyPriorityFieldValue = applyPriorityFieldValue;
+exports.applyPriorityFieldValue = exports.priorityOptionId = exports.findFieldByName = void 0;
 /**
  * Org Issue Field writes after issue create (Phase 2, spec §8).
  * Best-effort — label fallbacks from degradation.ts already applied on failure.
@@ -13,12 +11,14 @@ function findFieldByName(cache, name) {
     const needle = name.trim().toLowerCase();
     return cache.issueFields.find((f) => f.name.trim().toLowerCase() === needle) ?? null;
 }
+exports.findFieldByName = findFieldByName;
 /** Map OmniTask priority to a field option id when names align. */
 function priorityOptionId(field, priority) {
     const needle = priority.trim().toLowerCase();
     const match = field.options.find((o) => o.name.trim().toLowerCase() === needle);
     return match?.id ?? null;
 }
+exports.priorityOptionId = priorityOptionId;
 /**
  * Set Priority on an issue via org Issue Fields API when capabilities allow.
  * Silently no-ops when the field or option is missing.
@@ -47,4 +47,5 @@ async function applyPriorityFieldValue(token, owner, repo, issueNumber, cache, p
         throw err;
     }
 }
+exports.applyPriorityFieldValue = applyPriorityFieldValue;
 //# sourceMappingURL=issue-fields.js.map

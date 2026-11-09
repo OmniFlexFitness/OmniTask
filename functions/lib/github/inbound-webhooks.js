@@ -1,13 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shouldRefreshFieldCache = shouldRefreshFieldCache;
-exports.isExtendedIssuesAction = isExtendedIssuesAction;
-exports.extractAssigneeLogin = extractAssigneeLogin;
-exports.extractMilestoneTitle = extractMilestoneTitle;
-exports.isRelationshipWebhook = isRelationshipWebhook;
-exports.isRelationshipAddAction = isRelationshipAddAction;
-exports.extractRelationshipFromPayload = extractRelationshipFromPayload;
-exports.relationshipDocId = relationshipDocId;
+exports.relationshipDocId = exports.extractRelationshipFromPayload = exports.isRelationshipAddAction = exports.isRelationshipWebhook = exports.extractMilestoneTitle = exports.extractAssigneeLogin = exports.isExtendedIssuesAction = exports.shouldRefreshFieldCache = void 0;
 /** Webhook events that should trigger a field-definition cache refresh. */
 const CACHE_REFRESH_EVENTS = new Set([
     'issue_field',
@@ -28,19 +21,23 @@ const EXTENDED_ISSUE_ACTIONS = new Set([
 function shouldRefreshFieldCache(eventType) {
     return CACHE_REFRESH_EVENTS.has(eventType);
 }
+exports.shouldRefreshFieldCache = shouldRefreshFieldCache;
 function isExtendedIssuesAction(action) {
     return EXTENDED_ISSUE_ACTIONS.has(action);
 }
+exports.isExtendedIssuesAction = isExtendedIssuesAction;
 function extractAssigneeLogin(payload) {
     if (payload.action === 'unassigned')
         return null;
     return payload.assignee?.login ?? null;
 }
+exports.extractAssigneeLogin = extractAssigneeLogin;
 function extractMilestoneTitle(payload) {
     if (payload.action === 'demilestoned')
         return null;
     return payload.milestone?.title ?? null;
 }
+exports.extractMilestoneTitle = extractMilestoneTitle;
 /** Sub-issue and dependency events share the issues envelope in many cases. */
 function isRelationshipWebhook(eventType, action) {
     if (eventType === 'sub_issues')
@@ -49,6 +46,7 @@ function isRelationshipWebhook(eventType, action) {
         return true;
     return eventType === 'issues' && (action === 'parent_issue_added' || action === 'parent_issue_removed');
 }
+exports.isRelationshipWebhook = isRelationshipWebhook;
 /** Whether this relationship event adds (vs removes) a link. */
 function isRelationshipAddAction(eventType, action) {
     if (eventType === 'sub_issues')
@@ -57,6 +55,7 @@ function isRelationshipAddAction(eventType, action) {
         return action === 'added' || action === 'blocked_by_added';
     return action === 'parent_issue_added';
 }
+exports.isRelationshipAddAction = isRelationshipAddAction;
 function extractRelationshipFromPayload(eventType, payload) {
     const owner = payload.repository?.owner.login ?? payload.issue?.repository?.owner?.login;
     const repo = payload.repository?.name ?? payload.issue?.repository?.name;
@@ -91,7 +90,9 @@ function extractRelationshipFromPayload(eventType, payload) {
     }
     return null;
 }
+exports.extractRelationshipFromPayload = extractRelationshipFromPayload;
 function relationshipDocId(taskId, kind, owner, repo, issueNumber) {
     return `${taskId}__${kind}__${owner}__${repo}__${issueNumber}`;
 }
+exports.relationshipDocId = relationshipDocId;
 //# sourceMappingURL=inbound-webhooks.js.map

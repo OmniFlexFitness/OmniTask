@@ -1,9 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.githubGraphql = githubGraphql;
-exports.addIssueToProjectV2 = addIssueToProjectV2;
-exports.createLinkedBranch = createLinkedBranch;
-exports.suggestLinkedBranchName = suggestLinkedBranchName;
+exports.suggestLinkedBranchName = exports.createLinkedBranch = exports.addIssueToProjectV2 = exports.githubGraphql = void 0;
 /**
  * GitHub GraphQL helpers (Phase 3 scaffold — Projects v2, linked branches).
  * Uses the same installation token as REST; no @octokit/graphql dependency.
@@ -23,6 +20,7 @@ async function githubGraphql(token, query, variables) {
     }
     return res.data.data;
 }
+exports.githubGraphql = githubGraphql;
 /** Add an issue to an org Project v2 board (Phase 3). */
 async function addIssueToProjectV2(token, projectNodeId, contentNodeId) {
     const data = await githubGraphql(token, `mutation($projectId: ID!, $contentId: ID!) {
@@ -32,6 +30,7 @@ async function addIssueToProjectV2(token, projectNodeId, contentNodeId) {
     }`, { projectId: projectNodeId, contentId: contentNodeId });
     return data.addProjectV2ItemById.item?.id ?? null;
 }
+exports.addIssueToProjectV2 = addIssueToProjectV2;
 /** Create a linked branch for an issue (Phase 3 — requires Contents RW). */
 async function createLinkedBranch(token, issueNodeId, branchName) {
     const data = await githubGraphql(token, `mutation($issueId: ID!, $name: String!) {
@@ -41,6 +40,7 @@ async function createLinkedBranch(token, issueNodeId, branchName) {
     }`, { issueId: issueNodeId, name: branchName });
     return data.createLinkedBranch.linkedBranch?.ref.name ?? null;
 }
+exports.createLinkedBranch = createLinkedBranch;
 /** Safe branch name for GitHub linked-branch mutation. */
 function suggestLinkedBranchName(taskId, title) {
     const slug = title
@@ -51,4 +51,5 @@ function suggestLinkedBranchName(taskId, title) {
     const shortId = taskId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
     return slug ? `omnitask/${shortId}-${slug}` : `omnitask/${shortId || 'task'}`;
 }
+exports.suggestLinkedBranchName = suggestLinkedBranchName;
 //# sourceMappingURL=graphql.js.map

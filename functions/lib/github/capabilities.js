@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.detectCapabilities = detectCapabilities;
+exports.detectCapabilities = void 0;
 /**
  * Capability detection (spec §6). Phase 1 probes and caches; the linking UI
  * reads only from the cached result so it renders instantly and never offers
@@ -24,6 +24,7 @@ async function detectCapabilities(installationToken, accountLogin, accountType) 
     ]);
     return { issueTypes, issueFields, projects };
 }
+exports.detectCapabilities = detectCapabilities;
 async function probe(fn) {
     try {
         await fn();

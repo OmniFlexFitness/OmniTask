@@ -23,10 +23,11 @@ first-time package downloads; nothing else touches production.
   - `deploy-cloudrun.yml` pre-creates placeholder secrets because
     `firebase deploy --non-interactive` aborts on any bound secret missing from
     Secret Manager. A new `ANTHROPIC_API_KEY` secret must be added to that list.
-  - `functions/node_modules/` is git-tracked (legacy, committed from Windows, so
-    `.bin` entries lack the executable bit and the Functions emulator fails with
-    `EACCES` on macOS/Linux). Untracking it is a separate follow-up; this change
-    stops new installs from being added and has the launcher run `npm ci`.
+  - `functions/node_modules/` was git-tracked (legacy, committed from Windows, so
+    `.bin` entries lacked the executable bit and the Functions emulator failed
+    with `EACCES` on macOS/Linux). #212 untracked it; every environment now runs
+    `cd functions && npm ci`, and the launcher does so when the tree is missing
+    or stale.
 - **Email**: `sendTaskAssignmentEmail` fires on every task write and sends real
   Gmail SMTP mail (always including the admin inbox). Unsafe to run locally.
 - **No `ToastService`** exists despite the docs; `DialogService.alert()` is the
@@ -77,7 +78,7 @@ first-time package downloads; nothing else touches production.
 | `angular.json` | `local` build + serve configurations |
 | `package.json` | `dev:local`, `emulators`, `start:local` scripts |
 | `scripts/local-dev.mjs` | New launcher |
-| `.gitignore` | `.secret.local`, `.emulator-data/`, `functions/node_modules/` |
+| `.gitignore` | `.secret.local`, `.emulator-data/` |
 | `.github/workflows/deploy-cloudrun.yml` | Seed `ANTHROPIC_API_KEY` secret |
 | `.github/workflows/pr-validation.yml` | Functions unit tests + AI smoke test |
 | `docs/local-development.md`, `README.md`, `GEMINI.md`, `AGENTS.md` | Docs |
@@ -85,7 +86,7 @@ first-time package downloads; nothing else touches production.
 ## Out of scope (documented as "not available locally")
 
 Firebase Extensions, Google OAuth-backed features, GitHub Issues integration,
-scheduled functions, mobile emulator wiring, untracking `functions/node_modules`.
+scheduled functions, mobile emulator wiring.
 
 ## Test plan
 

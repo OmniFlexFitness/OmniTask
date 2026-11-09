@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchIssueActorsFromGraphql = fetchIssueActorsFromGraphql;
-exports.mirrorIssueActorsToTask = mirrorIssueActorsToTask;
+exports.mirrorIssueActorsToTask = exports.fetchIssueActorsFromGraphql = void 0;
 /**
  * Mirror GitHub issue assignees and participants onto task_github_actors.
  */
@@ -35,8 +34,10 @@ async function fetchIssueActorsFromGraphql(token, owner, repo, issueNumber) {
     }
     return actors;
 }
+exports.fetchIssueActorsFromGraphql = fetchIssueActorsFromGraphql;
 async function mirrorIssueActorsToTask(token, taskId, owner, repo, issueNumber) {
     const actors = await fetchIssueActorsFromGraphql(token, owner, repo, issueNumber);
     await (0, store_1.replaceTaskActorsForIssue)(taskId, actors);
 }
+exports.mirrorIssueActorsToTask = mirrorIssueActorsToTask;
 //# sourceMappingURL=actors.js.map

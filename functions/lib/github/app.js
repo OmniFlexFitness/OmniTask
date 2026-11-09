@@ -1,12 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GithubApiError = void 0;
-exports.createAppJwt = createAppJwt;
-exports.githubRequest = githubRequest;
-exports.createInstallationToken = createInstallationToken;
-exports.exchangeUserCode = exchangeUserCode;
-exports.refreshUserToken = refreshUserToken;
-exports.findUserInstallation = findUserInstallation;
+exports.findUserInstallation = exports.refreshUserToken = exports.exchangeUserCode = exports.createInstallationToken = exports.GithubApiError = exports.githubRequest = exports.createAppJwt = void 0;
 /**
  * GitHub App authentication (spec §4).
  *
@@ -47,6 +41,7 @@ function createAppJwt(appId, privateKeyPem, now = Date.now()) {
     const signature = base64Url(signer.sign(privateKeyPem));
     return `${signingInput}.${signature}`;
 }
+exports.createAppJwt = createAppJwt;
 /** Thin typed wrapper over fetch against the GitHub REST API. */
 async function githubRequest(path, init) {
     const url = path.startsWith('http') ? path : `${GITHUB_API}${path}`;
@@ -75,6 +70,7 @@ async function githubRequest(path, init) {
     }
     return { status: res.status, data, headers: res.headers };
 }
+exports.githubRequest = githubRequest;
 class GithubApiError extends Error {
     constructor(message, status, headers) {
         super(message);
@@ -93,6 +89,7 @@ async function createInstallationToken(appJwt, installationId) {
     const res = await githubRequest(`/app/installations/${installationId}/access_tokens`, { method: 'POST', token: appJwt });
     return res.data.token;
 }
+exports.createInstallationToken = createInstallationToken;
 async function postOAuth(params) {
     const res = await fetch(GITHUB_OAUTH, {
         method: 'POST',
@@ -118,6 +115,7 @@ function exchangeUserCode(clientId, clientSecret, code, redirectUri) {
         redirect_uri: redirectUri,
     });
 }
+exports.exchangeUserCode = exchangeUserCode;
 /** Refresh a user-to-server token from a stored refresh token. */
 function refreshUserToken(clientId, clientSecret, refreshToken) {
     return postOAuth({
@@ -127,6 +125,7 @@ function refreshUserToken(clientId, clientSecret, refreshToken) {
         refresh_token: refreshToken,
     });
 }
+exports.refreshUserToken = refreshUserToken;
 /**
  * Find the installation accessible to a user token. Phase 1 assumes a single
  * installation per user; if several exist we take the first and let the user
@@ -143,4 +142,5 @@ async function findUserInstallation(userToken) {
         accountType: first.account.type === 'Organization' ? 'Organization' : 'User',
     };
 }
+exports.findUserInstallation = findUserInstallation;
 //# sourceMappingURL=app.js.map

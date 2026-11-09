@@ -1,9 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_CLAUDE_MODEL = exports.anthropicApiKey = void 0;
-exports.isFunctionsEmulator = isFunctionsEmulator;
-exports.claudeModel = claudeModel;
-exports.generateJson = generateJson;
+exports.generateJson = exports.claudeModel = exports.isFunctionsEmulator = exports.DEFAULT_CLAUDE_MODEL = exports.anthropicApiKey = void 0;
 /**
  * Claude (Anthropic API) access for OmniTask's AI task features.
  *
@@ -57,10 +54,12 @@ const PLACEHOLDER_SECRET_VALUE = 'placeholder';
 function isFunctionsEmulator() {
     return process.env.FUNCTIONS_EMULATOR === 'true';
 }
+exports.isFunctionsEmulator = isFunctionsEmulator;
 /** Model used for AI features: ANTHROPIC_MODEL if set, else the default. */
 function claudeModel() {
     return process.env.ANTHROPIC_MODEL?.trim() || exports.DEFAULT_CLAUDE_MODEL;
 }
+exports.claudeModel = claudeModel;
 let _sdk;
 function getSdk() {
     return (_sdk ?? (_sdk = require('@anthropic-ai/sdk')));
@@ -168,4 +167,5 @@ async function generateJson(request) {
         throw new https_1.HttpsError('internal', 'Claude returned an unreadable response. Try again.');
     }
 }
+exports.generateJson = generateJson;
 //# sourceMappingURL=claude.js.map
