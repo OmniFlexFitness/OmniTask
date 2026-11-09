@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Task, Project } from '../../../core/models/domain.model';
 import { VertexAiService } from '../../../core/services/vertex-ai.service';
 import { TaskService } from '../../../core/services/task.service';
+import { DialogService } from '../../../core/services/dialog.service';
+import { aiErrorMessage } from '../../../core/services/ai-error.util';
 
 @Component({
   selector: 'app-task-ai-actions',
@@ -14,6 +16,7 @@ import { TaskService } from '../../../core/services/task.service';
 export class TaskAiActionsComponent {
   private vertexAiService = inject(VertexAiService);
   private taskService = inject(TaskService);
+  private dialogService = inject(DialogService);
 
   type = input.required<'generateSubtasks' | 'enhanceDescription'>();
   task = input.required<Task | null>();
@@ -72,6 +75,10 @@ export class TaskAiActionsComponent {
       }
     } catch (err) {
       console.error(`AI ${this.type()} failed:`, err);
+      // Surface the failure; the backend already phrases these for end users.
+      this.dialogService
+        .alert(aiErrorMessage(err), 'AI Assist')
+        .catch((dialogErr) => console.error('Failed to show AI error dialog:', dialogErr));
     } finally {
       this.loading.set(false);
     }

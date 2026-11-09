@@ -10,6 +10,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subtask } from '../../../core/models/domain.model';
 import { VertexAiService } from '../../../core/services/vertex-ai.service';
+import { DialogService } from '../../../core/services/dialog.service';
+import { aiErrorMessage } from '../../../core/services/ai-error.util';
 
 @Component({
   selector: 'app-task-ai-suggestions',
@@ -20,6 +22,7 @@ import { VertexAiService } from '../../../core/services/vertex-ai.service';
 })
 export class TaskAiSuggestionsComponent {
   private vertexAiService = inject(VertexAiService);
+  private dialogService = inject(DialogService);
 
   type = input.required<'priority' | 'dueDate' | 'subtasks'>();
   disabled = input<boolean>(false);
@@ -62,6 +65,10 @@ export class TaskAiSuggestionsComponent {
       }
     } catch (err) {
       console.error('Failed AI suggestion:', err);
+      // Surface the failure; the backend already phrases these for end users.
+      this.dialogService
+        .alert(aiErrorMessage(err), 'AI Assist')
+        .catch((dialogErr) => console.error('Failed to show AI error dialog:', dialogErr));
     } finally {
       this.loading.set(false);
     }
