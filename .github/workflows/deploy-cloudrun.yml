@@ -131,15 +131,30 @@ jobs:
         # yet so the deploy proceeds. Set real values later (without code
         # changes) via: firebase functions:secrets:set <NAME> --project <id>.
         # Existing secrets are never overwritten — the describe check skips them.
+        #
+        # ANTHROPIC_API_KEY (Claude-powered AI task features) is seeded from the
+        # GitHub repository secret of the same name when it is set, so the AI
+        # callables work right after the first deploy; otherwise it gets the
+        # same placeholder and the callables return "AI features are not
+        # configured" until the secret is set.
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           for SECRET in \
             GITHUB_APP_ID \
             GITHUB_APP_PRIVATE_KEY \
             GITHUB_CLIENT_ID \
             GITHUB_CLIENT_SECRET \
-            GITHUB_WEBHOOK_SECRET; do
+            GITHUB_WEBHOOK_SECRET \
+            ANTHROPIC_API_KEY; do
             if gcloud secrets describe "$SECRET" --project "${{ env.PROJECT_ID }}" >/dev/null 2>&1; then
               echo "Secret $SECRET already exists; leaving it untouched."
+            elif [ "$SECRET" = "ANTHROPIC_API_KEY" ] && [ -n "$ANTHROPIC_API_KEY" ]; then
+              echo "Creating $SECRET from the GitHub repository secret"
+              printf '%s' "$ANTHROPIC_API_KEY" | gcloud secrets create "$SECRET" \
+                --data-file=- \
+                --replication-policy=automatic \
+                --project "${{ env.PROJECT_ID }}"
             else
               echo "Creating placeholder for missing secret: $SECRET"
               printf 'placeholder' | gcloud secrets create "$SECRET" \

@@ -292,9 +292,13 @@ interface User {
 
 ### Start Development
 ```bash
-npm install
-ng serve
-# http://localhost:4200
+yarn install
+yarn dev:local      # emulators + functions + ng serve, fully local
+# http://localhost:4200  (Emulator UI: http://127.0.0.1:4000)
+# Add ANTHROPIC_API_KEY to functions/.secret.local for the AI features.
+# See docs/local-development.md
+
+ng serve            # against PRODUCTION Firebase
 ```
 
 ### Build for Production
@@ -310,5 +314,11 @@ git push origin live
 
 ### Firebase Emulators
 ```bash
-firebase emulators:start
+yarn emulators   # auth, firestore, functions, storage under project demo-omnitask
 ```
+
+### AI Features (Claude)
+The four AI callables (`generateSubtasks`, `suggestTaskPriority`, `suggestDueDate`,
+`enhanceTaskDescription`) call the Claude API through `functions/src/ai/claude.ts`.
+Model: `claude-opus-5-5` (override with `ANTHROPIC_MODEL`). Secret: `ANTHROPIC_API_KEY`
+(Secret Manager in production, `functions/.secret.local` in the emulator).

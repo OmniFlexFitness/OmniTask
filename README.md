@@ -6,13 +6,28 @@ Contributing guidelines: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development server
 
-To start a local development server, run:
+### Fully local (recommended)
+
+Runs the app, Firebase Auth, Firestore, Storage and Cloud Functions on your
+laptop against the Firebase Emulator Suite. Nothing touches production. The
+AI features use the Claude API with your own key.
+
+```bash
+yarn install
+yarn dev:local
+```
+
+Then add your Anthropic API key to `functions/.secret.local` (created on first
+run) and restart. Full guide, prerequisites (Node 20+, Java 21+) and
+troubleshooting: [docs/local-development.md](docs/local-development.md).
+
+### Against production Firebase
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files. This talks to the **production** Firebase project; prefer `yarn dev:local` for day-to-day work.
 
 ## Code scaffolding
 
@@ -90,6 +105,8 @@ OmniTask leverages Firebase Extensions to outsource complex storage, media, and 
 - **`storage-resize-images`**: Auto-optimizes uploaded avatar and cover images.
 - **`googlecloud/speech-to-text`** & **`extract-image-text`**: Transcribes audio notes and whiteboards via Google AI APIs.
 - **`firestore-multimodal-genai`**: Powers auto-tagging, task summaries, and generative chat features directly against the Firestore history.
+
+The in-app AI task features (generate subtasks, suggest priority and due date, enhance description) do **not** go through an extension: they are Cloud Functions in `functions/src/index.ts` that call the Claude API via `functions/src/ai/claude.ts`, keyed by the `ANTHROPIC_API_KEY` secret. The same code runs locally against the emulators.
 - **`firestore-vector-search`**: Uses Vertex AI embeddings to provide semantic search functionality without needing third-party search engines like Algolia.
 
 These extensions are defined in `firebase.json` and deploy automatically via the GitHub Actions `live` workflow. Their API keys and configuration secrets are managed securely via **Google Cloud Secret Manager**.
