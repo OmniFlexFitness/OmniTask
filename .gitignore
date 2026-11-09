@@ -92,3 +92,6 @@ mobile/android/app/google-services.json
 mobile/android/app/upload-keystore.jks
 mobile/ios/Runner/GoogleService-Info.plist
 mobile/lib/firebase_options.dart
+
+# Firebase Functions vendored deps: never tracked; every environment runs `cd functions && npm ci`
+/functions/node_modules/
