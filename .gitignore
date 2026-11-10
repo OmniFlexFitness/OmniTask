@@ -55,6 +55,12 @@ Thumbs.db
 # Working folder of an emulator export; left behind when an export fails. It
 # holds local Auth and Firestore data, so it must never be committed.
 firebase-export-*/
+# Written by scripts/local-dev.mjs for one run and deleted when it stops: the
+# ports in use, and, when Windows had reserved one of the usual ports, the
+# Firebase config and the Angular environment that carry the replacement.
+/.local-dev-ports.json
+/.local-dev-firebase.json
+/src/environments/environment.local-remapped.ts
 
 # Service account keys and env variables (sensitive - never commit)
 .env*

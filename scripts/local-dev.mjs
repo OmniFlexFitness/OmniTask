@@ -15,6 +15,12 @@
  *      .emulator-data/
  *   5. `ng serve --configuration local` (points the app at the emulators)
  *
+ * Before any of that the ports of the stack are tested. Windows reserves
+ * blocks of ports for Hyper-V, WSL and Docker, different ones after every
+ * boot, and a port inside such a block cannot be opened although nothing
+ * uses it. A port like that is replaced for this run (see "Ports" below);
+ * with every port free the stack runs exactly as configured.
+ *
  * Ctrl+C stops everything, at any step; the emulators export their data on exit.
  * The Build Console (scripts/launch-console.mjs) starts this script with an
  * IPC channel and stops it with a { type: 'shutdown' } message instead.
@@ -33,9 +39,10 @@ import {
   statSync,
   accessSync,
   constants,
+  writeFileSync,
 } from 'node:fs';
 import { request as httpRequest } from 'node:http';
-import { connect as netConnect } from 'node:net';
+import { connect as netConnect, createServer } from 'node:net';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,10 +68,11 @@ const EMULATORS = 'auth,firestore,functions,storage';
 const EMULATOR_DOWNLOADS = ['firestore', 'storage', 'ui'];
 /** Firebase CLI version used when no global `firebase` binary is installed. */
 const FIREBASE_TOOLS_SPEC = 'firebase-tools@15';
-/** Emulator hub (fixed port from firebase.json defaults) used to detect readiness. */
+/**
+ * Emulator hub: lists the running emulators (used to detect readiness) and
+ * writes exports. Its port is `ports.hub`, see "Ports" below.
+ */
 const EMULATOR_HUB_HOST = '127.0.0.1';
-const EMULATOR_HUB_PORT = 4400;
-const EMULATOR_HUB_URL = `http://${EMULATOR_HUB_HOST}:${EMULATOR_HUB_PORT}/emulators`;
 /** Hub endpoint that writes an export while the emulators keep running. */
 const EMULATOR_HUB_EXPORT_PATH = '/_admin/export';
 const EXPORT_DIR = '.emulator-data';
@@ -99,6 +107,12 @@ const stepChildren = new WeakSet();
 let shuttingDown = false;
 /** True once `emulators:start` was spawned, i.e. there may be data worth exporting. */
 let emulatorsStarted = false;
+/**
+ * The ports this run uses, by name (see STACK_PORTS), plus `remapped`: the
+ * names whose port is not the configured one. Set by preparePorts() before
+ * anything is started.
+ */
+let ports = null;
 
 const log = (msg) => console.log(`\x1b[36m[dev:local]\x1b[0m ${msg}`);
 const warn = (msg) => console.warn(`\x1b[33m[dev:local]\x1b[0m ${msg}`);
@@ -272,7 +286,7 @@ function exportViaHub(timeoutMs = HUB_EXPORT_TIMEOUT_MS) {
     const req = httpRequest(
       {
         host: EMULATOR_HUB_HOST,
-        port: EMULATOR_HUB_PORT,
+        port: ports.hub,
         path: EMULATOR_HUB_EXPORT_PATH,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
@@ -308,7 +322,7 @@ function exportViaHub(timeoutMs = HUB_EXPORT_TIMEOUT_MS) {
  */
 function hubPortClosed() {
   return new Promise((done) => {
-    const socket = netConnect({ host: EMULATOR_HUB_HOST, port: EMULATOR_HUB_PORT });
+    const socket = netConnect({ host: EMULATOR_HUB_HOST, port: ports.hub });
     const finish = (closed) => {
       socket.destroy();
       done(closed);
@@ -404,6 +418,344 @@ if (process.send) {
   // unhandled EPIPE would end this process before the children are stopped.
   process.stdout.on('error', () => {});
   process.stderr.on('error', () => {});
+}
+
+// ---------------------------------------------------------------------------
+// Ports
+//
+// Every port the stack opens at a fixed number is tested before anything is
+// started, because on Windows a port can be unusable without being in use:
+// Hyper-V, WSL and Docker reserve blocks of ports at boot (different blocks
+// every time, so no fixed number is safe), and opening a port inside a block
+// fails with "access denied" although nothing listens there. The Firebase CLI
+// then stops with "Port 9099 is not open on 127.0.0.1".
+//
+// A port in that state is replaced by the next usable one, for this run only:
+// the emulators get a generated copy of firebase.json, the web app a
+// generated environment file. A port that another program really uses is not
+// replaced; that is reported and nothing is started, so that a second stack
+// never comes up next to a first one.
+// ---------------------------------------------------------------------------
+
+/** Port of `ng serve`; the serve options in angular.json name the same number. */
+const APP_PORT = 4200;
+
+/**
+ * The ports the stack opens at a fixed number, in the order they are tested
+ * and reported. The number comes from the "emulators" block of firebase.json;
+ * `fallback` is the Firebase CLI's own default, for a port firebase.json does
+ * not name (it never names the hub). `label` is what a message calls the
+ * port. `client` marks the ports the web app connects to.
+ */
+const STACK_PORTS = [
+  { name: 'app', label: 'app', fallback: APP_PORT },
+  { name: 'auth', label: 'sign-in', fallback: 9099, client: true },
+  { name: 'firestore', label: 'database', fallback: 8080, client: true },
+  { name: 'functions', label: 'functions', fallback: 5001, client: true },
+  { name: 'storage', label: 'file storage', fallback: 9199, client: true },
+  { name: 'ui', label: 'Emulator UI', fallback: 4000 },
+  { name: 'hub', label: 'emulator hub', fallback: 4400 },
+];
+
+/**
+ * Where the Firebase CLI starts looking for the ports it chooses by itself:
+ * logging, the Firestore websocket, Eventarc and Cloud Tasks (firebase-tools
+ * 15, lib/emulator/constants.js and controller.js). It moves up from these
+ * numbers until a port can be opened, so they need no help here. They matter
+ * for one reason: a replacement port must not be one the CLI is about to
+ * choose, because the CLI moves an emulator whose port is already taken up to
+ * the next one without saying so, away from where the app looks for it.
+ */
+const CLI_CHOSEN_PORTS = [4500, 9150, 9299, 9499];
+
+/** All emulator ports are opened on this address (firebase.json "host"). */
+const LOOPBACK = '127.0.0.1';
+
+/**
+ * How long a connection test waits for an answer. A listening loopback port
+ * accepts at once; the wait only matters for a port nothing listens on, which
+ * Windows takes about two seconds to refuse.
+ */
+const PORT_ACCEPT_TIMEOUT_MS = 1000;
+
+/** The effective ports of this run, for the Build Console and for anyone who wants to look. */
+const PORTS_FILE = '.local-dev-ports.json';
+/**
+ * Copy of firebase.json with the replaced ports. It has to sit next to
+ * firebase.json: the CLI resolves the rules files and functions/ relative to
+ * the folder of its config file.
+ */
+const REMAPPED_FIREBASE_CONFIG = '.local-dev-firebase.json';
+/** Angular configuration (angular.json) that builds the app with the file below. */
+const REMAPPED_CONFIGURATION = 'local-remapped';
+const REMAPPED_ENVIRONMENT = 'src/environments/environment.local-remapped.ts';
+/** Everything this script generates for a run; none of it is kept or committed. */
+const GENERATED_FILES = [PORTS_FILE, REMAPPED_FIREBASE_CONFIG, REMAPPED_ENVIRONMENT];
+
+/** True once this run wrote its generated files, i.e. they are ours to delete. */
+let ownsGeneratedFiles = false;
+
+/**
+ * The process that wrote the ports file, when the file names one that is
+ * still alive and is not us. Two starts close together would otherwise fight
+ * over the generated files: the second deletes what the first is using.
+ */
+function otherOwnerPid() {
+  try {
+    const pid = JSON.parse(readFileSync(join(ROOT, PORTS_FILE), 'utf8'))?.pid;
+    if (!Number.isInteger(pid) || pid <= 0 || pid === process.pid) return null;
+    process.kill(pid, 0); // throws when there is no such process
+    return pid;
+  } catch {
+    return null;
+  }
+}
+
+function removeGeneratedFiles({ atExit = false } = {}) {
+  for (const file of GENERATED_FILES) {
+    // A second terminal may be serving the app from the generated environment
+    // file (the command printed after "Emulators are up."). Deleting it when
+    // the emulators stop breaks that dev server until it is restarted, so a
+    // backend-only run leaves it; it is gitignored, unused by every other
+    // configuration, and removed or rewritten by the next start.
+    if (atExit && EMULATORS_ONLY && file === REMAPPED_ENVIRONMENT) continue;
+    try {
+      rmSync(join(ROOT, file), { force: true });
+    } catch {
+      // Still open somewhere (Windows): the next start writes it again.
+    }
+  }
+}
+
+// Runs for every way this process ends by itself (process.exit in shutdown(),
+// an uncaught error). After a kill the files stay, which is why the next
+// start does not trust them and writes its own.
+process.on('exit', () => {
+  // Only what this run wrote: if another run has taken the files over since,
+  // they are its to delete.
+  if (ownsGeneratedFiles && !otherOwnerPid()) removeGeneratedFiles({ atExit: true });
+});
+
+/** True when a TCP server can be opened on host:port right now. It is closed again at once. */
+function canBind(host, port) {
+  return new Promise((done) => {
+    const server = createServer();
+    server.once('error', () => done(false));
+    server.listen({ host, port, exclusive: true }, () => server.close(() => done(true)));
+  });
+}
+
+/** True when something accepts a TCP connection on host:port. */
+function accepts(host, port) {
+  return new Promise((done) => {
+    const socket = netConnect({ host, port });
+    const finish = (accepted) => {
+      socket.destroy();
+      done(accepted);
+    };
+    socket.setTimeout(PORT_ACCEPT_TIMEOUT_MS, () => finish(false));
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+  });
+}
+
+const canBindAll = async (hosts, port) =>
+  (await Promise.all(hosts.map((host) => canBind(host, port)))).every(Boolean);
+
+/**
+ * State of one port:
+ *
+ *   'free'      a server can be opened on it
+ *   'in-use'    it cannot, and something accepts connections there
+ *   'reserved'  it cannot, and nothing accepts connections: the port is held
+ *               without being served, which is what a Windows reservation
+ *               looks like
+ *
+ * Told apart by what the port does and not by the error code (EACCES for a
+ * reservation, EADDRINUSE otherwise), so that one test covers every system.
+ */
+async function portState(hosts, port) {
+  if (await canBindAll(hosts, port)) return 'free';
+  const accepted = await Promise.all(hosts.map((host) => accepts(host, port)));
+  return accepted.includes(true) ? 'in-use' : 'reserved';
+}
+
+/** The first port from `from` upward that can be opened and is not in `taken`. */
+async function firstFreePort(hosts, from, taken) {
+  for (let port = from; port <= 65535; port++) {
+    if (!taken.has(port) && (await canBindAll(hosts, port))) return port;
+  }
+  throw new Error(`No usable port was found from ${from} upward.`);
+}
+
+/** firebase.json as an object, or null when it cannot be read (the CLI reports that itself). */
+function readFirebaseConfig() {
+  try {
+    const config = JSON.parse(readFileSync(join(ROOT, 'firebase.json'), 'utf8'));
+    return config && typeof config === 'object' ? config : null;
+  } catch {
+    return null;
+  }
+}
+
+const isPort = (value) => Number.isInteger(value) && value >= 1 && value <= 65535;
+
+/**
+ * Copy of firebase.json in which the replaced emulator ports are named. A
+ * port named there is fixed for the CLI, which also holds for the hub: left
+ * unnamed the CLI would pick a replacement by itself, and this script could
+ * not know which one to ask for readiness and for the export.
+ */
+function remappedFirebaseConfig(config) {
+  const emulators = { ...config.emulators };
+  for (const name of ports.remapped) {
+    if (name !== 'app') emulators[name] = { host: LOOPBACK, ...emulators[name], port: ports[name] };
+  }
+  return `${JSON.stringify({ ...config, emulators }, null, 2)}\n`;
+}
+
+/**
+ * Environment file for the web app: environment.local.ts with the emulator
+ * ports of this run. The committed file is left alone; angular.json swaps
+ * this one in for the `local-remapped` configuration only.
+ */
+function remappedEnvironment() {
+  return `// Generated by scripts/local-dev.mjs for one run of the local stack, and deleted
+// when it stops: a port the emulators normally use could not be opened on this
+// machine. Do not edit or commit. See docs/local-development.md.
+import { environment as local } from './environment.local';
+import { AppEnvironment } from './environment.types';
+
+export const environment: AppEnvironment = {
+  ...local,
+  emulators: {
+    host: local.emulators?.host ?? '${LOOPBACK}',
+    authPort: ${ports.auth},
+    firestorePort: ${ports.firestore},
+    functionsPort: ${ports.functions},
+    storagePort: ${ports.storage},
+  },
+};
+`;
+}
+
+/**
+ * Test the ports, replace the reserved ones, and write the files that carry
+ * the result: `ports` is set when this returns. Throws when a port is in use.
+ */
+async function preparePorts() {
+  const config = readFirebaseConfig();
+  const configured = (name, fallback) => {
+    const port = config?.emulators?.[name]?.port;
+    return name !== 'app' && isPort(port) ? port : fallback;
+  };
+  // `ng serve` listens on "localhost", which is ::1 on some machines and
+  // 127.0.0.1 on others, so where there is an IPv6 loopback the app port has
+  // to be usable on both: an earlier `ng serve` may hold it on ::1 only.
+  const appHosts = (await canBind('::1', 0)) ? [LOOPBACK, '::1'] : [LOOPBACK];
+  const stack = STACK_PORTS.map((entry) => ({
+    ...entry,
+    port: configured(entry.name, entry.fallback),
+    // The hub is not named in firebase.json, so the CLI opens it on
+    // "localhost" too and quietly moves it when either address is unusable.
+    hosts: entry.name === 'app' || entry.name === 'hub' ? appHosts : [LOOPBACK],
+  }));
+
+  const states = await Promise.all(stack.map(({ hosts, port }) => portState(hosts, port)));
+  stack.forEach((entry, i) => (entry.state = states[i]));
+
+  // With `--emulators-only` the app is started by hand in another terminal,
+  // and may well be running already.
+  const busy = stack.filter(
+    ({ name, state }) => state === 'in-use' && !(EMULATORS_ONLY && name === 'app'),
+  );
+  if (busy.length > 0) {
+    const list = busy.map(({ port, label }) => `${port} (${label})`).join(', ');
+    const [what, them] =
+      busy.length > 1 ? [`Ports ${list} are`, 'them'] : [`Port ${list} is`, 'it'];
+    throw new Error(
+      `${what} in use.\n` +
+        `  Another program holds ${them}, or an earlier run of this stack that is still going.\n` +
+        '  Nothing was started. Stop the other one and start again (docs/local-development.md,\n' +
+        '  Troubleshooting, shows how to find it).',
+    );
+  }
+
+  const reserved = stack.filter(({ state }) => state === 'reserved');
+  if (reserved.length > 0) {
+    // A configured port stays with its owner, and the ports the CLI is about
+    // to choose for itself are left to it (see CLI_CHOSEN_PORTS).
+    const taken = new Set(stack.map(({ port }) => port));
+    for (const from of CLI_CHOSEN_PORTS) {
+      taken.add(await firstFreePort([LOOPBACK], from, new Set()));
+    }
+    const holder = IS_WINDOWS ? 'Windows' : 'the system';
+    for (const entry of reserved) {
+      const replacement = await firstFreePort(entry.hosts, entry.port + 1, taken);
+      taken.add(replacement);
+      warn(
+        `Port ${entry.port} (${entry.label}) is reserved by ${holder}; using ${replacement} instead.`,
+      );
+      entry.port = replacement;
+    }
+  }
+
+  ports = Object.fromEntries(stack.map(({ name, port }) => [name, port]));
+  ports.remapped = reserved.map(({ name }) => name);
+
+  // From here on the generated files belong to this run. What a run that was
+  // killed left behind is removed first: a stale config or environment file
+  // must never be picked up.
+  const owner = otherOwnerPid();
+  if (owner) {
+    throw new Error(
+      `An earlier run of this stack is still going (process ${owner}). Stop it first.\n` +
+        `  If nothing is running, delete ${PORTS_FILE} in the repository folder and start again.`,
+    );
+  }
+  ownsGeneratedFiles = true;
+  removeGeneratedFiles();
+  writeFileSync(join(ROOT, PORTS_FILE), `${JSON.stringify({ ...ports, pid: process.pid })}\n`);
+  if (emulatorPortsRemapped()) {
+    if (!config) {
+      throw new Error(
+        'firebase.json could not be read, so the emulators cannot be moved to other ports.',
+      );
+    }
+    writeFileSync(join(ROOT, REMAPPED_FIREBASE_CONFIG), remappedFirebaseConfig(config));
+  }
+  if (clientPortsRemapped()) writeFileSync(join(ROOT, REMAPPED_ENVIRONMENT), remappedEnvironment());
+}
+
+/** True when the emulators need the generated Firebase config: firebase.json no longer fits. */
+const emulatorPortsRemapped = () => ports.remapped.some((name) => name !== 'app');
+
+/** True when the web app needs the generated environment: environment.local.ts no longer fits. */
+const clientPortsRemapped = () =>
+  STACK_PORTS.some(({ name, client }) => client && ports.remapped.includes(name));
+
+/** Arguments of `ng` that serve the app against the emulators of this run. */
+function appServeArgs() {
+  const configuration = clientPortsRemapped() ? REMAPPED_CONFIGURATION : 'local';
+  const args = ['serve', '--configuration', configuration];
+  if (ports.remapped.includes('app')) args.push('--port', String(ports.app));
+  return args;
+}
+
+/** The same as a command for a second terminal (`yarn emulators` leaves the app to the user). */
+function appServeCommand() {
+  if (ports.remapped.length === 0) return 'yarn start:local';
+  if (!clientPortsRemapped()) return `yarn start:local --port ${ports.app}`;
+  return `yarn ng ${appServeArgs().join(' ')}`;
+}
+
+/** One line that names the replaced ports once more, below the addresses; empty without any. */
+function remapSummary() {
+  if (ports.remapped.length === 0) return '';
+  const changes = STACK_PORTS.filter(({ name }) => ports.remapped.includes(name)).map(
+    ({ name, label }) => `${label} ${ports[name]}`,
+  );
+  return `  Replaced ports in this run: ${changes.join(', ')}. The full list is in ${PORTS_FILE}\n`;
 }
 
 // ---------------------------------------------------------------------------
@@ -718,28 +1070,32 @@ async function ensureEmulatorBinaries(firebase) {
 // ---------------------------------------------------------------------------
 // Stack
 // ---------------------------------------------------------------------------
+/** Resolves to the hub's list of running emulators once all of them are up, or to null. */
 async function waitForEmulators(timeoutMs = 180_000) {
+  const hubUrl = `http://${EMULATOR_HUB_HOST}:${ports.hub}/emulators`;
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    if (shuttingDown) return false;
+    if (shuttingDown) return null;
     try {
-      const res = await fetch(EMULATOR_HUB_URL);
+      const res = await fetch(hubUrl);
       if (res.ok) {
         const emulators = await res.json();
         // Wait for every requested emulator, not just the first few: the hub
         // lists them as they start, and a stop that arrives before the last
         // one (Storage) is listening makes the export fail and save nothing.
-        if (EMULATORS.split(',').every((name) => emulators[name])) return true;
+        if (EMULATORS.split(',').every((name) => emulators[name])) return emulators;
       }
     } catch {
       // not up yet
     }
     await new Promise((r) => setTimeout(r, 1500));
   }
-  return false;
+  return null;
 }
 
 async function main() {
+  await preparePorts();
+
   log('Preflight checks...');
   await preflight();
 
@@ -763,6 +1119,9 @@ async function main() {
     '--export-on-exit',
     EXPORT_DIR,
   ];
+  // Only when an emulator port was replaced; otherwise the CLI finds
+  // firebase.json by itself, as it always did.
+  if (emulatorPortsRemapped()) emulatorArgs.push('--config', REMAPPED_FIREBASE_CONFIG);
   // firebase-tools errors on --import of a missing directory, so only import
   // once a previous run has exported something.
   if (existsSync(join(ROOT, EXPORT_DIR))) {
@@ -784,31 +1143,45 @@ async function main() {
   });
 
   log('Waiting for the emulators to come up...');
-  const ready = await waitForEmulators();
-  if (!ready) {
+  const running = await waitForEmulators();
+  if (!running) {
     if (!shuttingDown) fail('Emulators did not become ready in time. See the output above.');
+    return;
+  }
+  // The CLI can move an emulator to another port without failing (see
+  // CLI_CHOSEN_PORTS). The app would then talk to a port nothing listens on,
+  // which looks like a broken app rather than a port problem: say it here.
+  const moved = STACK_PORTS.filter(
+    ({ name }) => isPort(running[name]?.port) && running[name].port !== ports[name],
+  );
+  if (moved.length > 0) {
+    const list = moved
+      .map(({ name, label }) => `${label} on ${running[name].port} instead of ${ports[name]}`)
+      .join(', ');
+    fail(`The emulators did not start on the expected ports (${list}). Start again.`);
     return;
   }
 
   if (EMULATORS_ONLY) {
     console.log(`
-\x1b[32mEmulators are up.\x1b[0m  Emulator UI: http://127.0.0.1:4000
-  Run \`yarn start:local\` in another terminal for the app. Ctrl+C stops and exports to ${EXPORT_DIR}/.
-`);
+\x1b[32mEmulators are up.\x1b[0m  Emulator UI: http://127.0.0.1:${ports.ui}
+  Run \`${appServeCommand()}\` in another terminal for the app. Ctrl+C stops and exports to ${EXPORT_DIR}/.
+${remapSummary()}`);
     return;
   }
 
-  log('Starting Angular dev server (ng serve --configuration local)...');
-  start('ng serve', process.execPath, [NG_BIN, 'serve', '--configuration', 'local'], { cwd: ROOT });
+  const serveArgs = appServeArgs();
+  log(`Starting Angular dev server (ng ${serveArgs.join(' ')})...`);
+  start('ng serve', process.execPath, [NG_BIN, ...serveArgs], { cwd: ROOT });
 
   console.log(`
 \x1b[32mOmniTask local stack is up.\x1b[0m
-  App:          http://localhost:4200
-  Emulator UI:  http://127.0.0.1:4000  (Auth users, Firestore data, function logs)
+  App:          http://localhost:${ports.app}
+  Emulator UI:  http://127.0.0.1:${ports.ui}  (Auth users, Firestore data, function logs)
   Sign in with "Continue with Google": the Auth emulator shows a fake popup where
   any email works. Accounts are local-only.
   Press Ctrl+C to stop (emulator data is saved to ${EXPORT_DIR}/).
-`);
+${remapSummary()}`);
 }
 
 main().catch((err) => {
