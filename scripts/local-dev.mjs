@@ -623,15 +623,17 @@ async function ensureFirebaseCli() {
       if (err instanceof Stopped) throw err;
       // An install that was killed half way (a forced stop, a closed window)
       // can leave a CLI that npx takes for complete and that then fails to
-      // load. Clear what such an install left behind and fetch once more.
-      const unfinished = [...npxFolders()].filter(
-        (folder) => existsSync(join(folder, 'node_modules')) && !npxInstallFinished(folder),
-      );
-      if (unfinished.length === 0) throw explain(err);
+      // load ("Cannot find module ..."), with or without npm's end-of-install
+      // marker: seen on Windows with the marker present. We only get here when
+      // no usable CLI was found, so whatever sits in this one npx folder (it
+      // is specific to firebase-tools@15) is not worth keeping: clear it and
+      // fetch once more.
+      const leftovers = [...npxFolders()].filter((folder) => existsSync(folder));
+      if (leftovers.length === 0) throw explain(err);
       warn(
         'An earlier fetch of the Firebase CLI was cut short. Removing what it left, fetching again...',
       );
-      for (const folder of unfinished) rmSync(folder, { recursive: true, force: true });
+      for (const folder of leftovers) rmSync(folder, { recursive: true, force: true });
       try {
         await fetchCli();
       } catch (again) {
