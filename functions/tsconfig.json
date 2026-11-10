@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "newLine": "lf",
     "module": "commonjs",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
