@@ -25,6 +25,7 @@ import {
   createGuard,
   defaultJobSteps,
   editorCommand,
+  findOnPath,
   folderCommand,
   openBrowser,
   parseArgs,
@@ -32,6 +33,7 @@ import {
   parseRegValue,
   parseSecretState,
   pingConsole,
+  plainOutputEnv,
   redact,
   resolveInside,
   rewriteEnvLocal,
@@ -50,17 +52,23 @@ const PATTERN_KEY = 'sk-ant-api03-AbCdEfGh_1234-5678ijkl';
 const ODD_KEY = 'local-test-key-0123456789-not-anthropic-shaped';
 
 // Stand-in for scripts/local-dev.mjs: prints the same "up" line, leaks a key on
-// stderr (to prove the redactor runs), and exits when asked over IPC.
+// stderr (to prove the redactor runs), and exits when asked over IPC. While a
+// "hold-exit" file sits next to it, it has heard the request but does not exit
+// yet: that is how a test keeps the stack in "stopping" for as long as it needs.
 const FAKE_STACK = `
+import fs from 'node:fs';
 const emulatorsOnly = process.argv.includes('--emulators-only');
 const stubborn = process.env.FAKE_STACK_STUBBORN === '1';
+const holdExit = new URL('./hold-exit', import.meta.url);
 console.log('\\u001b[36m[dev:local]\\u001b[0m Preflight checks...');
 console.error('debug: using ${PATTERN_KEY} for requests');
+console.log('[dev:local] colour env: FORCE_COLOR=' + process.env.FORCE_COLOR + ' NO_COLOR=' + process.env.NO_COLOR);
 process.on('message', (m) => {
   if (!m || m.type !== 'shutdown') return;
   if (stubborn) { console.log('[dev:local] ignoring the shutdown request'); return; }
   console.log('[dev:local] Shutting down...');
-  process.exit(0);
+  const leave = () => (fs.existsSync(holdExit) ? setTimeout(leave, 20) : process.exit(0));
+  leave();
 });
 setTimeout(() => {
   console.log(emulatorsOnly
@@ -428,20 +436,130 @@ describe('browser and OS helpers', () => {
       ['npm', ['ci'], fn, true],
     ]);
     assert.deepEqual(brief(steps.smoke), [[process.execPath, [path.join(fn, 'scripts', 'ai-smoke.mjs')], fn, false]]);
-    assert.deepEqual(brief(steps.checks), [
-      ['npm', ['run', 'build'], fn, true],
-      ['npm', ['test'], fn, true],
-      ['yarn', ['lint'], root, true],
-      ['yarn', ['build'], root, true],
-      ['yarn', ['test', '--no-watch', '--no-progress', '--browsers=ChromeHeadless'], root, true],
+    const fixedChecks = (r) => [
+      ['npm', ['run', 'build'], path.join(r, 'functions'), true],
+      ['npm', ['test'], path.join(r, 'functions'), true],
+      ['yarn', ['lint'], r, true],
+      ['yarn', ['build'], r, true],
+      ['yarn', ['test', '--no-watch', '--no-progress', '--browsers=ChromeHeadless'], r, true],
+    ];
+    // No scripts/ folder here, so there are no tooling tests to add.
+    assert.deepEqual(brief(steps.checks), fixedChecks(root));
+
+    // With tooling tests, checks ends with the step PR Validation calls "Run dev tooling tests":
+    // the scripts/*.test.mjs pattern, expanded here because no shell is involved.
+    const real = tempDir('omnitask-steps-');
+    for (const name of ['b.test.mjs', 'a.test.mjs', 'launch-console.mjs', 'notes.test.md', '.hidden.test.mjs', 'console/deep.test.mjs', 'folder.test.mjs/x']) {
+      write(real, `scripts/${name}`, '');
+    }
+    const withTests = defaultJobSteps(real);
+    assert.deepEqual(brief(withTests.checks), [
+      ...fixedChecks(real),
+      [process.execPath, ['--test', 'scripts/a.test.mjs', 'scripts/b.test.mjs'], real, false],
     ]);
-    for (const list of Object.values(steps)) {
+    assert.equal(withTests.checks.at(-1).label, 'node --test scripts/*.test.mjs');
+
+    for (const list of [...Object.values(steps), ...Object.values(withTests)]) {
       for (const step of list) {
         // The Windows shim path joins these with spaces, so none may contain one (or a shell character).
         if (step.shim) for (const part of [step.file, ...step.args]) assert.match(part, /^[A-Za-z0-9=_-]+$/);
         assert.equal(typeof step.label, 'string');
       }
     }
+  });
+
+  test('the tooling test step really runs the files it lists, without a shell', async () => {
+    const root = makeRoot();
+    write(root, 'scripts/one.test.mjs', "import { test } from 'node:test';\ntest('one', () => {});\n");
+    write(root, 'scripts/two.test.mjs', "import fs from 'node:fs';\nimport { test } from 'node:test';\ntest('two', () => fs.writeFileSync('two-ran.txt', process.cwd()));\n");
+    // This file itself runs under `node --test`, which marks its children (NODE_TEST_CONTEXT) so that a
+    // nested run does nothing. The step under test is that nested run, so it is started without the mark.
+    const unmarked = (step) => ({ ...step, env: { NODE_TEST_CONTEXT: undefined } });
+    const ctx = await startConsole({ root, jobSteps: (r) => ({ pull: [], install: [], smoke: [], checks: defaultJobSteps(r).checks.slice(-1).map(unmarked) }) });
+    try {
+      assert.equal((await ctx.api.act({ action: 'checks' })).status, 200);
+      const job = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.job && s.job.state !== 'running' ? s.job : null;
+      }, 'the tooling tests to finish', 30_000);
+      const log = await ctx.api.logText();
+      assert.deepEqual([job.state, job.exitCode], ['ok', 0], log);
+      assert.ok(log.includes('job|$ node --test scripts/*.test.mjs'));
+      assert.equal(fs.readFileSync(path.join(root, 'two-ran.txt'), 'utf8'), root, 'it ran in the repository folder');
+      assert.match(log, /^job\|.*\btests 2$/m, 'both files ran');
+
+      // A file added after the console started (a pull can bring one) is picked up by the next run.
+      write(root, 'scripts/three.test.mjs', "import { test } from 'node:test';\ntest('three', () => { throw new Error('three fails'); });\n");
+      assert.equal((await ctx.api.act({ action: 'checks' })).status, 200);
+      const second = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.job && s.job.id === 2 && s.job.state !== 'running' ? s.job : null;
+      }, 'the second run to finish', 30_000);
+      assert.deepEqual([second.state, second.exitCode], ['failed', 1]);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('findOnPath searches absolute PATH folders only, extensions in order', (t) => {
+    const bin = tempDir('omnitask-path-');
+    const other = tempDir('omnitask-path-other-');
+    const exe = (dir, name) => fs.writeFileSync(path.join(dir, name), '', { mode: 0o755 });
+    exe(bin, 'tool');
+    exe(bin, 'git.exe');
+    exe(other, 'git.exe');
+    const join = (...dirs) => dirs.join(path.delimiter);
+    assert.equal(findOnPath('tool', { pathValue: bin }), path.join(bin, 'tool'));
+    assert.equal(findOnPath('tool', { pathValue: join(other, bin) }), path.join(bin, 'tool'), 'later folders are searched');
+    assert.equal(findOnPath('missing', { pathValue: join(other, bin) }), null);
+    assert.equal(findOnPath('git', { pathValue: bin }), null, 'no extension asked for, none tried');
+    const windowsOrder = { extensions: ['.com', '.exe'] };
+    assert.equal(findOnPath('git', { pathValue: join(other, bin), ...windowsOrder }), path.join(other, 'git.exe'), 'the first folder wins');
+    exe(bin, 'git.com');
+    assert.equal(findOnPath('git', { pathValue: bin, ...windowsOrder }), path.join(bin, 'git.com'), '.com before .exe, as Node on Windows');
+    assert.equal(findOnPath('tool', { pathValue: `"${bin}"` }), path.join(bin, 'tool'), 'a quoted entry');
+    assert.equal(findOnPath('tool', { pathValue: '' }), null);
+
+    // An entry that is not absolute would be resolved against the working directory (the repository).
+    const relative = path.relative(process.cwd(), bin);
+    if (!path.isAbsolute(relative)) {
+      assert.ok(fs.existsSync(path.join(relative, 'tool')), 'the file is reachable through the relative entry');
+      assert.equal(findOnPath('tool', { pathValue: join('', '.', relative) }), null, 'but such an entry is never searched');
+      assert.equal(findOnPath('tool', { pathValue: join('', '.', relative, bin) }), path.join(bin, 'tool'));
+    }
+    if (IS_WINDOWS) return t.diagnostic('the execute-permission case needs POSIX file modes');
+    fs.writeFileSync(path.join(other, 'tool'), '', { mode: 0o644 });
+    assert.equal(findOnPath('tool', { pathValue: join(other, bin) }), path.join(bin, 'tool'), 'a file that cannot be executed is skipped');
+  });
+
+  test('plainOutputEnv: FORCE_COLOR=0 and no NO_COLOR, so a child that forces colour for its own children does not make Node warn', async () => {
+    const env = plainOutputEnv({ EXTRA: 'x', NO_COLOR: '1' }, { PATH: '/bin', NO_COLOR: '1', no_color: '1', NODE_DISABLE_COLORS: '1', FORCE_COLOR: '3', KEEP: 'k' });
+    assert.deepEqual(env, { PATH: '/bin', FORCE_COLOR: '0', KEEP: 'k', EXTRA: 'x' });
+    assert.equal(plainOutputEnv().PATH, process.env.PATH, 'the rest of the environment is passed on');
+
+    // A Node child under this environment, and a grandchild started the way scripts/local-dev.mjs
+    // starts the emulators (the same environment plus FORCE_COLOR=1). Each asks Node for the colour
+    // depth, which is where Node prints "Warning: The 'NO_COLOR' env is ignored ..." when both are set.
+    const probe =
+      "const tty = require('node:tty'); const { spawnSync } = require('node:child_process');" +
+      "const depth = tty.WriteStream.prototype.getColorDepth();" +
+      "if (process.argv[1] === 'grandchild') { console.log('grandchild depth ' + depth); } else {" +
+      "console.log('child depth ' + depth);" +
+      "spawnSync(process.execPath, ['-e', process.env.PROBE, 'grandchild'], { env: { ...process.env, FORCE_COLOR: '1' }, stdio: 'inherit' }); }";
+    const run = (childEnv) =>
+      new Promise((resolve) => {
+        const child = spawn(process.execPath, ['-e', probe], { env: { ...childEnv, PROBE: probe }, stdio: ['ignore', 'pipe', 'pipe'] });
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (chunk) => (stdout += chunk));
+        child.stderr.on('data', (chunk) => (stderr += chunk));
+        child.on('close', (code) => resolve({ code, stdout, stderr }));
+      });
+    const result = await run(plainOutputEnv({}, { ...process.env, NO_COLOR: '1' }));
+    assert.equal(result.code, 0, result.stderr);
+    assert.doesNotMatch(result.stderr, /NO_COLOR|FORCE_COLOR/, 'no colour warning from the child or the grandchild');
+    assert.match(result.stdout, /^child depth 1$/m, 'the child itself does not colour its output');
+    assert.match(result.stdout, /^grandchild depth 4$/m, 'the grandchild was really given FORCE_COLOR=1');
   });
 });
 
@@ -502,6 +620,26 @@ describe('createGuard', () => {
     assert.equal(status(withToken('same-site')), 403);
     assert.equal(status(withToken('same-origin')), null);
     assert.equal(status(withToken('none')), null);
+    assert.equal(guard.check(withToken('cross-site')).notice, undefined, 'the API answers in JSON');
+  });
+
+  test('the page is not served to a navigation another site started', () => {
+    const from = (site, url = '/') => guard.check(req({ url, headers: site === undefined ? {} : { 'sec-fetch-site': site } }));
+    for (const url of ['/', '/?source=link', '/index.html', '/nope']) {
+      for (const site of ['cross-site', 'same-site', 'CROSS-SITE', '']) {
+        const refused = from(site, url);
+        assert.equal(refused?.status, 403, `${url} from ${site}`);
+        assert.equal(refused.notice, true, 'answered with the notice, not JSON');
+        assert.ok(!JSON.stringify(refused).includes(TOKEN));
+      }
+      // The shortcut's window, a typed address and a reload send "none"; the page's own requests "same-origin";
+      // a program that is not a browser (the second launch's ping, curl) sends nothing.
+      for (const site of ['none', 'same-origin', undefined]) assert.equal(from(site, url), null, `${url} from ${site}`);
+    }
+    // What a second launch and the browser's own icon request need stays reachable.
+    for (const url of ['/api/ping', '/favicon.ico']) {
+      for (const site of ['cross-site', 'same-site', 'none', undefined]) assert.equal(from(site, url), null, `${url} from ${site}`);
+    }
   });
 
   test('POST must be application/json and declare a small body', () => {
@@ -559,6 +697,7 @@ describe('serving and the guard over HTTP', () => {
     assert.equal(res.status, 200);
     assert.match(res.headers['content-type'], /^text\/html/);
     assert.equal(res.headers['content-security-policy'], CSP);
+    assert.equal(res.headers['cross-origin-opener-policy'], 'same-origin');
     assertBaseHeaders(res, '/');
     assert.ok(res.text.startsWith('<!doctype html>'));
     assert.ok(res.text.includes('<main id="app">PAGE-BODY-1</main>'));
@@ -660,6 +799,37 @@ describe('serving and the guard over HTTP', () => {
     assert.equal(own.status, 200);
     const crossSite = await ctx.api.get('/api/state', { 'sec-fetch-site': 'cross-site' });
     assert.equal(crossSite.status, 403);
+  });
+
+  test('a navigation from another site gets a notice instead of the page; the shortcut and the address bar get the page', async () => {
+    for (const site of ['cross-site', 'same-site']) {
+      for (const target of ['/', '/?from=docs', '/nope']) {
+        const headers = { 'sec-fetch-site': site, 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' };
+        const res = await request(ctx.port, { path: target, headers });
+        assert.equal(res.status, 403, `${site} ${target}`);
+        assert.match(res.headers['content-type'], /^text\/plain/);
+        assert.match(res.text, /^OmniTask Build Console\n/);
+        assert.match(res.text, /shortcut/);
+        assert.match(res.text, /address bar and press Enter/);
+        assert.ok(!res.text.includes(ctx.token), 'no token in the notice');
+        assert.ok(!res.text.includes('PAGE-BODY'), 'and nothing of the page');
+        assert.equal(res.headers['content-security-policy'], undefined);
+        assert.equal(res.headers['cross-origin-opener-policy'], 'same-origin');
+        assertBaseHeaders(res, `${site} ${target}`);
+      }
+      // Loading the page as a script or an image from another site gets the same answer.
+      const asScript = await request(ctx.port, { headers: { 'sec-fetch-site': site, 'sec-fetch-mode': 'no-cors', 'sec-fetch-dest': 'script' } });
+      assert.equal(asScript.status, 403);
+      assert.ok(!asScript.text.includes(ctx.token));
+      // Still reachable: what a second launch pings, and the icon.
+      assert.equal((await request(ctx.port, { path: '/api/ping', headers: { 'sec-fetch-site': site } })).status, 200);
+      assert.equal((await request(ctx.port, { path: '/favicon.ico', headers: { 'sec-fetch-site': site } })).status, 200);
+    }
+    for (const headers of [{ 'sec-fetch-site': 'none', 'sec-fetch-mode': 'navigate' }, { 'sec-fetch-site': 'same-origin' }, {}]) {
+      const res = await request(ctx.port, { headers });
+      assert.equal(res.status, 200, JSON.stringify(headers));
+      assert.ok(res.text.includes(ctx.token), 'the real page, with its token');
+    }
   });
 
   test('the API refuses a missing or wrong token and never echoes the right one', async () => {
@@ -1205,11 +1375,18 @@ describe('start / stop', () => {
       }
       assert.ok(fs.existsSync(path.join(ctx.root, '.emulator-data', 'keep.txt')));
 
+      // The stand-in does not exit while this file exists, so "stopping" lasts until the test lets go
+      // of it. Without the hold, the child's exit races the two requests below.
+      const hold = write(ctx.root, 'scripts/hold-exit', '');
       const stopping = await ctx.api.act({ action: 'stop' });
       assert.equal(stopping.status, 200);
       assert.equal(stopping.json.state.stack.state, 'stopping');
       assert.equal((await ctx.api.act({ action: 'stop' })).status, 409, 'already stopping');
       assert.equal((await ctx.api.act({ action: 'start', mode: 'full' })).status, 409, 'not while stopping');
+      await waitFor(async () => (await ctx.api.logText()).includes('stack|[dev:local] Shutting down...'), 'the child to hear the stop request');
+      const held = await ctx.api.state();
+      assert.deepEqual([held.stack.state, held.stack.pid], ['stopping', pid], 'still stopping after the child has the message');
+      fs.rmSync(hold);
 
       const stopped = await waitFor(async () => {
         const s = await ctx.api.state();
@@ -1225,6 +1402,9 @@ describe('start / stop', () => {
       assert.ok(log.includes('stack|OmniTask local stack is up.'));
       assert.ok(log.includes('stack|[dev:local] Shutting down...'), 'the child handled the IPC message');
       assert.ok(log.includes(`stack|debug: using ${REDACTED} for requests`), 'stderr reaches the log, redacted');
+      assert.ok(log.includes('stack|[dev:local] colour env: FORCE_COLOR=0 NO_COLOR=undefined'), 'colour is turned off with FORCE_COLOR alone');
+      assert.ok(log.includes('console|The stack has stopped.'));
+      assert.ok(!log.includes('Scroll up'), 'a stop that was asked for needs no advice');
       assert.ok(!log.includes(PATTERN_KEY));
       assert.ok(!log.includes(ESC));
       assert.ok(log.includes('console|'));
@@ -1274,6 +1454,39 @@ describe('start / stop', () => {
         return s.stack.state === 'stopped' ? s : null;
       }, 'the crash');
       assert.equal(stopped.stack.lastExit.code, 7);
+      assert.ok(!Number.isNaN(Date.parse(stopped.stack.lastExit.at)));
+      // The line that reports it says where to look and what to do next.
+      const said = (await ctx.api.logText()).split('\n').find((line) => line.startsWith('console|The stack exited'));
+      assert.equal(said, 'console|The stack exited (code 7) before it finished starting. Scroll up to the first error above, fix what it names, then start the stack again.');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a stack that dies while running says so; lastExit keeps the code', async () => {
+    const root = makeRoot();
+    // Up at once, then exits with code 3 as soon as a "die" file appears next to it.
+    const dies = write(
+      root,
+      'dies.mjs',
+      "import fs from 'node:fs';\nconsole.log('OmniTask local stack is up.');\n" +
+        "const wait = () => (fs.existsSync(new URL('./die', import.meta.url)) ? process.exit(3) : setTimeout(wait, 20));\nwait();\n",
+    );
+    const ctx = await startConsole({
+      root,
+      spawnStack: () => spawn(process.execPath, [dies], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], detached: !IS_WINDOWS }),
+    });
+    try {
+      await ctx.api.act({ action: 'start', mode: 'full' });
+      await waitFor(async () => (await ctx.api.state()).stack.state === 'running', 'running');
+      write(root, 'die', '');
+      const stopped = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.stack.state === 'stopped' ? s : null;
+      }, 'the stack to die');
+      assert.equal(stopped.stack.lastExit.code, 3);
+      const said = (await ctx.api.logText()).split('\n').find((line) => line.startsWith('console|The stack exited'));
+      assert.equal(said, 'console|The stack exited (code 3) by itself. Scroll up to the first error above, then start the stack again.');
     } finally {
       await ctx.consoleServer.close();
     }
@@ -1305,6 +1518,63 @@ describe('start / stop', () => {
       }, 'the kill fallback');
       assert.ok(Date.now() - asked >= 350, 'not before the timeout');
       assert.notEqual(stopped.stack.lastExit.code, 0);
+      assert.throws(() => process.kill(pid, 0), 'the child is gone');
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('ending its process tree'));
+      assert.ok(log.includes('console|The stack exited (it was ended).'), 'a stop that was asked for is reported without advice');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('endStack: a stack that finishes within the grace time is left to finish', async () => {
+    const ctx = await startConsole();
+    try {
+      await ctx.api.act({ action: 'start', mode: 'full' });
+      await waitFor(async () => (await ctx.api.state()).stack.state === 'running', 'running');
+      const hold = write(ctx.root, 'scripts/hold-exit', '');
+      let ended = false;
+      const ending = ctx.consoleServer.endStack(60_000).then(() => {
+        ended = true;
+      });
+      await waitFor(async () => (await ctx.api.logText()).includes('stack|[dev:local] Shutting down...'), 'the child to hear the stop request');
+      assert.equal((await ctx.api.state()).stack.state, 'stopping');
+      assert.equal(ended, false, 'it waits for the stack');
+      fs.rmSync(hold);
+      await ending;
+      const s = await ctx.api.state();
+      assert.equal(s.stack.state, 'stopped');
+      assert.equal(s.stack.lastExit.code, 0, 'it exited by itself');
+      assert.ok(!(await ctx.api.logText()).includes('ending its process tree'));
+      await ctx.consoleServer.endStack(60_000); // nothing running: returns at once
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('endStack: a stack that does not finish in time has its process tree ended', async () => {
+    const root = makeRoot();
+    const ctx = await startConsole({
+      root,
+      spawnStack: () =>
+        spawn(process.execPath, [path.join(root, 'scripts', 'local-dev.mjs')], {
+          stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+          detached: !IS_WINDOWS,
+          env: { ...process.env, FAKE_STACK_STUBBORN: '1' },
+        }),
+    });
+    try {
+      const started = await ctx.api.act({ action: 'start', mode: 'full' });
+      const pid = started.json.state.stack.pid;
+      await waitFor(async () => (await ctx.api.state()).stack.state === 'running', 'running');
+      // The first Ctrl+C has asked for the stop; the second one arrives while it is still stopping.
+      await ctx.api.act({ action: 'stop' });
+      const asked = Date.now();
+      await ctx.consoleServer.endStack(300);
+      assert.ok(Date.now() - asked >= 250, 'not before the grace time');
+      const s = await ctx.api.state();
+      assert.equal(s.stack.state, 'stopped', 'endStack returns only once the stack is gone');
+      assert.notEqual(s.stack.lastExit.code, 0);
       assert.throws(() => process.kill(pid, 0), 'the child is gone');
       assert.ok((await ctx.api.logText()).includes('ending its process tree'));
     } finally {

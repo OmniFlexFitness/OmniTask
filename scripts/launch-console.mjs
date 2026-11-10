@@ -17,9 +17,10 @@
  *   --no-idle-exit            keep running even when nobody is looking at the page
  *
  * Because this server can start processes, every request passes a guard first
- * (see createGuard): loopback Host only, same-origin only, a per-run token on
- * the API, JSON bodies only. Actions are a fixed allowlist with fixed argument
- * lists; nothing from a request is ever put on a command line.
+ * (see createGuard): loopback Host only, same-origin only, no navigation that
+ * another site started, a per-run token on the API, JSON bodies only. Actions
+ * are a fixed allowlist with fixed argument lists; nothing from a request is
+ * ever put on a command line.
  *
  * Plain Node, no dependencies, works on Windows/macOS/Linux.
  */
@@ -52,6 +53,8 @@ const LOG_LINE_MAX = 2000;
 const LOG_PAGE_MAX = 800;
 const IDLE_EXIT_MS = 120_000;
 const STOP_TIMEOUT_MS = 60_000;
+/** Windows, second Ctrl+C: how long a stack that is already stopping gets before its process tree is ended. */
+const HURRY_GRACE_MS = 5000;
 
 /** The lines scripts/local-dev.mjs prints once everything answers. */
 const UP_MARKERS = {
@@ -74,6 +77,13 @@ const PAGE_CSP =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
   "font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; base-uri 'none'; " +
   "form-action 'none'; frame-ancestors 'none'";
+
+/** Sent in place of the page when another site linked or navigated here (see createGuard). Carries no token. */
+const CROSS_SITE_NOTICE =
+  'OmniTask Build Console\n\n' +
+  'This window was opened by a link on another page, so the console did not load.\n\n' +
+  'Open the console from its Desktop or Start menu shortcut (or run: yarn console).\n' +
+  'Or click the address bar and press Enter.\n';
 
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for scripts/launch-console.test.mjs)
@@ -252,11 +262,17 @@ function isJsonContentType(value) {
  *      own name here, so it is refused.
  *   2. An Origin header, when present, must be this server. Browsers add it to
  *      every cross-site POST and fetch(), so other sites are refused.
- *   3. /api/* except /api/ping needs the per-run token in X-Console-Token. A
+ *   3. Sec-Fetch-Site, when the browser sends it, must be `same-origin` or
+ *      `none` (the shortcut's window, a typed address, a reload of those).
+ *      A link or a script on another site, even one on another loopback port,
+ *      gets neither the page nor the API. /api/ping and /favicon.ico are
+ *      exempt. For the page the refusal carries `notice: true`, so the person
+ *      who followed such a link is told what to do instead of shown JSON.
+ *   4. /api/* except /api/ping needs the per-run token in X-Console-Token. A
  *      custom header also forces a CORS preflight, which is never approved.
- *   4. POST bodies must be application/json (not one of the content types a
+ *   5. POST bodies must be application/json (not one of the content types a
  *      plain HTML form can send), at most 16 KiB, and a JSON object.
- *   5. Only GET and POST. No CORS headers are ever sent.
+ *   6. Only GET and POST. No CORS headers are ever sent.
  *
  * `port` may be a function for servers that listen on an ephemeral port.
  */
@@ -288,16 +304,21 @@ export function createGuard({ port, token }) {
     }
 
     const pathname = requestPath(req);
-    if (pathname.startsWith('/api/') && pathname !== '/api/ping') {
-      // Extra to the token: browsers label where a request came from, and the
-      // page only ever calls the API from its own origin.
+    const isApi = pathname.startsWith('/api/');
+    if (pathname !== '/api/ping' && pathname !== '/favicon.ico') {
+      // Browsers label where a request came from. The page only ever calls the
+      // API from its own origin, and the page itself is opened by the shortcut
+      // or from the address bar, never by a link on another site: served to
+      // such a link, the live console could be put under somebody's cursor.
       const site = headers['sec-fetch-site'];
       if (site !== undefined && site !== 'same-origin' && site !== 'none') {
-        return { status: 403, error: 'Requests from other sites are not accepted.' };
+        return isApi
+          ? { status: 403, error: 'Requests from other sites are not accepted.' }
+          : { status: 403, error: 'The console does not open from a link on another page.', notice: true };
       }
-      if (!tokenMatches(headers['x-console-token'])) {
-        return { status: 401, error: 'Missing or wrong console token. Reload the console window.' };
-      }
+    }
+    if (isApi && pathname !== '/api/ping' && !tokenMatches(headers['x-console-token'])) {
+      return { status: 401, error: 'Missing or wrong console token. Reload the console window.' };
     }
 
     if (req.method === 'POST') {
@@ -390,6 +411,62 @@ function isFile(file) {
   } catch {
     return false;
   }
+}
+
+/**
+ * First runnable file called `name` (plus one of `extensions`) in the folders
+ * of a PATH value, or null. Only absolute folders count: "." or an empty entry
+ * means the working directory, which is the repository.
+ */
+export function findOnPath(name, { pathValue = process.env.PATH ?? '', extensions = [''] } = {}) {
+  for (const entry of pathValue.split(path.delimiter)) {
+    const dir = entry.replace(/^"(.*)"$/, '$1');
+    if (!path.isAbsolute(dir)) continue;
+    for (const extension of extensions) {
+      const candidate = path.join(dir, name + extension);
+      try {
+        fs.accessSync(candidate, fs.constants.X_OK);
+        if (isFile(candidate)) return candidate;
+      } catch {
+        // not here
+      }
+    }
+  }
+  return null;
+}
+
+const pathTools = new Map();
+
+/**
+ * git and java do not ship with Windows, so there is no fixed folder for
+ * them as there is for systemTool(). They are looked up once, on PATH only
+ * (.com before .exe in each folder, as Node does on Windows), and run
+ * by full path from then on, so a git.exe that a pull drops into the
+ * repository is never the one that runs. Falls back to the bare name when
+ * PATH has none; elsewhere than Windows a bare name is already PATH-only.
+ */
+function pathTool(name) {
+  if (!IS_WINDOWS) return name;
+  if (!pathTools.has(name)) pathTools.set(name, findOnPath(name, { extensions: ['.com', '.exe'] }) ?? name);
+  return pathTools.get(name);
+}
+
+/**
+ * Environment for a child whose output goes to the log: no colour codes.
+ * FORCE_COLOR=0 does that for Node and the tools built on it. NO_COLOR is
+ * deliberately not set, and one inherited from the shell is taken out:
+ * scripts/local-dev.mjs starts the emulators with FORCE_COLOR=1, and Node
+ * prints "Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env
+ * being set" in every process that sees both. Whatever colour a child still
+ * emits is removed by stripAnsi() before it reaches the log.
+ */
+export function plainOutputEnv(extra = {}, base = process.env) {
+  const env = { ...base, ...extra, FORCE_COLOR: '0' };
+  for (const name of Object.keys(env)) {
+    // Windows variable names are not case-sensitive.
+    if (/^(NO_COLOR|NODE_DISABLE_COLORS)$/i.test(name)) delete env[name];
+  }
+  return env;
 }
 
 function readText(file) {
@@ -533,7 +610,7 @@ function probePort(port, timeoutMs = 250) {
 /** Versions of the tools the stack needs; null for one that is missing. Run once at startup. */
 async function probeTools() {
   // java prints its version on stderr.
-  const java = await capture('java', ['-version'], { timeoutMs: 8000 });
+  const java = await capture(pathTool('java'), ['-version'], { timeoutMs: 8000 });
   const javaMatch = java.code === 0 ? /version "([^"]+)"/.exec(`${java.stderr}\n${java.stdout}`) : null;
   const [yarnFile, yarnArgv, yarnShell] = spawnArgs('yarn', ['--version']);
   const yarn = await capture(yarnFile, yarnArgv, { ...yarnShell, timeoutMs: 8000 });
@@ -542,14 +619,34 @@ async function probeTools() {
 }
 
 /**
- * The fixed command lists behind the job actions. Every value is a constant;
+ * scripts/*.test.mjs as paths relative to the repository: the files the
+ * "Run dev tooling tests" step of PR Validation runs.
+ */
+function toolingTestFiles(root) {
+  try {
+    return fs
+      .readdirSync(path.join(root, 'scripts'), { withFileTypes: true })
+      .filter((entry) => !entry.isDirectory() && !entry.name.startsWith('.') && entry.name.endsWith('.test.mjs'))
+      .map((entry) => `scripts/${entry.name}`)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The fixed command lists behind the job actions. Every value is a constant
+ * except the names of the tooling test files, which are read from scripts/;
  * `shim` marks the .cmd shims that go through spawnArgs() on Windows.
  */
 export function defaultJobSteps(root) {
   const functionsDir = path.join(root, 'functions');
+  // CI leaves this pattern to its shell. Jobs run without one, and Node 20
+  // does not expand it either, so it is expanded here.
+  const toolingTests = toolingTestFiles(root);
   return {
     // Never wait for a password nobody can type; a failed login shows up in the log instead.
-    pull: [{ file: 'git', args: ['pull', '--ff-only'], cwd: root, env: { GIT_TERMINAL_PROMPT: '0' }, label: 'git pull --ff-only' }],
+    pull: [{ file: pathTool('git'), args: ['pull', '--ff-only'], cwd: root, env: { GIT_TERMINAL_PROMPT: '0' }, label: 'git pull --ff-only' }],
     install: [
       { file: 'yarn', args: ['install'], cwd: root, shim: true, label: 'yarn install' },
       { file: 'npm', args: ['ci'], cwd: functionsDir, shim: true, label: 'npm ci  (in functions/)' },
@@ -574,6 +671,10 @@ export function defaultJobSteps(root) {
         shim: true,
         label: 'yarn test --no-watch --no-progress --browsers=ChromeHeadless',
       },
+      // Left out on a branch without such tests: `node --test` with no file goes looking for tests everywhere.
+      ...(toolingTests.length
+        ? [{ file: process.execPath, args: ['--test', ...toolingTests], cwd: root, label: 'node --test scripts/*.test.mjs' }]
+        : []),
     ],
   };
 }
@@ -614,7 +715,7 @@ class ActionError extends Error {
  * `onExit(reason)` (called after `quit` or an idle exit, once everything is
  * closed), `report(text)` (receives the console's own log lines).
  *
- * Returns `{ server, token, close(), log(text), state() }`.
+ * Returns `{ server, token, close(), endStack(graceMs), log(text), state() }`.
  */
 export function createConsoleServer(options = {}) {
   const root = path.resolve(options.root ?? DEFAULT_ROOT);
@@ -626,7 +727,8 @@ export function createConsoleServer(options = {}) {
   const idleExitMs = options.idleExitMs ?? 0;
   const onExit = options.onExit ?? (() => {});
   const report = options.report ?? (() => {});
-  const steps = (options.jobSteps ?? defaultJobSteps)(root);
+  // Built when a job starts, not once: a pull can add a tooling test file.
+  const jobSteps = options.jobSteps ?? defaultJobSteps;
 
   const functionsDir = path.join(root, 'functions');
   const files = {
@@ -740,7 +842,7 @@ export function createConsoleServer(options = {}) {
     // way of a git command the owner is running in the same folder.
     const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' };
     const git = async (args) => {
-      const result = await capture('git', args, { cwd: root, env, timeoutMs: 3000 });
+      const result = await capture(pathTool('git'), args, { cwd: root, env, timeoutMs: 3000 });
       return result.code === 0 ? result.stdout.trim() : null;
     };
     // Never fetches: behind/ahead compare against what the last fetch or pull saw.
@@ -809,7 +911,7 @@ export function createConsoleServer(options = {}) {
       windowsHide: true,
       // Own process group on POSIX, so the fallback kill reaches the whole group.
       detached: !IS_WINDOWS,
-      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
+      env: plainOutputEnv(),
     });
   }
 
@@ -845,13 +947,26 @@ export function createConsoleServer(options = {}) {
       finished = true;
       clearTimeout(stack.killTimer);
       stack.killTimer = null;
+      const was = stack.state;
       stack.lastExit = { code: code ?? null, at: new Date().toISOString() };
       stack.child = null;
       stack.state = 'stopped';
       stack.mode = null;
       stack.since = null;
       portsCache = null;
-      note(code === 0 ? 'The stack has stopped.' : `The stack exited (${code === null ? 'it was ended' : `code ${code}`}).`);
+      if (code === 0) {
+        note('The stack has stopped.');
+      } else {
+        const how = `The stack exited (${code === null ? 'it was ended' : `code ${code}`})`;
+        // Nobody asked it to stop, so the reason is further up in its own output: say where to look and what to do.
+        if (was === 'starting') {
+          note(`${how} before it finished starting. Scroll up to the first error above, fix what it names, then start the stack again.`);
+        } else if (was === 'running') {
+          note(`${how} by itself. Scroll up to the first error above, then start the stack again.`);
+        } else {
+          note(`${how}.`);
+        }
+      }
       resolveExit();
     };
     child.on('error', (err) => {
@@ -899,6 +1014,30 @@ export function createConsoleServer(options = {}) {
     clearTimeout(giveUp);
   }
 
+  /**
+   * For a caller that cannot wait for the full stop (a second Ctrl+C on
+   * Windows): give a stack that is already stopping `graceMs` to finish by
+   * itself, then end its process tree, and resolve once it is gone.
+   */
+  async function endStack(graceMs) {
+    const child = stack.child;
+    if (!child) return;
+    requestStop();
+    const within = (ms) => {
+      let timer;
+      const limit = new Promise((resolve) => {
+        timer = setTimeout(resolve, ms);
+      });
+      return Promise.race([stack.exited, limit]).then(() => clearTimeout(timer));
+    };
+    await within(graceMs);
+    if (stack.child !== child) return;
+    note(`The stack did not stop within ${Math.round(graceMs / 1000)} s; ending its process tree.`);
+    killTree(child);
+    // The kill is asynchronous on Windows (taskkill): stay until it has worked, but not for ever.
+    await within(5000);
+  }
+
   // ---- jobs -----------------------------------------------------------------
   function runStep(step) {
     return new Promise((resolve) => {
@@ -907,7 +1046,7 @@ export function createConsoleServer(options = {}) {
       try {
         child = spawn(file, argv, {
           cwd: step.cwd,
-          env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0', ...step.env },
+          env: plainOutputEnv(step.env),
           stdio: ['ignore', 'pipe', 'pipe'],
           windowsHide: true,
           detached: !IS_WINDOWS,
@@ -1013,7 +1152,7 @@ export function createConsoleServer(options = {}) {
       (body, state) => {
         requireStackStopped(state);
         requireNoJob();
-        startJob('pull', steps.pull);
+        startJob('pull', jobSteps(root).pull);
       },
     ],
     [
@@ -1021,7 +1160,7 @@ export function createConsoleServer(options = {}) {
       (body, state) => {
         requireStackStopped(state);
         requireNoJob();
-        startJob('install', steps.install);
+        startJob('install', jobSteps(root).install);
       },
     ],
     [
@@ -1044,14 +1183,14 @@ export function createConsoleServer(options = {}) {
         const env = { ANTHROPIC_API_KEY: key };
         const model = envValue(readText(files.envLocal), 'ANTHROPIC_MODEL');
         if (model) env.ANTHROPIC_MODEL = model;
-        startJob('smoke', steps.smoke.map((step) => ({ ...step, env: { ...step.env, ...env } })));
+        startJob('smoke', jobSteps(root).smoke.map((step) => ({ ...step, env: { ...step.env, ...env } })));
       },
     ],
     [
       'checks',
       () => {
         requireNoJob();
-        startJob('checks', steps.checks);
+        startJob('checks', jobSteps(root).checks);
       },
     ],
     [
@@ -1185,7 +1324,15 @@ export function createConsoleServer(options = {}) {
     }
     if (denied) {
       // A refused request may still have an unread body on the wire: do not reuse the connection.
-      sendJson(res, denied.status, { ok: false, error: denied.error }, { Connection: 'close' });
+      if (denied.notice) {
+        // Somebody followed a link here (the docs on github.com have one): plain words, not JSON.
+        sendBody(res, denied.status, 'text/plain; charset=utf-8', CROSS_SITE_NOTICE, {
+          Connection: 'close',
+          'Cross-Origin-Opener-Policy': 'same-origin',
+        });
+      } else {
+        sendJson(res, denied.status, { ok: false, error: denied.error }, { Connection: 'close' });
+      }
       return;
     }
 
@@ -1212,7 +1359,11 @@ export function createConsoleServer(options = {}) {
         return;
       }
       const html = wrapPage(page, { token, version, platform: process.platform, repo: root, port: currentPort() });
-      sendBody(res, 200, 'text/html; charset=utf-8', html, { 'Content-Security-Policy': PAGE_CSP });
+      // The opener policy leaves a page that opened this window no handle on it.
+      sendBody(res, 200, 'text/html; charset=utf-8', html, {
+        'Content-Security-Policy': PAGE_CSP,
+        'Cross-Origin-Opener-Policy': 'same-origin',
+      });
       return;
     }
 
@@ -1323,7 +1474,7 @@ export function createConsoleServer(options = {}) {
       }, idleTickMs)
     : null;
 
-  return { server, token, close, log: note, state: buildState };
+  return { server, token, close, endStack, log: note, state: buildState };
 }
 
 function readVersion(root) {
@@ -1385,20 +1536,6 @@ async function findWindowsBrowser() {
     for (const key of APP_PATH_KEYS) registered.push(await query(`${key}\\${exeName}`, ['/ve']));
     const found = windowsBrowserCandidates(kind, process.env, registered).find(isFile);
     if (found) return found;
-  }
-  return null;
-}
-
-function findOnPath(name) {
-  for (const dir of (process.env.PATH ?? '').split(path.delimiter)) {
-    if (!dir) continue;
-    const candidate = path.join(dir, name);
-    try {
-      fs.accessSync(candidate, fs.constants.X_OK);
-      if (isFile(candidate)) return candidate;
-    } catch {
-      // not here
-    }
   }
   return null;
 }
@@ -1536,6 +1673,12 @@ function createReporter(detached) {
 }
 
 async function main() {
+  // Windows looks for a bare program name in the working directory, which is
+  // the repository, before PATH. With this set, neither Node (22 and newer)
+  // nor cmd.exe does, and every child inherits it: yarn and npm in the jobs,
+  // and everything scripts/local-dev.mjs starts. See also pathTool().
+  if (IS_WINDOWS) process.env.NoDefaultCurrentDirectoryInExePath = '1';
+
   let opts;
   try {
     opts = parseArgs(process.argv.slice(2));
@@ -1603,10 +1746,24 @@ async function main() {
   });
 
   let stopping = false;
+  let hurrying = false;
   const stop = (why, exitCode = 0) => {
     if (stopping) {
-      // Second Ctrl+C: leave now. The stack notices the closed channel and finishes shutting down itself.
-      process.exit(1);
+      // Second Ctrl+C: leave without waiting for the full stop. Elsewhere than
+      // Windows that can be at once: the stack has its own process group,
+      // notices the closed channel and finishes shutting down by itself.
+      // On Windows it cannot. The stack is ended together with this process
+      // (Node keeps a child that is not detached in a job that dies with its
+      // parent), in the middle of its shutdown, and the emulators it started
+      // can be left holding their ports. So the stack gets a few seconds to
+      // finish, then its whole tree is ended, and only then does this exit.
+      // A third Ctrl+C leaves at once.
+      if (!IS_WINDOWS || hurrying) process.exit(1);
+      hurrying = true;
+      out.log(`Asked to stop again: the stack gets ${HURRY_GRACE_MS / 1000} s to finish, then it is ended.`);
+      const leave = () => process.exit(1);
+      consoleServer.endStack(HURRY_GRACE_MS).then(leave, leave);
+      return;
     }
     stopping = true;
     out.log(`${why}: stopping...`);
