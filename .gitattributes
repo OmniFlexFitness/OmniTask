@@ -1,1 +1,7 @@
 mobile/pubspec.lock text eol=lf
+
+# The compiled Cloud Functions (functions/lib) are committed. Sources and output stay LF on
+# every platform: a CRLF source makes tsc emit mixed line endings inside template literals
+# and comments, which shows up on Windows as phantom changes in functions/lib.
+functions/src/** text eol=lf
+functions/lib/** text eol=lf
