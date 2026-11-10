@@ -109,3 +109,74 @@ scheduled functions, mobile emulator wiring.
 - Revert the PR.
 - Prod-side effects are limited to one extra Secret Manager secret, which is
   harmless if left in place.
+
+---
+
+## Addendum: Build Console launcher and Windows-safe shutdown
+
+### Scope
+
+1. **Build Console as a local program.** The console page that is published
+   as an Artifact also runs from the checkout: `scripts/launch-console.mjs`
+   serves `scripts/console/console.html` on `http://127.0.0.1:4310`, and its
+   Start / Stop / Check buttons act on the local stack. A Windows shortcut
+   (Desktop + Start menu) starts it like an installed program. Plain Node, no
+   new dependencies, no administrator rights.
+2. **Managed stop for `scripts/local-dev.mjs`.** When started with an IPC
+   channel (as the console does) it stops on a `{ type: 'shutdown' }` message
+   and when the channel closes.
+3. **Windows-safe shutdown.** `taskkill /T /F` used to end the emulators
+   before they could export `.emulator-data/`. Now: after a console Ctrl+C the
+   launcher waits for the emulators' own export (until the Emulator Hub port
+   closes, at most 30 s) and only then removes what is left; for every other
+   stop it first asks the Emulator Hub to export (`POST /_admin/export`, at
+   most 30 s) and then ends the process trees. POSIX behaviour is unchanged
+   (SIGINT to each child's process group); the last-resort exit deadline went
+   from 15 s to 45 s so a slow export is not cut off.
+4. **Dev server fix.** The `vite` resolution moves from `^6.4.3` to `^7.3.7`.
+   `@angular/build` 21.2 is written for Vite 7 and patches its client; with
+   Vite 6 forced in, `GET /@vite/client` answered 500 and the app never
+   rendered under `ng serve`. 7.3.7 is the first 7.x release outside the range
+   of every advisory the 6.4.3 pin was added for.
+
+Security model of the console server: loopback only, `Host` and `Origin`
+checked on every request, a per-run token on the API, JSON bodies only, and a
+fixed allowlist of actions with fixed argument lists.
+
+### Files affected
+
+| File | Change |
+|---|---|
+| `scripts/launch-console.mjs` | New: local HTTP server + process manager for the console |
+| `scripts/launch-console.test.mjs` | New: `node --test` tests for the launcher |
+| `scripts/console/console.html` | New: the console page (Artifact body format) |
+| `scripts/console/omnitask-console.ico` | New: multi-size (16 to 256 px) brand icon for the shortcut |
+| `scripts/console-shortcut.ps1` | New: installs / removes the Desktop and Start menu shortcuts |
+| `scripts/local-dev.mjs` | IPC stop + disconnect, hub export before a Windows kill, Node started without a shell on Windows, "up" reported only when all four emulators are listening |
+| `.gitignore` | `firebase-export-*/` (working folder a failed emulator export leaves behind) |
+| `package.json`, `yarn.lock` | `console`, `console:shortcut` scripts; `vite` resolution `^7.3.7` |
+| `.github/workflows/pr-validation.yml` | Step: `node --test scripts/*.test.mjs` |
+| `docs/local-development.md`, `README.md` | Build Console section, corrected sign-in guidance, troubleshooting rows |
+
+### Test plan
+
+- `node --test scripts/*.test.mjs` (launcher guard, parsing, wrapping, actions).
+- `yarn build`, `yarn lint`, `yarn test --no-watch --no-progress --browsers=ChromeHeadless`.
+- `ng serve --configuration local`: `/@vite/client` answers 200 and the login
+  page renders.
+- Linux/macOS, emulators only: write a Firestore document, stop once with an
+  IPC `shutdown` message and once with SIGINT; each time `.emulator-data/`
+  must contain the document and no emulator, Java or `tsc` process may remain.
+- Windows (manual, on the laptop): `yarn console:shortcut`, open the shortcut,
+  Start, add a task in the app, Stop; Start again and confirm the task is
+  still there. Repeat with `yarn dev:local` and Ctrl+C in a terminal.
+
+### Rollback
+
+- Revert the commits. The console is additive: nothing in the app, the
+  Functions or the deploy chain depends on it.
+- Remove installed shortcuts with `yarn console:shortcut -Remove` (or delete
+  `OmniTask Build Console.lnk` from the Desktop and the Start menu).
+- If only the Vite change must go, restoring `"vite": "^6.4.3"` and running
+  `yarn install` brings back the previous lockfile state, and with it the
+  broken dev server.

@@ -20,6 +20,7 @@ yarn dev:local
 Then add your Anthropic API key to `functions/.secret.local` (created on first
 run) and restart. Full guide, prerequisites (Node 20+, Java 21+) and
 troubleshooting: [docs/local-development.md](docs/local-development.md).
+Prefer buttons to a terminal? `yarn console` opens the Build Console (start, stop and check the stack from a window); `yarn console:shortcut` puts it on the Windows Desktop and Start menu.
 
 ### Against production Firebase
 

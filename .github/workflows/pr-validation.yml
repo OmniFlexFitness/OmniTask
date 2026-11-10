@@ -44,6 +44,12 @@ jobs:
       - name: Run tests
         run: yarn test --no-watch --no-progress --browsers=ChromeHeadless
 
+      # Plain-Node tests for the dev tooling in scripts/ (Build Console
+      # launcher). The file pattern is expanded by the shell: `node --test`
+      # with a bare directory fails on Node 22.
+      - name: Run dev tooling tests
+        run: node --test scripts/*.test.mjs
+
       # ============================================
       # Firebase Functions Validation
       # ============================================

@@ -598,8 +598,9 @@ git --version</pre>
         Open <a href="http://localhost:4200" target="_blank" rel="noopener">http://localhost:4200</a> and press
         <em>Continue with Google</em>. The popup is the emulator's stand-in: it takes any email and asks for no password.
         <b>Type your OmniFlex admin email there.</b> The security rules treat that one address as the super admin
-        (it is written in <code>firestore.rules</code>), locally exactly as in production. Any other address becomes an
-        ordinary member, who cannot create projects and sees an empty dashboard. Accounts exist only in the emulator.
+        (it is written in <code>firestore.rules</code>), locally exactly as in production, and the dashboard fills
+        with sample projects. Any other address becomes an ordinary member: the sample data is refused by the rules,
+        so the dashboard starts empty, though projects can still be created by hand. Accounts exist only in the emulator.
       </p>
     </section>
 
@@ -907,7 +908,7 @@ git --version</pre>
               <tr><td>AI dialog: AI features are not configured</td><td>The key line still says <code>placeholder</code>, or the stack was not restarted</td><td>Step 03, then restart the stack</td></tr>
               <tr><td>AI dialog: the model is not available to this API key</td><td>The key's workspace cannot use that model</td><td>Pick another under Local overrides</td></tr>
               <tr><td>AI dialog: too long for the AI assistant</td><td>Title over 300 characters, or description over 8,000</td><td>Shorten the text</td></tr>
-              <tr><td>Empty dashboard, or Missing or insufficient permissions</td><td>Signed in as an ordinary member; only admins create projects</td><td>Sign out, sign in with the admin email (step 05)</td></tr>
+              <tr><td>Empty dashboard, or Missing or insufficient permissions</td><td>Signed in as an ordinary member; the rules refuse the sample data for anyone but an admin</td><td>Sign out, sign in with the admin email (step 05), or create a project by hand</td></tr>
               <tr><td>Blank page at <code>localhost:4200</code></td><td>Packages are older than the lockfile</td><td>Step 02, then restart the stack</td></tr>
               <tr><td><code>Java ... was not found on PATH</code></td><td>No JDK, or a terminal opened before it was installed</td><td>Install JDK 21, open a new terminal</td></tr>
               <tr><td><code>spawn ... firebase-functions EACCES</code></td><td>A stale <code>functions/node_modules</code> from before it left git</td><td>Step 02</td></tr>
@@ -1090,7 +1091,7 @@ git --version</pre>
     { re: /error TS\d+/i, sev: "bad", title: "TypeScript error in the functions",
       fix: "Fix the file and line it names in functions/src. The watcher rebuilds as soon as it compiles." },
     { re: /PERMISSION_DENIED|Missing or insufficient permissions|No matching allow statements/i, sev: "warn", title: "The security rules said no",
-      fix: "Locally the same rules apply as in production. An ordinary account cannot create projects: sign out and sign in with the admin email (step 05). If you are the admin, sign out and back in; an expired local session looks the same." },
+      fix: "Locally the same rules apply as in production. For an ordinary account the rules refuse the sample data, so the dashboard starts empty: sign out and sign in with the admin email (step 05), or create a project by hand. If you are the admin, sign out and back in; an expired local session looks the same." },
     { re: /local changes[^\n]*would be overwritten/i, sev: "warn", title: "Uncommitted edits block the switch",
       fix: "Run git stash, switch branches, then decide what to keep." },
     { re: /Not possible to fast-forward|diverg/i, sev: "warn", title: "The branch has diverged",
@@ -1365,6 +1366,10 @@ git --version</pre>
     }
 
     var view = STACK_VIEW[s.stack.state] || ["idle", s.stack.state];
+    /* The launcher reports "running" once the app's dev server is started; the first compile takes longer. */
+    var appOpen = (s.ports || []).some(function (p) { return p.port === 4200 && p.open === true; });
+    var compiling = s.stack.state === "running" && s.stack.mode === "full" && !appOpen;
+    if (compiling) view = ["warn", "Backend up · app still compiling"];
     $("deck-state").className = "deck-state sev-" + view[0];
     $("stack-tag").textContent = view[1] + (s.stack.mode === "emulators" && s.stack.state !== "stopped" ? " · backend only" : "");
     var since = "";
@@ -1398,7 +1403,7 @@ git --version</pre>
       "00": major(t.node) >= 20 && major(t.java) >= 21 && !!t.yarn,
       "02": !!(s.setup.rootDeps && s.setup.functionsDeps),
       "03": s.setup.secretFile === "set",
-      "04": s.stack.state === "running" || s.stack.state === "external"
+      "04": (s.stack.state === "running" && !compiling) || s.stack.state === "external"
     };
     if (s.job && s.job.action === "smoke" && s.job.state === "ok") live.smokeOk = true;
     if (live.smokeOk) live.derived["06"] = true;
