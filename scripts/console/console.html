@@ -55,6 +55,7 @@
 .sev-idle { --sev: #94a3b8; --sev-rgb: 148, 163, 184; }
 
 * { box-sizing: border-box; }
+html { scroll-padding-top: 76px; }
 
 /* Dashboard shell: #050810 under the 40px cyber grid (S:881-886). */
 body {
@@ -85,7 +86,7 @@ a:hover { color: var(--magenta); text-shadow: var(--omni-neon-blue); filter: bri
 p a, li a, td a { text-decoration: underline; text-decoration-color: rgba(80, 190, 255, 0.4); text-underline-offset: 3px; }
 strong { color: var(--bold-color); font-weight: 700; text-shadow: 0 0 10px rgba(165, 100, 255, 0.45); }   /* S:331-336 */
 em { font-style: normal; color: var(--fg); font-weight: 600; }
-:where(input, textarea, select, button, a, summary):focus-visible { outline: 2px solid #00d2ff; outline-offset: 2px; }   /* S:75-79 */
+:where(input, textarea, select, button, a, summary, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid #00d2ff; outline-offset: 2px; }   /* S:75-79 */
 ::selection { background: rgba(0, 210, 255, 0.4); color: #fff; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { border-radius: 4px; background: linear-gradient(180deg, rgba(0, 210, 255, 0.5), rgba(165, 100, 255, 0.5)); box-shadow: 0 0 6px rgba(0, 210, 255, 0.4); }
@@ -168,6 +169,8 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 .btn-sm { padding: 4px 12px; font-size: 12px; line-height: 16px; border-width: 1.5px; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; box-shadow: none; text-shadow: none; transform: none; }
 .btn:disabled::before { display: none; }
+.btn:disabled:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-neon:disabled:hover { background: rgba(var(--n), 0.08); }
 .links, .controls-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 
 /* ── Stack control (live mode) ── */
@@ -201,11 +204,11 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 .state-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
 .state-list li { display: grid; grid-template-columns: 8px 9.5rem minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 8px 12px; border-radius: 8px;
   border: 1px solid transparent; background: rgba(2, 6, 23, 0.4); font-size: 15px; color: var(--text-2); transition: all .2s; }
-.state-list li::before { content: ""; align-self: center; width: 8px; height: 8px; border-radius: 9999px; color: var(--sev); background: currentColor; box-shadow: 0 0 6px currentColor; }
+.state-list li::before { content: ""; align-self: start; margin-top: .45em; width: 8px; height: 8px; border-radius: 9999px; color: var(--sev); background: currentColor; box-shadow: 0 0 6px currentColor; }
 .state-list li:hover { background: rgba(10, 15, 30, 0.75); border-color: rgba(0, 210, 255, 0.25); box-shadow: 0 0 12px rgba(0, 210, 255, 0.15); }
 .state-list .what { color: #f1f5f9; font-weight: 600; }
 .tag, .verdict .chip {
-  display: inline-flex; align-items: center; margin-right: 8px; padding: 2px 10px; border-radius: 9999px; white-space: nowrap;
+  display: inline-flex; align-items: center; margin-right: 8px; padding: 2px 10px; border-radius: 12px; white-space: normal; overflow-wrap: anywhere; min-width: 0;
   font: 700 12px/16px var(--default-font); letter-spacing: .05em; text-transform: uppercase; color: var(--sev);
   background: rgba(var(--sev-rgb), 0.12); border: 1px solid rgba(var(--sev-rgb), 0.3); text-shadow: 0 0 5px rgba(var(--sev-rgb), 0.5);
 }
@@ -240,16 +243,18 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
   appearance: none; -webkit-appearance: none; flex: none; margin: 0; width: 1.15rem; height: 1.15rem; border-radius: .25rem; border: 1px solid rgba(148, 163, 184, 0.5);
   background: transparent center / 80% no-repeat; cursor: pointer; transition: all .15s ease;
 }
-.done input:hover { border-color: rgb(16, 185, 129); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+.done input:not(:disabled):hover { border-color: rgb(16, 185, 129); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 .done input:checked { background-color: rgba(16, 185, 129, 0.2); border-color: rgb(16, 185, 129); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E"); }
 .done input:disabled { cursor: default; }
+.done input:disabled:not(:checked) { opacity: .5; }
+.done:has(input:disabled) { cursor: default; }
 .aside, .expect { font-size: 15px; line-height: 1.5; color: var(--text-3); max-width: 70ch; }
 .aside b { font-weight: 700; color: #fbbf24; text-shadow: 0 0 10px rgba(245, 158, 11, 0.45); }
 .aside.danger b { color: #fb7185; text-shadow: 0 0 10px rgba(244, 63, 94, 0.45); }
 
 /* ── Command block ── */
-.command { border-radius: var(--omni-radius); overflow: hidden; background: var(--bg_highlight_dark); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 44px rgba(124, 92, 255, 0.08); min-width: 0; }
+.command { border-radius: var(--omni-radius); background: var(--bg_highlight_dark); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 44px rgba(124, 92, 255, 0.08); min-width: 0; }
 .command.boxed { margin-top: 14px; }
 .command-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 8px 8px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
 .command-bar .label { min-width: 0; }
@@ -265,11 +270,13 @@ pre { margin: 0; padding: 1rem 1.1rem; font-size: 13px; line-height: 1.7; color:
 
 /* ── Live log ── */
 .log { max-height: 380px; min-height: 120px; overflow: auto; padding: 12px 14px; font: 400 12.5px/1.6 var(--font-monospace); color: #dbeafe; white-space: pre-wrap; overflow-wrap: anywhere; }
-.log .l-job { color: #c4b5fd; }
+.log { border-radius: 0 0 11px 11px; }
+.log:focus-visible { outline-offset: -2px; }
+.log .l-job { color: #c4b5fd; text-shadow: 0 0 8px rgba(139, 92, 246, 0.25); }
 .log .l-console { color: var(--text-3); }
 .log .l-cmd { color: #67e8f9; text-shadow: 0 0 8px rgba(0, 210, 255, 0.4); }
 .log .l-up { color: #34d399; text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
-.log .l-err { color: #fda4af; }
+.log .l-err { color: #fda4af; text-shadow: 0 0 8px rgba(244, 63, 94, 0.45); }
 .log .l-empty { color: var(--text-3); }
 
 /* ── Tinted frames: .cyber-border-glow with the state hue (S:1318-1331) ── */
@@ -578,7 +585,8 @@ git --version</pre>
       </div>
       <p class="aside">
         It checks the tools, builds the functions, starts the four emulators, waits for them, then
-        starts the app. The first run downloads the emulator programs, so give it a couple of minutes.
+        starts the app. The first run also fetches the Firebase tools and the emulator programs, which can take
+        ten minutes or more on a slow connection. Later starts take under a minute.
       </p>
       <div class="command">
         <div class="command-bar"><span class="label" id="lbl-start">PowerShell · stays open</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="start" data-mode="full" hidden>Start now</button><button class="copy" type="button" data-copy="cmd-start">Copy</button></span></div>
@@ -598,9 +606,10 @@ git --version</pre>
         Open <a href="http://localhost:4200" target="_blank" rel="noopener">http://localhost:4200</a> and press
         <em>Continue with Google</em>. The popup is the emulator's stand-in: it takes any email and asks for no password.
         <b>Type your OmniFlex admin email there.</b> The security rules treat that one address as the super admin
-        (it is written in <code>firestore.rules</code>), locally exactly as in production, and the dashboard fills
-        with sample projects. Any other address becomes an ordinary member: the sample data is refused by the rules,
-        so the dashboard starts empty, though projects can still be created by hand. Accounts exist only in the emulator.
+        (it is written in <code>firestore.rules</code>), locally exactly as in production. Then open <em>Workspace</em>
+        in the top bar: its first visit creates three sample projects. Any other address becomes an ordinary member:
+        the rules refuse the sample data, so Workspace starts empty with a seeding error, though projects can still be
+        created by hand. Accounts exist only in the emulator.
       </p>
     </section>
 
@@ -882,6 +891,7 @@ git --version</pre>
               <tr><td>Claude model</td><td><code>DEFAULT_CLAUDE_MODEL</code> in code</td><td>Same, or <code>ANTHROPIC_MODEL</code> in <code>.env.local</code></td></tr>
               <tr><td>Email</td><td>Sent over Gmail SMTP</td><td>Captured and logged</td></tr>
               <tr><td>Super admin</td><td colspan="2">The one address in <code>firestore.rules</code>, in both. Locally, type it into the fake Google popup.</td></tr>
+              <tr><td>Who can use the console</td><td>Not applicable</td><td>Anyone signed in to this computer. Its checks keep other websites out, not other programs on the same machine.</td></tr>
               <tr><td>Plain <code>ng serve</code> or <code>yarn start</code></td><td colspan="2">Talks to <em>production</em> Firebase. Use step 04 or <code>yarn start:local</code> for local work.</td></tr>
             </tbody>
           </table>
@@ -908,7 +918,7 @@ git --version</pre>
               <tr><td>AI dialog: AI features are not configured</td><td>The key line still says <code>placeholder</code>, or the stack was not restarted</td><td>Step 03, then restart the stack</td></tr>
               <tr><td>AI dialog: the model is not available to this API key</td><td>The key's workspace cannot use that model</td><td>Pick another under Local overrides</td></tr>
               <tr><td>AI dialog: too long for the AI assistant</td><td>Title over 300 characters, or description over 8,000</td><td>Shorten the text</td></tr>
-              <tr><td>Empty dashboard, or Missing or insufficient permissions</td><td>Signed in as an ordinary member; the rules refuse the sample data for anyone but an admin</td><td>Sign out, sign in with the admin email (step 05), or create a project by hand</td></tr>
+              <tr><td>No sample projects, or Failed to seed data</td><td>Sample projects are created on the first visit to Workspace, and only for an admin; the rules refuse them for an ordinary member</td><td>Sign in with the admin email (step 05) and open Workspace, or create a project by hand</td></tr>
               <tr><td>Blank page at <code>localhost:4200</code></td><td>Packages are older than the lockfile</td><td>Step 02, then restart the stack</td></tr>
               <tr><td><code>Java ... was not found on PATH</code></td><td>No JDK, or a terminal opened before it was installed</td><td>Install JDK 21, open a new terminal</td></tr>
               <tr><td><code>spawn ... firebase-functions EACCES</code></td><td>A stale <code>functions/node_modules</code> from before it left git</td><td>Step 02</td></tr>
@@ -965,7 +975,10 @@ git --version</pre>
     if (m) s = "/" + m[1].toLowerCase() + "/" + m[2];
     return s;
   }
-  function quote(p) { return /\s/.test(p) ? "\"" + p + "\"" : p; }
+  /* A path is left bare only when every character is harmless to the shell; anything else is
+     single-quoted, where neither shell expands or splits it. */
+  function psQuote(p) { return /^[A-Za-z0-9_.:\\\/-]+$/.test(p) ? p : "'" + p.replace(/'/g, "''") + "'"; }
+  function shQuote(p) { return /^[A-Za-z0-9_.\/-]+$/.test(p) ? p : "'" + p.replace(/'/g, "'\\''") + "'"; }
   function cleanBranch(b) {
     var s = String(b || "").trim();
     return /^[A-Za-z0-9._\/-]+$/.test(s) ? s : PR_BRANCH;
@@ -976,7 +989,7 @@ git --version</pre>
   var SHELLS = {
     powershell: {
       name: "PowerShell",
-      repo: function (o) { return quote(toWin(o.repo)); },
+      repo: function (o) { return psQuote(toWin(o.repo)); },
       key: function () {
         return "if (!(Test-Path functions\\.secret.local)) { Copy-Item functions\\.secret.local.example functions\\.secret.local }\n" +
           "notepad functions\\.secret.local";
@@ -985,7 +998,7 @@ git --version</pre>
         return "$env:ANTHROPIC_API_KEY = (@(Get-Content functions\\.secret.local) -match '^ANTHROPIC_API_KEY=')[0] -replace '^ANTHROPIC_API_KEY=',''\n" +
           "node functions\\scripts\\ai-smoke.mjs";
       },
-      reset: function (o) { return "Remove-Item -Recurse -Force " + quote(toWin(o.repo) + "\\.emulator-data"); },
+      reset: function (o) { return "Remove-Item -Recurse -Force " + psQuote(toWin(o.repo) + "\\.emulator-data"); },
       portfind: function () {
         return "Get-NetTCPConnection -State Listen -LocalPort " + PORTS.join(",") +
           " -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess";
@@ -995,7 +1008,7 @@ git --version</pre>
     },
     bash: {
       name: "Git Bash",
-      repo: function (o) { return quote(toPosix(o.repo)); },
+      repo: function (o) { return shQuote(toPosix(o.repo)); },
       key: function () {
         return "[ -f functions/.secret.local ] || cp functions/.secret.local.example functions/.secret.local\n" +
           "notepad 'functions\\.secret.local'";
@@ -1003,7 +1016,7 @@ git --version</pre>
       smoke: function () {
         return "ANTHROPIC_API_KEY=\"$(grep '^ANTHROPIC_API_KEY=' functions/.secret.local | cut -d= -f2- | tr -d '\\r')\" node functions/scripts/ai-smoke.mjs";
       },
-      reset: function (o) { return "rm -rf " + quote(toPosix(o.repo) + "/.emulator-data"); },
+      reset: function (o) { return "rm -rf " + shQuote(toPosix(o.repo) + "/.emulator-data"); },
       portfind: function () {
         return "netstat -ano | grep LISTENING | grep -E ':(" + PORTS.join("|") + ") '";
       },
@@ -1034,7 +1047,7 @@ git --version</pre>
       "cmd-emu": cd + "yarn emulators",
       "cmd-app": cd + "yarn start:local",
       "cmd-checks": cd + "npm --prefix functions run build\nnpm --prefix functions test\nyarn lint\nyarn build\n" +
-        "yarn test --no-watch --no-progress --browsers=ChromeHeadless",
+        "yarn test --no-watch --no-progress --browsers=ChromeHeadless\nnode --test scripts/launch-console.test.mjs",
       "cmd-portfind": sh.portfind(o),
       "cmd-portkill": sh.portkill(o),
       "cmd-rotate": fb + " login\n" + fb + " functions:secrets:set ANTHROPIC_API_KEY --project " + PROJECT + "\n" +
@@ -1058,7 +1071,7 @@ git --version</pre>
       fix: "Choose another model under Local overrides, save functions/.env.local and restart the stack. In production the model is DEFAULT_CLAUDE_MODEL in functions/src/ai/claude.ts." },
     { re: /too long for the AI assistant/i, sev: "warn", title: "Input over the limit",
       fix: "AI calls accept a title up to 300 characters and a description or project context up to 8,000. Shorten the text." },
-    { re: /too many requests right now|rate.?limit|\b429\b/i, sev: "warn", title: "Rate limited",
+    { re: /too many requests|rate.?limit|(?:status|code|HTTP|error)\D{0,3}429\b/i, sev: "warn", title: "Rate limited",
       fix: "Wait a minute and try again. If it keeps happening, check the key's workspace limits in the Claude Console." },
     { re: /Could not reach Claude|ENOTFOUND|ECONNRESET|ETIMEDOUT/i, sev: "warn", title: "No route to the Claude API",
       fix: "Check the internet connection. The Claude API is the one part of the stack that is not on the laptop." },
@@ -1066,9 +1079,9 @@ git --version</pre>
       fix: "Try again. The function already retried once before giving up." },
     { re: /declined this request/i, sev: "warn", title: "Claude declined the request",
       fix: "A safety check refused that text. Rephrase the task and try again." },
-    { re: /EACCES[\s\S]*firebase-functions|firebase-functions[\s\S]*EACCES/i, sev: "bad", title: "Stale functions/node_modules",
+    { re: /\bEACCES\b[^\n]*firebase-functions|firebase-functions[^\n]*\bEACCES\b/, sev: "bad", title: "Stale functions/node_modules",
       fix: "Run step 02 again (it reinstalls the functions packages), then start again." },
-    { re: /Unable to parse JSON[\s\S]*upstream|Failed to make request to http:\/\/127\.0\.0\.1/i, sev: "bad", title: "A proxy is catching local calls",
+    { re: /Unable to parse JSON[\s\S]*upstream/i, sev: "bad", title: "A proxy is catching local calls",
       fix: "The Firebase CLI sends even its own local requests through HTTP_PROXY / HTTPS_PROXY. Start with step 04 (yarn dev:local) or yarn emulators, which remove those variables for the emulators." },
     { re: /Unable to access secret environment variables/i, sev: "warn", title: "A blank secret",
       fix: "A line in functions/.secret.local has no value, so the emulator went looking in Google Cloud. Put the word placeholder on every line you do not use." },
@@ -1083,7 +1096,7 @@ git --version</pre>
     { re: /Directory "[^"]*emulator-data" does not exist/i, sev: "warn", title: "No saved data to import",
       fix: "Start with yarn dev:local or yarn emulators. They skip the import until a first run has saved something." },
     { re: /Emulators did not become ready/i, sev: "warn", title: "The emulators did not come up in time",
-      fix: "Scroll up for the first error. On a slow first run the downloads can outlast the wait; starting again usually succeeds." },
+      fix: "Scroll up for the first error. If there is none, pull the latest code and start again: older copies of the launcher timed out while the Firebase tools were still downloading on a first run." },
     { re: /Cannot find module[^\n]*lib[\\\/]ai[\\\/]claude/i, sev: "bad", title: "The functions are not built",
       fix: "Run: npm --prefix functions run build" },
     { re: /Cannot find module/i, sev: "warn", title: "A package is missing",
@@ -1091,7 +1104,7 @@ git --version</pre>
     { re: /error TS\d+/i, sev: "bad", title: "TypeScript error in the functions",
       fix: "Fix the file and line it names in functions/src. The watcher rebuilds as soon as it compiles." },
     { re: /PERMISSION_DENIED|Missing or insufficient permissions|No matching allow statements/i, sev: "warn", title: "The security rules said no",
-      fix: "Locally the same rules apply as in production. For an ordinary account the rules refuse the sample data, so the dashboard starts empty: sign out and sign in with the admin email (step 05), or create a project by hand. If you are the admin, sign out and back in; an expired local session looks the same." },
+      fix: "Locally the same rules apply as in production. Sample projects are created on the first visit to Workspace, and the rules refuse them for an ordinary account: sign in with the admin email (step 05) and open Workspace, or create a project by hand. If you are the admin, sign out and back in; an expired local session looks the same." },
     { re: /local changes[^\n]*would be overwritten/i, sev: "warn", title: "Uncommitted edits block the switch",
       fix: "Run git stash, switch branches, then decide what to keep." },
     { re: /Not possible to fast-forward|diverg/i, sev: "warn", title: "The branch has diverged",
@@ -1134,7 +1147,7 @@ git --version</pre>
   /* ── state ─────────────────────────────────────────────────────────── */
   var state = { shell: "powershell", repo: DEFAULT_REPO, branch: PR_BRANCH, model: DEFAULT_MODEL, realmail: false, done: {} };
   /* What the laptop reports, in live mode. */
-  var live = { s: null, seq: 0, lost: "", synced: false, derived: {}, smokeOk: false, logLines: 0, cleared: false };
+  var live = { s: null, seq: 0, lost: "", synced: false, derived: {}, smokeOk: false, logLines: 0, dirty: { model: false, realmail: false } };
 
   function load() {
     try {
@@ -1169,14 +1182,14 @@ git --version</pre>
     var o = options();
     var sh = SHELLS[o.shell];
     var cmds = build(o);
-    Object.keys(cmds).forEach(function (id) {
-      var el = $(id);
-      if (el) el.textContent = cmds[id];
-    });
-
     /* An empty override file is a real answer, not a blank box. */
     var envEmpty = !cmds["cmd-env"];
-    $("cmd-env").textContent = envEmpty ? "(nothing to override; the file is not needed)" : cmds["cmd-env"];
+    if (envEmpty) cmds["cmd-env"] = "(nothing to override; the file is not needed)";
+    /* Written only when it changed: rewriting the node would drop a selection on every poll. */
+    Object.keys(cmds).forEach(function (id) {
+      var el = $(id);
+      if (el && el.textContent !== cmds[id]) el.textContent = cmds[id];
+    });
     document.querySelector('[data-copy="cmd-env"]').disabled = envEmpty;
 
     $("shell-ps").setAttribute("aria-pressed", String(o.shell === "powershell"));
@@ -1218,7 +1231,7 @@ git --version</pre>
       var on = derived ? live.derived[id] : state.done[id] === true;
       sec.classList.toggle("is-done", on);
       var box = $("done-" + id);
-      if (box) { box.checked = on; box.disabled = derived; }
+      if (box) { box.checked = on; box.disabled = derived; box.parentNode.title = derived ? "Detected from this laptop" : ""; }
     });
 
     var repoInput = $("repo"), branchInput = $("branch");
@@ -1355,13 +1368,15 @@ git --version</pre>
     $("mode-dot").className = "live-dot is-on";
     $("mode-text").textContent = "Live on this laptop";
 
-    /* Take the model and mail switch from the file once, so the page starts from what is on disk. */
+    /* The two override controls follow functions/.env.local on every poll, unless the person has
+       changed one here and not saved it yet. Saving then sends only what they changed, so a line
+       edited by hand in the file is never overwritten by a stale value from this page. */
+    if (s.setup.env) {
+      if (!live.dirty.model && typeof s.setup.env.model === "string" && /^claude-[a-z0-9-]+$/.test(s.setup.env.model)) state.model = s.setup.env.model;
+      if (!live.dirty.realmail) state.realmail = s.setup.env.realmail === true;
+    }
     if (first) {
       live.synced = true;
-      if (s.setup.env) {
-        if (typeof s.setup.env.model === "string" && /^claude-[a-z0-9-]+$/.test(s.setup.env.model)) state.model = s.setup.env.model;
-        state.realmail = s.setup.env.realmail === true;
-      }
       if (LIVE.platform && LIVE.platform !== "win32") state.shell = "bash";
     }
 
@@ -1433,20 +1448,29 @@ git --version</pre>
     render();
   }
 
-  function act(btn) {
+  function act(btn, ev) {
     var action = btn.getAttribute("data-action");
     var body = { action: action };
     if (action === "start") body.mode = btn.getAttribute("data-mode") === "emulators" ? "emulators" : "full";
-    if (action === "set-env") { body.model = state.model; body.realmail = state.realmail; }
+    if (action === "set-env") {
+      var both = !live.dirty.model && !live.dirty.realmail;
+      if (both || live.dirty.model) body.model = state.model;
+      if (both || live.dirty.realmail) body.realmail = state.realmail;
+    }
     if (action === "reset-data") body.confirm = true;
 
-    /* confirm() never shows inside an artifact frame, and a second click is harder to do by accident. */
+    /* confirm() never shows inside an artifact frame. The second click must be a separate, deliberate
+       one: a double-click or a held Enter lands inside the first second and is ignored. */
     var ask = btn.getAttribute("data-confirm");
-    if (ask && btn.getAttribute("data-armed") !== "1") {
-      var label = btn.textContent;
-      btn.setAttribute("data-armed", "1"); btn.textContent = ask + " Click again";
-      window.setTimeout(function () { btn.removeAttribute("data-armed"); btn.textContent = label; }, 4000);
-      return;
+    if (ask) {
+      var armedAt = parseInt(btn.getAttribute("data-armed") || "0", 10);
+      if (!armedAt) {
+        var label = btn.textContent;
+        btn.setAttribute("data-armed", String(Date.now())); btn.textContent = ask + " Click again";
+        window.setTimeout(function () { btn.removeAttribute("data-armed"); btn.textContent = label; }, 5000);
+        return;
+      }
+      if (Date.now() - armedAt < 1000 || (ev && ev.detail > 1)) return;
     }
     btn.disabled = true;
     setNotice("");
@@ -1459,6 +1483,7 @@ git --version</pre>
         lost("quit");
         setNotice("The console has stopped. You can close this window.", "info");
       } else if (action === "set-env") {
+        live.dirty.model = false; live.dirty.realmail = false;
         setNotice("Saved functions/.env.local. Restart the stack for it to take effect.", "info");
       }
       if (action === "start" || action === "pull" || action === "install" || action === "smoke" || action === "checks") {
@@ -1523,7 +1548,7 @@ git --version</pre>
     $("log-clear").addEventListener("click", function () { $("log").textContent = ""; live.logLines = 0; });
     document.addEventListener("click", function (ev) {
       var btn = ev.target.closest ? ev.target.closest("[data-action]") : null;
-      if (btn && !btn.disabled) act(btn);
+      if (btn && !btn.disabled) act(btn, ev);
     });
     pollState();
     pollLog();
@@ -1536,8 +1561,8 @@ git --version</pre>
   $("src-live").addEventListener("click", function () { set({ branch: LIVE_BRANCH }); });
   $("repo").addEventListener("input", function (e) { if (!LIVE) set({ repo: e.target.value }); });
   $("branch").addEventListener("input", function (e) { if (!LIVE) set({ branch: e.target.value }); });
-  $("model").addEventListener("change", function (e) { set({ model: e.target.value }); });
-  $("realmail").addEventListener("change", function (e) { set({ realmail: e.target.checked }); });
+  $("model").addEventListener("change", function (e) { live.dirty.model = true; set({ model: e.target.value }); });
+  $("realmail").addEventListener("change", function (e) { live.dirty.realmail = true; set({ realmail: e.target.checked }); });
   $("diag").addEventListener("input", function (e) { renderVerdicts(e.target.value); });
   each(".done input", function (box) {
     box.addEventListener("change", function () {
@@ -1547,6 +1572,12 @@ git --version</pre>
       set({ done: done });
     });
   });
+
+  /* The sticky bar wraps to more lines on a phone, so its height is measured, not assumed. */
+  var bar = document.querySelector(".masthead");
+  function padForBar() { document.documentElement.style.scrollPaddingTop = (bar.offsetHeight + 16) + "px"; }
+  padForBar();
+  if (window.ResizeObserver) new ResizeObserver(padForBar).observe(bar);
 
   load();
   render();
