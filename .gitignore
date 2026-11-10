@@ -52,6 +52,9 @@ Thumbs.db
 # .secret.local holds real API keys for the Functions emulator - never commit it.
 .secret.local
 .emulator-data/
+# Working folder of an emulator export; left behind when an export fails. It
+# holds local Auth and Firestore data, so it must never be committed.
+firebase-export-*/
 
 # Service account keys and env variables (sensitive - never commit)
 .env*

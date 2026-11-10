@@ -14,11 +14,15 @@
  *   4. `ng serve --configuration local` (points the app at the emulators)
  *
  * Ctrl+C stops everything; the emulators export their data on exit.
+ * The Build Console (scripts/launch-console.mjs) starts this script with an
+ * IPC channel and stops it with a { type: 'shutdown' } message instead.
  * Plain Node, no extra dependencies, works on Windows/macOS/Linux.
  * Full guide: docs/local-development.md
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, copyFileSync, readFileSync, accessSync, constants } from 'node:fs';
+import { request as httpRequest } from 'node:http';
+import { connect as netConnect } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,8 +38,24 @@ const EMULATORS = 'auth,firestore,functions,storage';
 /** Firebase CLI version used when no global `firebase` binary is installed. */
 const FIREBASE_TOOLS_SPEC = 'firebase-tools@15';
 /** Emulator hub (fixed port from firebase.json defaults) used to detect readiness. */
-const EMULATOR_HUB_URL = 'http://127.0.0.1:4400/emulators';
+const EMULATOR_HUB_HOST = '127.0.0.1';
+const EMULATOR_HUB_PORT = 4400;
+const EMULATOR_HUB_URL = `http://${EMULATOR_HUB_HOST}:${EMULATOR_HUB_PORT}/emulators`;
+/** Hub endpoint that writes an export while the emulators keep running. */
+const EMULATOR_HUB_EXPORT_PATH = '/_admin/export';
 const EXPORT_DIR = '.emulator-data';
+
+/** How long the hub gets to write an export before a Windows stop gives up on it. */
+const HUB_EXPORT_TIMEOUT_MS = 30_000;
+/** How long the children get to exit by themselves after a Ctrl+C in a Windows console. */
+const CONSOLE_INTERRUPT_GRACE_MS = 30_000;
+/**
+ * Last resort: exit even if a child never reports its exit. Counted from the
+ * moment the children were told to stop, and long enough for the emulators to
+ * finish an export of a large local database (it used to be 15 s, which a
+ * slow export could overrun).
+ */
+const EXIT_DEADLINE_MS = 45_000;
 
 /** JS entry points run directly with the current Node binary (no npm/yarn wrapper). */
 const TSC_BIN = join(FUNCTIONS_DIR, 'node_modules', 'typescript', 'bin', 'tsc');
@@ -43,6 +63,8 @@ const NG_BIN = join(ROOT, 'node_modules', '@angular', 'cli', 'bin', 'ng.js');
 
 const children = new Set();
 let shuttingDown = false;
+/** True once `emulators:start` was spawned, i.e. there may be data worth exporting. */
+let emulatorsStarted = false;
 
 const log = (msg) => console.log(`\x1b[36m[dev:local]\x1b[0m ${msg}`);
 const warn = (msg) => console.warn(`\x1b[33m[dev:local]\x1b[0m ${msg}`);
@@ -53,12 +75,18 @@ const fail = (msg) => {
 
 /**
  * Build spawn arguments. Node 24 deprecates passing an args array together
- * with `shell: true` (DEP0190), so on Windows, where .cmd shims need a shell,
- * the command is a single pre-built string. All arguments used here are fixed
- * literals without spaces, so plain joining is safe.
+ * with `shell: true` (DEP0190), so on Windows, where .cmd shims (yarn, npm,
+ * npx, firebase) need a shell, the command is a single pre-built string. All
+ * arguments of those commands are fixed literals without spaces, so plain
+ * joining is safe.
+ *
+ * The Node binary itself is a real executable and is always started without a
+ * shell: its path (C:\Program Files\nodejs\node.exe) and the script paths
+ * under the repo may contain spaces, which a joined command line would split.
  */
 function spawnArgs(cmd, args) {
-  return IS_WINDOWS ? [[cmd, ...args].join(' '), [], { shell: true }] : [cmd, args, { shell: false }];
+  if (!IS_WINDOWS || cmd === process.execPath) return [cmd, args, { shell: false }];
+  return [[cmd, ...args].join(' '), [], { shell: true }];
 }
 
 /** Run a command to completion, inheriting stdio. Throws on non-zero exit. */
@@ -77,8 +105,9 @@ function run(cmd, args, opts = {}) {
  * On POSIX each child gets its own process group (`detached`), so shutdown()
  * can signal the whole tree with kill(-pid): `npx firebase-tools` is a
  * wrapper around the real CLI, and signaling only the wrapper would orphan
- * the emulators without an export. On Windows the tree is ended with
- * `taskkill /T`.
+ * the emulators without an export. On Windows there is no signal that reaches
+ * another process tree, so shutdown() saves the data first and then ends the
+ * tree with `taskkill /T /F` (see shutdown()).
  */
 function start(name, cmd, args, opts = {}) {
   const [file, argv, shellOpt] = spawnArgs(cmd, args);
@@ -91,22 +120,26 @@ function start(name, cmd, args, opts = {}) {
   children.add(child);
   child.on('exit', (code, signal) => {
     children.delete(child);
-    if (!shuttingDown) {
-      fail(`${name} exited unexpectedly (${signal ?? `code ${code}`}). Stopping the stack.`);
-    }
+    const report = () => {
+      if (!shuttingDown) {
+        fail(`${name} exited unexpectedly (${signal ?? `code ${code}`}). Stopping the stack.`);
+      }
+    };
+    // A Ctrl+C in a Windows console ends the children directly. Let our own
+    // SIGINT handler run first, so that a normal stop is not reported as a
+    // crash (and does not take the "save, then taskkill" path meant for one).
+    if (IS_WINDOWS) setTimeout(report, 250);
+    else report();
   });
   return child;
 }
 
-/** Deliver SIGINT (or the Windows equivalent) to a child's whole process tree. */
-function stopTree(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return;
-  if (IS_WINDOWS) {
-    // Ctrl+C in the console already reaches every process in the console group,
-    // so this path is mostly for "one child died, stop the rest".
-    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-    return;
-  }
+const hasExited = (child) => child.exitCode !== null || child.signalCode !== null;
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/** POSIX: deliver SIGINT to a child's whole process group so it can clean up. */
+function interruptTree(child) {
+  if (hasExited(child)) return;
   try {
     process.kill(-child.pid, 'SIGINT'); // whole process group
   } catch {
@@ -114,19 +147,163 @@ function stopTree(child) {
   }
 }
 
-function shutdown(exitCode = 0) {
+/**
+ * Windows: end a child's whole process tree at once. `taskkill /F` gives the
+ * tree no chance to clean up, so anything worth saving must be saved first.
+ */
+function killTree(child) {
+  if (hasExited(child)) return;
+  spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+}
+
+/**
+ * Ask the running Emulator Hub to write an export to .emulator-data/ now.
+ * This is the same request the Firebase CLI sends itself for
+ * `--export-on-exit`; it is used where the CLI never gets the chance to
+ * (Windows stops that end the tree with taskkill).
+ *
+ * Sent with node:http rather than fetch so that no `Origin` header can ever
+ * be attached: the hub answers 403 to any request that carries one.
+ * Never rejects: resolves to { ok, detail } so a failed export cannot keep
+ * the stack from stopping.
+ */
+function exportViaHub(timeoutMs = HUB_EXPORT_TIMEOUT_MS) {
+  return new Promise((done) => {
+    const body = JSON.stringify({ path: join(ROOT, EXPORT_DIR), initiatedBy: 'local-dev' });
+    let settled = false;
+    let timer;
+    const finish = (ok, detail) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      done({ ok, detail });
+    };
+    const req = httpRequest(
+      {
+        host: EMULATOR_HUB_HOST,
+        port: EMULATOR_HUB_PORT,
+        path: EMULATOR_HUB_EXPORT_PATH,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      },
+      (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          if (text.length < 2000) text += chunk;
+        });
+        res.on('end', () =>
+          finish(res.statusCode === 200, `HTTP ${res.statusCode} ${text.trim().slice(0, 300)}`.trim()),
+        );
+      },
+    );
+    // The hub answers only when the export is complete, so this bounds the whole export.
+    timer = setTimeout(() => {
+      const seconds = Math.round(timeoutMs / 1000);
+      req.destroy(new Error(`no answer from the Emulator Hub within ${seconds} s`));
+    }, timeoutMs);
+    req.on('error', (err) =>
+      finish(false, err.code === 'ECONNREFUSED' ? 'the Emulator Hub is not running' : err.message),
+    );
+    req.end(body);
+  });
+}
+
+/** True when nothing listens on the hub port (a refused connection, not merely a slow one). */
+function hubPortClosed() {
+  return new Promise((done) => {
+    const socket = netConnect({ host: EMULATOR_HUB_HOST, port: EMULATOR_HUB_PORT });
+    const finish = (closed) => {
+      socket.destroy();
+      done(closed);
+    };
+    socket.setTimeout(1000, () => finish(false));
+    socket.once('connect', () => finish(false));
+    socket.once('error', (err) => finish(err.code === 'ECONNREFUSED'));
+  });
+}
+
+/**
+ * Windows, after a Ctrl+C in the console. The console already delivered the
+ * Ctrl+C to every process in it, so the emulators are running their own
+ * export-on-exit; killing them now would cut that export short. Wait until
+ * the children are gone, or until the hub port closes: the CLI stops the hub
+ * only after the export is on disk, so from then on only wrappers can be left
+ * (typically cmd.exe sitting at "Terminate batch job (Y/N)?").
+ */
+async function waitAfterConsoleInterrupt() {
+  const started = Date.now();
+  while (children.size > 0 && Date.now() - started < CONSOLE_INTERRUPT_GRACE_MS) {
+    if (await hubPortClosed()) {
+      await sleep(1000); // let the CLI finish exiting by itself
+      return;
+    }
+    await sleep(500);
+  }
+}
+
+/**
+ * Stop every child, then exit.
+ *
+ * `cause` is 'interrupt' for SIGINT (Ctrl+C) and 'request' for everything
+ * else: the console's managed stop, a lost IPC channel, SIGTERM, or one child
+ * dying. The distinction only matters on Windows:
+ *
+ *   POSIX              SIGINT to each child's process group. The emulators
+ *                      export .emulator-data on SIGINT.
+ *   Windows interrupt  Wait for the children to finish by themselves (see
+ *                      waitAfterConsoleInterrupt), then taskkill what is left.
+ *   Windows request    Nothing has told the emulators to stop, and taskkill
+ *                      would end them before they could export. Ask the hub
+ *                      to export first, then taskkill.
+ */
+async function shutdown(exitCode = 0, cause = 'request') {
   if (shuttingDown) return;
   shuttingDown = true;
   log('Shutting down...');
-  for (const child of children) stopTree(child);
-  // Emulators export .emulator-data on SIGINT; give them time to flush, then exit.
+
+  try {
+    if (!IS_WINDOWS) {
+      for (const child of children) interruptTree(child);
+    } else {
+      if (cause === 'interrupt') {
+        await waitAfterConsoleInterrupt();
+      } else if (emulatorsStarted) {
+        log(`Saving emulator data to ${EXPORT_DIR}/ ...`);
+        const result = await exportViaHub();
+        if (result.ok) log('Emulator data saved.');
+        else warn(`Emulator data was not saved (${result.detail}).`);
+      }
+      for (const child of children) killTree(child);
+    }
+  } catch (err) {
+    // Stopping must always end in process.exit, whatever went wrong on the way.
+    warn(`Problem while stopping: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const pending = [...children].map((c) => new Promise((res) => c.once('exit', res)));
-  const deadline = new Promise((res) => setTimeout(res, 15_000).unref());
-  Promise.race([Promise.all(pending), deadline]).then(() => process.exit(exitCode));
+  const deadline = new Promise((res) => setTimeout(res, EXIT_DEADLINE_MS).unref());
+  await Promise.race([Promise.all(pending), deadline]);
+  process.exit(exitCode);
 }
 
-process.on('SIGINT', () => shutdown(0));
+process.on('SIGINT', () => shutdown(0, 'interrupt'));
 process.on('SIGTERM', () => shutdown(0));
+
+// Managed mode: the Build Console starts this script with an IPC channel and
+// stops it with a message, because a hidden Windows process has no console to
+// receive a Ctrl+C. A closed channel means the console is gone, so stop too
+// rather than keep a stack running that nothing can control.
+if (process.send) {
+  process.on('message', (m) => {
+    if (m && m.type === 'shutdown') shutdown(0);
+  });
+  process.on('disconnect', () => shutdown(0));
+  // The console also owns our output pipes. If it dies they break, and an
+  // unhandled EPIPE would end this process before the children are stopped.
+  process.stdout.on('error', () => {});
+  process.stderr.on('error', () => {});
+}
 
 // ---------------------------------------------------------------------------
 // Preflight
@@ -246,7 +423,10 @@ async function waitForEmulators(timeoutMs = 180_000) {
       const res = await fetch(EMULATOR_HUB_URL);
       if (res.ok) {
         const emulators = await res.json();
-        if (emulators.functions && emulators.firestore && emulators.auth) return true;
+        // Wait for every requested emulator, not just the first few: the hub
+        // lists them as they start, and a stop that arrives before the last
+        // one (Storage) is listening makes the export fail and save nothing.
+        if (EMULATORS.split(',').every((name) => emulators[name])) return true;
       }
     } catch {
       // not up yet
@@ -285,6 +465,7 @@ async function main() {
     log(`No ${EXPORT_DIR}/ yet: starting with an empty database (it is created on first exit).`);
   }
   log(`Starting Firebase emulators (${EMULATORS}) for project ${LOCAL_PROJECT_ID}...`);
+  emulatorsStarted = true;
   start('Firebase emulators', cmd, emulatorArgs, {
     cwd: ROOT,
     env: emulatorEnv({ FORCE_COLOR: '1' }),
