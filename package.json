@@ -7,6 +7,8 @@
     "start:local": "ng serve --configuration local",
     "dev:local": "node scripts/local-dev.mjs",
     "emulators": "node scripts/local-dev.mjs --emulators-only",
+    "console": "node scripts/launch-console.mjs",
+    "console:shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/console-shortcut.ps1",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -32,7 +34,7 @@
   "resolutions": {
     "handlebars": "^4.7.9",
     "undici": "^7.28.0",
-    "vite": "^6.4.3",
+    "vite": "^7.3.7",
     "picomatch": "^4.0.4",
     "lodash": "^4.17.23",
     "tar": "^7.5.16",
