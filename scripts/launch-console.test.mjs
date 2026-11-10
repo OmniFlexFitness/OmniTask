@@ -1090,6 +1090,7 @@ describe('POST /api/action', () => {
 
     // One argument alone leaves the other setting as it is.
     res = await ctx.api.act({ action: 'set-env', model: 'claude-haiku-4-5' });
+    assert.equal(res.status, 200);
     assert.equal(fs.readFileSync(envFile, 'utf8'), '# mine\nOTHER=keep me\nEMULATOR_SEND_REAL_EMAIL=true\nANTHROPIC_MODEL=claude-haiku-4-5\n');
 
     fs.writeFileSync(envFile, 'ANTHROPIC_MODEL=claude-sonnet-5\nEMULATOR_SEND_REAL_EMAIL=true\n');
