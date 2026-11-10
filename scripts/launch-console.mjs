@@ -62,7 +62,11 @@ const UP_MARKERS = {
   emulators: 'Emulators are up.',
 };
 
-/** Ports of the local stack (firebase.json defaults plus ng serve). */
+/**
+ * Ports of the local stack, in the order /api/state lists them. The numbers
+ * are what is used when firebase.json cannot be read or does not name one:
+ * the Firebase defaults (the hub is not in firebase.json at all) plus ng serve.
+ */
 const STACK_PORTS = [
   { port: 4200, name: 'app' },
   { port: 9099, name: 'auth' },
@@ -72,6 +76,18 @@ const STACK_PORTS = [
   { port: 4000, name: 'ui' },
   { port: 4400, name: 'hub' },
 ];
+
+/**
+ * Written by scripts/local-dev.mjs when it starts and deleted when it exits:
+ * the ports the stack really uses. Windows reserves blocks of ports that
+ * change with every boot, and the stack then moves to the next free one.
+ */
+const PORTS_FILE = '.local-dev-ports.json';
+/** The real file is about 120 bytes; a larger one is not that file and is not read. */
+const PORTS_FILE_LIMIT = 4 * 1024;
+const FIREBASE_JSON_LIMIT = 256 * 1024;
+/** How long the defaults read from firebase.json are kept; the file only changes with a pull or an edit. */
+const DEFAULT_PORTS_TTL_MS = 5000;
 
 const PAGE_CSP =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; " +
@@ -236,6 +252,81 @@ export function resolveInside(root, name) {
   }
   const same = IS_WINDOWS ? actual.toLowerCase() === expected.toLowerCase() : actual === expected;
   return same ? expected : null;
+}
+
+const isPortNumber = (value) => Number.isInteger(value) && value >= 1 && value <= 65535;
+
+/**
+ * The default port of each part of the stack, by name, given the text of
+ * firebase.json (null when it could not be read): `emulators.<name>.port`
+ * where that is a port number, otherwise the literal in STACK_PORTS. The app
+ * is not an emulator, so its default is always the literal.
+ */
+export function defaultStackPorts(firebaseJsonText) {
+  let emulators = null;
+  try {
+    // Editors on Windows may put a byte order mark first, which JSON.parse does not accept.
+    emulators = JSON.parse(String(firebaseJsonText ?? '').replace(/^\uFEFF/, ''))?.emulators;
+  } catch {
+    // unreadable or not JSON: the literals stand
+  }
+  const ports = {};
+  for (const { name, port } of STACK_PORTS) {
+    const configured = name === 'app' ? undefined : emulators?.[name]?.port;
+    ports[name] = isPortNumber(configured) ? configured : port;
+  }
+  return ports;
+}
+
+/**
+ * The ports in the text of .local-dev-ports.json, by name, or null when the
+ * text is not exactly what scripts/local-dev.mjs writes: a JSON object with a
+ * whole number from 1 to 65535 for each of the seven names. One bad value
+ * discards the file as a whole; a half-believed file would show a mix of
+ * ports that no stack is using. Other keys ("remapped") are not looked at.
+ *
+ * Anybody who can write to the folder can write this file, so the result is
+ * only ever a set of numbers: each is probed on loopback and shown to the
+ * page, and none is used for anything else.
+ */
+export function parsePortsFile(text) {
+  if (typeof text !== 'string') return null;
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return null; // also a file caught half-written: the next poll reads it whole
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const ports = {};
+  for (const { name } of STACK_PORTS) {
+    if (!Object.hasOwn(value, name) || !isPortNumber(value[name])) return null;
+    ports[name] = value[name];
+  }
+  return ports;
+}
+
+/**
+ * True when the ports file names the process that wrote it and that process
+ * is gone: the stack was killed before it could delete the file, so its
+ * numbers describe nothing that is running.
+ */
+export function portsFileIsStale(text, isAlive = pidAlive) {
+  try {
+    const pid = JSON.parse(text)?.pid;
+    return Number.isInteger(pid) && pid > 0 && !isAlive(pid);
+  } catch {
+    return false; // unreadable: parsePortsFile rejects it anyway
+  }
+}
+
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === 'EPERM'; // exists, owned by someone else
+  }
 }
 
 function sha256(text) {
@@ -474,6 +565,40 @@ function readText(file) {
     return fs.readFileSync(file, 'utf8');
   } catch {
     return null;
+  }
+}
+
+/**
+ * Text of a regular file of at most `limit` bytes; null for anything else (no
+ * file, a folder, a pipe, a larger file). At most `limit` + 1 bytes are read,
+ * whatever the file turns out to be.
+ */
+function readSmallFile(file, limit) {
+  let fd;
+  try {
+    // Non-blocking, so that opening a named pipe left under this name cannot
+    // hang the server waiting for a writer. Windows has no such flag or need.
+    fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+    if (!fs.fstatSync(fd).isFile()) return null;
+    const buffer = Buffer.alloc(limit + 1);
+    let size = 0;
+    for (;;) {
+      const count = fs.readSync(fd, buffer, size, buffer.length - size, null);
+      if (count === 0) break;
+      size += count;
+      if (size > limit) return null;
+    }
+    return buffer.toString('utf8', 0, size);
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch {
+        // nothing more to do with it
+      }
+    }
   }
 }
 
@@ -739,6 +864,8 @@ export function createConsoleServer(options = {}) {
     secretExample: path.join(functionsDir, '.secret.local.example'),
     envLocal: path.join(functionsDir, '.env.local'),
     smokeScript: path.join(functionsDir, 'scripts', 'ai-smoke.mjs'),
+    firebaseJson: path.join(root, 'firebase.json'),
+    stackPorts: path.join(root, PORTS_FILE),
   };
 
   const token = randomBytes(24).toString('hex');
@@ -820,13 +947,39 @@ export function createConsoleServer(options = {}) {
     .then(options.probeTools ?? probeTools)
     .catch(() => ({ node: process.version, java: null, yarn: null }));
 
+  let defaultPortsCache = null;
+  function getDefaultPorts() {
+    if (!defaultPortsCache || Date.now() - defaultPortsCache.at >= DEFAULT_PORTS_TTL_MS) {
+      defaultPortsCache = { at: Date.now(), ports: defaultStackPorts(readSmallFile(files.firebaseJson, FIREBASE_JSON_LIMIT)) };
+    }
+    return defaultPortsCache.ports;
+  }
+
   let portsCache = null;
+  /**
+   * One `{ name, port, default, open }` per part of the stack. `port` is where
+   * the stack is (or would be) listening and the only one probed: the number
+   * in .local-dev-ports.json while that file exists and is valid, otherwise
+   * `default`. The console never picks a port itself.
+   */
   function getPorts() {
-    if (portsCache && Date.now() - portsCache.at < 1000) return portsCache.promise;
+    const defaults = getDefaultPorts();
+    // Read every time, not cached: the stack writes the file when it starts
+    // and deletes it when it exits, and the page should follow at once.
+    const text = readSmallFile(files.stackPorts, PORTS_FILE_LIMIT);
+    const effective = (typeof text === 'string' && portsFileIsStale(text) ? null : parsePortsFile(text)) ?? defaults;
+    const key = STACK_PORTS.map(({ name }) => `${effective[name]}/${defaults[name]}`).join(' ');
+    // Probe results are kept for a second, but only for the same set of ports.
+    if (portsCache && portsCache.key === key && Date.now() - portsCache.at < 1000) return portsCache.promise;
     const promise = Promise.all(
-      STACK_PORTS.map(async ({ port, name }) => ({ port, name, open: Boolean(await probe(port)) })),
+      STACK_PORTS.map(async ({ name }) => ({
+        name,
+        port: effective[name],
+        default: defaults[name],
+        open: Boolean(await probe(effective[name])),
+      })),
     );
-    portsCache = { at: Date.now(), promise };
+    portsCache = { at: Date.now(), key, promise };
     return promise;
   }
 
@@ -1101,6 +1254,7 @@ export function createConsoleServer(options = {}) {
       current.state = code === 0 ? 'ok' : 'failed';
       current.endedAt = new Date().toISOString();
       gitCache = null; // a pull or an install changes what the header shows
+      defaultPortsCache = null; // and a pull can bring another firebase.json
       note(code === 0 ? `${action}: finished.` : `${action}: failed${code === null ? '' : ` (exit code ${code})`}.`);
     })();
   }
@@ -1111,7 +1265,12 @@ export function createConsoleServer(options = {}) {
   };
   const requireStackStopped = (state) => {
     if (state.stack.state === 'external') {
-      throw new ActionError(409, 'A stack this console did not start is running (port 4400 or 4200 is in use). Stop it where it was started first.');
+      // The ports that were probed, which are not 4400 and 4200 when the stack had to move.
+      const portOf = (name) => state.ports.find((p) => p.name === name).port;
+      throw new ActionError(
+        409,
+        `A stack this console did not start is running (port ${portOf('hub')} or ${portOf('app')} is in use). Stop it where it was started first.`,
+      );
     }
     if (state.stack.state !== 'stopped') throw new ActionError(409, 'Stop the stack first.');
   };
@@ -1724,6 +1883,12 @@ async function main() {
   consoleServer.server.once('error', async (err) => {
     if (err.code !== 'EADDRINUSE') {
       out.error(`Could not start the console on port ${opts.port}: ${err.message}`);
+      if (err.code === 'EACCES') {
+        // Windows reserves blocks of ports per boot (Hyper-V, WSL, Docker); the console's own can be in one.
+        out.error(
+          `Windows may have reserved port ${opts.port} for this session. Use another one: set OMNITASK_CONSOLE_PORT, or pass --port.`,
+        );
+      }
       process.exit(1);
     }
     // Single instance: if the port is held by a console, show that one instead.

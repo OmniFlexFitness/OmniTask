@@ -24,12 +24,14 @@ import {
   createConsoleServer,
   createGuard,
   defaultJobSteps,
+  defaultStackPorts,
   editorCommand,
   findOnPath,
   folderCommand,
   openBrowser,
   parseArgs,
   parseEnvLocal,
+  parsePortsFile,
   parseRegValue,
   parseSecretState,
   pingConsole,
@@ -40,6 +42,7 @@ import {
   stripAnsi,
   windowsBrowserCandidates,
   wrapPage,
+  portsFileIsStale,
 } from './launch-console.mjs';
 
 const LAUNCHER = fileURLToPath(new URL('./launch-console.mjs', import.meta.url));
@@ -999,8 +1002,9 @@ describe('GET /api/state', () => {
           [5001, 'functions'],
           [4000, 'ui'],
           [4400, 'hub'],
-        ].map(([port, name]) => ({ port, name, open: false })),
+        ].map(([port, name]) => ({ name, port, default: port, open: false })),
       );
+      assert.deepEqual(Object.keys(s.ports[0]), ['name', 'port', 'default', 'open']);
       assert.equal(s.job, null);
       assert.equal(typeof s.logSeq, 'number');
 
@@ -1086,6 +1090,356 @@ describe('GET /api/state', () => {
       }
       const stop = await ctx.api.act({ action: 'stop' });
       assert.equal(stop.status, 409, 'the console only stops what it started');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+});
+
+describe('stack ports', () => {
+  const NAMES = ['app', 'auth', 'firestore', 'storage', 'functions', 'ui', 'hub'];
+  /** What the console assumes when firebase.json says nothing. */
+  const LITERALS = { app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 4400 };
+  /** A stack that had to leave every one of its ports. None of these numbers is a default anywhere. */
+  const MOVED = { app: 61200, auth: 61099, firestore: 61080, functions: 61001, storage: 61199, ui: 61000, hub: 61400 };
+  /** The file as scripts/local-dev.mjs writes it. */
+  const stackFile = (ports, remapped = []) => JSON.stringify({ ...ports, remapped });
+  const portsPath = (root) => path.join(root, '.local-dev-ports.json');
+  const firebaseJson = (emulators) => JSON.stringify({ hosting: { public: 'dist' }, emulators: { singleProjectMode: true, ...emulators } });
+  const listed = (ports, key = 'port') => Object.fromEntries(ports.map((p) => [p.name, p[key]]));
+
+  /** A console whose probe records every port it is asked about and finds only `open` listening. */
+  async function startProbed({ open = [], ...options } = {}) {
+    const probed = [];
+    const ctx = await startConsole({
+      ...options,
+      probePort: async (port) => {
+        probed.push(port);
+        return open.includes(port);
+      },
+    });
+    return { ...ctx, probed };
+  }
+
+  test('defaultStackPorts: firebase.json where it names a port, the literal where it does not', () => {
+    assert.deepEqual(defaultStackPorts(null), LITERALS);
+    assert.deepEqual(defaultStackPorts(undefined), LITERALS);
+    assert.deepEqual(Object.keys(defaultStackPorts(null)), NAMES, 'in the order the page lists them');
+    const all = firebaseJson({
+      auth: { host: '127.0.0.1', port: 9098 },
+      firestore: { port: 8081 },
+      functions: { port: 5002 },
+      storage: { port: 9198 },
+      ui: { enabled: true, port: 4001 },
+      hub: { port: 4401 },
+    });
+    assert.deepEqual(defaultStackPorts(all), { app: 4200, auth: 9098, firestore: 8081, storage: 9198, functions: 5002, ui: 4001, hub: 4401 });
+    assert.deepEqual(defaultStackPorts(`\uFEFF${all}`).auth, 9098, 'a byte order mark does not hide the file');
+    // The repository's own firebase.json has no hub entry: the Firebase default stands.
+    assert.equal(defaultStackPorts(firebaseJson({ auth: { port: 9098 } })).hub, 4400);
+    assert.equal(defaultStackPorts(firebaseJson({ app: { port: 4999 } })).app, 4200, 'the app is not an emulator');
+    for (const bad of ['9098', 0, -1, 65536, 9098.5, null, true, [9098], { port: 9098 }]) {
+      assert.equal(defaultStackPorts(firebaseJson({ auth: { port: bad } })).auth, 9099, JSON.stringify(bad));
+    }
+    for (const text of ['', '{', 'null', '[]', '"emulators"', '{"emulators":null}', '{"emulators":"auth"}', '{"emulators":{"auth":9098}}']) {
+      assert.deepEqual(defaultStackPorts(text), LITERALS, text);
+    }
+  });
+
+  test('parsePortsFile: seven whole numbers from 1 to 65535, or nothing', () => {
+    assert.deepEqual(parsePortsFile(stackFile(MOVED, ['auth'])), MOVED);
+    assert.deepEqual(parsePortsFile(stackFile({ ...MOVED, auth: 1, hub: 65535 })), { ...MOVED, auth: 1, hub: 65535 }, 'both ends of the range');
+    assert.deepEqual(Object.keys(parsePortsFile(stackFile(MOVED))), NAMES);
+    // Only the seven names come back, whatever else the file holds.
+    assert.deepEqual(parsePortsFile(JSON.stringify({ ...MOVED, remapped: 'x', extra: { deep: [1] }, command: 'calc.exe' })), MOVED);
+
+    for (const text of [null, undefined, 42, {}, '', ' ', '{', 'null', '[]', '"auth"', '61099', 'true', stackFile(MOVED).slice(0, -5)]) {
+      assert.equal(parsePortsFile(text), null, String(text));
+    }
+    assert.equal(parsePortsFile(JSON.stringify([MOVED])), null, 'an array is not the file');
+    for (const name of NAMES) {
+      const { [name]: dropped, ...rest } = MOVED;
+      assert.equal(parsePortsFile(JSON.stringify(rest)), null, `without ${name}`);
+      for (const bad of [0, -1, 65536, 1e9, 61099.5, '61099', null, true, [61099], { port: 61099 }]) {
+        assert.equal(parsePortsFile(JSON.stringify({ ...MOVED, [name]: bad })), null, `${name}: ${JSON.stringify(bad)}`);
+      }
+    }
+    // Numbers that only an inherited property would supply are not the file's own.
+    assert.equal(parsePortsFile(`{"__proto__":${JSON.stringify(MOVED)}}`), null);
+  });
+
+  test('without the ports file: the defaults of firebase.json, and those are what is probed', async () => {
+    const root = makeRoot();
+    write(root, 'firebase.json', firebaseJson({ auth: { port: 9098 }, firestore: { port: 8081 }, functions: { port: 5002 }, storage: { port: 9198 }, ui: { port: 4001 } }));
+    const ctx = await startProbed({ root, open: [9098] });
+    try {
+      const s = await ctx.api.state();
+      assert.deepEqual(
+        s.ports,
+        [
+          ['app', 4200],
+          ['auth', 9098],
+          ['firestore', 8081],
+          ['storage', 9198],
+          ['functions', 5002],
+          ['ui', 4001],
+          ['hub', 4400],
+        ].map(([name, port]) => ({ name, port, default: port, open: name === 'auth' })),
+      );
+      assert.deepEqual([...ctx.probed].sort(), [4001, 4200, 4400, 5002, 8081, 9098, 9198]);
+      assert.equal(s.stack.state, 'stopped', 'an open auth port alone is not a running stack');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a firebase.json that cannot be used leaves the literal defaults', async () => {
+    const dir = makeRoot();
+    fs.mkdirSync(path.join(dir, 'firebase.json'));
+    const huge = makeRoot();
+    // Valid, and it names a port, but no firebase.json is this large: it is not read.
+    write(huge, 'firebase.json', firebaseJson({ auth: { port: 9098 } }) + ' '.repeat(300 * 1024));
+    const broken = makeRoot();
+    write(broken, 'firebase.json', '{ "emulators": { "auth": { "port": 9098 }');
+    for (const [what, root] of [['a folder', dir], ['oversized', huge], ['cut short', broken], ['missing', makeRoot()]]) {
+      const ctx = await startProbed({ root });
+      try {
+        const s = await ctx.api.state();
+        assert.deepEqual(listed(s.ports), LITERALS, what);
+        assert.deepEqual(listed(s.ports, 'default'), LITERALS, what);
+      } finally {
+        await ctx.consoleServer.close();
+      }
+    }
+  });
+
+  test('with the ports file: the effective port is shown and probed, next to its default', async () => {
+    const root = makeRoot();
+    write(root, 'firebase.json', firebaseJson({ auth: { port: 9099 }, firestore: { port: 8081 } }));
+    // The case from the laptop: Windows held 9099 that boot, so sign-in went to 9100.
+    const effective = { ...LITERALS, firestore: 8081, auth: 9100 };
+    write(root, '.local-dev-ports.json', stackFile(effective, ['auth']));
+    const ctx = await startProbed({ root, open: [9100, 8081] });
+    try {
+      const res = await ctx.api.get('/api/state');
+      const s = res.json;
+      assert.deepEqual(s.ports.map((p) => p.name), NAMES);
+      assert.deepEqual(
+        s.ports.find((p) => p.name === 'auth'),
+        { name: 'auth', port: 9100, default: 9099, open: true },
+      );
+      assert.ok(res.text.includes('{"name":"auth","port":9100,"default":9099,"open":true}'), 'in the documented key order');
+      assert.deepEqual(listed(s.ports), effective);
+      assert.deepEqual(listed(s.ports, 'default'), { ...LITERALS, firestore: 8081 });
+      assert.deepEqual(listed(s.ports, 'open'), { app: false, auth: true, firestore: true, storage: false, functions: false, ui: false, hub: false });
+      assert.ok(ctx.probed.includes(9100), 'the effective port is probed');
+      assert.ok(!ctx.probed.includes(9099), 'the default it moved away from is not');
+      assert.deepEqual(Object.keys(s), ['console', 'git', 'tools', 'setup', 'stack', 'ports', 'job', 'logSeq'], 'nothing else is added to the state');
+      assert.ok(!res.text.includes('remapped'));
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a ports file that is malformed, oversized or out of range is ignored as a whole', async (t) => {
+    const ctx = await startProbed();
+    const file = portsPath(ctx.root);
+    const whole = stackFile(MOVED, ['auth']);
+    const padded = (bytes) => whole + ' '.repeat(bytes - Buffer.byteLength(whole));
+    const expectDefaults = async (what) => {
+      const res = await ctx.api.get('/api/state');
+      assert.equal(res.status, 200, what);
+      assert.deepEqual(listed(res.json.ports), LITERALS, what);
+      assert.deepEqual(listed(res.json.ports, 'default'), LITERALS, what);
+      // Only the ports part is searched: a process id or this console's own port may hold the same digits.
+      const shown = JSON.stringify(res.json.ports);
+      for (const port of Object.values(MOVED)) {
+        assert.ok(!ctx.probed.includes(port), `${what}: ${port} must not be probed`);
+        assert.ok(!shown.includes(String(port)), `${what}: ${port} must not reach the page`);
+      }
+    };
+    try {
+      const bad = [
+        ['empty', ''],
+        ['cut off while being written', whole.slice(0, 40)],
+        ['not JSON', 'auth=61099\n'],
+        ['null', 'null'],
+        ['an array', JSON.stringify([MOVED])],
+        ['a string', JSON.stringify(whole)],
+        ['a name missing', JSON.stringify({ ...MOVED, hub: undefined })],
+        ['a port as text', JSON.stringify({ ...MOVED, auth: '61099' })],
+        ['a fraction', JSON.stringify({ ...MOVED, auth: 61099.5 })],
+        ['port 0', JSON.stringify({ ...MOVED, ui: 0 })],
+        ['a negative port', JSON.stringify({ ...MOVED, ui: -61000 })],
+        ['port 65536', JSON.stringify({ ...MOVED, hub: 65536 })],
+        ['a huge number', JSON.stringify({ ...MOVED, app: 1e21 })],
+        ['a nested value', JSON.stringify({ ...MOVED, auth: { port: 61099 } })],
+        // Valid JSON with valid ports: only the size refuses it.
+        ['one byte over 4 KiB', padded(4097)],
+        ['far over 4 KiB', padded(2 * 1024 * 1024)],
+      ];
+      for (const [what, text] of bad) {
+        fs.writeFileSync(file, text);
+        await expectDefaults(what);
+      }
+
+      // Not a file at all: a folder, and (where there are such things) a pipe nobody writes to.
+      fs.rmSync(file);
+      fs.mkdirSync(file);
+      await expectDefaults('a folder');
+      fs.rmdirSync(file);
+      if (!IS_WINDOWS) {
+        const made = await new Promise((resolve) => {
+          const child = spawn('mkfifo', [file], { stdio: 'ignore' });
+          child.on('error', () => resolve(false));
+          child.on('exit', (code) => resolve(code === 0));
+        });
+        if (made) {
+          await expectDefaults('a named pipe'); // would hang here if the open waited for a writer
+          fs.rmSync(file);
+        } else {
+          t.diagnostic('mkfifo is not available: the named pipe case was not run');
+        }
+      }
+
+      // The same content at exactly 4 KiB is taken, so it was the rules above that refused the others.
+      fs.writeFileSync(file, padded(4096));
+      const taken = await ctx.api.state();
+      assert.deepEqual(listed(taken.ports), MOVED);
+      assert.deepEqual(listed(taken.ports, 'default'), LITERALS);
+      for (const port of Object.values(MOVED)) assert.ok(ctx.probed.includes(port), `${port} is probed once the file is valid`);
+    } finally {
+      fs.rmSync(file, { recursive: true, force: true });
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('"external" follows the effective hub and app ports', async () => {
+    // Something listens on the default hub and app ports, but the stack says it is elsewhere.
+    const moved = { ...LITERALS, hub: 4401, app: 4201 };
+    const elsewhere = makeRoot();
+    write(elsewhere, '.local-dev-ports.json', stackFile(moved, ['hub', 'app']));
+    const idle = await startProbed({ root: elsewhere, open: [4400, 4200] });
+    try {
+      const s = await idle.api.state();
+      assert.equal(s.stack.state, 'stopped');
+      assert.ok(!idle.probed.includes(4400) && !idle.probed.includes(4200), 'the default hub and app ports are not probed');
+    } finally {
+      await idle.consoleServer.close();
+    }
+
+    for (const [name, port] of [['hub', 4401], ['app', 4201]]) {
+      const root = makeRoot();
+      write(root, '.local-dev-ports.json', stackFile(moved, ['hub', 'app']));
+      const ctx = await startProbed({ root, open: [port] });
+      try {
+        const s = await ctx.api.state();
+        assert.equal(s.stack.state, 'external', name);
+        assert.deepEqual(s.ports.filter((p) => p.open), [{ name, port, default: LITERALS[name], open: true }]);
+        const res = await ctx.api.act({ action: 'start', mode: 'full' });
+        assert.equal(res.status, 409);
+        assert.match(res.json.error, /did not start/);
+        assert.match(res.json.error, /port 4401 or 4201 is in use/, 'the message names the ports that were probed');
+      } finally {
+        await ctx.consoleServer.close();
+      }
+    }
+  });
+
+  test('the file is followed as it appears, changes and disappears, without waiting for the probe cache', async () => {
+    const ctx = await startProbed({ open: [61400] });
+    const file = portsPath(ctx.root);
+    try {
+      const before = await ctx.api.state();
+      assert.deepEqual(listed(before.ports), LITERALS);
+      assert.equal(before.stack.state, 'stopped');
+
+      fs.writeFileSync(file, stackFile(MOVED, NAMES));
+      const during = await ctx.api.state();
+      assert.deepEqual(listed(during.ports), MOVED);
+      assert.deepEqual(listed(during.ports, 'default'), LITERALS);
+      assert.equal(during.stack.state, 'external', 'the moved hub answers');
+
+      fs.writeFileSync(file, stackFile({ ...MOVED, hub: 61401 }, NAMES));
+      const changed = await ctx.api.state();
+      assert.equal(listed(changed.ports).hub, 61401);
+      assert.equal(changed.stack.state, 'stopped');
+
+      fs.rmSync(file);
+      const afterwards = await ctx.api.state();
+      assert.deepEqual(afterwards.ports, before.ports, 'back to the defaults');
+      assert.equal(afterwards.stack.state, 'stopped');
+
+      // An unchanged set of ports within the same second is answered from the cache.
+      const count = ctx.probed.length;
+      await ctx.api.state();
+      assert.equal(ctx.probed.length, count);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a stack that writes the file at start and deletes it on exit is followed through both', async () => {
+    const root = makeRoot();
+    // What scripts/local-dev.mjs does with the file, and nothing else of it.
+    write(
+      root,
+      'scripts/local-dev.mjs',
+      `
+import fs from 'node:fs';
+fs.writeFileSync('.local-dev-ports.json', ${JSON.stringify(stackFile({ ...LITERALS, auth: 9100 }, ['auth']))});
+console.log('Port 9099 (sign-in) is reserved by Windows; using 9100 instead.');
+console.log('OmniTask local stack is up.');
+process.on('message', (m) => {
+  if (!m || m.type !== 'shutdown') return;
+  fs.rmSync('.local-dev-ports.json', { force: true });
+  process.exit(0);
+});
+setInterval(() => {}, 1000);
+`,
+    );
+    const ctx = await startProbed({ root });
+    try {
+      assert.equal(listed((await ctx.api.state()).ports).auth, 9099);
+      assert.equal((await ctx.api.act({ action: 'start', mode: 'full' })).status, 200);
+      const running = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.stack.state === 'running' ? s : null;
+      }, 'the stack to report running');
+      assert.deepEqual(
+        running.ports.find((p) => p.name === 'auth'),
+        { name: 'auth', port: 9100, default: 9099, open: false },
+      );
+      assert.equal((await ctx.api.act({ action: 'stop' })).status, 200);
+      const stopped = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.stack.state === 'stopped' ? s : null;
+      }, 'the stack to stop');
+      assert.ok(!fs.existsSync(portsPath(root)));
+      assert.deepEqual(listed(stopped.ports), LITERALS);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a finished job drops the cached defaults, since a pull can bring another firebase.json', async () => {
+    const root = makeRoot();
+    write(root, 'firebase.json', firebaseJson({ auth: { port: 9098 } }));
+    const noop = [{ file: process.execPath, args: ['-e', ''], cwd: root, label: 'node -e ""' }];
+    const ctx = await startProbed({ root, jobSteps: () => ({ pull: noop, install: [], smoke: [], checks: [] }) });
+    try {
+      assert.equal(listed((await ctx.api.state()).ports, 'default').auth, 9098);
+      write(root, 'firebase.json', firebaseJson({ auth: { port: 9097 } }));
+      assert.equal((await ctx.api.act({ action: 'pull' })).status, 200);
+      const s = await waitFor(async () => {
+        const state = await ctx.api.state();
+        return state.job && state.job.state !== 'running' ? state : null;
+      }, 'the job to finish');
+      assert.equal(s.job.state, 'ok');
+      assert.deepEqual(
+        s.ports.find((p) => p.name === 'auth'),
+        { name: 'auth', port: 9097, default: 9097, open: false },
+      );
     } finally {
       await ctx.consoleServer.close();
     }
@@ -1857,4 +2211,14 @@ describe('quit, idle exit and single instance', () => {
     assert.equal(code, 2);
     assert.ok(output.includes('Usage: node scripts/launch-console.mjs'));
   });
+});
+
+test('a ports file left by a killed stack is recognised as stale', () => {
+  const file = (pid) => JSON.stringify({ app: 4200, auth: 9100, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 4400, pid });
+  assert.equal(portsFileIsStale(file(4242), () => false), true, 'the writer is gone');
+  assert.equal(portsFileIsStale(file(4242), () => true), false, 'the writer is alive');
+  assert.equal(portsFileIsStale(file(process.pid)), false, 'a live pid, checked for real');
+  assert.equal(portsFileIsStale(file(undefined), () => false), false, 'no pid: written by an older stack, trusted as before');
+  assert.equal(portsFileIsStale(file('12'), () => false), false, 'a pid that is not a number is ignored');
+  assert.equal(portsFileIsStale('{not json', () => false), false);
 });
