@@ -224,3 +224,94 @@ the few seconds npm needs to undo it), recovery from an install that was
 killed half way, and that a warm start takes as long as before. The
 Windows-only paths (shortcut target, `taskkill`, the Ctrl+C wait, the
 first-run fetch through `npx.cmd`) still need one run on the laptop.
+
+### Follow-up: ports Windows has reserved (second run on the laptop)
+
+The Auth emulator did not start on the Windows 11 laptop: `auth: Port 9099 is
+not open on 127.0.0.1, could not start Authentication Emulator`. Nothing was
+listening on 9099. Windows (Hyper-V, WSL, Docker) had reserved 9000-9034,
+9058-9158 and 9247-9400 for that boot, and binding a port inside such a block
+fails with WSAEACCES (`listen EACCES` in Node). The blocks change at every
+boot, so moving the stack to other fixed numbers would only move the problem.
+
+**What changed.** `scripts/local-dev.mjs` tests the seven ports the stack
+fixes (app, auth, firestore, functions, storage, Emulator UI, Emulator Hub;
+the emulator numbers are read from `firebase.json`) before it starts
+anything, with real sockets: bind on 127.0.0.1, and a connection test when
+the bind fails.
+
+- All free: the same commands, config and output as before. The probes took
+  about 13 ms here.
+- Bind fails and something answers: the port is in use. The start names it,
+  starts nothing and exits non-zero, so a second stack never comes up beside
+  a running one.
+- Bind fails and nothing answers: the port is reserved. The next usable port
+  replaces it for this run, with one line per port
+  (`Port 9099 (sign-in) is reserved by Windows; using 9100 instead.`). The
+  state is told by behaviour, not by the error code, which is what made it
+  testable on Linux.
+
+**How the replacement reaches each part.**
+
+- Emulators: a generated copy of `firebase.json` (`.local-dev-firebase.json`,
+  next to it, because the CLI resolves the rules files and `functions/`
+  relative to the folder of its config file) passed with the CLI's global
+  `--config`. Only the replaced ports differ. Read from firebase-tools 15:
+  auth, firestore, functions and storage are fixed by default and the UI is
+  fixed because `firebase.json` names its port; the hub, logging, Eventarc,
+  Cloud Tasks and the Firestore websocket are chosen by the CLI, which moves
+  up from its default when that is not free. Those are left to the CLI,
+  except the hub when it has to move: the script needs to know its port for
+  the readiness check and for the export on a Windows stop, so the generated
+  config names it.
+- One trap in the CLI: an emulator with a fixed port is moved up by one,
+  without an error, when another emulator took that port first. A replacement
+  therefore avoids the ports the CLI is about to choose for itself, and after
+  the start the script compares the hub's list with the ports it expects and
+  stops with a clear message on a mismatch.
+- Web app: a generated `src/environments/environment.local-remapped.ts` that
+  re-exports `environment.local` with the emulator ports of the run, selected
+  by a new `local-remapped` configuration in `angular.json` (build and
+  serve). It is used only when one of the four ports the app connects to was
+  replaced; `--port` is passed to `ng serve` only when 4200 itself was. The
+  committed environment files are untouched, and every existing
+  configuration still builds on a clean checkout without the generated file.
+- Everyone else: `.local-dev-ports.json` holds the effective map in every
+  run. The Build Console reads it for its port tiles and links.
+- All three generated files are gitignored, deleted when the script exits,
+  and rewritten at every start, so what a killed run left behind is never
+  used. They sit outside `functions/` and outside the hosting folder, so no
+  deploy can pick them up and `firebase.json` did not need a new ignore entry.
+
+**Checked on Linux**, where a socket that is bound but not listening stands
+in for a reserved port (the bind fails for everyone else and connections are
+refused):
+
+- nothing held: log identical to the previous version up to shutdown, banner
+  byte-identical, warm start about 22 s as before;
+- 9099 and 9150 held (the laptop's case): remap line, `Emulators are up.`,
+  Auth answers on 9100, Firestore on 8080, Ctrl+C exports and removes the
+  generated files;
+- the same in full mode in a headless browser: login page, sign-in through
+  the fake Google popup, Auth requests go to 9100 and none to 9099;
+- 4200 held as well: app served and reported on 4201; the command printed for
+  a second terminal (`yarn ng serve --configuration local-remapped --port
+  4201`) works;
+- the whole of 9058-9158 held: Auth on 9160, the CLI's websocket on 9159, no
+  collision;
+- every stack port held: all seven replaced, hub on 4401, export on stop;
+- a real listener on 8080: message naming the port, exit 1, nothing started,
+  and a second start beside a running stack leaves the first one's files
+  alone;
+- the Build Console's stop over the IPC channel exports with a replaced hub.
+
+**Still to confirm on the laptop.** The real reservation (EACCES instead of a
+held socket), the one-second wait Windows needs before a connection to a
+reserved port counts as unanswered, the export request to a replaced hub port
+on a console stop (the request itself was sent to port 4401 by hand here and
+answered 200; the Windows-only branch that sends it was not run), and the app
+port test on `::1`, which this machine has no IPv6 loopback to exercise.
+
+**Rollback.** Revert the commit. Nothing is persisted outside the repository;
+delete `.local-dev-ports.json`, `.local-dev-firebase.json` and
+`src/environments/environment.local-remapped.ts` if a killed run left them.

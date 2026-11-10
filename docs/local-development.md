@@ -134,6 +134,83 @@ console** and refuses Start. End them by hand: `netstat -ano | findstr :4400`
 prints the process ID in the last column, then
 `taskkill /PID <that number> /T /F`.
 
+### Ports Windows has reserved
+
+Windows sets aside blocks of TCP ports for Hyper-V, WSL 2 and Docker Desktop,
+and chooses the blocks again at every boot. A port inside a block cannot be
+opened although nothing is using it. Started by hand, the Firebase CLI then
+stops with `Port 9099 is not open on 127.0.0.1, could not start Authentication
+Emulator` (Node calls it `listen EACCES`), and which port is hit changes from
+one boot to the next.
+
+**What happens automatically.** `yarn dev:local`, `yarn emulators` and the
+Build Console test the stack's ports before they start anything: the app
+(4200), the emulators (9099, 8080, 5001, 9199), the Emulator UI (4000) and the
+Emulator Hub (4400). A port that cannot be opened and that nothing answers on
+is replaced by the next usable one, for this run only, and the start says so:
+
+```text
+[dev:local] Port 9099 (sign-in) is reserved by Windows; using 9100 instead.
+```
+
+The emulators and the app both follow, so there is nothing to edit:
+`firebase.json` and `src/environments/environment.local.ts` stay as they are,
+and the next start uses the usual port again if Windows has released it. Your
+local data is kept. One exception: an image uploaded while the file-storage
+port was moved is saved with that port in its address, so it shows as broken in
+a later run that uses a different storage port; upload it again. If the app's own port moves (4200 to 4201, say),
+the browser treats that as another site, so you sign in once more.
+
+A port that another program is really using is never replaced. The start
+stops with `Port 8080 (database) is in use` and starts nothing, so that a
+second stack cannot come up next to one that is still running.
+
+**Seeing which ports are in use.** The addresses printed under
+`OmniTask local stack is up.` and `Emulators are up.` are the real ones, and a
+line below them lists the replacements. While the stack runs, all seven ports
+are in `.local-dev-ports.json` in the repository root (the Build Console
+reads its port tiles and links from that file):
+
+```json
+{"app":4200,"auth":9100,"firestore":8080,"functions":5001,"storage":9199,"ui":4000,"hub":4400,"remapped":["auth"]}
+```
+
+**Running the app in a second terminal.** After `yarn emulators` replaced an
+emulator port, plain `yarn start:local` would still look for the usual one.
+The `Emulators are up.` message then prints the command to use instead, for
+example `yarn ng serve --configuration local-remapped`. That configuration
+reads a file the emulator start generates, so it works only while those
+emulators are running.
+
+**Optional: keep a port for good.** Nothing here is needed for the stack to
+work. If you would rather have the usual port back permanently, an
+administrator can take it out of the pool Windows reserves from. In a terminal
+opened with **Run as administrator**:
+
+```bat
+netsh interface ipv4 show excludedportrange protocol=tcp
+
+net stop winnat
+netsh interface ipv4 add excludedportrange protocol=tcp startport=9099 numberofports=1
+net start winnat
+```
+
+The first command lists the blocks that are reserved right now. The `add`
+line is the documented way to exclude a port range, and it is permanent
+unless you add `store=active` (see Microsoft's
+[`netsh interface` reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/netsh-interface));
+an exclusion you add yourself keeps the port out of the blocks Windows hands
+to Hyper-V, while a program that asks for exactly that port still gets it.
+Microsoft's
+[Hyper-V troubleshooting guide](https://learn.microsoft.com/en-us/troubleshoot/windows-server/virtualization/hyper-v-installation-configuration-operational-failure)
+describes the same conflict and the same remedy: reserve the ports an
+application needs yourself.
+Stopping `winnat` around it is common practice rather than something
+Microsoft documents: it releases the current blocks, because the `add` is
+refused while the port sits inside one, and it interrupts WSL and Docker
+networking for a moment. Repeat the `add` line for every port you want to
+keep, and undo one with `delete excludedportrange` and the same numbers.
+
 ## Build Console
 
 A small local control panel for this stack: the same page as the published
@@ -195,7 +272,7 @@ The launcher has its own tests: `node --test scripts/*.test.mjs`.
 |---|---|---|
 | Firebase config | `src/environments/environment.ts` | `src/environments/environment.local.ts` (swapped in by the `local` build configuration in `angular.json`) |
 | Project ID | `omnitask-475422` | `demo-omnitask`. Firebase treats `demo-*` projects as offline-only, so anything not emulated fails instead of reaching production |
-| Auth / Firestore / Functions / Storage | Firebase | Emulator Suite, ports in `firebase.json` → `emulators` |
+| Auth / Firestore / Functions / Storage | Firebase | Emulator Suite, ports in `firebase.json` → `emulators` (a port Windows has reserved is replaced for that run, see [Ports Windows has reserved](#ports-windows-has-reserved)) |
 | AI features | Claude via `ANTHROPIC_API_KEY` in Secret Manager | Claude via `ANTHROPIC_API_KEY` in `functions/.secret.local` |
 | Outbound email | Gmail SMTP | Dev mail sink: logged to the emulator console, never sent |
 | Firebase Extensions | Deployed | Not available |
@@ -288,7 +365,8 @@ used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 | `Emulators did not become ready in time` on the very first start, with no emulator output before it | An older checkout fetched the Firebase CLI inside the three-minute wait for the emulators, and the stop then discarded the unfinished fetch, so every start failed the same way. Update your checkout: the fetch is now its own step without a time limit |
 | `The Firebase CLI could not be fetched` | Check the internet connection (and the proxy settings, if you use one), then start again. The launcher already removes an unfinished fetch and retries once; if it still fails, delete the folder the message names and start again |
 | `spawn .../functions/node_modules/.bin/firebase-functions EACCES` | `cd functions && npm ci` (the launcher does this when it detects the problem) |
-| Port already in use (`4200`, `5001`, `8080`, `9099`, `9199`, `4000`) | Stop the other process, or change the port in both `firebase.json` and `src/environments/environment.local.ts` |
+| `Port 8080 (database) is in use` (or `4200`, `5001`, `9099`, `9199`, `4000`, `4400`) and nothing starts | Another program, or an earlier run of the stack, is listening on that port. Stop it and start again. To find it on Windows: `netstat -ano \| findstr :8080`, then `taskkill /PID <number in the last column> /T /F`; on macOS/Linux: `lsof -i :8080`. Only if the other program has to keep the port, change the number in both `firebase.json` and `src/environments/environment.local.ts` |
+| `Port 9099 is not open on 127.0.0.1, could not start Authentication Emulator`, or `listen EACCES`, although nothing uses the port (Windows) | Windows has reserved the port for Hyper-V, WSL or Docker for this boot. `yarn dev:local`, `yarn emulators` and the Build Console move to the next usable port by themselves and print `Port 9099 (sign-in) is reserved by Windows; using 9100 instead.`; update your checkout if you do not see that line. You only meet the raw error when you run `firebase emulators:start` by hand. See [Ports Windows has reserved](#ports-windows-has-reserved) |
 | AI button says "not configured" | Add `ANTHROPIC_API_KEY` to `functions/.secret.local`, restart `yarn dev:local` |
 | AI button says the model is not available | Your key cannot use `claude-opus-5-5`; locally set `ANTHROPIC_MODEL` in `functions/.env.local`, in production change `DEFAULT_CLAUDE_MODEL` |
 | AI button says the input is too long | Titles are capped at 300 characters and descriptions at 8,000 for AI calls; shorten the text |
@@ -299,6 +377,6 @@ used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 | Blank page at `localhost:4200`; DevTools shows `GET /@vite/client` answering 500 (`Failed to update Vite client error overlay text`) | `node_modules` still has Vite 6, which the Angular dev server cannot patch. Run `yarn install` after pulling (the lockfile now resolves Vite 7), then restart |
 | No sample projects after signing in | They are created by the **Workspace** page, not by the Dashboard page you land on, and only for an admin account. Open Workspace; if the account already has a project, use **+ Sample Data** at the bottom of its sidebar. `PERMISSION_DENIED` or `Missing or insufficient permissions` in the browser console on that page is expected for an ordinary account. See [Which account to sign in with](#which-account-to-sign-in-with) |
 | Local data is gone after a restart on Windows | Fixed in the launcher: it used to end the emulators on Windows before they could export. Update your checkout, then stop with the console's **Stop** button or Ctrl+C in the terminal and wait for `Shutting down...` to finish; both save `.emulator-data/` first. Closing the terminal window or ending the processes in Task Manager still skips the export |
-| The console shortcut seems to do nothing | Run `yarn console` in a terminal to see its message. If another program uses port 4310, set `OMNITASK_CONSOLE_PORT` to a free port |
+| The console shortcut seems to do nothing | Run `yarn console` in a terminal to see its message. If another program uses port 4310, or Windows has reserved it for this session (`listen EACCES`), set `OMNITASK_CONSOLE_PORT` to a free port |
 | The console shortcut says its target `node.cmd` was changed or moved | The shortcut was made by an older `yarn console:shortcut`, which stored the path of a temporary wrapper that yarn creates instead of `node.exe`. Update your checkout and run `yarn console:shortcut` again; it overwrites both shortcuts |
 | The console shows **Running outside the console** and refuses Start, but no terminal is running the stack | Emulators were left behind by a hard stop (see [Stopping, and where the data goes](#stopping-and-where-the-data-goes)). On Windows: `netstat -ano \| findstr :4400`, then `taskkill /PID <number in the last column> /T /F`. On macOS/Linux: `lsof -ti :4400 \| xargs kill -INT` |
