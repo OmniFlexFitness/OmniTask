@@ -433,18 +433,18 @@ footer .build-line { display: block; margin-top: 10px; font-size: .6875rem; lett
     <div class="chips" id="chips" hidden></div>
 
     <ul class="port-grid">
-      <li class="port" data-port="4200"><span class="nm"><i class="led" hidden></i>The app</span><span class="no">:4200</span><span class="dt">Angular dev server, local configuration</span></li>
-      <li class="port" data-port="9099"><span class="nm"><i class="led" hidden></i>Sign-in</span><span class="no">:9099</span><span class="dt">Auth emulator, fake Google popup</span></li>
-      <li class="port" data-port="8080"><span class="nm"><i class="led" hidden></i>Database</span><span class="no">:8080</span><span class="dt">Firestore emulator</span></li>
-      <li class="port" data-port="9199"><span class="nm"><i class="led" hidden></i>File storage</span><span class="no">:9199</span><span class="dt">Storage emulator</span></li>
-      <li class="port" data-port="5001"><span class="nm"><i class="led" hidden></i>Cloud Functions</span><span class="no">:5001</span><span class="dt">Functions emulator; email is captured, not sent</span></li>
-      <li class="port" data-port="4000"><span class="nm"><i class="led" hidden></i>Emulator UI</span><span class="no">:4000</span><span class="dt">Browse data, users and function logs</span></li>
+      <li class="port" data-name="app" data-port="4200"><span class="nm"><i class="led" hidden></i>The app</span><span class="no">:4200</span><span class="dt">Angular dev server, local configuration</span></li>
+      <li class="port" data-name="auth" data-port="9099"><span class="nm"><i class="led" hidden></i>Sign-in</span><span class="no">:9099</span><span class="dt">Auth emulator, fake Google popup</span></li>
+      <li class="port" data-name="firestore" data-port="8080"><span class="nm"><i class="led" hidden></i>Database</span><span class="no">:8080</span><span class="dt">Firestore emulator</span></li>
+      <li class="port" data-name="storage" data-port="9199"><span class="nm"><i class="led" hidden></i>File storage</span><span class="no">:9199</span><span class="dt">Storage emulator</span></li>
+      <li class="port" data-name="functions" data-port="5001"><span class="nm"><i class="led" hidden></i>Cloud Functions</span><span class="no">:5001</span><span class="dt">Functions emulator; email is captured, not sent</span></li>
+      <li class="port" data-name="ui" data-port="4000"><span class="nm"><i class="led" hidden></i>Emulator UI</span><span class="no">:4000</span><span class="dt">Browse data, users and function logs</span></li>
       <li class="port is-out"><span class="nm">Claude API</span><span class="no">api.anthropic.com</span><span class="dt">Called by the four AI functions with the key in functions/.secret.local</span></li>
     </ul>
     <p class="ports-key">Everything runs under the offline-only Firebase project <code>demo-omnitask</code>. The Claude API is the one hop that leaves the laptop.</p>
     <nav class="links" aria-label="Quick links">
-      <a class="btn btn-neon" href="http://localhost:4200" target="_blank" rel="noopener">Open local app</a>
-      <a class="btn" href="http://127.0.0.1:4000" target="_blank" rel="noopener">Emulator UI</a>
+      <a class="btn btn-neon" id="link-app" href="http://localhost:4200" target="_blank" rel="noopener">Open local app</a>
+      <a class="btn" id="link-ui" href="http://127.0.0.1:4000" target="_blank" rel="noopener">Emulator UI</a>
       <a class="btn" href="https://github.com/OmniFlexFitness/OmniTask/pull/213" target="_blank" rel="noopener">PR #213</a>
       <a class="btn" href="https://github.com/OmniFlexFitness/OmniTask/actions" target="_blank" rel="noopener">GitHub Actions</a>
       <a class="btn" href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Claude API keys</a>
@@ -603,7 +603,7 @@ git --version</pre>
         <label class="done"><input type="checkbox" id="done-05">Done</label>
       </div>
       <p class="aside">
-        Open <a href="http://localhost:4200" target="_blank" rel="noopener">http://localhost:4200</a> and press
+        Open <a id="link-app-step" href="http://localhost:4200" target="_blank" rel="noopener">http://localhost:4200</a> and press
         <em>Continue with Google</em>. The popup is the emulator's stand-in: it takes any email and asks for no password.
         <b>Type your OmniFlex admin email there.</b> The security rules treat that one address as the super admin
         (it is written in <code>firestore.rules</code>), locally exactly as in production. Then open <em>Workspace</em>
@@ -925,6 +925,7 @@ git --version</pre>
               <tr><td><code>Unable to access secret environment variables</code></td><td>A blank value in <code>.secret.local</code></td><td>Put <code>placeholder</code> on every line you do not use</td></tr>
               <tr><td><code>Unable to parse JSON ... upstream</code></td><td>An HTTP proxy is catching the emulators' own local calls</td><td>Use step 04, which works around it, not a hand-typed <code>firebase emulators:start</code></td></tr>
               <tr><td>A port is taken</td><td>An earlier run was closed without stopping</td><td>Free a stuck port</td></tr>
+              <tr><td>A port shows a different number than usual</td><td>Windows reserved the usual one for this session (Hyper-V, WSL and Docker do this), so the stack moved</td><td>Nothing: the app and the links follow. It can change after a restart</td></tr>
               <tr><td>Local app shows production data</td><td>Started with <code>ng serve</code> or <code>yarn start</code></td><td>Stop it; use step 04</td></tr>
               <tr><td>Yesterday's local data is gone</td><td>The terminal window was closed, so nothing was saved</td><td>Stop with the Stop button or Ctrl+C</td></tr>
               <tr><td>Git Bash: <code>cd: C:AntigravityOmniTask</code></td><td>Unquoted backslashes; bash read them as escapes</td><td>Switch Commands for to Git Bash</td></tr>
@@ -1089,8 +1090,8 @@ git --version</pre>
       fix: "Install Temurin JDK 21 or newer, then open a new terminal so PATH is refreshed." },
     { re: /yarn[^\n]*(not recognized|command not found)/i, sev: "bad", title: "Yarn is not installed",
       fix: "Run: npm install -g yarn   then open a new terminal." },
-    { re: /EADDRINUSE|port[^\n]*(taken|already in use|is not open)|address already in use/i, sev: "bad", title: "A port is taken",
-      fix: "Something from an earlier run still holds one of the stack's ports. Use Free a stuck port under Day to day." },
+    { re: /EADDRINUSE|port[^\n]*(taken|already in use|is not open)|address already in use|forbidden by its access permissions|listen EACCES/i, sev: "bad", title: "A port cannot be opened",
+      fix: "Either something from an earlier run still holds it (use Free a stuck port under Day to day), or Windows has reserved it for this session, which Hyper-V, WSL and Docker do. Current versions of the stack move to a free port by themselves in the second case: pull the latest code and start again." },
     { re: /Failed to update Vite client|@vite\/client/i, sev: "bad", title: "The dev server's packages are out of step",
       fix: "node_modules is older than the lockfile. Run step 02 again, then restart the stack." },
     { re: /Directory "[^"]*emulator-data" does not exist/i, sev: "warn", title: "No saved data to import",
@@ -1382,7 +1383,7 @@ git --version</pre>
 
     var view = STACK_VIEW[s.stack.state] || ["idle", s.stack.state];
     /* The launcher reports "running" once the app's dev server is started; the first compile takes longer. */
-    var appOpen = (s.ports || []).some(function (p) { return p.port === 4200 && p.open === true; });
+    var appOpen = (s.ports || []).some(function (p) { return (p.name === "app" || p.port === 4200) && p.open === true; });
     var compiling = s.stack.state === "running" && s.stack.mode === "full" && !appOpen;
     if (compiling) view = ["warn", "Backend up · app still compiling"];
     $("deck-state").className = "deck-state sev-" + view[0];
@@ -1392,9 +1393,23 @@ git --version</pre>
     else if (s.stack.state === "stopped" && s.stack.lastExit && typeof s.stack.lastExit.code === "number" && s.stack.lastExit.code !== 0) since = "last run exited with code " + s.stack.lastExit.code;
     $("stack-since").textContent = since;
 
+    /* Windows can reserve a port for the session; the stack then moves to a free one and reports it.
+       Tiles and links follow the port actually in use. */
     (s.ports || []).forEach(function (p) {
-      var tile = document.querySelector('.port[data-port="' + p.port + '"]');
-      if (tile) tile.classList.toggle("is-open", p.open === true);
+      var tile = document.querySelector('.port[data-name="' + p.name + '"]') || document.querySelector('.port[data-port="' + p.port + '"]');
+      if (!tile || typeof p.port !== "number") return;
+      tile.classList.toggle("is-open", p.open === true);
+      var no = tile.querySelector(".no"), shown = ":" + p.port;
+      if (no.textContent !== shown) no.textContent = shown;
+      var moved = typeof p.default === "number" && p.default !== p.port;
+      tile.title = moved ? "Moved from " + p.default + ": that port could not be opened on this machine" : "";
+      if (p.name === "app") {
+        var appUrl = "http://localhost:" + p.port;
+        $("link-app").href = appUrl;
+        var stepLink = $("link-app-step"); stepLink.href = appUrl;
+        if (stepLink.textContent !== appUrl) stepLink.textContent = appUrl;
+      }
+      if (p.name === "ui") $("link-ui").href = "http://127.0.0.1:" + p.port;
     });
 
     var chips = $("chips"); chips.textContent = "";
