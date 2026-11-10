@@ -17,6 +17,9 @@ yarn install
 yarn dev:local
 ```
 
+The first start also fetches the Firebase CLI and the emulators, which can
+take several minutes; later starts skip that.
+
 Then add your Anthropic API key to `functions/.secret.local` (created on first
 run) and restart. Full guide, prerequisites (Node 20+, Java 21+) and
 troubleshooting: [docs/local-development.md](docs/local-development.md).

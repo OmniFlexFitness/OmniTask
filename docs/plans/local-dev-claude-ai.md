@@ -180,3 +180,47 @@ fixed allowlist of actions with fixed argument lists.
 - If only the Vite change must go, restoring `"vite": "^6.4.3"` and running
   `yarn install` brings back the previous lockfile state, and with it the
   broken dev server.
+
+### Follow-up fixes (first run on the Windows laptop, and the review)
+
+Found when the stack was first started on the Windows laptop, and by the
+review of this addendum's changes. All in `scripts/local-dev.mjs`,
+`scripts/console-shortcut.ps1` and the docs.
+
+- **A first run could never finish.** `npx firebase-tools@15 emulators:start`
+  had to install the CLI (several minutes on that machine) inside the
+  three-minute wait for the emulators. The wait expired, the stop killed the
+  install, nothing was cached, and the next start failed the same way. The
+  launcher now fetches the CLI and the emulator downloads as their own steps
+  before it starts the emulators: visible, without a time limit, and skipped
+  once the files are there (a file check, no extra CLI call). An install that
+  was cut short is removed and fetched again once.
+- **A stop during an install had to wait for it.** The installs, the first
+  build and the downloads ran synchronously, so a Ctrl+C or the console's
+  Stop was not handled until they ended. They now run as tracked children
+  that a stop ends at once; a stop before the emulators were started no
+  longer asks the Emulator Hub for an export.
+- **Behind a proxy every start downloaded the emulators again** (about
+  200 MB). The download step now runs only for files that are missing.
+- **`yarn console:shortcut` stored yarn's temporary `node.cmd`** as the
+  shortcut target. The script now asks for `node.exe` by name and refuses
+  anything else.
+- **Ctrl+C on Windows waited the full 30 s** when a wrapper was left behind:
+  the check for the closed hub port gave up after 1 s, before Windows refuses
+  a loopback connection (about 2 s). It now waits up to 5 s per check.
+- **Bare command names on Windows** are no longer looked up in the repository
+  folder first: `NoDefaultCurrentDirectoryInExePath` is set for the launcher
+  and its children, and `taskkill` is started by its System32 path.
+- **Docs:** the sample projects are created by the Workspace page, not the
+  Dashboard page; the console is meant for a single-user computer (its checks
+  keep other websites out, not other local programs or accounts); on Windows
+  the stack ends together with the console process, and how to end emulators
+  a hard stop left behind; a slow first start.
+
+Checked on Linux with an empty npm cache and home folder: the order of the
+steps, `Emulators are up.`, a stop during the CLI fetch and during a
+download (exit at once, nothing left running; a stop during `npm ci` takes
+the few seconds npm needs to undo it), recovery from an install that was
+killed half way, and that a warm start takes as long as before. The
+Windows-only paths (shortcut target, `taskkill`, the Ctrl+C wait, the
+first-run fetch through `npx.cmd`) still need one run on the laptop.

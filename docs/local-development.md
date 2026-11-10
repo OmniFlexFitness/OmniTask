@@ -33,11 +33,20 @@ yarn dev:local
 1. Checks Node and Java, installs `functions/` dependencies if needed.
 2. Creates `functions/.secret.local` from `.secret.local.example` if it is
    missing, and warns when `ANTHROPIC_API_KEY` is blank.
-3. Builds the Cloud Functions and keeps `tsc --watch` running.
-4. Starts the Auth, Firestore, Functions and Storage emulators under the
-   offline-only project `demo-omnitask`. The first run downloads the emulator
-   JARs (a minute or two).
-5. Starts `ng serve --configuration local` once the emulators are ready.
+3. On the first run only: fetches the Firebase CLI (through `npx`, unless
+   `firebase` is installed globally) and downloads the Firestore, Storage and
+   Emulator UI files. This is the slow part of a first run and can take
+   several minutes; npm prints nothing while it fetches the CLI. Both are
+   cached on the machine, so later starts skip this step.
+4. Builds the Cloud Functions and keeps `tsc --watch` running.
+5. Starts the Auth, Firestore, Functions and Storage emulators under the
+   offline-only project `demo-omnitask`, and waits up to three minutes for
+   them to answer.
+6. Starts `ng serve --configuration local` once the emulators are ready.
+
+Ctrl+C (or **Stop** in the Build Console) works at every step, including
+during an install or a download; the next start runs the unfinished step
+again.
 
 Then add your key, replacing the `placeholder` value:
 
@@ -67,26 +76,34 @@ Accounts exist only in the emulator.
 ### Which account to sign in with
 
 The local stack loads the same `firestore.rules` as production, so what an
-account may do depends on its role, exactly as it does in production:
+account may do depends on its role, exactly as it does in production.
 
-- **An ordinary new account** (any made-up email) starts with an empty
-  dashboard. The sample projects are *not* created for it: the app writes them
-  as one batch of projects and tasks, and the rules refuse that batch for
-  anyone who is not an admin. The browser console shows `Failed to seed data`
-  with a permission error (`PERMISSION_DENIED ... for 'create'`, which is the
-  emulator's wording of `Missing or insufficient permissions`). The account
-  itself works: it can create a project by hand and add tasks to it.
+After sign-in the app opens **Dashboard** (your own tasks), which is empty
+for every new account. The sample projects are created by the **Workspace**
+page (next to Dashboard in the top bar), the first time it is opened by an
+account that has no project yet:
+
+- **An ordinary new account** (any made-up email) does not get them. The app
+  writes the sample projects as one batch of projects and tasks, and the rules
+  refuse that batch for anyone who is not an admin. On opening Workspace the
+  browser console shows `Failed to seed data` with a permission error
+  (`PERMISSION_DENIED ... for 'create'`, which is the emulator's wording of
+  `Missing or insufficient permissions`). The account itself works: it can
+  create a project by hand and add tasks to it.
 - **To get the sample projects and the admin screens**, use one of:
   1. In the fake Google popup choose **Add new account** and type the
      super-admin address in `firestore.rules` (the one `isSuperAdminEmail()`
      compares against; `SUPER_ADMIN_EMAIL` in `src/app/core/constants.ts` is
      the same address). No password is needed, the emulator does not check
-     who you are. That account is made an admin on sign-in and gets the three
-     sample projects on the first dashboard load.
+     who you are. That account is made an admin on sign-in; open
+     **Workspace** and the three sample projects are created.
   2. Or sign in with any email, open the Emulator UI at
      <http://127.0.0.1:4000/firestore>, open `users` > your document, change
-     `role` from `user` to `admin`, and reload the app. The sample projects
-     are created on the next dashboard load.
+     `role` from `user` to `admin`, reload the app and open **Workspace**.
+
+  Workspace only creates them for an account without any project. If you
+  already added a task from Dashboard (that creates a `Personal` project),
+  click **+ Sample Data** at the bottom of the Workspace sidebar instead.
 
 Either way the account exists only in the emulator. No real Google account is
 touched, and no mail is sent unless you turned on real email (see
@@ -106,6 +123,16 @@ export before cleaning up. Either way, stop with Ctrl+C or the console's
 **Stop** button and let `Shutting down...` finish. Closing the terminal
 window, or ending the processes in Task Manager, skips the export and loses
 what changed since the last clean stop.
+
+On Windows the stack is also ended the moment the Build Console's own process
+is ended (Task Manager, a crash, its terminal window closed): Windows ends
+the stack together with it, so the stack gets no chance to stop its
+emulators. Only on macOS and Linux does the stack notice that the console is
+gone and shut down by itself. After such a hard stop the emulators can stay
+behind and keep their ports; the console then shows **Running outside the
+console** and refuses Start. End them by hand: `netstat -ano | findstr :4400`
+prints the process ID in the last column, then
+`taskkill /PID <that number> /T /F`.
 
 ## Build Console
 
@@ -139,10 +166,13 @@ as its working directory, so it keeps working after `git pull`; run
 
 What to know about it:
 
-- **Local only.** The server listens on `127.0.0.1` and nothing else. Every
-  request must come from the console's own page: the `Host` and `Origin`
-  headers are checked, and the buttons send a token that is generated fresh on
-  each run.
+- **Local only, and for a computer only you use.** The server listens on
+  `127.0.0.1` and nothing else. The `Host` and `Origin` headers of every
+  request are checked and the buttons send a token that is generated fresh on
+  each run, which keeps other websites out. It does not keep out other
+  programs or other user accounts on the same computer: anything that can
+  reach `127.0.0.1` can load the page, read the token from it and press the
+  same buttons. Do not run the console on a shared machine.
 - **A fixed list of actions.** The page can only ask for the actions built
   into the launcher (start, stop, pull, install, smoke test, checks, open a
   file or folder, change the two local settings, reset local data). Nothing
@@ -254,6 +284,9 @@ used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 | Symptom | Fix |
 |---|---|
 | `Java ... was not found on PATH` | Install JDK 21+, reopen the terminal |
+| The first start sits at `Fetching the Firebase CLI...` or `Downloading the Firebase emulators...` for minutes | Expected on the first run only: the CLI is several hundred npm packages and npm prints nothing while it fetches them, and the emulators are about 200 MB. Let it finish; later starts skip both. They are kept outside the repository: the CLI in npm's cache (`%LOCALAPPDATA%\npm-cache\_npx` on Windows, `~/.npm/_npx` elsewhere), the emulators in `.cache/firebase/emulators` in your home folder |
+| `Emulators did not become ready in time` on the very first start, with no emulator output before it | An older checkout fetched the Firebase CLI inside the three-minute wait for the emulators, and the stop then discarded the unfinished fetch, so every start failed the same way. Update your checkout: the fetch is now its own step without a time limit |
+| `The Firebase CLI could not be fetched` | Check the internet connection (and the proxy settings, if you use one), then start again. The launcher already removes an unfinished fetch and retries once; if it still fails, delete the folder the message names and start again |
 | `spawn .../functions/node_modules/.bin/firebase-functions EACCES` | `cd functions && npm ci` (the launcher does this when it detects the problem) |
 | Port already in use (`4200`, `5001`, `8080`, `9099`, `9199`, `4000`) | Stop the other process, or change the port in both `firebase.json` and `src/environments/environment.local.ts` |
 | AI button says "not configured" | Add `ANTHROPIC_API_KEY` to `functions/.secret.local`, restart `yarn dev:local` |
@@ -264,6 +297,8 @@ used by the PR smoke test; it falls back to `ANTHROPIC_API_KEY` when unset).
 | `Unable to access secret environment variables from Google Cloud Secret Manager` | A value in `functions/.secret.local` is blank. Use `placeholder` for anything you do not have |
 | Weird template or schema errors after a big refactor | `rm -rf .angular/cache` |
 | Blank page at `localhost:4200`; DevTools shows `GET /@vite/client` answering 500 (`Failed to update Vite client error overlay text`) | `node_modules` still has Vite 6, which the Angular dev server cannot patch. Run `yarn install` after pulling (the lockfile now resolves Vite 7), then restart |
-| Empty dashboard for a new account; `PERMISSION_DENIED` or `Missing or insufficient permissions` in the browser console | Expected for an ordinary account: the sample projects are only created for an admin. See [Which account to sign in with](#which-account-to-sign-in-with) |
+| No sample projects after signing in | They are created by the **Workspace** page, not by the Dashboard page you land on, and only for an admin account. Open Workspace; if the account already has a project, use **+ Sample Data** at the bottom of its sidebar. `PERMISSION_DENIED` or `Missing or insufficient permissions` in the browser console on that page is expected for an ordinary account. See [Which account to sign in with](#which-account-to-sign-in-with) |
 | Local data is gone after a restart on Windows | Fixed in the launcher: it used to end the emulators on Windows before they could export. Update your checkout, then stop with the console's **Stop** button or Ctrl+C in the terminal and wait for `Shutting down...` to finish; both save `.emulator-data/` first. Closing the terminal window or ending the processes in Task Manager still skips the export |
 | The console shortcut seems to do nothing | Run `yarn console` in a terminal to see its message. If another program uses port 4310, set `OMNITASK_CONSOLE_PORT` to a free port |
+| The console shortcut says its target `node.cmd` was changed or moved | The shortcut was made by an older `yarn console:shortcut`, which stored the path of a temporary wrapper that yarn creates instead of `node.exe`. Update your checkout and run `yarn console:shortcut` again; it overwrites both shortcuts |
+| The console shows **Running outside the console** and refuses Start, but no terminal is running the stack | Emulators were left behind by a hard stop (see [Stopping, and where the data goes](#stopping-and-where-the-data-goes)). On Windows: `netstat -ano \| findstr :4400`, then `taskkill /PID <number in the last column> /T /F`. On macOS/Linux: `lsof -ti :4400 \| xargs kill -INT` |
