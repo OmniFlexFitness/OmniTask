@@ -79,7 +79,11 @@ if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
     throw ('The console launcher was not found: ' + $launcher)
 }
 
-$nodeCommand = Get-Command -Name 'node' -CommandType Application -ErrorAction SilentlyContinue |
+# Ask for node.exe by its full name. A plain 'node' matches the first node.* on
+# PATH, and "yarn console:shortcut" puts a temporary folder with a node.cmd
+# wrapper first on PATH: the shortcut would point at that wrapper and stop
+# working as soon as the temp folder is cleaned.
+$nodeCommand = Get-Command -Name 'node.exe' -CommandType Application -ErrorAction SilentlyContinue |
     Select-Object -First 1
 if (-not $nodeCommand) {
     throw 'Node.js was not found on PATH. Install Node 20 or newer (https://nodejs.org), open a new terminal and run this again.'
@@ -88,8 +92,13 @@ $nodePath = [string]$nodeCommand.Path
 if (-not (Test-Path -LiteralPath $nodePath -PathType Leaf)) {
     throw ('Node.js was found on PATH but its file does not exist: ' + $nodePath)
 }
-if ($nodePath -like '*fnm_multishells*') {
-    Write-Warning 'This node.exe belongs to a temporary fnm shell folder. The shortcut stops working when that folder is cleaned up; run this script again from a terminal if that happens.'
+if ([IO.Path]::GetExtension($nodePath) -ne '.exe') {
+    throw ('Expected the path of node.exe but PATH gave: ' + $nodePath)
+}
+$tempRoot = [IO.Path]::GetTempPath()
+if ($nodePath -like '*fnm_multishells*' -or
+    ($tempRoot -and $nodePath.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase))) {
+    Write-Warning 'This node.exe is in a temporary folder. The shortcut stops working when that folder is cleaned up; run this script again from a terminal if that happens.'
 }
 
 # The launcher path is quoted because the repository path may contain spaces.

@@ -7,23 +7,37 @@
  *
  * Starts, in order:
  *   1. Preflight: Node/Java checks, dependency install, functions/.secret.local
- *   2. Cloud Functions build + `tsc --watch`
- *   3. Firebase emulators (Auth, Firestore, Functions, Storage) under the
+ *   2. First run only: fetch the Firebase CLI and the emulator downloads, so
+ *      that the wait in step 4 only ever measures the emulators starting
+ *   3. Cloud Functions build + `tsc --watch`
+ *   4. Firebase emulators (Auth, Firestore, Functions, Storage) under the
  *      offline-only project `demo-omnitask`, importing and persisting data in
  *      .emulator-data/
- *   4. `ng serve --configuration local` (points the app at the emulators)
+ *   5. `ng serve --configuration local` (points the app at the emulators)
  *
- * Ctrl+C stops everything; the emulators export their data on exit.
+ * Ctrl+C stops everything, at any step; the emulators export their data on exit.
  * The Build Console (scripts/launch-console.mjs) starts this script with an
  * IPC channel and stops it with a { type: 'shutdown' } message instead.
  * Plain Node, no extra dependencies, works on Windows/macOS/Linux.
  * Full guide: docs/local-development.md
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, copyFileSync, readFileSync, accessSync, constants } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  copyFileSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  accessSync,
+  constants,
+} from 'node:fs';
 import { request as httpRequest } from 'node:http';
 import { connect as netConnect } from 'node:net';
-import { dirname, join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,10 +45,20 @@ const FUNCTIONS_DIR = join(ROOT, 'functions');
 const IS_WINDOWS = process.platform === 'win32';
 const EMULATORS_ONLY = process.argv.includes('--emulators-only');
 
+// Windows looks for a bare command name (java, yarn, npm, npx, firebase) in
+// the working directory, which is the repository, before PATH, so a file of
+// that name in the checkout would run instead of the installed tool. This
+// variable switches that lookup off in cmd.exe, which runs every such command
+// here (see spawnArgs), and in Node's own spawn from Node 22 on. The children
+// inherit it.
+if (IS_WINDOWS) process.env.NoDefaultCurrentDirectoryInExePath = '1';
+
 /** Must match src/environments/environment.local.ts (demo- prefix = offline only). */
 const LOCAL_PROJECT_ID = 'demo-omnitask';
 /** Emulators to run. Extensions are intentionally excluded (production-only). */
 const EMULATORS = 'auth,firestore,functions,storage';
+/** What the CLI has to download before those can start (Auth and Functions ship inside it). */
+const EMULATOR_DOWNLOADS = ['firestore', 'storage', 'ui'];
 /** Firebase CLI version used when no global `firebase` binary is installed. */
 const FIREBASE_TOOLS_SPEC = 'firebase-tools@15';
 /** Emulator hub (fixed port from firebase.json defaults) used to detect readiness. */
@@ -47,6 +71,8 @@ const EXPORT_DIR = '.emulator-data';
 
 /** How long the hub gets to write an export before a Windows stop gives up on it. */
 const HUB_EXPORT_TIMEOUT_MS = 30_000;
+/** How long one check of the hub port waits for the connection to be accepted or refused. */
+const HUB_REFUSAL_TIMEOUT_MS = 5_000;
 /** How long the children get to exit by themselves after a Ctrl+C in a Windows console. */
 const CONSOLE_INTERRUPT_GRACE_MS = 30_000;
 /**
@@ -56,12 +82,20 @@ const CONSOLE_INTERRUPT_GRACE_MS = 30_000;
  * slow export could overrun).
  */
 const EXIT_DEADLINE_MS = 45_000;
+/**
+ * POSIX: how long a preparation step gets to exit after SIGINT before it is
+ * killed. npm needs several seconds to undo a half-done install, and killing
+ * it during that would leave the half-done install behind.
+ */
+const STEP_KILL_AFTER_MS = 20_000;
 
 /** JS entry points run directly with the current Node binary (no npm/yarn wrapper). */
 const TSC_BIN = join(FUNCTIONS_DIR, 'node_modules', 'typescript', 'bin', 'tsc');
 const NG_BIN = join(ROOT, 'node_modules', '@angular', 'cli', 'bin', 'ng.js');
 
 const children = new Set();
+/** The children started by runStep(): installs and downloads, which hold nothing worth saving. */
+const stepChildren = new WeakSet();
 let shuttingDown = false;
 /** True once `emulators:start` was spawned, i.e. there may be data worth exporting. */
 let emulatorsStarted = false;
@@ -89,14 +123,48 @@ function spawnArgs(cmd, args) {
   return [[cmd, ...args].join(' '), [], { shell: true }];
 }
 
-/** Run a command to completion, inheriting stdio. Throws on non-zero exit. */
-function run(cmd, args, opts = {}) {
+/** Rejection of a preparation step that ended because the stack is being stopped. */
+class Stopped extends Error {}
+
+/**
+ * Run a preparation step (an install, a download, the first build) to
+ * completion, with its output visible and no time limit. Rejects on a
+ * non-zero exit.
+ *
+ * The child is tracked like the long-running ones instead of being run with
+ * spawnSync, which would block this process until the step ends: a Ctrl+C or
+ * the Build Console's stop message is then handled while a long install is
+ * still running, and shutdown() stops the step like any other child.
+ */
+function runStep(cmd, args, opts = {}) {
+  if (shuttingDown) return Promise.reject(new Stopped());
   const [file, argv, shellOpt] = spawnArgs(cmd, args);
-  const result = spawnSync(file, argv, { stdio: 'inherit', ...shellOpt, ...opts });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`${cmd} ${args.join(' ')} exited with code ${result.status}`);
-  }
+  return new Promise((done, failed) => {
+    const child = spawn(file, argv, {
+      stdio: ['ignore', 'inherit', 'inherit'],
+      detached: !IS_WINDOWS,
+      ...shellOpt,
+      ...opts,
+    });
+    children.add(child);
+    stepChildren.add(child);
+    child.once('error', (err) => {
+      children.delete(child);
+      failed(err);
+    });
+    child.once('exit', (code, signal) => {
+      children.delete(child);
+      const settle = () => {
+        if (shuttingDown) failed(new Stopped());
+        else if (code === 0) done();
+        else failed(new Error(`${cmd} ${args.join(' ')} exited with ${signal ?? `code ${code}`}`));
+      };
+      // As in start(): after a Ctrl+C in a Windows console the step ends
+      // before our own SIGINT handler has run. Do not report that as a failure.
+      if (IS_WINDOWS && code !== 0) setTimeout(settle, 250);
+      else settle();
+    });
+  });
 }
 
 /**
@@ -137,14 +205,37 @@ function start(name, cmd, args, opts = {}) {
 const hasExited = (child) => child.exitCode !== null || child.signalCode !== null;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-/** POSIX: deliver SIGINT to a child's whole process group so it can clean up. */
-function interruptTree(child) {
+/** POSIX: deliver a signal to a child's whole process group. */
+function signalTree(child, signal) {
   if (hasExited(child)) return;
   try {
-    process.kill(-child.pid, 'SIGINT'); // whole process group
+    process.kill(-child.pid, signal); // whole process group
   } catch {
-    child.kill('SIGINT');
+    child.kill(signal);
   }
+}
+
+/**
+ * POSIX: SIGINT to a child's whole process group so it can clean up. A
+ * preparation step has no data to save, so one that does not react to the
+ * signal is killed in the end rather than left behind when this script exits.
+ */
+function interruptTree(child) {
+  signalTree(child, 'SIGINT');
+  if (stepChildren.has(child)) {
+    setTimeout(() => signalTree(child, 'SIGKILL'), STEP_KILL_AFTER_MS).unref();
+  }
+}
+
+/**
+ * Full path of taskkill.exe. It is started without a shell, and before Node 22
+ * a bare name would be looked up in the working directory (the repository)
+ * first.
+ */
+function taskkillPath() {
+  const winDir = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+  const file = join(winDir, 'System32', 'taskkill.exe');
+  return existsSync(file) ? file : 'taskkill';
 }
 
 /**
@@ -153,7 +244,7 @@ function interruptTree(child) {
  */
 function killTree(child) {
   if (hasExited(child)) return;
-  spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  spawnSync(taskkillPath(), ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
 }
 
 /**
@@ -209,7 +300,12 @@ function exportViaHub(timeoutMs = HUB_EXPORT_TIMEOUT_MS) {
   });
 }
 
-/** True when nothing listens on the hub port (a refused connection, not merely a slow one). */
+/**
+ * True when nothing listens on the hub port (a refused connection, not merely
+ * a slow one). Windows takes about two seconds to refuse a connection to a
+ * closed loopback port, so the wait for an answer has to be longer than that:
+ * with one second this never saw the port close.
+ */
 function hubPortClosed() {
   return new Promise((done) => {
     const socket = netConnect({ host: EMULATOR_HUB_HOST, port: EMULATOR_HUB_PORT });
@@ -217,7 +313,7 @@ function hubPortClosed() {
       socket.destroy();
       done(closed);
     };
-    socket.setTimeout(1000, () => finish(false));
+    socket.setTimeout(HUB_REFUSAL_TIMEOUT_MS, () => finish(false));
     socket.once('connect', () => finish(false));
     socket.once('error', (err) => finish(err.code === 'ECONNREFUSED'));
   });
@@ -256,6 +352,9 @@ async function waitAfterConsoleInterrupt() {
  *   Windows request    Nothing has told the emulators to stop, and taskkill
  *                      would end them before they could export. Ask the hub
  *                      to export first, then taskkill.
+ *
+ * A stop that arrives before the emulators were started (during an install or
+ * a download) has nothing to save: on Windows the tree is ended at once.
  */
 async function shutdown(exitCode = 0, cause = 'request') {
   if (shuttingDown) return;
@@ -266,9 +365,11 @@ async function shutdown(exitCode = 0, cause = 'request') {
     if (!IS_WINDOWS) {
       for (const child of children) interruptTree(child);
     } else {
-      if (cause === 'interrupt') {
+      if (!emulatorsStarted) {
+        // Nothing to export, and no hub to wait for or to ask.
+      } else if (cause === 'interrupt') {
         await waitAfterConsoleInterrupt();
-      } else if (emulatorsStarted) {
+      } else {
         log(`Saving emulator data to ${EXPORT_DIR}/ ...`);
         const result = await exportViaHub();
         if (result.ok) log('Emulator data saved.');
@@ -308,14 +409,19 @@ if (process.send) {
 // ---------------------------------------------------------------------------
 // Preflight
 // ---------------------------------------------------------------------------
-function versionOf(cmd, args) {
+/** Output of a short command that answers at once, or null when it is missing or failed. */
+function capture(cmd, args, opts = {}) {
   const [file, argv, shellOpt] = spawnArgs(cmd, args);
-  const r = spawnSync(file, argv, { encoding: 'utf8', ...shellOpt });
-  if (r.error || r.status !== 0) return null;
-  return `${r.stdout}${r.stderr}`.trim();
+  const r = spawnSync(file, argv, { encoding: 'utf8', ...shellOpt, ...opts });
+  return r.error || r.status !== 0 ? null : r;
 }
 
-function preflight() {
+function versionOf(cmd, args) {
+  const r = capture(cmd, args);
+  return r ? `${r.stdout}${r.stderr}`.trim() : null;
+}
+
+async function preflight() {
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 20) {
     throw new Error(`Node 20 or newer is required (found ${process.version}).`);
@@ -331,7 +437,7 @@ function preflight() {
 
   if (!EMULATORS_ONLY && !existsSync(NG_BIN)) {
     log('Installing web app dependencies (yarn install)...');
-    run('yarn', ['install', '--frozen-lockfile'], { cwd: ROOT });
+    await runStep('yarn', ['install', '--frozen-lockfile'], { cwd: ROOT });
   }
 
   // functions/node_modules is not tracked in git (see #212); install it when
@@ -349,7 +455,7 @@ function preflight() {
   const sdkOk = existsSync(join(FUNCTIONS_DIR, 'node_modules', '@anthropic-ai', 'sdk'));
   if (!fnBinOk || !sdkOk || !existsSync(TSC_BIN)) {
     log('Installing Cloud Functions dependencies (npm ci in functions/)...');
-    run('npm', ['ci'], { cwd: FUNCTIONS_DIR });
+    await runStep('npm', ['ci'], { cwd: FUNCTIONS_DIR });
   }
 
   // Local secrets for the Functions emulator.
@@ -390,31 +496,226 @@ function emulatorEnv(extra = {}) {
   return env;
 }
 
+// ---------------------------------------------------------------------------
+// Firebase CLI and emulator downloads
+//
+// Both are fetched before the emulators are started, each as its own visible
+// step without a time limit. Left to `emulators:start` they would run inside
+// the readiness wait: on a slow first run that wait expired while npx was
+// still installing the CLI without printing anything, the stop killed the
+// install half way, nothing was cached, and the next start failed the same way.
+// ---------------------------------------------------------------------------
+
+const hasFile = (file) => {
+  try {
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
+
+/** Where npm keeps its cache unless it is configured otherwise. */
+function usualNpmCacheDir() {
+  const fromEnv = process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE;
+  if (fromEnv) return resolve(fromEnv);
+  if (IS_WINDOWS) {
+    return join(process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local'), 'npm-cache');
+  }
+  return join(homedir(), '.npm');
+}
+
+/** The cache folder npm itself reports (one short npm call; this sees a `cache=` line in .npmrc). */
+function configuredNpmCacheDir() {
+  const r = capture('npm', ['config', 'get', 'cache'], { cwd: ROOT });
+  const answer = r ? r.stdout.trim().split(/\r?\n/).pop().trim() : '';
+  return answer ? resolve(answer) : null;
+}
+
 /**
- * Behind a proxy, fetch the emulator JARs/UI with the proxy still set
- * (cached under ~/.cache/firebase/emulators, so this is a no-op after the
- * first run). Without a proxy, emulators:start downloads them itself.
+ * The folders npx may have installed `firebase-tools@15` into, most likely first.
+ *
+ * npx keeps the packages of one command in <npm cache>/_npx/<hash>, where the
+ * hash is the first 16 hex digits of the SHA-512 of the package spec
+ * (libnpmexec). npm is only asked for its cache folder when the caller looks
+ * past the usual one, which keeps a normal start free of extra CLI calls.
  */
-function ensureEmulatorBinaries(firebase) {
-  if (!proxyConfigured()) return;
-  warn(
-    'HTTP proxy detected. Pre-downloading emulator binaries through it, then starting the emulators\n' +
-      '  without the proxy variables (the Firebase CLI would otherwise proxy its own loopback calls).',
+function* npxFolders() {
+  const hash = createHash('sha512').update(FIREBASE_TOOLS_SPEC).digest('hex').slice(0, 16);
+  const usual = usualNpmCacheDir();
+  yield join(usual, '_npx', hash);
+  const configured = configuredNpmCacheDir();
+  if (configured && configured !== usual) yield join(configured, '_npx', hash);
+}
+
+/**
+ * npm writes node_modules/.package-lock.json at the end of an install; a
+ * folder without it belongs to an install that was cut short.
+ */
+const npxInstallFinished = (folder) => hasFile(join(folder, 'node_modules', '.package-lock.json'));
+
+/**
+ * Package folder of the CLI that `npx firebase-tools@15` has installed, or
+ * null when there is no complete install yet. If a later npm lays the folder
+ * out differently this is null every time and the CLI is simply run once more
+ * (see ensureFirebaseCli), which is quick when it is already there.
+ */
+function npxFirebaseHome() {
+  for (const folder of npxFolders()) {
+    const home = join(folder, 'node_modules', 'firebase-tools');
+    if (npxInstallFinished(folder) && hasFile(join(home, 'package.json'))) return home;
+  }
+  return null;
+}
+
+/**
+ * Package folder of a globally installed CLI, or null when it cannot be told
+ * (the standalone binary, for example). npm puts `firebase` on PATH as a link
+ * into the package (macOS/Linux) or as firebase.cmd next to node_modules
+ * (Windows).
+ */
+function globalFirebaseHome() {
+  const names = IS_WINDOWS ? ['firebase.cmd', 'firebase.exe', 'firebase'] : ['firebase'];
+  for (const dir of (process.env.PATH || '').split(delimiter)) {
+    if (!dir) continue;
+    const shim = names.map((name) => join(dir, name)).find(hasFile);
+    if (!shim) continue;
+    const candidates = [join(dir, 'node_modules', 'firebase-tools')];
+    try {
+      // <package>/lib/bin/firebase.js
+      candidates.push(resolve(dirname(realpathSync(shim)), '..', '..'));
+    } catch {
+      // not a link we can follow
+    }
+    const isCli = (home) => hasFile(join(home, 'lib', 'emulator', 'downloadableEmulators.js'));
+    return candidates.find(isCli) ?? null;
+  }
+  return null;
+}
+
+/**
+ * How to run the Firebase CLI: a globally installed one when there is one,
+ * otherwise through npx. In the npx case the first run has to install the CLI
+ * (hundreds of packages, several minutes on a slow disk or connection), which
+ * is done here, by itself and to completion, so that `emulators:start` later
+ * finds it in the npx cache and starts at once.
+ *
+ * Returns { cmd, prefix, home }; `home` is the CLI's package folder, or null
+ * when it could not be located.
+ */
+async function ensureFirebaseCli() {
+  if (versionOf('firebase', ['--version'])) {
+    return { cmd: 'firebase', prefix: [], home: globalFirebaseHome() };
+  }
+  const npx = { cmd: 'npx', prefix: ['--yes', FIREBASE_TOOLS_SPEC] };
+  let home = npxFirebaseHome();
+  if (!home) {
+    log('Fetching the Firebase CLI (first run only; this can take several minutes)...');
+    const fetchCli = () => runStep(npx.cmd, [...npx.prefix, '--version'], { cwd: ROOT });
+    const explain = (err) =>
+      new Error(
+        `The Firebase CLI could not be fetched (${err.message}).\n` +
+          '  Check the internet connection and start again. If it keeps failing, delete the folder\n' +
+          `  ${dirname([...npxFolders()].pop())} and start again.`,
+      );
+    try {
+      await fetchCli();
+    } catch (err) {
+      if (err instanceof Stopped) throw err;
+      // An install that was killed half way (a forced stop, a closed window)
+      // can leave a CLI that npx takes for complete and that then fails to
+      // load. Clear what such an install left behind and fetch once more.
+      const unfinished = [...npxFolders()].filter(
+        (folder) => existsSync(join(folder, 'node_modules')) && !npxInstallFinished(folder),
+      );
+      if (unfinished.length === 0) throw explain(err);
+      warn(
+        'An earlier fetch of the Firebase CLI was cut short. Removing what it left, fetching again...',
+      );
+      for (const folder of unfinished) rmSync(folder, { recursive: true, force: true });
+      try {
+        await fetchCli();
+      } catch (again) {
+        throw again instanceof Stopped ? again : explain(again);
+      }
+    }
+    home = npxFirebaseHome();
+  }
+  return { ...npx, home };
+}
+
+/** Folder the Firebase CLI keeps its emulator downloads in (lib/emulator/downloadableEmulators.js). */
+const emulatorCacheDir = () =>
+  process.env.FIREBASE_EMULATORS_PATH || join(homedir(), '.cache', 'firebase', 'emulators');
+
+/**
+ * The emulator downloads that are not in the CLI's cache folder yet.
+ *
+ * The CLI names the exact file it starts for each emulator, and its size, in
+ * lib/emulator/downloadableEmulatorInfo.json: a JAR for Firestore and Storage,
+ * server/server.mjs inside the unpacked archive for the UI. A file of another
+ * size is a download that was cut short. Where that list cannot be read (the
+ * CLI was not located) any version of the file counts as present, and
+ * `emulators:start` fetches a newer one itself if it wants one.
+ */
+function missingEmulatorDownloads(firebaseHome) {
+  const cache = emulatorCacheDir();
+  let info = null;
+  if (firebaseHome) {
+    try {
+      const list = join(firebaseHome, 'lib', 'emulator', 'downloadableEmulatorInfo.json');
+      info = JSON.parse(readFileSync(list, 'utf8'));
+    } catch {
+      // fall back to the name patterns below
+    }
+  }
+  let names = [];
+  try {
+    names = readdirSync(cache);
+  } catch {
+    // no cache folder yet: everything is missing
+  }
+  const anyVersion = {
+    firestore: (name) => /^cloud-firestore-emulator-v.+\.jar$/.test(name),
+    storage: (name) => /^cloud-storage-rules-runtime-v.+\.jar$/.test(name),
+    ui: (name) => /^ui-v/.test(name) && hasFile(join(cache, name, 'server', 'server.mjs')),
+  };
+  return EMULATOR_DOWNLOADS.filter((target) => {
+    const details = target === 'ui' ? info?.ui?.main : info?.[target];
+    const file = details?.binaryPathRelativeToCacheDir ?? details?.downloadPathRelativeToCacheDir;
+    if (typeof file !== 'string') return !names.some(anyVersion[target]);
+    try {
+      const { size } = statSync(join(cache, file));
+      const sized = !details.binaryPathRelativeToCacheDir && details.expectedSize > 0;
+      return sized && size !== details.expectedSize;
+    } catch {
+      return true;
+    }
+  });
+}
+
+/**
+ * Download the emulator JARs and the Emulator UI when they are not cached yet
+ * (the first run, or after the CLI moved to newer emulator versions). With
+ * everything in place this only looks at the files and starts nothing.
+ *
+ * The downloads run with the proxy variables still set; the emulators are
+ * started without them (see emulatorEnv).
+ */
+async function ensureEmulatorBinaries(firebase) {
+  const missing = missingEmulatorDownloads(firebase.home);
+  if (missing.length === 0) return;
+  const which = missing.join(', ');
+  log(
+    `Downloading the Firebase emulators (${which}; first run only, this can take a few minutes)...`,
   );
-  for (const target of ['firestore', 'storage', 'ui']) {
-    run(firebase.cmd, [...firebase.prefix, `setup:emulators:${target}`], { cwd: ROOT });
+  for (const target of missing) {
+    await runStep(firebase.cmd, [...firebase.prefix, `setup:emulators:${target}`], { cwd: ROOT });
   }
 }
 
 // ---------------------------------------------------------------------------
 // Stack
 // ---------------------------------------------------------------------------
-function firebaseCommand() {
-  // Prefer a globally installed CLI; otherwise run it via npx (cached after first use).
-  if (versionOf('firebase', ['--version'])) return { cmd: 'firebase', prefix: [] };
-  return { cmd: 'npx', prefix: ['--yes', FIREBASE_TOOLS_SPEC] };
-}
-
 async function waitForEmulators(timeoutMs = 180_000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
@@ -438,15 +739,18 @@ async function waitForEmulators(timeoutMs = 180_000) {
 
 async function main() {
   log('Preflight checks...');
-  preflight();
+  await preflight();
+
+  // First run only. Both steps take as long as they take; nothing is timed
+  // until the emulators themselves are started.
+  const firebase = await ensureFirebaseCli();
+  const { cmd, prefix } = firebase;
+  await ensureEmulatorBinaries(firebase);
 
   log('Building Cloud Functions...');
-  run(process.execPath, [TSC_BIN, '-p', FUNCTIONS_DIR]);
+  await runStep(process.execPath, [TSC_BIN, '-p', FUNCTIONS_DIR]);
   start('tsc --watch (functions)', process.execPath, [TSC_BIN, '--watch', '--preserveWatchOutput', '-p', FUNCTIONS_DIR]);
 
-  const firebase = firebaseCommand();
-  const { cmd, prefix } = firebase;
-  ensureEmulatorBinaries(firebase);
   const emulatorArgs = [
     ...prefix,
     'emulators:start',
@@ -464,6 +768,12 @@ async function main() {
   } else {
     log(`No ${EXPORT_DIR}/ yet: starting with an empty database (it is created on first exit).`);
   }
+  if (proxyConfigured()) {
+    warn(
+      'HTTP proxy detected. Starting the emulators without the proxy variables (the Firebase CLI\n' +
+        '  would otherwise send its own loopback calls through the proxy).',
+    );
+  }
   log(`Starting Firebase emulators (${EMULATORS}) for project ${LOCAL_PROJECT_ID}...`);
   emulatorsStarted = true;
   start('Firebase emulators', cmd, emulatorArgs, {
@@ -471,7 +781,7 @@ async function main() {
     env: emulatorEnv({ FORCE_COLOR: '1' }),
   });
 
-  log('Waiting for the emulators to come up (first run downloads the emulator JARs)...');
+  log('Waiting for the emulators to come up...');
   const ready = await waitForEmulators();
   if (!ready) {
     if (!shuttingDown) fail('Emulators did not become ready in time. See the output above.');
@@ -499,4 +809,8 @@ async function main() {
 `);
 }
 
-main().catch((err) => fail(err instanceof Error ? err.message : String(err)));
+main().catch((err) => {
+  // A step that was stopped on purpose is not a failure, and shutdown() is already on its way.
+  if (err instanceof Stopped || shuttingDown) return;
+  fail(err instanceof Error ? err.message : String(err));
+});
