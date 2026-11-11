@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600;700&display=swap">
 
 <style>
 /* OmniTask Build Console.
@@ -53,6 +53,13 @@
 .sev-bad  { --sev: #fb7185; --sev-rgb: 244, 63, 94; }
 .sev-info { --sev: #00d2ff; --sev-rgb: 0, 210, 255; }
 .sev-idle { --sev: #94a3b8; --sev-rgb: 148, 163, 184; }
+/* Chips and toggles take the OmniFlex Design System's own palette and layered glows
+   (tokens.css: of-mint, of-warning, of-danger, of-neon-blue; components/Buttons badge recipe). */
+.sev-ok   { --chip: 5, 242, 219; }
+.sev-warn { --chip: 245, 158, 11; }
+.sev-bad  { --chip: 255, 51, 85; }
+.sev-info { --chip: 68, 126, 242; --chip-ink: 142, 178, 255; }
+.sev-idle { --chip: 148, 163, 184; }
 
 * { box-sizing: border-box; }
 html { scroll-padding-top: 76px; }
@@ -127,10 +134,15 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 /* ── Segmented switch: the dashboard view switcher (S:1111-1113) ── */
 .switches { display: flex; flex-wrap: wrap; gap: 14px 32px; margin-top: 24px; }
 .switch-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 8px; background: #0a0f1e; border: 1px solid rgba(130, 37, 230, 0.2); box-shadow: 0 0 10px rgb(130, 37, 230); }
-.seg button { padding: 6px 16px; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); font: 600 14px/20px var(--default-font); cursor: pointer; transition: all .2s; }
-.seg button:hover { color: var(--text-2); }
-.seg button[aria-pressed="true"] { color: rgb(193, 157, 255); background: rgba(130, 37, 230, 0.2); box-shadow: 0 0 18px rgba(139, 92, 246, 0.45), inset 0 0 10px rgba(139, 92, 246, 0.15); text-shadow: 0 0 10px rgba(139, 92, 246, 0.7); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 5px; border-radius: 999px; background: rgba(5, 5, 16, 0.72); border: 1px solid rgba(255, 255, 255, 0.10); box-shadow: inset 0 0 14px rgba(var(--seg), 0.10), 0 0 12px rgba(var(--seg), 0.12); --seg: 68, 126, 242; }
+.seg.alt { --seg: 101, 11, 255; }
+.seg button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px 6px 12px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--text-3);
+  font: 600 11px/1.5 'Fira Code', var(--font-monospace); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; transition: color .2s, border-color .2s, box-shadow .2s, background .2s; }
+.seg button::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #334155; transition: background .2s, box-shadow .2s; }
+.seg button:hover { color: #fff; border-color: rgba(var(--seg), 0.45); box-shadow: 0 0 6px rgba(var(--seg), 0.45), inset 0 0 8px rgba(var(--seg), 0.12); }
+.seg button[aria-pressed="true"] { color: #fff; border-color: rgb(var(--seg)); background: rgba(var(--seg), 0.22); text-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 6px rgb(var(--seg)), 0 0 16px rgba(var(--seg), 0.85), 0 0 34px rgba(var(--seg), 0.35), inset 0 0 12px rgba(var(--seg), 0.30); }
+.seg button[aria-pressed="true"]::before { background: #05f2db; box-shadow: 0 0 6px #05f2db, 0 0 12px #05f2db; }
 
 /* ── Panels: .ofx-panel (S:108-117) ── */
 .ports, .state, .panel, .action {
@@ -182,9 +194,16 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 
 /* ── Port tiles: .kpi tiles (features/dashboard/components/project-overview.component.css:8-25) ── */
 .port-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.port { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 10px 12px; border-radius: 8px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.05);
+.port { display: flex; flex-direction: column; min-width: 0; padding: 0; border-radius: 8px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: inset 0 0 0 1px rgba(0, 210, 255, 0.04), 0 6px 20px rgba(0, 0, 0, 0.35); transition: all .2s ease; }
 .port:hover { border-color: rgba(0, 210, 255, 0.2); box-shadow: 0 0 20px rgba(0, 210, 255, 0.1); }
+/* The tile opens the service; the row under it carries the full address to copy. */
+.port-link, .port-link:hover { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; padding: 10px 12px 6px; color: inherit; text-decoration: none; text-shadow: none; filter: none; border-radius: 8px 8px 0 0; }
+a.port-link:hover .no { text-shadow: 0 0 10px currentColor, 0 0 22px currentColor; }
+a.port-link:hover .nm { color: var(--text-2); }
+.port-url { display: flex; align-items: center; gap: 6px; padding: 0 8px 8px 12px; min-width: 0; }
+.port-url code { flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; font-size: 10.5px; color: var(--text-3); text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.copy.mini { padding: 2px 8px; font-size: 10px; line-height: 14px; border-radius: 6px; }
 .port .nm { order: -1; display: flex; align-items: center; gap: 6px; font: 700 10px/1.5 var(--default-font); letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
 .port .no { font: 700 1.35rem/1.1 var(--font-display); color: #00d2ff; text-shadow: 0 0 10px currentColor; font-variant-numeric: tabular-nums; }
 .port .dt { font-size: 13px; line-height: 1.4; color: var(--text-3); overflow-wrap: anywhere; }
@@ -196,6 +215,7 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 .port.is-out { grid-column: span 2; background: rgba(224, 64, 251, 0.06); border: 1px solid rgba(224, 64, 251, 0.4); box-shadow: 0 0 10px rgba(224, 64, 251, 0.25), inset 0 0 10px rgba(224, 64, 251, 0.08); }
 .port.is-out:hover { border-color: rgba(224, 64, 251, 0.7); box-shadow: 0 0 18px rgba(224, 64, 251, 0.5), inset 0 0 18px rgba(224, 64, 251, 0.15); }
 .port.is-out .no { font: 500 15px/1.5 var(--font-monospace); color: #e040fb; text-shadow: 0 0 10px rgba(224, 64, 251, 0.7); }
+.port.is-out .port-link { padding-bottom: 10px; }
 .ports-key { margin-top: 14px; font-size: 15px; color: var(--text-3); max-width: 70ch; }
 
 /* ── Status rows (.task-row) and tags (.cyber-badge, S:1038-1044) ── */
@@ -208,10 +228,15 @@ code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: 
 .state-list li:hover { background: rgba(10, 15, 30, 0.75); border-color: rgba(0, 210, 255, 0.25); box-shadow: 0 0 12px rgba(0, 210, 255, 0.15); }
 .state-list .what { color: #f1f5f9; font-weight: 600; }
 .tag, .verdict .chip {
-  display: inline-flex; align-items: center; margin-right: 8px; padding: 2px 10px; border-radius: 12px; white-space: normal; overflow-wrap: anywhere; min-width: 0;
-  font: 700 12px/16px var(--default-font); letter-spacing: .05em; text-transform: uppercase; color: var(--sev);
-  background: rgba(var(--sev-rgb), 0.12); border: 1px solid rgba(var(--sev-rgb), 0.3); text-shadow: 0 0 5px rgba(var(--sev-rgb), 0.5);
+  --c: var(--chip, 148, 163, 184); --ink: var(--chip-ink, var(--c));
+  display: inline-flex; align-items: center; gap: 7px; margin-right: 8px; padding: 3px 11px 3px 9px; border-radius: 14px; white-space: normal; overflow-wrap: anywhere; min-width: 0;
+  font: 600 10.5px/1.5 'Fira Code', var(--font-monospace); letter-spacing: .14em; text-transform: uppercase; color: rgb(var(--ink));
+  background: rgba(5, 5, 16, 0.62); border: 1px solid rgba(var(--c), 0.8); text-shadow: 0 0 6px rgba(var(--c), 0.75);
+  box-shadow: 0 0 6px rgba(var(--c), 0.55), 0 0 16px rgba(var(--c), 0.28), inset 0 0 10px rgba(var(--c), 0.14); vertical-align: 1px;
 }
+.tag::before, .verdict .chip::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--c)); box-shadow: 0 0 6px rgb(var(--c)), 0 0 12px rgb(var(--c)); }
+.sev-idle .tag, .tag.sev-idle, .verdict.sev-idle .chip { box-shadow: none; text-shadow: none; border-color: rgba(255, 255, 255, 0.18); }
+.sev-idle .tag::before, .tag.sev-idle::before, .verdict.sev-idle .chip::before { box-shadow: none; background: #475569; }
 .chips .tag { margin-right: 0; }
 
 /* ── Sections and step cards ── */
@@ -274,6 +299,7 @@ pre { margin: 0; padding: 1rem 1.1rem; font-size: 13px; line-height: 1.7; color:
 .log:focus-visible { outline-offset: -2px; }
 .log .l-job { color: #c4b5fd; text-shadow: 0 0 8px rgba(139, 92, 246, 0.25); }
 .log .l-console { color: var(--text-3); }
+.log .l-app { color: #93c5fd; }
 .log .l-cmd { color: #67e8f9; text-shadow: 0 0 8px rgba(0, 210, 255, 0.4); }
 .log .l-up { color: #34d399; text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
 .log .l-err { color: #fda4af; text-shadow: 0 0 8px rgba(244, 63, 94, 0.45); }
@@ -406,7 +432,7 @@ footer .build-line { display: block; margin-top: 10px; font-size: .6875rem; lett
     </div>
     <div class="switch-group" id="branch-switch">
       <span class="lbl">Run from</span>
-      <div class="seg" role="group" aria-label="Branch">
+      <div class="seg alt" role="group" aria-label="Branch">
         <button type="button" id="src-pr" aria-pressed="true">PR #213 branch</button>
         <button type="button" id="src-live" aria-pressed="false">live</button>
       </div>
@@ -427,21 +453,23 @@ footer .build-line { display: block; margin-top: 10px; font-size: .6875rem; lett
       <button class="btn" type="button" data-action="start" data-mode="emulators">Backend only</button>
       <button class="btn btn-neon btn-rose" type="button" data-action="stop">Stop</button>
       <button class="btn" type="button" data-action="open-folder">Open folder</button>
+      <button class="btn" type="button" data-action="terminal">Terminal here</button>
       <button class="btn" type="button" data-action="quit" data-confirm="Quit the console?">Quit console</button>
     </div>
     <p class="warn-line sev-bad notice" id="notice" role="alert" hidden></p>
     <div class="chips" id="chips" hidden></div>
 
     <ul class="port-grid">
-      <li class="port" data-name="app" data-port="4200"><span class="nm"><i class="led" hidden></i>The app</span><span class="no">:4200</span><span class="dt">Angular dev server, local configuration</span></li>
-      <li class="port" data-name="auth" data-port="9099"><span class="nm"><i class="led" hidden></i>Sign-in</span><span class="no">:9099</span><span class="dt">Auth emulator, fake Google popup</span></li>
-      <li class="port" data-name="firestore" data-port="8080"><span class="nm"><i class="led" hidden></i>Database</span><span class="no">:8080</span><span class="dt">Firestore emulator</span></li>
-      <li class="port" data-name="storage" data-port="9199"><span class="nm"><i class="led" hidden></i>File storage</span><span class="no">:9199</span><span class="dt">Storage emulator</span></li>
-      <li class="port" data-name="functions" data-port="5001"><span class="nm"><i class="led" hidden></i>Cloud Functions</span><span class="no">:5001</span><span class="dt">Functions emulator; email is captured, not sent</span></li>
-      <li class="port" data-name="ui" data-port="4000"><span class="nm"><i class="led" hidden></i>Emulator UI</span><span class="no">:4000</span><span class="dt">Browse data, users and function logs</span></li>
-      <li class="port is-out"><span class="nm">Claude API</span><span class="no">api.anthropic.com</span><span class="dt">Called by the four AI functions with the key in functions/.secret.local</span></li>
+      <li class="port" data-name="app" data-port="4200"><a class="port-link" id="open-app" href="http://localhost:4200" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>The app</span><span class="no">:4200</span><span class="dt">Angular dev server, local configuration</span></a><span class="port-url"><code id="url-app">http://localhost:4200</code><button class="copy mini" type="button" data-copy="url-app">Copy</button></span></li>
+      <li class="port" data-name="auth" data-port="9099"><a class="port-link" id="open-auth" href="http://127.0.0.1:9099" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Sign-in</span><span class="no">:9099</span><span class="dt">Auth emulator, fake Google popup</span></a><span class="port-url"><code id="url-auth">http://127.0.0.1:9099</code><button class="copy mini" type="button" data-copy="url-auth">Copy</button></span></li>
+      <li class="port" data-name="firestore" data-port="8080"><a class="port-link" id="open-firestore" href="http://127.0.0.1:8080" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Database</span><span class="no">:8080</span><span class="dt">Firestore emulator</span></a><span class="port-url"><code id="url-firestore">http://127.0.0.1:8080</code><button class="copy mini" type="button" data-copy="url-firestore">Copy</button></span></li>
+      <li class="port" data-name="storage" data-port="9199"><a class="port-link" id="open-storage" href="http://127.0.0.1:9199" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>File storage</span><span class="no">:9199</span><span class="dt">Storage emulator</span></a><span class="port-url"><code id="url-storage">http://127.0.0.1:9199</code><button class="copy mini" type="button" data-copy="url-storage">Copy</button></span></li>
+      <li class="port" data-name="functions" data-port="5001"><a class="port-link" id="open-functions" href="http://127.0.0.1:5001" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Cloud Functions</span><span class="no">:5001</span><span class="dt">Functions emulator; email is captured, not sent</span></a><span class="port-url"><code id="url-functions">http://127.0.0.1:5001</code><button class="copy mini" type="button" data-copy="url-functions">Copy</button></span></li>
+      <li class="port" data-name="ui" data-port="4000"><a class="port-link" id="open-ui" href="http://127.0.0.1:4000" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Emulator UI</span><span class="no">:4000</span><span class="dt">Browse data, users and function logs</span></a><span class="port-url"><code id="url-ui">http://127.0.0.1:4000</code><button class="copy mini" type="button" data-copy="url-ui">Copy</button></span></li>
+      <li class="port is-out"><span class="port-link"><span class="nm">Claude API</span><span class="no">api.anthropic.com</span><span class="dt">Called by the four AI functions with the key in functions/.secret.local</span></span></li>
     </ul>
-    <p class="ports-key">Everything runs under the offline-only Firebase project <code>demo-omnitask</code>. The Claude API is the one hop that leaves the laptop.</p>
+    <p class="ports-key">Click a tile to open that service; its address underneath is ready to copy. The emulator tiles open their page in the Emulator UI.</p>
+    <p class="ports-key" style="margin-top:6px">Everything runs under the offline-only Firebase project <code>demo-omnitask</code>. The Claude API is the one hop that leaves the laptop.</p>
     <nav class="links" aria-label="Quick links">
       <a class="btn btn-neon" id="link-app" href="http://localhost:4200" target="_blank" rel="noopener">Open local app</a>
       <a class="btn" id="link-ui" href="http://127.0.0.1:4000" target="_blank" rel="noopener">Emulator UI</a>
@@ -518,7 +546,7 @@ footer .build-line { display: block; margin-top: 10px; font-size: .6875rem; lett
         <label class="done"><input type="checkbox" id="done-00">Done</label>
       </div>
       <div class="command">
-        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="copy" type="button" data-copy="cmd-tools">Copy</button></span></div>
+        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="tools" hidden>Check now</button><button class="copy" type="button" data-copy="cmd-tools">Copy</button></span></div>
         <pre id="cmd-tools">node -v
 java -version
 yarn -v
@@ -680,7 +708,7 @@ git --version</pre>
         <pre id="cmd-emu"></pre>
       </div>
       <div class="command">
-        <div class="command-bar"><span class="label" id="lbl-app">Window 2 · the app</span><span class="tools"><button class="copy" type="button" data-copy="cmd-app">Copy</button></span></div>
+        <div class="command-bar"><span class="label" id="lbl-app">Window 2 · the app</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="app-start" hidden>Start app</button><button class="btn btn-neon btn-rose btn-sm" type="button" data-action="app-stop" hidden>Stop app</button><button class="copy" type="button" data-copy="cmd-app">Copy</button></span></div>
         <pre id="cmd-app"></pre>
       </div>
     </section>
@@ -709,12 +737,41 @@ git --version</pre>
       </div>
       <p class="aside">The first line lists what is listening on the stack's ports, with a process id at the end of each row. Put that id in the second line.</p>
       <div class="command">
-        <div class="command-bar"><span class="label" id="lbl-portfind">Find it</span><span class="tools"><button class="copy" type="button" data-copy="cmd-portfind">Copy</button></span></div>
+        <div class="command-bar"><span class="label" id="lbl-portfind">Find it</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="port-find" hidden>Find now</button><button class="copy" type="button" data-copy="cmd-portfind">Copy</button></span></div>
         <pre id="cmd-portfind"></pre>
       </div>
       <div class="command">
         <div class="command-bar"><span class="label">Stop it · replace 1234</span><span class="tools"><button class="copy" type="button" data-copy="cmd-portkill">Copy</button></span></div>
         <pre id="cmd-portkill"></pre>
+      </div>
+      <div data-live hidden>
+        <p class="aside">Or free one here. It ends whatever is listening on that port. If that program runs as administrator, Windows asks for your approval when you press the button.</p>
+        <div class="controls-row" style="margin-top:10px">
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="app" data-confirm="End it?">Free the app port</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="auth" data-confirm="End it?">Free sign-in</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="firestore" data-confirm="End it?">Free database</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="storage" data-confirm="End it?">Free storage</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="functions" data-confirm="End it?">Free functions</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="ui" data-confirm="End it?">Free Emulator UI</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="hub" data-confirm="End it?">Free the hub</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="action is-once" data-windows>
+      <div class="action-head">
+        <span class="mark">E</span>
+        <h3 class="step-title">Keep Windows off these ports</h3>
+        <span class="says">Optional. Needs administrator approval, once.</span>
+      </div>
+      <p class="aside">
+        Hyper-V, WSL and Docker let Windows reserve blocks of ports at each start, and a block can land on one the
+        stack uses. The stack already moves to a free port when that happens. This tells Windows to leave the usual
+        ports alone for good, so the numbers never change. <b>Pressing the button brings up the Windows administrator prompt.</b>
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label">PowerShell · run as administrator</span><span class="tools"><button class="btn btn-neon btn-purple btn-sm" type="button" data-action="ports-reserve" hidden>Reserve them · admin</button><button class="btn btn-sm" type="button" data-action="ports-unreserve" data-confirm="Undo it?" hidden>Undo · admin</button><button class="copy" type="button" data-copy="cmd-reserve">Copy</button></span></div>
+        <pre id="cmd-reserve"></pre>
       </div>
     </section>
 
@@ -771,10 +828,11 @@ git --version</pre>
       <p class="aside">
         The first line signs you in to Firebase. The second asks for the new key and stores it in Secret
         Manager without echoing it. The third redeploys the functions so they pick it up. Use a key made for
-        production, for example <code>omnitask-prod</code>, not the laptop's.
+        production, for example <code>omnitask-prod</code>, not the laptop's. Each of these asks you something, so
+        from this console each opens in its own terminal window.
       </p>
       <div class="command">
-        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="copy" type="button" data-copy="cmd-rotate">Copy</button></span></div>
+        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="firebase-login" hidden>1 · Sign in</button><button class="btn btn-neon btn-sm" type="button" data-action="secret-set" hidden>2 · Set the key</button><button class="btn btn-neon btn-rose btn-sm" type="button" data-action="deploy-functions" data-confirm="Deploy to production?" hidden>3 · Deploy</button><button class="copy" type="button" data-copy="cmd-rotate">Copy</button></span></div>
         <pre id="cmd-rotate"></pre>
       </div>
     </section>
@@ -786,10 +844,21 @@ git --version</pre>
         <span class="says">When an AI button fails for real users.</span>
       </div>
       <div class="command">
-        <div class="command-bar"><span class="label">Any shell · signed in to Firebase</span><span class="tools"><button class="copy" type="button" data-copy="cmd-prodlog">Copy</button></span></div>
-        <pre id="cmd-prodlog">npx --yes firebase-tools@15 functions:log --only generateSubtasks --project omnitask-475422</pre>
+        <div class="command-bar"><span class="label">Any shell · signed in to Firebase</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="prod-logs" hidden>Read logs</button><button class="copy" type="button" data-copy="cmd-prodlog">Copy</button></span></div>
+        <pre id="cmd-prodlog"></pre>
       </div>
-      <p class="expect">Lines from the AI code start with <code>[claude]</code>. The other three functions are <code>suggestTaskPriority</code>, <code>suggestDueDate</code> and <code>enhanceTaskDescription</code>.</p>
+      <div class="controls" style="margin-top:0">
+        <div class="field">
+          <label for="prodfn">Function</label>
+          <select id="prodfn">
+            <option value="generateSubtasks" selected>generateSubtasks</option>
+            <option value="suggestTaskPriority">suggestTaskPriority</option>
+            <option value="suggestDueDate">suggestDueDate</option>
+            <option value="enhanceTaskDescription">enhanceTaskDescription</option>
+          </select>
+        </div>
+      </div>
+      <p class="expect">Lines from the AI code start with <code>[claude]</code>. Sign in to Firebase first (S3, step 1).</p>
     </section>
 
   </div>
@@ -812,6 +881,10 @@ git --version</pre>
             <label for="branch">Branch</label>
             <input type="text" id="branch" value="feature/local-dev-claude-ai" spellcheck="false" autocomplete="off">
           </div>
+        </div>
+        <div class="controls-row" data-live data-windows hidden>
+          <button class="btn btn-sm" type="button" data-action="shortcut">Reinstall the shortcuts</button>
+          <button class="btn btn-sm" type="button" data-action="shortcut-remove" data-confirm="Remove both?">Remove the shortcuts</button>
         </div>
       </div>
 
@@ -1055,7 +1128,11 @@ git --version</pre>
         cd + fb + " deploy --only functions --project " + PROJECT,
       "cmd-env": env.length ? env.join("\n") : "",
       "cmd-envopen": cd + sh.envopen(o),
-      "cmd-shortcut": cd + "yarn console:shortcut"
+      "cmd-shortcut": cd + "yarn console:shortcut",
+      "cmd-prodlog": fb + " functions:log --only " + (o.prodfn || "generateSubtasks") + " --project " + PROJECT,
+      "cmd-reserve": [4200, 9099, 8080, 9199, 5001, 4000, 4400].map(function (p) {
+        return "netsh interface ipv4 add excludedportrange protocol=tcp startport=" + p + " numberofports=1 store=persistent";
+      }).join("\n")
     };
   }
 
@@ -1176,7 +1253,7 @@ git --version</pre>
       repo = toWin(LIVE.repo) || repo;
       if (live.s && live.s.git && live.s.git.branch) branch = cleanBranch(live.s.git.branch);
     }
-    return { shell: state.shell, repo: repo, branch: branch, model: state.model, realmail: state.realmail };
+    return { shell: state.shell, repo: repo, branch: branch, model: state.model, realmail: state.realmail, prodfn: $("prodfn").value };
   }
 
   function render() {
@@ -1284,7 +1361,13 @@ git --version</pre>
      The page only ever names an action; the launcher owns what each one runs. */
   var ACTION_LABEL = { start: "Start", stop: "Stop", pull: "Pull", install: "Install", smoke: "Key test", checks: "Checks",
     "open-key": "Open key file", "open-env": "Open overrides", "set-env": "Save overrides", "reset-data": "Delete saved data",
-    "open-folder": "Open folder", quit: "Quit" };
+    "open-folder": "Open folder", quit: "Quit", tools: "Tool check", "app-start": "Start app", "app-stop": "Stop app",
+    "port-find": "Port check", "port-free": "Free a port", "ports-reserve": "Reserve ports", "ports-unreserve": "Release ports",
+    shortcut: "Shortcuts", "shortcut-remove": "Remove shortcuts", terminal: "Terminal", "firebase-login": "Firebase sign-in",
+    "secret-set": "Set production key", "deploy-functions": "Deploy functions", "prod-logs": "Production logs" };
+  var JOB_ACTIONS = { start: 1, pull: 1, install: 1, smoke: 1, checks: 1, tools: 1, "app-start": 1, "port-find": 1, "port-free": 1,
+    "ports-reserve": 1, "ports-unreserve": 1, shortcut: 1, "shortcut-remove": 1, "prod-logs": 1 };
+  var WINDOW_ACTIONS = { terminal: 1, "firebase-login": 1, "secret-set": 1, "deploy-functions": 1 };
 
   function call(path, body) {
     var opt = { method: body ? "POST" : "GET", cache: "no-store", headers: { "X-Console-Token": LIVE.token } };
@@ -1337,9 +1420,47 @@ git --version</pre>
       case "reset-data":
         if (st !== "stopped") return "Stop the stack first.";
         return setup.savedData ? "" : "There is no saved data.";
+      case "tools": case "port-find": case "prod-logs": case "shortcut": case "shortcut-remove": case "port-free": case "ports-reserve": case "ports-unreserve":
+        return jobRunning(s) ? "Wait for the running job to finish." : "";
+      case "app-start":
+        if (!setup.hasLocalDev) return "This branch has no local stack.";
+        if (s.stack.mode === "full" && st !== "stopped") return "The stack is already running the app.";
+        if (s.app && s.app.state !== "stopped") return "The app is already " + s.app.state + ".";
+        return "";
+      case "app-stop":
+        return (s.app && (s.app.state === "running" || s.app.state === "starting")) ? "" : "The app was not started from here.";
       default:
         return "";
     }
+  }
+
+  /* Windows can reserve a port for the session; the stack then moves to a free one and reports it.
+     Tiles, addresses and links follow the port actually in use. Clicking a tile opens the service:
+     the app itself, or that emulator's page in the Emulator UI. */
+  var UI_PAGE = { auth: "/auth", firestore: "/firestore", storage: "/storage", functions: "/functions", ui: "/" };
+  function paintPorts(list) {
+    var ui = 4000;
+    list.forEach(function (p) { if (p.name === "ui" && typeof p.port === "number") ui = p.port; });
+    list.forEach(function (p) {
+      var tile = document.querySelector('.port[data-name="' + p.name + '"]');
+      if (!tile || typeof p.port !== "number") return;
+      tile.classList.toggle("is-open", p.open === true);
+      var no = tile.querySelector(".no"), shown = ":" + p.port;
+      if (no.textContent !== shown) no.textContent = shown;
+      var moved = typeof p.default === "number" && p.default !== p.port;
+      var raw = "http://" + (p.name === "app" ? "localhost" : "127.0.0.1") + ":" + p.port;
+      var open = p.name === "app" ? raw : "http://127.0.0.1:" + ui + UI_PAGE[p.name];
+      var link = $("open-" + p.name), code = $("url-" + p.name);
+      if (link.getAttribute("href") !== open) link.setAttribute("href", open);
+      link.title = "Open " + open + (moved ? " (moved from " + p.default + ": that port could not be opened on this machine)" : "");
+      if (code.textContent !== raw) code.textContent = raw;
+      if (p.name === "app") {
+        $("link-app").href = raw;
+        var stepLink = $("link-app-step"); stepLink.href = raw;
+        if (stepLink.textContent !== raw) stepLink.textContent = raw;
+      }
+      if (p.name === "ui") $("link-ui").href = raw;
+    });
   }
 
   function chip(sev, text) {
@@ -1393,24 +1514,7 @@ git --version</pre>
     else if (s.stack.state === "stopped" && s.stack.lastExit && typeof s.stack.lastExit.code === "number" && s.stack.lastExit.code !== 0) since = "last run exited with code " + s.stack.lastExit.code;
     $("stack-since").textContent = since;
 
-    /* Windows can reserve a port for the session; the stack then moves to a free one and reports it.
-       Tiles and links follow the port actually in use. */
-    (s.ports || []).forEach(function (p) {
-      var tile = document.querySelector('.port[data-name="' + p.name + '"]') || document.querySelector('.port[data-port="' + p.port + '"]');
-      if (!tile || typeof p.port !== "number") return;
-      tile.classList.toggle("is-open", p.open === true);
-      var no = tile.querySelector(".no"), shown = ":" + p.port;
-      if (no.textContent !== shown) no.textContent = shown;
-      var moved = typeof p.default === "number" && p.default !== p.port;
-      tile.title = moved ? "Moved from " + p.default + ": that port could not be opened on this machine" : "";
-      if (p.name === "app") {
-        var appUrl = "http://localhost:" + p.port;
-        $("link-app").href = appUrl;
-        var stepLink = $("link-app-step"); stepLink.href = appUrl;
-        if (stepLink.textContent !== appUrl) stepLink.textContent = appUrl;
-      }
-      if (p.name === "ui") $("link-ui").href = "http://127.0.0.1:" + p.port;
-    });
+    paintPorts(s.ports || []);
 
     var chips = $("chips"); chips.textContent = "";
     var t = s.tools || {};
@@ -1451,6 +1555,8 @@ git --version</pre>
       b.disabled = !!why;
       b.title = why;
     });
+    var win = !(s.setup.platformSupports && s.setup.platformSupports.elevation === false) && LIVE.platform === "win32";
+    each("[data-windows]", function (el) { if (el.hasAttribute("data-live") || el.classList.contains("action")) el.hidden = !win; });
 
     var laptop = $("laptop-text"); laptop.textContent = "";
     var ready = live.derived["00"] && live.derived["02"] && live.derived["03"];
@@ -1472,7 +1578,9 @@ git --version</pre>
       if (both || live.dirty.model) body.model = state.model;
       if (both || live.dirty.realmail) body.realmail = state.realmail;
     }
-    if (action === "reset-data") body.confirm = true;
+    if (action === "reset-data" || action === "deploy-functions") body.confirm = true;
+    if (action === "port-free") body.name = btn.getAttribute("data-name");
+    if (action === "prod-logs") body.fn = $("prodfn").value;
 
     /* confirm() never shows inside an artifact frame. The second click must be a separate, deliberate
        one: a double-click or a held Enter lands inside the first second and is ignored. */
@@ -1501,8 +1609,11 @@ git --version</pre>
         live.dirty.model = false; live.dirty.realmail = false;
         setNotice("Saved functions/.env.local. Restart the stack for it to take effect.", "info");
       }
-      if (action === "start" || action === "pull" || action === "install" || action === "smoke" || action === "checks") {
-        var panel = $("log-panel"); if (panel.scrollIntoView) panel.scrollIntoView({ block: "nearest" });
+      if (res.body && res.body.ok === true && WINDOW_ACTIONS[action]) {
+        setNotice("Opened in its own terminal window. Look for it on the taskbar.", "info");
+      }
+      if (res.body && res.body.ok === true && JOB_ACTIONS[action]) {
+        var panel = $("log-panel"); if (panel.scrollIntoView) panel.scrollIntoView({ block: "start", behavior: "smooth" });
       }
     }, function () { lost("gone"); });
   }
@@ -1515,7 +1626,7 @@ git --version</pre>
     payload.lines.forEach(function (l) {
       var d = document.createElement("div");
       var text = String(l.text == null ? "" : l.text);
-      var cls = "l-" + (l.src === "job" ? "job" : (l.src === "console" ? "console" : "stack"));
+      var cls = "l-" + (l.src === "job" ? "job" : (l.src === "console" ? "console" : (l.src === "app" ? "app" : "stack")));
       if (/^\$ /.test(text)) cls = "l-cmd";
       else if (/stack is up\.|Emulators are up\.|ai-smoke OK/.test(text)) cls = "l-up";
       else if (/\berror\b|FAILED|EADDRINUSE|exited unexpectedly/i.test(text)) cls = "l-err";
@@ -1579,6 +1690,7 @@ git --version</pre>
   $("model").addEventListener("change", function (e) { live.dirty.model = true; set({ model: e.target.value }); });
   $("realmail").addEventListener("change", function (e) { live.dirty.realmail = true; set({ realmail: e.target.checked }); });
   $("diag").addEventListener("input", function (e) { renderVerdicts(e.target.value); });
+  $("prodfn").addEventListener("change", render);
   each(".done input", function (box) {
     box.addEventListener("change", function () {
       var done = {};
@@ -1596,6 +1708,8 @@ git --version</pre>
 
   load();
   render();
+  paintPorts([["app", 4200], ["auth", 9099], ["firestore", 8080], ["storage", 9199], ["functions", 5001], ["ui", 4000]]
+    .map(function (d) { return { name: d[0], port: d[1], default: d[1], open: false }; }));
   if (LIVE) goLive();
 })();
 </script>
