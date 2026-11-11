@@ -21,6 +21,7 @@ import {
   APP_ID,
   DEFAULT_MODEL,
   browserKindFromProgId,
+  capture,
   createConsoleServer,
   createGuard,
   defaultJobSteps,
@@ -43,6 +44,19 @@ import {
   windowsBrowserCandidates,
   wrapPage,
   portsFileIsStale,
+  portsFileHasLivePid,
+  PROD_FUNCTIONS,
+  appServePlan,
+  buildElevatedCommand,
+  defaultCommandSteps,
+  elevatedBody,
+  encodePowerShell,
+  parseLsofListeners,
+  parsePortFindOutput,
+  portFindScript,
+  powerShellArgs,
+  runElevated,
+  terminalCommand,
 } from './launch-console.mjs';
 
 const LAUNCHER = fileURLToPath(new URL('./launch-console.mjs', import.meta.url));
@@ -171,6 +185,7 @@ async function startConsole({ rootOptions, root = makeRoot(rootOptions), openPor
     port: 0,
     probePort: async (port) => openPorts.includes(port),
     probeTools: async () => ({ node: process.version, java: '21.0.4', yarn: '1.22.22' }),
+    probeElevated: async () => false,
     launch: async (file, args) => {
       launched.push([file, args]);
       return true;
@@ -971,8 +986,10 @@ describe('GET /api/state', () => {
       const res = await ctx.api.get('/api/state');
       assert.equal(res.status, 200);
       const s = res.json;
-      assert.deepEqual(Object.keys(s), ['console', 'git', 'tools', 'setup', 'stack', 'ports', 'job', 'logSeq']);
-      assert.deepEqual(Object.keys(s.console), ['version', 'pid', 'port', 'platform', 'repo', 'startedAt']);
+      assert.deepEqual(Object.keys(s), ['console', 'git', 'tools', 'setup', 'stack', 'app', 'ports', 'job', 'logSeq']);
+      assert.deepEqual(Object.keys(s.console), ['version', 'pid', 'port', 'platform', 'repo', 'startedAt', 'elevated']);
+      assert.equal(s.console.elevated, false, 'the console itself never runs as administrator');
+      assert.deepEqual(s.app, { state: 'stopped', pid: null, since: null, lastExit: null, port: null, configuration: null });
       assert.equal(s.console.version, '9.8.7');
       assert.equal(s.console.pid, process.pid);
       assert.equal(s.console.port, ctx.port);
@@ -990,6 +1007,7 @@ describe('GET /api/state', () => {
         hasLocalDev: false,
         env: { model: 'claude-opus-5-5', realmail: false },
         savedData: false,
+        platformSupports: { elevation: IS_WINDOWS, shortcut: false },
       });
       assert.deepEqual(s.stack, { state: 'stopped', mode: null, pid: null, since: null, lastExit: null });
       assert.deepEqual(
@@ -1025,6 +1043,7 @@ describe('GET /api/state', () => {
         hasLocalDev: true,
         env: { model: 'claude-sonnet-5', realmail: true },
         savedData: true,
+        platformSupports: { elevation: IS_WINDOWS, shortcut: false },
       });
 
       write(ctx.root, 'functions/.secret.local', `ANTHROPIC_API_KEY=${PATTERN_KEY}\nGOOGLE_CLIENT_SECRET=${ODD_KEY}\n`);
@@ -1234,7 +1253,7 @@ describe('stack ports', () => {
       assert.deepEqual(listed(s.ports, 'open'), { app: false, auth: true, firestore: true, storage: false, functions: false, ui: false, hub: false });
       assert.ok(ctx.probed.includes(9100), 'the effective port is probed');
       assert.ok(!ctx.probed.includes(9099), 'the default it moved away from is not');
-      assert.deepEqual(Object.keys(s), ['console', 'git', 'tools', 'setup', 'stack', 'ports', 'job', 'logSeq'], 'nothing else is added to the state');
+      assert.deepEqual(Object.keys(s), ['console', 'git', 'tools', 'setup', 'stack', 'app', 'ports', 'job', 'logSeq'], 'the ports file adds nothing to the state');
       assert.ok(!res.text.includes('remapped'));
     } finally {
       await ctx.consoleServer.close();
@@ -1978,7 +1997,7 @@ describe('jobs', () => {
     try {
       const res = await ctx.api.act({ action: 'smoke' });
       assert.equal(res.status, 200);
-      assert.deepEqual(Object.keys(res.json.state.job), ['id', 'action', 'state', 'exitCode', 'startedAt', 'endedAt']);
+      assert.deepEqual(Object.keys(res.json.state.job), ['id', 'action', 'state', 'exitCode', 'startedAt', 'endedAt', 'declined']);
       assert.deepEqual([res.json.state.job.id, res.json.state.job.action, res.json.state.job.state, res.json.state.job.exitCode, res.json.state.job.endedAt], [1, 'smoke', 'running', null, null]);
       assert.ok(!res.text.includes(ODD_KEY));
 
@@ -2221,4 +2240,1633 @@ test('a ports file left by a killed stack is recognised as stale', () => {
   assert.equal(portsFileIsStale(file(undefined), () => false), false, 'no pid: written by an older stack, trusted as before');
   assert.equal(portsFileIsStale(file('12'), () => false), false, 'a pid that is not a number is ignored');
   assert.equal(portsFileIsStale('{not json', () => false), false);
+});
+
+test('portsFileHasLivePid: port-free believes only a file written by a running stack', () => {
+  const file = (pid) => JSON.stringify({ app: 4200, pid });
+  assert.equal(portsFileHasLivePid(file(4242), () => true), true);
+  assert.equal(portsFileHasLivePid(file(4242), () => false), false, 'the writer is gone');
+  assert.equal(portsFileHasLivePid(file(undefined), () => true), false, 'no pid: a committed or dropped file');
+  assert.equal(portsFileHasLivePid(file('4242'), () => true), false);
+  assert.equal(portsFileHasLivePid(file(0), () => true), false);
+  assert.equal(portsFileHasLivePid(file(-4), () => true), false);
+  assert.equal(portsFileHasLivePid('{not json', () => true), false);
+  assert.equal(portsFileHasLivePid(file(process.pid)), true, 'checked for real');
+});
+
+describe('capture: the answer comes from "exit" when asked to, not from "close"', () => {
+  test('a program that outlives its parent with the pipes does not hold the answer', async () => {
+    const script = [
+      "const { spawn } = require('node:child_process');",
+      "spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { stdio: ['ignore', 'inherit', 'inherit'], detached: true }).unref();",
+      "console.log('opened');",
+    ].join('');
+    const started = Date.now();
+    const result = await capture(process.execPath, ['-e', script], { timeoutMs: 10_000, exitGraceMs: 200 });
+    assert.deepEqual([result.code, result.stdout.trim()], [0, 'opened']);
+    assert.ok(Date.now() - started < 3000, `took ${Date.now() - started} ms: it waited for the pipes`);
+  });
+
+  test('without the option the old behaviour stays (and a plain command still answers)', async () => {
+    const result = await capture(process.execPath, ['-e', "console.log('x'); process.exitCode = 3"]);
+    assert.deepEqual([result.code, result.stdout.trim()], [3, 'x']);
+    const graced = await capture(process.execPath, ['-e', "console.error('boom'); process.exitCode = 1"], { exitGraceMs: 100 });
+    assert.deepEqual([graced.code, graced.stderr.trim()], [1, 'boom'], 'the last output still arrives');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Addendum 2: every command runs from a button
+// ---------------------------------------------------------------------------
+
+const WIN_PORTS = [4200, 9099, 8080, 9199, 5001, 4000, 4400];
+/** The script behind a `-EncodedCommand` argument list. */
+function decodeEncoded(args) {
+  const at = args.indexOf('-EncodedCommand');
+  assert.notEqual(at, -1, 'the script is passed with -EncodedCommand');
+  assert.equal(at, args.length - 2, 'and nothing follows it');
+  return Buffer.from(args[at + 1], 'base64').toString('utf16le');
+}
+/** The script that the outer script hands to Start-Process. */
+function decodeInner(outer) {
+  const match = /-EncodedCommand(?:','| )([A-Za-z0-9+/=]+)/.exec(outer);
+  assert.ok(match, 'the outer script passes the inner one encoded');
+  return Buffer.from(match[1], 'base64').toString('utf16le');
+}
+const HIDDEN_PS = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand'];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A real child that stays alive until it is killed; `listen` makes it hold a loopback port and print it. */
+function standIn({ listen = false } = {}) {
+  const code = listen
+    ? "const s=require('net').createServer().listen(0,'127.0.0.1',()=>console.log('port='+s.address().port));setInterval(()=>{},1000)"
+    : "console.log('ng stand-in: '+process.argv.slice(1).join(' '));console.error('warn: '+process.argv.length);setInterval(()=>{},1000)";
+  return (args = []) => spawn(process.execPath, ['-e', code, '--', ...args], { stdio: ['ignore', 'pipe', 'pipe'], detached: !IS_WINDOWS });
+}
+const exited = (child) => child.exitCode !== null || child.signalCode !== null;
+const waitJob = (ctx, action) =>
+  waitFor(async () => {
+    const { job } = await ctx.api.state();
+    return job && job.action === action && job.state !== 'running' ? job : null;
+  }, `the ${action} job to end`);
+
+describe('PowerShell command text', () => {
+  test('a script is passed as UTF-16LE base64, hidden and without a profile', () => {
+    const script = "Write-Host 'h\u00e9 \"x\" $y'";
+    assert.equal(Buffer.from(encodePowerShell(script), 'base64').toString('utf16le'), script);
+    assert.match(encodePowerShell(script), /^[A-Za-z0-9+/=]+$/);
+    assert.deepEqual(powerShellArgs('exit 0'), [...HIDDEN_PS, 'ZQB4AGkAdAAgADAA']);
+  });
+
+  test('port-find: one fixed pipeline, the ports as digits', () => {
+    assert.equal(
+      portFindScript([4200, 9100]),
+      [
+        "$ErrorActionPreference = 'SilentlyContinue'",
+        '$ports = @(4200,9100)',
+        'Get-NetTCPConnection -State Listen | Where-Object { $ports -contains $_.LocalPort } | Sort-Object LocalPort, OwningProcess -Unique | ForEach-Object {',
+        "  '{0}|{1}|{2}' -f $_.LocalPort, $_.OwningProcess, (Get-Process -Id $_.OwningProcess).ProcessName",
+        '}',
+        'exit 0',
+      ].join('\r\n'),
+    );
+    for (const bad of [['4200'], [0], [65536], [4200.5], ['1); calc #'], [], null, [NaN], [4200, '$(x)']]) {
+      assert.throws(() => portFindScript(bad), TypeError, JSON.stringify(bad));
+    }
+  });
+
+  test('port-find output: only well-formed lines count, names are cleaned', () => {
+    assert.deepEqual(parsePortFindOutput('4200|4242|node\r\n9099|77|java\r\n4200|4242|node\r\nnoise\r\n70000|1|x\r\n8080|5|we`ird$(n)\r\n4000|9|\r\n'), [
+      { port: 4200, pid: 4242, name: 'node' },
+      { port: 9099, pid: 77, name: 'java' },
+      { port: 8080, pid: 5, name: 'weird(n)' },
+      { port: 4000, pid: 9, name: 'unknown' },
+    ]);
+    assert.deepEqual(parsePortFindOutput(null), []);
+  });
+
+  test('lsof output is filtered to the asked ports', () => {
+    const text =
+      'COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME\n' +
+      'node     4242 me     23u  IPv4 0x1         0t0  TCP 127.0.0.1:4200 (LISTEN)\n' +
+      'node     4242 me     24u  IPv6 0x2         0t0  TCP [::1]:4200 (LISTEN)\n' +
+      'java       77 me     10u  IPv6 0x3         0t0  TCP *:9099 (LISTEN)\n' +
+      'ng\\x20ser  901 me     34u  IPv4 0x5         0t0  TCP 127.0.0.1:4000 (LISTEN)\n' +
+      'sshd       12 root    3u  IPv4 0x4         0t0  TCP *:22 (LISTEN)\n';
+    assert.deepEqual(parseLsofListeners(text, [4200, 9099, 4000]), [
+      { port: 4200, pid: 4242, name: 'node' },
+      { port: 9099, pid: 77, name: 'java' },
+      { port: 4000, pid: 901, name: 'ng ser' },
+    ]);
+    assert.deepEqual(parseLsofListeners('', [4200]), []);
+  });
+
+  test('the elevated work is three fixed texts with numbers in them', () => {
+    assert.deepEqual(elevatedBody('reserve', [9099, 8080]), [
+      "$netsh = Join-Path ([Environment]::SystemDirectory) 'netsh.exe'",
+      'foreach ($n in @(9099,8080)) {',
+      `  $r = (((& $netsh interface ipv4 add excludedportrange protocol=tcp startport=$n numberofports=1 store=persistent 2>&1 | ForEach-Object { "$_" }) -join ' ') -replace '\\s+', ' ').Trim()`,
+      "  if ($LASTEXITCODE -eq 0) { Say ('port ' + $n + ': kept for the local stack') } else { Say ('port ' + $n + ': not changed. Windows said: ' + $r) }",
+      '}',
+    ]);
+    const unreserve = elevatedBody('unreserve', [9099]);
+    assert.equal(unreserve[1], 'foreach ($n in @(9099)) {');
+    assert.ok(unreserve[2].includes('interface ipv4 delete excludedportrange protocol=tcp startport=$n numberofports=1 store=persistent'));
+    assert.ok(unreserve[3].includes('given back to Windows'));
+    assert.deepEqual(elevatedBody('kill', [4242, 4242, 5000]), [
+      "$taskkill = Join-Path ([Environment]::SystemDirectory) 'taskkill.exe'",
+      'foreach ($n in @(4242,5000)) {',
+      `  $r = (((& $taskkill /PID $n /T /F 2>&1 | ForEach-Object { "$_" }) -join ' ') -replace '\\s+', ' ').Trim()`,
+      '  if ($LASTEXITCODE -ne 0) { $code = 1 }',
+      "  Say ('pid ' + $n + ': ' + $r)",
+      '}',
+    ]);
+  });
+
+  test('nothing but whole numbers in range gets into the elevated text', () => {
+    for (const bad of [['9099'], [0], [70000], [1.5], ['9099); Remove-Item C:\\ #'], [], undefined, [9099, null]]) {
+      assert.throws(() => elevatedBody('reserve', bad), TypeError, JSON.stringify(bad));
+      assert.throws(() => elevatedBody('unreserve', bad), TypeError, JSON.stringify(bad));
+    }
+    // PID 0 is the idle process and 4 is Windows itself; a PID is never a string.
+    for (const bad of [[0], [4], [1], [-5], ['4242'], [4242, '1 /IM *'], [2 ** 33], []]) {
+      assert.throws(() => elevatedBody('kill', bad), TypeError, JSON.stringify(bad));
+    }
+    assert.throws(() => elevatedBody('format-c', [1]), TypeError);
+    assert.throws(() => elevatedBody('__proto__', [9099]), TypeError);
+  });
+
+  test('the elevated command: exact inner script, RunAs outer script, both encoded', () => {
+    const resultFile = "C:\\Users\\O'Brien & Co\\AppData\\Local\\Temp\\omnitask-console-00ff.txt";
+    const { inner, outer, args } = buildElevatedCommand('reserve', [9099], resultFile);
+    assert.equal(
+      inner,
+      [
+        "$ErrorActionPreference = 'Continue'",
+        `$out = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${Buffer.from(resultFile, 'utf16le').toString('base64')}'))`,
+        'if (-not (Test-Path -LiteralPath $out -PathType Leaf)) { exit 3 }',
+        '$enc = New-Object System.Text.UTF8Encoding($false)',
+        'function Say([string]$t) { [IO.File]::AppendAllText($out, $t + "`r`n", $enc) }',
+        '$code = 0',
+        'try {',
+        ...elevatedBody('reserve', [9099]),
+        "} catch { Say ('error: ' + $_.Exception.Message); $code = 1 }",
+        "Say ('::exit::' + $code)",
+        'exit $code',
+      ].join('\r\n'),
+    );
+    assert.ok(!inner.includes("O'Brien") && !outer.includes("O'Brien"), 'the path is only ever there as base64');
+    assert.equal(
+      outer,
+      [
+        "$ErrorActionPreference = 'Stop'",
+        'try {',
+        '  $psi = New-Object System.Diagnostics.ProcessStartInfo',
+        "  $psi.FileName = Join-Path $PSHOME 'powershell.exe'",
+        `  $psi.Arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand ${encodePowerShell(inner)}'`,
+        "  $psi.Verb = 'runas'",
+        '  $psi.UseShellExecute = $true',
+        "  $psi.WindowStyle = 'Hidden'",
+        '  $p = [System.Diagnostics.Process]::Start($psi)',
+        '  $p.WaitForExit()',
+        '  exit $p.ExitCode',
+        '} catch {',
+        '  $e = $_.Exception',
+        '  while ($e) {',
+        '    if ($e -is [System.ComponentModel.Win32Exception] -and $e.NativeErrorCode -eq 1223) { exit 1223 }',
+        '    $e = $e.InnerException',
+        '  }',
+        '  [Console]::Error.WriteLine($_.Exception.Message)',
+        '  exit 1',
+        '}',
+      ].join('\r\n'),
+    );
+    assert.deepEqual(args, powerShellArgs(outer));
+    assert.equal(decodeEncoded(args), outer);
+    assert.equal(decodeInner(outer), inner);
+    // Comfortably inside what CreateProcess (32767) and ShellExecute accept.
+    assert.ok(args.join(' ').length < 12_000, `outer command line is ${args.join(' ').length} characters`);
+  });
+});
+
+describe('runElevated', () => {
+  const NAME = /^omnitask-console-[0-9a-f]{32}\.txt$/;
+  /** Stand-in for the helper PowerShell: plays the elevated script by writing to the file it was told about. */
+  function fakePowerShell(calls, behave) {
+    return async (file, args, opts) => {
+      const outer = decodeEncoded(args);
+      const inner = decodeInner(outer);
+      const encodedPath = /FromBase64String\('([A-Za-z0-9+/=]+)'\)/.exec(inner)[1];
+      const resultFile = Buffer.from(encodedPath, 'base64').toString('utf16le');
+      const call = { file, args, opts, outer, inner, resultFile, existedBefore: fs.existsSync(resultFile), sizeBefore: fs.statSync(resultFile).size };
+      calls.push(call);
+      return behave(call);
+    };
+  }
+
+  test('success: the lines the elevated script wrote come back, and the file is gone', async () => {
+    const tmpDir = tempDir('omnitask-elev-');
+    const calls = [];
+    const result = await runElevated('reserve', [9099, 8080], {
+      tmpDir,
+      powershell: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      runTool: fakePowerShell(calls, ({ resultFile }) => {
+        fs.appendFileSync(resultFile, 'port 9099: kept for the local stack\r\nport 8080: not changed. Windows said: The file exists.\r\n::exit::0\r\n');
+        return { code: 0, stdout: '', stderr: '' };
+      }),
+    });
+    assert.deepEqual(result, {
+      status: 'ok',
+      exitCode: 0,
+      lines: ['port 9099: kept for the local stack', 'port 8080: not changed. Windows said: The file exists.'],
+    });
+    assert.equal(calls.length, 1, 'one PowerShell, so one UAC prompt');
+    const [call] = calls;
+    assert.equal(call.file, 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+    assert.deepEqual(call.args.slice(0, 5), HIDDEN_PS);
+    assert.ok(call.outer.includes("$psi.Verb = 'runas'") && !call.outer.includes('Start-Process'));
+    assert.ok(call.inner.includes('foreach ($n in @(9099,8080)) {'));
+    assert.ok(call.inner.includes('interface ipv4 add excludedportrange protocol=tcp startport=$n numberofports=1 store=persistent'));
+    assert.equal(path.dirname(call.resultFile), tmpDir);
+    assert.match(path.basename(call.resultFile), NAME);
+    assert.equal(call.existedBefore, true, 'created by the console before Windows is asked');
+    assert.equal(call.sizeBefore, 0);
+    assert.equal(fs.existsSync(call.resultFile), false, 'removed afterwards');
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
+  });
+
+  test('a failing elevated script is "failed" with its own exit code, whatever the helper reports', async () => {
+    const tmpDir = tempDir('omnitask-elev-');
+    const calls = [];
+    const result = await runElevated('kill', [4242], {
+      tmpDir,
+      runTool: fakePowerShell(calls, ({ resultFile }) => {
+        fs.appendFileSync(resultFile, '\uFEFFpid 4242: ERROR: The process "4242" not found.\r\n::exit::1\r\n');
+        return { code: 0, stdout: '', stderr: '' };
+      }),
+    });
+    assert.deepEqual(result, { status: 'failed', exitCode: 1, lines: ['pid 4242: ERROR: The process "4242" not found.'] });
+    assert.ok(calls[0].inner.includes('foreach ($n in @(4242)) {'));
+    assert.ok(calls[0].inner.includes('& $taskkill /PID $n /T /F'));
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
+  });
+
+  test('a declined UAC prompt is "declined": nothing ran, nothing is left behind', async () => {
+    const tmpDir = tempDir('omnitask-elev-');
+    const calls = [];
+    const result = await runElevated('unreserve', [9099], {
+      tmpDir,
+      runTool: fakePowerShell(calls, () => ({ code: 1223, stdout: '', stderr: '' })),
+    });
+    assert.deepEqual(result, { status: 'declined', exitCode: null, lines: [] });
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
+  });
+
+  test('a helper that cannot start, or fails for another reason, is "error" with the reason', async () => {
+    const tmpDir = tempDir('omnitask-elev-');
+    const failed = await runElevated('reserve', [9099], {
+      tmpDir,
+      runTool: fakePowerShell([], () => ({ code: 1, stdout: '', stderr: 'This command cannot be run due to the error: Access is denied.\r\n' })),
+    });
+    assert.deepEqual(failed, { status: 'error', exitCode: 1, lines: ['This command cannot be run due to the error: Access is denied.'] });
+    const missing = await runElevated('reserve', [9099], { tmpDir, runTool: fakePowerShell([], () => ({ code: null, stdout: '', stderr: '' })) });
+    assert.equal(missing.status, 'error');
+    assert.equal(missing.lines.length, 1);
+    // An exit mark that is not the last line does not count as the script's verdict.
+    const cut = await runElevated('reserve', [9099], {
+      tmpDir,
+      runTool: fakePowerShell([], ({ resultFile }) => {
+        fs.appendFileSync(resultFile, '::exit::0\r\nport 9099: half\r\n');
+        return { code: 5, stdout: '', stderr: '' };
+      }),
+    });
+    assert.deepEqual(cut, { status: 'error', exitCode: 5, lines: ['::exit::0', 'port 9099: half', 'exit code 5'] });
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
+  });
+
+  test('every run gets its own unguessable file; a bad number throws before anything exists', async () => {
+    const tmpDir = tempDir('omnitask-elev-');
+    const calls = [];
+    const runTool = fakePowerShell(calls, () => ({ code: 1223, stdout: '', stderr: '' }));
+    await runElevated('reserve', [9099], { tmpDir, runTool });
+    await runElevated('reserve', [9099], { tmpDir, runTool });
+    assert.notEqual(calls[0].resultFile, calls[1].resultFile);
+    await assert.rejects(runElevated('kill', ['4242; calc'], { tmpDir, runTool }), TypeError);
+    await assert.rejects(runElevated('kill', [4], { tmpDir, runTool }), TypeError);
+    assert.equal(calls.length, 2, 'PowerShell was not started for the bad values');
+    assert.deepEqual(fs.readdirSync(tmpDir), []);
+    const noDir = await runElevated('reserve', [9099], { tmpDir: path.join(tmpDir, 'missing'), runTool });
+    assert.equal(noDir.status, 'error');
+    assert.equal(calls.length, 2);
+  });
+});
+
+describe('terminal windows and the app plan', () => {
+  const ROOT = "C:\\Dev Folder\\Omni'Task [x]";
+
+  test('Windows: a hidden PowerShell opens a visible one that shows the command and stays open', () => {
+    const expected = {
+      'firebase-login': ['OmniTask: Firebase sign-in', 'npx --yes firebase-tools@15 login'],
+      'secret-set': ['OmniTask: set the production API key', 'npx --yes firebase-tools@15 functions:secrets:set ANTHROPIC_API_KEY --project omnitask-475422'],
+      'deploy-functions': ['OmniTask: deploy functions to PRODUCTION', 'npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422'],
+    };
+    for (const [kind, [title, shown]] of Object.entries(expected)) {
+      const command = terminalCommand(kind, ROOT, 'win32');
+      assert.equal(command.via, 'tool');
+      assert.equal(command.shown, shown);
+      assert.match(command.file, /powershell\.exe$/);
+      assert.deepEqual(command.args.slice(0, 5), HIDDEN_PS);
+      assert.deepEqual(command.env, { OMNITASK_CONSOLE_REPO: ROOT });
+      const outer = decodeEncoded(command.args);
+      assert.equal(
+        outer,
+        [
+          "$ErrorActionPreference = 'Stop'",
+          'try {',
+          `  Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList '-NoLogo','-NoExit','-EncodedCommand','${encodePowerShell(command.inner)}'`,
+          '  exit 0',
+          '} catch {',
+          '  [Console]::Error.WriteLine($_.Exception.Message)',
+          '  exit 1',
+          '}',
+        ].join('\r\n'),
+      );
+      assert.equal(
+        decodeInner(outer),
+        [
+          'if ($env:OMNITASK_CONSOLE_REPO) { Set-Location -LiteralPath $env:OMNITASK_CONSOLE_REPO }',
+          `$Host.UI.RawUI.WindowTitle = '${title}'`,
+          "Write-Host ''",
+          "Write-Host 'The OmniTask Build Console opened this window to run:'",
+          `Write-Host '> ${shown}' -ForegroundColor Cyan`,
+          "Write-Host ''",
+          ...(kind === 'deploy-functions'
+            ? ["if ((Read-Host 'Type DEPLOY to deploy to PRODUCTION') -cne 'DEPLOY') { Write-Host 'Nothing was deployed.'; return }"]
+            : []),
+          `& npx.cmd ${shown.slice('npx '.length)}`,
+          "Write-Host ''",
+          "Write-Host ('Finished (exit code ' + $LASTEXITCODE + '). This window stays open; close it when you are done.')",
+        ].join('\r\n'),
+      );
+      assert.ok(!outer.includes('Dev Folder') && !command.inner.includes('Dev Folder'), 'the repository path is in no script');
+    }
+    const plain = terminalCommand('terminal', ROOT, 'win32');
+    assert.equal(plain.shown, null);
+    assert.equal(
+      plain.inner,
+      [
+        'if ($env:OMNITASK_CONSOLE_REPO) { Set-Location -LiteralPath $env:OMNITASK_CONSOLE_REPO }',
+        "$Host.UI.RawUI.WindowTitle = 'OmniTask'",
+        "Write-Host 'OmniTask repository folder. Close this window when you are done.'",
+      ].join('\r\n'),
+    );
+    assert.throws(() => terminalCommand('rm -rf', ROOT, 'win32'), TypeError);
+    assert.throws(() => terminalCommand('toString', ROOT, 'win32'), TypeError);
+  });
+
+  test('macOS and Linux: Terminal / x-terminal-emulator, the folder as an argument or the working directory', () => {
+    assert.deepEqual(terminalCommand('firebase-login', '/Users/me/Omni Task', 'darwin'), {
+      via: 'launch',
+      file: 'osascript',
+      args: [
+        '-e', 'on run argv',
+        '-e', 'tell application "Terminal" to do script "cd " & quoted form of (item 1 of argv) & " && npx --yes firebase-tools@15 login"',
+        '-e', 'tell application "Terminal" to activate',
+        '-e', 'end run',
+        '/Users/me/Omni Task',
+      ],
+      shown: 'npx --yes firebase-tools@15 login',
+    });
+    assert.equal(
+      terminalCommand('deploy-functions', '/Users/me/Omni Task', 'darwin').args[3],
+      'tell application "Terminal" to do script "cd " & quoted form of (item 1 of argv) & " && printf \'Type DEPLOY to deploy to PRODUCTION: \'; read a; if [ \\"$a\\" = DEPLOY ]; then npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422; else echo \'Nothing was deployed.\'; fi"',
+    );
+    assert.equal(terminalCommand('terminal', '/r', 'darwin').args[3], 'tell application "Terminal" to do script "cd " & quoted form of (item 1 of argv)');
+    assert.deepEqual(terminalCommand('terminal', '/home/me/omni task', 'linux'), { via: 'launch', file: 'x-terminal-emulator', args: [], shown: null });
+    assert.deepEqual(terminalCommand('deploy-functions', '/home/me/omni task', 'linux'), {
+      via: 'launch',
+      file: 'x-terminal-emulator',
+      args: [
+        '-e',
+        'sh',
+        '-c',
+        "echo '> npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422'; printf 'Type DEPLOY to deploy to PRODUCTION: '; read a; if [ \"$a\" = DEPLOY ]; then npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422; else echo 'Nothing was deployed.'; fi; echo; echo 'Finished. This window stays open.'; exec \"${SHELL:-sh}\"",
+      ],
+      shown: 'npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422',
+    });
+  });
+
+  test('the app is served the way the stack serves it', () => {
+    const defaults = { app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 4400 };
+    assert.deepEqual(appServePlan(defaults, defaults, false), {
+      args: ['serve', '--configuration', 'local'],
+      configuration: 'local',
+      port: 4200,
+      missingEnvironment: false,
+    });
+    assert.deepEqual(appServePlan({ ...defaults, app: 4201 }, defaults, true).args, ['serve', '--configuration', 'local', '--port', '4201']);
+    assert.deepEqual(appServePlan({ ...defaults, auth: 9100 }, defaults, true), {
+      args: ['serve', '--configuration', 'local-remapped'],
+      configuration: 'local-remapped',
+      port: 4200,
+      missingEnvironment: false,
+    });
+    assert.deepEqual(appServePlan({ ...defaults, auth: 9100, app: 4207 }, defaults, true).args, ['serve', '--configuration', 'local-remapped', '--port', '4207']);
+    // Only what the app connects to needs the generated environment: the UI and the hub do not.
+    assert.equal(appServePlan({ ...defaults, ui: 4001, hub: 4401 }, defaults, true).configuration, 'local');
+    // Without the generated file there is nothing for local-remapped to build with.
+    assert.deepEqual(appServePlan({ ...defaults, storage: 9200 }, defaults, false), {
+      args: ['serve', '--configuration', 'local'],
+      configuration: 'local',
+      port: 4200,
+      missingEnvironment: true,
+    });
+    assert.throws(() => appServePlan({ ...defaults, app: '4200; calc' }, defaults, false), TypeError);
+  });
+
+  test('the fixed command lists of the other jobs', () => {
+    const root = tempDir('omnitask-steps-');
+    const steps = defaultCommandSteps(root);
+    assert.deepEqual(Object.keys(steps), ['tools', 'prod-logs', 'shortcut', 'shortcut-remove']);
+    assert.deepEqual(
+      steps.tools.map((step) => [path.basename(step.file).replace(/\.(exe|com)$/i, ''), step.args, step.label, Boolean(step.shim)]),
+      [
+        [path.basename(process.execPath).replace(/\.exe$/i, ''), ['-v'], 'node -v', false],
+        ['java', ['-version'], 'java -version', false],
+        ['yarn', ['-v'], 'yarn -v', true],
+        ['git', ['--version'], 'git --version', false],
+      ],
+    );
+    assert.equal(steps.tools[0].file, process.execPath);
+    assert.deepEqual(Object.keys(steps['prod-logs']), ['generateSubtasks', 'suggestTaskPriority', 'suggestDueDate', 'enhanceTaskDescription']);
+    assert.deepEqual(Object.keys(steps['prod-logs']), PROD_FUNCTIONS);
+    for (const name of PROD_FUNCTIONS) {
+      assert.deepEqual(steps['prod-logs'][name], [
+        {
+          file: 'npx',
+          args: ['--yes', 'firebase-tools@15', 'functions:log', '--only', name, '--project', 'omnitask-475422'],
+          cwd: root,
+          shim: true,
+          label: `npx --yes firebase-tools@15 functions:log --only ${name} --project omnitask-475422`,
+        },
+      ]);
+    }
+    const script = path.join(root, 'scripts', 'console-shortcut.ps1');
+    assert.match(steps.shortcut[0].file, /powershell(\.exe)?$/);
+    assert.deepEqual(steps.shortcut[0].args, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script]);
+    assert.deepEqual(steps['shortcut-remove'][0].args, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-Remove']);
+    assert.equal(steps.shortcut[0].shim, undefined, 'started without a shell');
+    // Every argument of a step that goes through the Windows shell is free of spaces and shell characters.
+    for (const list of [steps.tools, ...Object.values(steps['prod-logs'])]) {
+      for (const step of list.filter((s) => s.shim)) for (const arg of step.args) assert.match(arg, /^[A-Za-z0-9@:._-]+$/);
+    }
+  });
+});
+
+describe('actions: tools, production commands and terminal windows', () => {
+  const quick = (script) => ({ file: process.execPath, args: ['-e', script], cwd: os.tmpdir(), label: 'step' });
+
+  test('tools: every step runs and is reported, even after one is missing', async () => {
+    const root = makeRoot();
+    let probes = 0;
+    const ctx = await startConsole({
+      root,
+      probeTools: async () => ({ node: process.version, java: probes++ ? '99.0.1' : null, yarn: '1.22.22' }),
+      commandSteps: () => ({
+        tools: [
+          { ...quick("console.log('v-one')"), label: 'node -v' },
+          { file: path.join(root, 'no-such-java'), args: ['-version'], cwd: root, label: 'java -version' },
+          { ...quick("console.log('v-three');process.exit(4)"), label: 'yarn -v' },
+          { ...quick("console.log('v-four')"), label: 'git --version' },
+        ],
+      }),
+    });
+    try {
+      assert.equal((await ctx.api.state()).tools.java, null);
+      const res = await ctx.api.act({ action: 'tools' });
+      assert.equal(res.status, 200);
+      assert.equal(res.json.state.job.action, 'tools');
+      const job = await waitJob(ctx, 'tools');
+      assert.equal(job.state, 'failed', 'a missing tool fails the job');
+      assert.equal(job.exitCode, null, 'with the code of the first step that failed');
+      const log = await ctx.api.logText();
+      for (const line of ['job|$ node -v', 'job|v-one', 'job|$ java -version', 'job|(could not run)', 'job|$ yarn -v', 'job|v-three', 'job|(exit code 4)', 'job|$ git --version', 'job|v-four']) {
+        assert.ok(log.includes(line), `${line}\n${log}`);
+      }
+      assert.equal((await ctx.api.state()).tools.java, '99.0.1', 'the header is read again after the job');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('prod-logs: only the four function names, one job at a time', async () => {
+    const root = makeRoot();
+    write(root, 'functions/.secret.local', `ANTHROPIC_API_KEY=${PATTERN_KEY}\n`);
+    write(root, 'functions/lib/index.js', '');
+    const picked = [];
+    const ctx = await startConsole({
+      root,
+      commandSteps: (r) => ({
+        'prod-logs': Object.fromEntries(
+          PROD_FUNCTIONS.map((name) => [name, [{ ...quick(`console.log('logs for ${name}')`), label: defaultCommandSteps(r)['prod-logs'][name][0].label, picked: picked.push(name) }]]),
+        ),
+      }),
+    });
+    try {
+      for (const fn of [undefined, null, '', 'generateSubtasks ', 'GENERATESUBTASKS', 'deleteEverything', 'generateSubtasks --project other', ['generateSubtasks'], { name: 'generateSubtasks' }, 0, true, '__proto__', 'constructor', 'toString']) {
+        const res = await ctx.api.act({ action: 'prod-logs', fn });
+        assert.equal(res.status, 400, JSON.stringify(fn));
+        assert.deepEqual(res.json, { ok: false, error: 'fn must be one of generateSubtasks, suggestTaskPriority, suggestDueDate, enhanceTaskDescription.' });
+      }
+      assert.equal((await ctx.api.state()).job, null, 'nothing was started');
+      fs.writeFileSync(path.join(root, 'functions', 'scripts', 'hold'), '');
+      assert.equal((await ctx.api.act({ action: 'smoke' })).status, 200);
+      const busy = await ctx.api.act({ action: 'prod-logs', fn: 'suggestDueDate' });
+      assert.equal(busy.status, 409);
+      assert.equal(busy.json.error, 'Wait for the running job (smoke) to finish first.');
+      fs.rmSync(path.join(root, 'functions', 'scripts', 'hold'));
+      await waitJob(ctx, 'smoke');
+      assert.equal((await ctx.api.act({ action: 'prod-logs', fn: 'suggestDueDate' })).status, 200);
+      const job = await waitJob(ctx, 'prod-logs');
+      assert.equal(job.state, 'ok');
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('job|$ npx --yes firebase-tools@15 functions:log --only suggestDueDate --project omnitask-475422'), log);
+      assert.ok(log.includes('job|logs for suggestDueDate'), log);
+      assert.ok(!log.includes('logs for generateSubtasks'));
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('deploy-functions needs confirm: true and then opens its own window', async () => {
+    const tools = [];
+    const ctx = await startConsole({
+      platform: 'win32',
+      runTool: async (file, args, opts) => {
+        tools.push({ file, args, opts });
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    });
+    try {
+      for (const confirm of [undefined, false, 'true', 1, 'yes', {}, [true]]) {
+        const res = await ctx.api.act({ action: 'deploy-functions', confirm });
+        assert.equal(res.status, 400, JSON.stringify(confirm));
+        assert.deepEqual(res.json, { ok: false, error: 'confirm must be true to deploy the functions to production.' });
+      }
+      assert.equal(tools.length, 0, 'nothing was started without the confirmation');
+      const res = await ctx.api.act({ action: 'deploy-functions', confirm: true });
+      assert.equal(res.status, 200);
+      assert.deepEqual(Object.keys(res.json), ['ok', 'message', 'state']);
+      assert.equal(
+        res.json.message,
+        'Opened a terminal window running: npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422. If the window is not in front, look for it on the taskbar.',
+      );
+      assert.equal(res.json.state.job, null, 'a window is not a job');
+      assert.equal(tools.length, 1);
+      const expected = terminalCommand('deploy-functions', ctx.root, 'win32');
+      assert.equal(tools[0].file, expected.file);
+      assert.deepEqual(tools[0].args, expected.args);
+      assert.equal(tools[0].opts.cwd, ctx.root, 'started in the repository');
+      assert.equal(tools[0].opts.env.OMNITASK_CONSOLE_REPO, ctx.root);
+      assert.equal(ctx.launched.length, 0);
+      const log = await ctx.api.logText();
+      assert.ok(
+        log.includes('console|Opened a terminal window running: npx --yes firebase-tools@15 deploy --only functions --project omnitask-475422. If the window is not in front, look for it on the taskbar. Its output is in that window, not in this log.'),
+        log,
+      );
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('deploy-functions waits for a running job, and one press opens one window', async () => {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    const tools = [];
+    const ctx = await startConsole({
+      platform: 'win32',
+      jobSteps: () => ({ pull: [{ label: 'slow pull', run: async () => gate }], install: [], smoke: [], checks: [] }),
+      runTool: async (file, args, opts) => {
+        tools.push({ file, args, opts });
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'pull' })).status, 200);
+      const during = await ctx.api.act({ action: 'deploy-functions', confirm: true });
+      assert.equal(during.status, 409);
+      assert.equal(during.json.error, 'Wait for the running job (pull) to finish first.');
+      assert.equal(tools.length, 0, 'no window while a job rewrites the tree');
+      release(0);
+      await waitJob(ctx, 'pull');
+      const burst = await Promise.all(Array.from({ length: 8 }, () => ctx.api.act({ action: 'deploy-functions', confirm: true })));
+      assert.deepEqual(burst.map((r) => r.status).sort(), [200, 409, 409, 409, 409, 409, 409, 409]);
+      assert.equal(tools.length, 1, 'one window');
+      assert.match(burst.find((r) => r.status === 409).json.error, /A deploy window was opened a moment ago\./);
+      // The other windows are not held back by the deploy cooldown.
+      assert.equal((await ctx.api.act({ action: 'firebase-login' })).status, 200);
+      assert.equal(tools.length, 2);
+      // The helper's answer comes from its exit, so inherited pipes cannot make it fail.
+      assert.equal(tools[0].opts.exitGraceMs, 1500);
+      assert.equal(tools[0].opts.timeoutMs, 20_000);
+    } finally {
+      release(0);
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a deploy window that could not open does not start the cooldown', async () => {
+    let code = 1;
+    const ctx = await startConsole({ platform: 'win32', runTool: async () => ({ code, stdout: '', stderr: 'nope\r\n' }) });
+    try {
+      const failed = await ctx.api.act({ action: 'deploy-functions', confirm: true });
+      assert.equal(failed.status, 409);
+      assert.equal(failed.json.error, 'Could not open a PowerShell window: nope');
+      code = 0;
+      assert.equal((await ctx.api.act({ action: 'deploy-functions', confirm: true })).status, 200);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('terminal, firebase-login and secret-set open a window; a window that cannot open is a 409', async () => {
+    const tools = [];
+    let code = 0;
+    const win = await startConsole({
+      platform: 'win32',
+      runTool: async (file, args, opts) => {
+        tools.push({ file, args, opts });
+        return { code, stdout: '', stderr: code ? 'This command cannot be run due to the error: The system cannot find the file specified.\r\n' : '' };
+      },
+    });
+    const linux = await startConsole({ platform: 'linux' });
+    const noTerminal = await startConsole({ platform: 'linux', launch: async () => false });
+    try {
+      for (const action of ['terminal', 'firebase-login', 'secret-set']) {
+        const expected = terminalCommand(action, win.root, 'win32');
+        const res = await win.api.act({ action });
+        assert.equal(res.status, 200, action);
+        assert.equal(res.json.message, (expected.shown ? `Opened a terminal window running: ${expected.shown}` : 'Opened a terminal window in the repository folder') +
+            '. If the window is not in front, look for it on the taskbar.',
+        );
+        assert.deepEqual(tools.at(-1).args, expected.args);
+      }
+      assert.ok((await win.api.logText()).includes('console|Opened a terminal window in the repository folder.'));
+      code = 1;
+      const failed = await win.api.act({ action: 'firebase-login' });
+      assert.equal(failed.status, 409);
+      assert.equal(failed.json.error, 'Could not open a PowerShell window: This command cannot be run due to the error: The system cannot find the file specified.');
+
+      const opened = await linux.api.act({ action: 'secret-set' });
+      assert.equal(opened.status, 200);
+      assert.deepEqual(linux.launched, [
+        [
+          'x-terminal-emulator',
+          terminalCommand('secret-set', linux.root, 'linux').args,
+        ],
+      ]);
+      assert.ok(linux.launched[0][1][3].includes('functions:secrets:set ANTHROPIC_API_KEY --project omnitask-475422'));
+
+      const none = await noTerminal.api.act({ action: 'firebase-login' });
+      assert.equal(none.status, 409);
+      assert.equal(none.json.error, `Could not open a terminal window. Run it yourself in ${noTerminal.root}: npx --yes firebase-tools@15 login`);
+      assert.equal((await noTerminal.api.act({ action: 'terminal' })).json.error, `Could not open a terminal window. The folder is ${noTerminal.root}`);
+    } finally {
+      await Promise.all([win, linux, noTerminal].map((ctx) => ctx.consoleServer.close()));
+    }
+  });
+
+  test('the Windows-only steps answer 409 elsewhere and start nothing', async () => {
+    const tools = [];
+    const ctx = await startConsole({
+      platform: 'linux',
+      runTool: async (...call) => {
+        tools.push(call);
+        return { code: 0, stdout: '', stderr: '' };
+      },
+      runElevated: async (...call) => {
+        tools.push(call);
+        return { status: 'ok', exitCode: 0, lines: [] };
+      },
+    });
+    try {
+      write(ctx.root, 'scripts/console-shortcut.ps1', '# stand-in');
+      const state = await ctx.api.state();
+      assert.deepEqual(state.setup.platformSupports, { elevation: false, shortcut: false });
+      for (const action of ['ports-reserve', 'ports-unreserve']) {
+        const res = await ctx.api.act({ action });
+        assert.equal(res.status, 409, action);
+        assert.equal(res.json.error, 'This is a Windows-only step: only Windows hands ports to Hyper-V, WSL and Docker. Nothing to do on this system.');
+      }
+      for (const action of ['shortcut', 'shortcut-remove']) {
+        const res = await ctx.api.act({ action });
+        assert.equal(res.status, 409, action);
+        assert.equal(res.json.error, 'Shortcuts are a Windows-only step. On this system, start the console with: yarn console');
+      }
+      assert.equal(tools.length, 0);
+      assert.equal((await ctx.api.state()).job, null);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('shortcut and shortcut-remove run the script as a job on Windows', async () => {
+    const asked = [];
+    const ctx = await startConsole({
+      platform: 'win32',
+      commandSteps: (r) => {
+        const real = defaultCommandSteps(r);
+        const stand = (name) => [{ ...quick(`console.log('ran ${name}')`), label: real[name][0].label, tag: asked.push(name) }];
+        return { shortcut: stand('shortcut'), 'shortcut-remove': stand('shortcut-remove') };
+      },
+    });
+    try {
+      const missing = await ctx.api.act({ action: 'shortcut' });
+      assert.equal(missing.status, 409);
+      assert.equal(missing.json.error, 'scripts/console-shortcut.ps1 is not on this branch.');
+      write(ctx.root, 'scripts/console-shortcut.ps1', '# stand-in');
+      assert.deepEqual((await ctx.api.state()).setup.platformSupports, { elevation: true, shortcut: true });
+      assert.equal((await ctx.api.act({ action: 'shortcut' })).status, 200);
+      assert.equal((await waitJob(ctx, 'shortcut')).state, 'ok');
+      assert.equal((await ctx.api.act({ action: 'shortcut-remove' })).status, 200);
+      assert.equal((await waitJob(ctx, 'shortcut-remove')).state, 'ok');
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('job|$ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/console-shortcut.ps1\njob|ran shortcut'), log);
+      assert.ok(log.includes('job|$ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/console-shortcut.ps1 -Remove\njob|ran shortcut-remove'), log);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+});
+
+describe('actions: ports-reserve / ports-unreserve', () => {
+  /** A console that believes it is on Windows, with a helper PowerShell that plays the elevated script. */
+  async function winConsole(elevated, extra = {}) {
+    const tools = [];
+    const root = makeRoot();
+    // Defaults come from firebase.json, not from literals and not from the ports file.
+    write(root, 'firebase.json', JSON.stringify({ emulators: { auth: { port: 9555 }, firestore: { port: 8080 }, functions: { port: 5001 }, storage: { port: 9199 }, ui: { port: 4000 } } }));
+    write(root, '.local-dev-ports.json', JSON.stringify({ app: 4200, auth: 9777, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 4400, pid: process.pid }));
+    const ctx = await startConsole({
+      root,
+      platform: 'win32',
+      runTool: async (file, args, opts) => {
+        const call = { file, args, opts };
+        tools.push(call);
+        if (/netsh(\.exe)?$/.test(file)) return { code: 0, stdout: '\r\nProtocol tcp Port Exclusion Ranges\r\n      9555        9555     *\r\n', stderr: '' };
+        call.outer = decodeEncoded(args);
+        call.inner = decodeInner(call.outer);
+        call.resultFile = Buffer.from(/FromBase64String\('([A-Za-z0-9+/=]+)'\)/.exec(call.inner)[1], 'base64').toString('utf16le');
+        return elevated(call);
+      },
+      ...extra,
+    });
+    return { ...ctx, tools };
+  }
+
+  test('one elevated PowerShell reserves every default port, then the result is shown', async () => {
+    const ctx = await winConsole(({ resultFile }) => {
+      fs.appendFileSync(resultFile, 'port 4200: kept for the local stack\r\nport 9555: not changed. Windows said: The process cannot access the file because it is being used by another process.\r\n::exit::0\r\n');
+      return { code: 0, stdout: '', stderr: '' };
+    });
+    try {
+      const res = await ctx.api.act({ action: 'ports-reserve', ports: [1, 2, 3], startport: '22', store: 'active' });
+      assert.equal(res.status, 200);
+      assert.equal(res.json.state.job.action, 'ports-reserve');
+      const job = await waitJob(ctx, 'ports-reserve');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['ok', 0, false]);
+      const elevated = ctx.tools.filter((call) => call.inner);
+      assert.equal(elevated.length, 1, 'one PowerShell, one UAC prompt');
+      assert.match(elevated[0].file, /powershell(\.exe)?$/);
+      assert.ok(elevated[0].outer.includes("$psi.Verb = 'runas'"));
+      assert.ok(elevated[0].inner.includes('foreach ($n in @(4200,9555,8080,9199,5001,4000,4400)) {'), elevated[0].inner);
+      assert.ok(elevated[0].inner.includes('interface ipv4 add excludedportrange protocol=tcp startport=$n numberofports=1 store=persistent'));
+      assert.ok(!elevated[0].inner.includes('9777'), 'the ports of the current run are not what gets reserved');
+      assert.ok(!elevated[0].inner.includes('store=active'));
+      assert.equal(fs.existsSync(elevated[0].resultFile), false);
+      const show = ctx.tools.filter((call) => !call.inner);
+      assert.deepEqual(show.map((call) => call.args), [['interface', 'ipv4', 'show', 'excludedportrange', 'protocol=tcp']]);
+      const log = await ctx.api.logText();
+      for (const line of [
+        'job|$ netsh interface ipv4 add excludedportrange protocol=tcp startport=<4200|9555|8080|9199|5001|4000|4400> numberofports=1 store=persistent  (as administrator)',
+        'job|Asking Windows for administrator permission (answer the prompt). If no prompt appears, click the flashing shield button on the taskbar.',
+        'job|port 4200: kept for the local stack',
+        'job|port 9555: not changed. Windows said: The process cannot access the file',
+        'job|A port that was "not changed" is already reserved',
+        'job|$ netsh interface ipv4 show excludedportrange protocol=tcp',
+        'job|      9555        9555     *',
+        'console|ports-reserve: finished.',
+      ]) {
+        assert.ok(log.includes(line), `${line}\n${log}`);
+      }
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('ports-unreserve deletes the same ranges', async () => {
+    const ctx = await winConsole(({ resultFile }) => {
+      fs.appendFileSync(resultFile, 'port 4200: given back to Windows\r\n::exit::0\r\n');
+      return { code: 0, stdout: '', stderr: '' };
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'ports-unreserve' })).status, 200);
+      assert.equal((await waitJob(ctx, 'ports-unreserve')).state, 'ok');
+      const [elevated] = ctx.tools.filter((call) => call.inner);
+      assert.ok(elevated.inner.includes('interface ipv4 delete excludedportrange protocol=tcp startport=$n numberofports=1 store=persistent'));
+      assert.ok(elevated.inner.includes('@(4200,9555,8080,9199,5001,4000,4400)'));
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a declined prompt ends the job without an error, in plain words', async () => {
+    const ctx = await winConsole(() => ({ code: 1223, stdout: '', stderr: '' }));
+    try {
+      assert.equal((await ctx.api.act({ action: 'ports-reserve' })).status, 200);
+      const job = await waitJob(ctx, 'ports-reserve');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['ok', 0, true]);
+      assert.equal(ctx.tools.filter((call) => !call.inner).length, 0, 'nothing changed, so nothing is listed');
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('job|Windows did not get permission; nothing was changed.'), log);
+      assert.ok(log.includes('console|ports-reserve: Windows did not get permission; nothing was changed.'), log);
+      assert.ok(!log.includes('failed'), log);
+      assert.ok(!log.includes('finished'), log);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('a helper that cannot run is a failed job; a second press while one runs is a 409', async () => {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    const ctx = await winConsole(async () => {
+      await gate;
+      return { code: 1, stdout: '', stderr: 'Start-Process : boom\r\n' };
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'ports-reserve' })).status, 200);
+      const again = await ctx.api.act({ action: 'ports-unreserve' });
+      assert.equal(again.status, 409);
+      assert.equal(again.json.error, 'Wait for the running job (ports-reserve) to finish first.');
+      release();
+      const job = await waitJob(ctx, 'ports-reserve');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['failed', 1, false]);
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('job|Start-Process : boom'), log);
+      assert.ok(log.includes('job|The administrator step could not be started; nothing was changed.'), log);
+    } finally {
+      release();
+      await ctx.consoleServer.close();
+    }
+  });
+});
+
+describe('actions: port-find / port-free', () => {
+  const FREE = { ok: true, listeners: [] };
+
+  test('port-find lists every stack port with what holds it', async () => {
+    const asked = [];
+    const ctx = await startConsole({
+      findListeners: async (ports) => {
+        asked.push(ports);
+        return { ok: true, listeners: [{ port: 4200, pid: 4242, name: 'node' }, { port: 9099, pid: 77, name: 'java' }, { port: 9099, pid: 78, name: 'ja`va$(x)' }] };
+      },
+    });
+    try {
+      const res = await ctx.api.act({ action: 'port-find' });
+      assert.equal(res.status, 200);
+      assert.equal((await waitJob(ctx, 'port-find')).state, 'ok');
+      assert.deepEqual(asked, [[4200, 9099, 8080, 9199, 5001, 4000, 4400]]);
+      const log = await ctx.api.logText();
+      for (const line of [
+        `job|$ ${IS_WINDOWS ? 'Get-NetTCPConnection -State Listen' : 'lsof -nP -iTCP -sTCP:LISTEN'}  (ports 4200, 9099, 8080, 9199, 5001, 4000, 4400)`,
+        'job|app        4200   node (pid 4242)',
+        'job|auth       9099   java (pid 77), java(x) (pid 78)',
+        'job|firestore  8080   nothing is listening',
+        'job|hub        4400   nothing is listening',
+      ]) {
+        assert.ok(log.includes(line), `${line}\n${log}`);
+      }
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('port-find on Windows runs the fixed pipeline through the hidden PowerShell', async () => {
+    const tools = [];
+    const ctx = await startConsole({
+      platform: 'win32',
+      runTool: async (file, args) => {
+        tools.push({ file, args });
+        return { code: 0, stdout: '4000|4242|java\r\n', stderr: '' };
+      },
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'port-find' })).status, 200);
+      assert.equal((await waitJob(ctx, 'port-find')).state, 'ok');
+      assert.equal(tools.length, 1);
+      assert.match(tools[0].file, /powershell(\.exe)?$/);
+      assert.deepEqual(tools[0].args, powerShellArgs(portFindScript(WIN_PORTS)));
+      assert.ok((await ctx.api.logText()).includes('job|ui         4000   java (pid 4242)'));
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('port-free takes one of the seven names and nothing else', async () => {
+    const calls = [];
+    const ctx = await startConsole({
+      findListeners: async (ports) => {
+        calls.push(ports);
+        return FREE;
+      },
+    });
+    try {
+      for (const name of [undefined, null, '', 'App', 'app ', 'console', '4200', 4200, ['app'], { name: 'app' }, '__proto__', 'constructor', 'app; taskkill /IM *']) {
+        const res = await ctx.api.act({ action: 'port-free', name, pid: 1, port: 22 });
+        assert.equal(res.status, 400, JSON.stringify(name));
+        assert.deepEqual(res.json, { ok: false, error: 'name must be one of app, auth, firestore, storage, functions, ui, hub.' });
+      }
+      assert.equal(calls.length, 0);
+      const nothing = await ctx.api.act({ action: 'port-free', name: 'ui', port: 22, pid: 1 });
+      assert.equal(nothing.status, 409);
+      assert.equal(nothing.json.error, 'Nothing is listening on port 4000 (ui).');
+      assert.deepEqual(calls, [[4000]], 'the port is the one the state shows, whatever the request says');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('port-free never ends the console, what it started, or the operating system', async () => {
+    let holder = null;
+    const killed = [];
+    const ctx = await startConsole({
+      findListeners: async (ports) => (holder === 'error' ? { ok: false, error: 'lsof is not installed, or it did not answer.' } : { ok: true, listeners: [{ port: ports[0], pid: holder, name: 'node' }] }),
+      kill: (pid, signal) => killed.push([pid, signal]),
+      runTool: async (...call) => {
+        killed.push(call);
+        return { code: 0, stdout: '', stderr: '' };
+      },
+      runElevated: async (...call) => {
+        killed.push(call);
+        return { status: 'ok', exitCode: 0, lines: [] };
+      },
+      spawnApp: standIn(),
+    });
+    try {
+      write(ctx.root, 'node_modules/@angular/cli/bin/ng.js', '');
+      const refuse = async (name, pid, error) => {
+        holder = pid;
+        const res = await ctx.api.act({ action: 'port-free', name });
+        assert.equal(res.status, 409, `${name} ${pid}`);
+        assert.equal(res.json.error, error);
+      };
+      await refuse('ui', process.pid, `Port 4000 is held by this console or by something it started (pid ${process.pid}). Use Stop or Quit instead.`);
+      await refuse('ui', process.ppid, `Port 4000 is held by this console or by something it started (pid ${process.ppid}). Use Stop or Quit instead.`);
+      for (const pid of [0, 1, 4]) await refuse('hub', pid, `Port 4400 is held by the operating system itself (pid ${pid}), which the console never ends.`);
+      await refuse('hub', 'error', 'Could not look up what is using port 4400: lsof is not installed, or it did not answer.');
+
+      // The app dev server this console started.
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      const appPid = (await ctx.api.state()).app.pid;
+      await refuse('app', 4242, 'The app dev server this console started is using port 4200. Use Stop app instead.');
+      await refuse('ui', appPid, `Port 4000 is held by this console or by something it started (pid ${appPid}). Use Stop or Quit instead.`);
+      assert.equal((await ctx.api.act({ action: 'app-stop' })).status, 200);
+      await waitFor(async () => (await ctx.api.state()).app.state === 'stopped', 'the app to stop');
+
+      // The stack this console started: emulators only leaves the app port alone, the full stack owns all seven.
+      assert.equal((await ctx.api.act({ action: 'start', mode: 'emulators' })).status, 200);
+      const stackPid = (await ctx.api.state()).stack.pid;
+      for (const name of ['auth', 'firestore', 'storage', 'functions', 'ui', 'hub']) {
+        const port = (await ctx.api.state()).ports.find((p) => p.name === name).port;
+        await refuse(name, 4242, `The stack this console started is using port ${port}. Use Stop instead.`);
+      }
+      await refuse('app', stackPid, `Port 4200 is held by this console or by something it started (pid ${stackPid}). Use Stop or Quit instead.`);
+      assert.equal((await ctx.api.act({ action: 'stop' })).status, 200);
+      await waitFor(async () => (await ctx.api.state()).stack.state === 'stopped', 'the stack to stop');
+      assert.equal((await ctx.api.act({ action: 'start', mode: 'full' })).status, 200);
+      await refuse('app', 4242, 'The stack this console started is using port 4200. Use Stop instead.');
+
+      assert.deepEqual(killed, [], 'nothing was ended and no helper was started');
+      assert.equal((await ctx.api.state()).job, null);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('Windows: taskkill by PID with /T /F, and the port is checked afterwards', async () => {
+    const tools = [];
+    let listening = true;
+    const ctx = await startConsole({
+      platform: 'win32',
+      portFreeWaitMs: 50,
+      findListeners: async () => ({ ok: true, listeners: listening ? [{ port: 9099, pid: 4242, name: 'java' }, { port: 9099, pid: 4243, name: 'java' }] : [] }),
+      runTool: async (file, args) => {
+        tools.push({ file, args });
+        if (args[1] === '4243') listening = false;
+        return { code: 0, stdout: `SUCCESS: The process with PID ${args[1]} has been terminated.\r\n`, stderr: '' };
+      },
+      runElevated: async () => assert.fail('no elevation when Windows did not refuse'),
+    });
+    try {
+      const res = await ctx.api.act({ action: 'port-free', name: 'auth', pid: '999', pids: [1], force: true });
+      assert.equal(res.status, 200);
+      const job = await waitJob(ctx, 'port-free');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['ok', 0, false]);
+      assert.deepEqual(tools.map((call) => call.args), [['/PID', '4242', '/T', '/F'], ['/PID', '4243', '/T', '/F']]);
+      for (const call of tools) assert.match(call.file, /taskkill(\.exe)?$/);
+      const log = await ctx.api.logText();
+      for (const line of ['job|$ taskkill /PID 4242 /T /F ; taskkill /PID 4243 /T /F', 'job|Port 9099 (auth) is held by java (pid 4242), java (pid 4243).', 'job|SUCCESS: The process with PID 4243 has been terminated.', 'job|Port 9099 is free.']) {
+        assert.ok(log.includes(line), `${line}\n${log}`);
+      }
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('Windows: access denied leads to the same kill, elevated, for the PIDs the console found', async () => {
+    const tools = [];
+    let listening = true;
+    let answer = 'allow';
+    const ctx = await startConsole({
+      platform: 'win32',
+      portFreeWaitMs: 50,
+      findListeners: async () => ({ ok: true, listeners: listening ? [{ port: 4400, pid: 4242, name: 'java' }] : [] }),
+      runTool: async (file, args) => {
+        const call = { file, args };
+        tools.push(call);
+        if (/taskkill/.test(file)) return { code: 1, stdout: '', stderr: 'ERROR: The process with PID 4242 could not be terminated.\r\nReason: Access is denied.\r\n' };
+        call.inner = decodeInner(decodeEncoded(args));
+        if (answer === 'decline') return { code: 1223, stdout: '', stderr: '' };
+        const resultFile = Buffer.from(/FromBase64String\('([A-Za-z0-9+/=]+)'\)/.exec(call.inner)[1], 'base64').toString('utf16le');
+        fs.appendFileSync(resultFile, 'pid 4242: SUCCESS: The process with PID 4242 has been terminated.\r\n::exit::0\r\n');
+        listening = false;
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    });
+    try {
+      answer = 'decline';
+      assert.equal((await ctx.api.act({ action: 'port-free', name: 'hub', pid: 31337 })).status, 200);
+      let job = await waitJob(ctx, 'port-free');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['ok', 0, true]);
+      let log = await ctx.api.logText();
+      assert.ok(log.includes('job|Reason: Access is denied.'), log);
+      assert.ok(
+        log.includes('job|Windows refused: the program runs with administrator rights. Asking Windows for permission to end it... If no prompt appears, click the flashing shield button on the taskbar.'),
+        log,
+      );
+      assert.ok(log.includes('console|port-free: Windows did not get permission; nothing was changed.'), log);
+
+      answer = 'allow';
+      tools.length = 0;
+      assert.equal((await ctx.api.act({ action: 'port-free', name: 'hub', pid: 31337 })).status, 200);
+      await waitFor(async () => (await ctx.api.state()).job.id === job.id + 1, 'the second job');
+      job = await waitJob(ctx, 'port-free');
+      assert.deepEqual([job.state, job.exitCode, job.declined], ['ok', 0, false]);
+      assert.deepEqual(tools[0].args, ['/PID', '4242', '/T', '/F']);
+      assert.equal(tools.length, 2);
+      assert.ok(tools[1].inner.includes('foreach ($n in @(4242)) {'), tools[1].inner);
+      assert.ok(tools[1].inner.includes('& $taskkill /PID $n /T /F'));
+      assert.ok(!tools[1].inner.includes('31337'));
+      log = await ctx.api.logText();
+      assert.ok(log.includes('job|pid 4242: SUCCESS: The process with PID 4242 has been terminated.'), log);
+      assert.ok(log.includes('job|Port 4400 is free.'), log);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('port-free refuses ports below 1024, whichever file chose them', async () => {
+    const asked = [];
+    const root = makeRoot();
+    write(root, '.local-dev-ports.json', JSON.stringify({ app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 443, pid: process.pid }));
+    const ctx = await startConsole({
+      root,
+      platform: 'win32',
+      findListeners: async (ports) => {
+        asked.push(ports);
+        return { ok: true, listeners: [{ port: ports[0], pid: 4242, name: 'node' }] };
+      },
+      runTool: async () => assert.fail('nothing is ended'),
+      runElevated: async () => assert.fail('no prompt'),
+    });
+    try {
+      const res = await ctx.api.act({ action: 'port-free', name: 'hub' });
+      assert.equal(res.status, 409);
+      assert.equal(res.json.error, 'Port 443 (hub) is below 1024: those belong to the system, and the console never ends what holds one.');
+      assert.deepEqual(asked, [], 'the system was not even asked');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+    // The same through the tracked firebase.json: with no live stack the default is what counts.
+    const root2 = makeRoot();
+    write(root2, 'firebase.json', JSON.stringify({ emulators: { firestore: { port: 135 }, functions: { port: 445 } } }));
+    const ctx2 = await startConsole({ root: root2, platform: 'win32', findListeners: async () => assert.fail('not asked') });
+    try {
+      for (const [name, port] of [['firestore', 135], ['functions', 445]]) {
+        assert.equal((await ctx2.api.state()).ports.find((p) => p.name === name).port, port);
+        assert.equal((await ctx2.api.act({ action: 'port-free', name })).status, 409, name);
+      }
+    } finally {
+      await ctx2.consoleServer.close();
+    }
+  });
+
+  test('port-free ignores a ports file without a live pid, and believes one with a live pid', async () => {
+    const asked = []; // the port each lookup was for
+    const listeners = (ports) => ({ ok: true, listeners: [{ port: ports[0], pid: 4242, name: 'node' }] });
+    const run = async (extra, expectedPort) => {
+      const root = makeRoot();
+      write(root, '.local-dev-ports.json', JSON.stringify({ app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 36503, ...extra }));
+      const ctx = await startConsole({
+        root,
+        platform: 'linux',
+        portFreeWaitMs: 20,
+        kill: () => {},
+        findListeners: async (ports) => {
+          asked.push(ports[0]);
+          return listeners(ports);
+        },
+      });
+      try {
+        assert.equal((await ctx.api.act({ action: 'port-free', name: 'hub' })).status, 200);
+        await waitJob(ctx, 'port-free');
+        assert.equal(asked.at(-1), expectedPort);
+      } finally {
+        await ctx.consoleServer.close();
+      }
+    };
+    await run({}, 4400);
+    await run({ pid: 2_000_000_000 }, 4400); // a pid nobody has
+    await run({ pid: process.pid }, 36503);
+  });
+
+  test('port-free refuses the number of a managed port, whatever the name', async () => {
+    const root = makeRoot();
+    // "ui" is forged onto the number the app dev server is using.
+    write(root, '.local-dev-ports.json', JSON.stringify({ app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4200, hub: 4400, pid: process.pid }));
+    write(root, 'node_modules/@angular/cli/bin/ng.js', '');
+    const killed = [];
+    const ctx = await startConsole({
+      root,
+      kill: (pid) => killed.push(pid),
+      findListeners: async (ports) => ({ ok: true, listeners: [{ port: ports[0], pid: 4242, name: 'node' }] }),
+      spawnApp: standIn(),
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      const res = await ctx.api.act({ action: 'port-free', name: 'ui' });
+      assert.equal(res.status, 409);
+      assert.equal(res.json.error, 'Port 4200 is one that the app dev server this console started is using. Use Stop app instead.');
+      assert.deepEqual(killed, []);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('Windows: a system program holding the port is not ended and raises no prompt', async () => {
+    for (const name of ['svchost', 'svchost.exe', 'LSASS', 'wininit', 'services', 'csrss', 'smss', 'System', 'Registry']) {
+      const ctx = await startConsole({
+        platform: 'win32',
+        findListeners: async () => ({ ok: true, listeners: [{ port: 9099, pid: 1234, name }] }),
+        runTool: async () => assert.fail('nothing is ended'),
+        runElevated: async () => assert.fail('no prompt'),
+      });
+      try {
+        const res = await ctx.api.act({ action: 'port-free', name: 'auth' });
+        assert.equal(res.status, 409, name);
+        assert.equal(res.json.error, `Port 9099 is held by ${name} (pid 1234), a Windows system program, which the console never ends.`);
+        assert.ok((await ctx.api.logText()).includes(`console|port-free: port 9099 (auth) is held by ${name} (pid 1234), a Windows system program. It was not ended and no administrator prompt was raised.`));
+        assert.equal((await ctx.api.state()).job, null);
+      } finally {
+        await ctx.consoleServer.close();
+      }
+    }
+  });
+
+  test('Windows: only "access denied" (1) raises the prompt; "no such process" (128) says a child holds the port', async () => {
+    for (const [code, elevates] of [[1, true], [128, false], [5, false], [null, false]]) {
+      let elevations = 0;
+      const ctx = await startConsole({
+        platform: 'win32',
+        portFreeWaitMs: 20,
+        findListeners: async () => ({ ok: true, listeners: [{ port: 4400, pid: 4242, name: 'node' }] }),
+        runTool: async () => ({ code, stdout: '', stderr: code === 128 ? 'ERROR: The process "4242" not found.\r\n' : '' }),
+        runElevated: async () => {
+          elevations += 1;
+          return { status: 'declined', exitCode: null, lines: [] };
+        },
+      });
+      try {
+        assert.equal((await ctx.api.act({ action: 'port-free', name: 'hub' })).status, 200);
+        const job = await waitJob(ctx, 'port-free');
+        assert.equal(elevations, elevates ? 1 : 0, `taskkill code ${code}`);
+        const log = await ctx.api.logText();
+        if (code === 128) {
+          assert.deepEqual([job.state, job.exitCode, job.declined], ['failed', 1, false]);
+          assert.ok(log.includes('job|The process that opened port 4400 (pid 4242) has already ended, and a program it started still holds the port.'), log);
+          assert.ok(log.includes('job|Port 4400 is still in use (pid 4242).'), log);
+          assert.ok(!log.includes('Windows refused'), log);
+        }
+        if (!elevates) assert.ok(!log.includes('Asking Windows'), log);
+      } finally {
+        await ctx.consoleServer.close();
+      }
+    }
+  });
+
+  test('elsewhere: a plain kill, and EPERM is reported instead of worked around', async () => {
+    const signals = [];
+    const ctx = await startConsole({
+      platform: 'linux',
+      portFreeWaitMs: 50,
+      findListeners: async () => ({ ok: true, listeners: [{ port: 8080, pid: 4242, name: 'java' }] }),
+      kill: (pid, signal) => {
+        signals.push([pid, signal]);
+        throw Object.assign(new Error('kill EPERM'), { code: 'EPERM' });
+      },
+      runTool: async () => assert.fail('no helper program is used'),
+      runElevated: async () => assert.fail('no elevation outside Windows'),
+    });
+    try {
+      assert.equal((await ctx.api.act({ action: 'port-free', name: 'firestore' })).status, 200);
+      const job = await waitJob(ctx, 'port-free');
+      assert.deepEqual([job.state, job.exitCode], ['failed', 1]);
+      assert.deepEqual(signals, [[4242, 'SIGTERM']]);
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('job|$ kill 4242'), log);
+      assert.ok(log.includes('job|pid 4242 belongs to another user, so it was not ended (EPERM). In a terminal: sudo kill 4242'), log);
+      assert.ok(log.includes('job|Port 8080 is still in use (pid 4242).'), log);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('for real: finds a listening process by its port and ends it', { skip: IS_WINDOWS || !findOnPath('lsof') }, async () => {
+    const child = standIn({ listen: true })();
+    const port = await new Promise((resolve, reject) => {
+      let text = '';
+      child.stdout.on('data', (chunk) => {
+        text += chunk;
+        const match = /port=(\d+)/.exec(text);
+        if (match) resolve(Number(match[1]));
+      });
+      child.once('exit', () => reject(new Error('the listener ended early')));
+    });
+    const root = makeRoot();
+    write(root, '.local-dev-ports.json', JSON.stringify({ app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: port, hub: 4400, pid: process.pid }));
+    const ctx = await startConsole({ root, portFreeWaitMs: 3000 });
+    try {
+      assert.equal((await ctx.api.act({ action: 'port-find' })).status, 200);
+      assert.equal((await waitJob(ctx, 'port-find')).state, 'ok');
+      assert.match(await ctx.api.logText(), new RegExp(`job\\|ui +${port} +\\S+ \\(pid ${child.pid}\\)`));
+      assert.equal((await ctx.api.act({ action: 'port-free', name: 'ui' })).status, 200);
+      const job = await waitJob(ctx, 'port-free');
+      assert.equal(job.state, 'ok', await ctx.api.logText());
+      await waitFor(() => exited(child), 'the listener to be gone');
+      assert.ok((await ctx.api.logText()).includes(`job|Port ${port} is free.`));
+      const gone = await ctx.api.act({ action: 'port-free', name: 'ui' });
+      assert.equal(gone.status, 409);
+      assert.equal(gone.json.error, `Nothing is listening on port ${port} (ui).`);
+    } finally {
+      if (!exited(child)) child.kill('SIGKILL');
+      await ctx.consoleServer.close();
+    }
+  });
+});
+
+describe('actions: app-start / app-stop', () => {
+  /** A console whose "ng serve" is a stand-in child; `spawned` records the arguments it was given. */
+  async function appConsole(options = {}) {
+    const spawned = [];
+    const children = [];
+    const make = standIn();
+    const root = options.root ?? makeRoot();
+    write(root, 'node_modules/@angular/cli/bin/ng.js', '');
+    const ctx = await startConsole({
+      root,
+      spawnApp: (args, extra) => {
+        spawned.push({ args, extra });
+        const child = make(args);
+        children.push(child);
+        return child;
+      },
+      ...options,
+    });
+    return { ...ctx, spawned, children };
+  }
+
+  test('lifecycle: starting, running once the port answers, stopped with its tree gone', async () => {
+    const ctx = await appConsole();
+    try {
+      const notRunning = await ctx.api.act({ action: 'app-stop' });
+      assert.equal(notRunning.status, 409);
+      assert.equal(notRunning.json.error, 'The app dev server is not running.');
+
+      const res = await ctx.api.act({ action: 'app-start', port: 1, configuration: 'production', args: ['--open'] });
+      assert.equal(res.status, 200);
+      assert.equal(res.json.message, 'Starting the app dev server on port 4200.');
+      assert.deepEqual(ctx.spawned, [{ args: ['serve', '--configuration', 'local'], extra: { root: ctx.root } }]);
+      const [child] = ctx.children;
+      let app = res.json.state.app;
+      assert.deepEqual(Object.keys(app), ['state', 'pid', 'since', 'lastExit', 'port', 'configuration']);
+      assert.deepEqual([app.state, app.pid, app.lastExit, app.port, app.configuration], ['starting', child.pid, null, 4200, 'local']);
+      assert.ok(!Number.isNaN(Date.parse(app.since)));
+      assert.equal(res.json.state.stack.state, 'stopped');
+
+      const again = await ctx.api.act({ action: 'app-start' });
+      assert.equal(again.status, 409);
+      assert.equal(again.json.error, 'The app dev server is already running.');
+
+      await waitFor(async () => (await ctx.api.logText()).includes('app|ng stand-in: serve --configuration local'), 'the output of the app');
+      assert.ok((await ctx.api.logText()).includes('app|warn: '), 'stderr goes to the log too');
+      assert.ok((await ctx.api.logText()).includes('console|Starting the app dev server (ng serve --configuration local)...'));
+
+      ctx.openPorts.push(4200);
+      const state = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.app.state === 'running' ? s : null;
+      }, 'the app to be running');
+      assert.equal(state.stack.state, 'stopped', 'its own app port does not make the stack "external"');
+      assert.ok((await ctx.api.logText()).includes('console|The app is up: http://localhost:4200/'));
+
+      for (const [body, error] of [
+        [{ action: 'start', mode: 'full' }, 'Stop the app dev server first: the full stack starts its own.'],
+        [{ action: 'pull' }, 'Stop the app dev server first.'],
+        [{ action: 'install' }, 'Stop the app dev server first.'],
+      ]) {
+        const refused = await ctx.api.act(body);
+        assert.equal(refused.status, 409, body.action);
+        assert.equal(refused.json.error, error);
+      }
+
+      const stop = await ctx.api.act({ action: 'app-stop' });
+      assert.equal(stop.status, 200);
+      ctx.openPorts.length = 0;
+      await waitFor(() => exited(child), 'the app process to be gone');
+      const after = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.app.state === 'stopped' ? s : null;
+      }, 'the app to be stopped');
+      assert.deepEqual([after.app.pid, after.app.since, after.app.port, after.app.configuration], [null, null, null, null]);
+      assert.ok(!Number.isNaN(Date.parse(after.app.lastExit.at)));
+      assert.ok((await ctx.api.logText()).includes('console|The app dev server has stopped.'));
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('the configuration and the port follow the ports file the stack wrote', async () => {
+    const moved = (ports) => JSON.stringify({ app: 4200, auth: 9099, firestore: 8080, storage: 9199, functions: 5001, ui: 4000, hub: 4400, pid: process.pid, ...ports });
+    const cases = [
+      [{ auth: 9100 }, true, ['serve', '--configuration', 'local-remapped'], 4200, 'local-remapped'],
+      [{ app: 4207, firestore: 8081, remapped: ['app', 'firestore', '; calc'] }, true, ['serve', '--configuration', 'local-remapped', '--port', '4207'], 4207, 'local-remapped'],
+      [{ app: 4207 }, false, ['serve', '--configuration', 'local', '--port', '4207'], 4207, 'local'],
+      [{ auth: 9100 }, false, ['serve', '--configuration', 'local'], 4200, 'local'],
+      [{ ui: 4001, hub: 4401 }, true, ['serve', '--configuration', 'local'], 4200, 'local'],
+    ];
+    for (const [ports, withEnvironment, args, port, configuration] of cases) {
+      const root = makeRoot();
+      write(root, '.local-dev-ports.json', moved(ports));
+      if (withEnvironment) write(root, 'src/environments/environment.local-remapped.ts', 'export const environment = {};\n');
+      const ctx = await appConsole({ root });
+      try {
+        const res = await ctx.api.act({ action: 'app-start' });
+        assert.equal(res.status, 200, JSON.stringify(ports));
+        assert.deepEqual(ctx.spawned[0].args, args, JSON.stringify(ports));
+        assert.deepEqual([res.json.state.app.port, res.json.state.app.configuration], [port, configuration]);
+        const warned = (await ctx.api.logText()).includes('src/environments/environment.local-remapped.ts is missing');
+        assert.equal(warned, !withEnvironment && 'auth' in ports);
+      } finally {
+        await ctx.consoleServer.close();
+        assert.ok(exited(ctx.children[0]) || (await waitFor(() => exited(ctx.children[0]), 'the app to end with the console')));
+      }
+    }
+  });
+
+  test('preconditions: dependencies, a free port, no full stack, no running job', async () => {
+    const bare = await startConsole({ spawnApp: () => assert.fail('must not start') });
+    const busy = await appConsole({ openPorts: [4200] });
+    const ctx = await appConsole();
+    try {
+      const noDeps = await bare.api.act({ action: 'app-start' });
+      assert.equal(noDeps.status, 409);
+      assert.equal(noDeps.json.error, 'The dependencies are not installed yet (node_modules has no Angular CLI). Run Install first.');
+
+      const taken = await busy.api.act({ action: 'app-start' });
+      assert.equal(taken.status, 409);
+      assert.equal(taken.json.error, 'Port 4200 is already in use, so the app cannot start there. Find out what is using it, or free it.');
+      assert.equal(busy.spawned.length, 0);
+
+      assert.equal((await ctx.api.act({ action: 'start', mode: 'full' })).status, 200);
+      const full = await ctx.api.act({ action: 'app-start' });
+      assert.equal(full.status, 409);
+      assert.equal(full.json.error, 'The full stack already runs the app. Stop it, or start only the emulators, then start the app by itself.');
+      assert.equal((await ctx.api.act({ action: 'stop' })).status, 200);
+      await waitFor(async () => (await ctx.api.state()).stack.state === 'stopped', 'the stack to stop');
+
+      // Next to the emulators it is allowed: that is what it is for.
+      assert.equal((await ctx.api.act({ action: 'start', mode: 'emulators' })).status, 200);
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      const both = await ctx.api.state();
+      assert.deepEqual([both.stack.mode, both.app.state], ['emulators', 'starting']);
+      assert.equal(ctx.spawned.length, 1);
+    } finally {
+      await Promise.all([bare, busy, ctx].map((c) => c.consoleServer.close()));
+      assert.ok(exited(ctx.children[0]), 'closing the console ends the app');
+    }
+  });
+
+  test('an app that ends by itself is reported, with its exit code', async () => {
+    const ctx = await startConsole({
+      spawnApp: () => spawn(process.execPath, ['-e', "console.error('Error: Port 4200 is already in use.');process.exit(3)"], { stdio: ['ignore', 'pipe', 'pipe'] }),
+    });
+    try {
+      write(ctx.root, 'node_modules/@angular/cli/bin/ng.js', '');
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      const state = await waitFor(async () => {
+        const s = await ctx.api.state();
+        return s.app.state === 'stopped' ? s : null;
+      }, 'the app to end');
+      assert.equal(state.app.lastExit.code, 3);
+      const log = await ctx.api.logText();
+      assert.ok(log.includes('app|Error: Port 4200 is already in use.'), log);
+      assert.ok(log.includes('console|The app dev server exited (code 3) before it finished starting. Scroll up to the first error above.'), log);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('for real: node runs ng.js from the repository, without a shell', async () => {
+    const root = makeRoot();
+    // A folder name with a space and shell characters: nothing may split or interpret it.
+    const odd = path.join(root, 'odd & dir (x)');
+    fs.mkdirSync(odd);
+    write(odd, 'package.json', JSON.stringify({ name: 'omni-task', version: '1.0.0' }));
+    write(odd, 'scripts/console/console.html', '<title>x</title>');
+    write(odd, 'node_modules/@angular/cli/bin/ng.js', "console.log('ng argv: ' + process.argv.slice(2).join(' ') + ' cwd: ' + process.cwd() + ' FORCE_COLOR=' + process.env.FORCE_COLOR);setInterval(()=>{},1000);");
+    const ctx = await startConsole({ root: odd });
+    try {
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      const pid = (await ctx.api.state()).app.pid;
+      await waitFor(async () => (await ctx.api.logText()).includes(`app|ng argv: serve --configuration local cwd: ${odd} FORCE_COLOR=0`), 'the output of ng');
+      const res = await ctx.api.act({ action: 'quit' });
+      assert.equal(res.status, 200);
+      await waitFor(() => {
+        try {
+          process.kill(pid, 0);
+          return false;
+        } catch {
+          return true;
+        }
+      }, 'ng to be gone after quit');
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+
+  test('the console does not idle-exit while the app is running', async () => {
+    const exits = [];
+    const ctx = await appConsole({ idleExitMs: 200, onExit: (reason) => exits.push(reason) });
+    try {
+      assert.equal((await ctx.api.act({ action: 'app-start' })).status, 200);
+      await sleep(700);
+      assert.deepEqual(exits, []);
+      assert.equal(exited(ctx.children[0]), false);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
+});
+
+describe('nothing a request says reaches a command line', () => {
+  const MARK = 'FUZZMARK';
+  const NASTY = [
+    `${MARK}" & calc.exe & "`,
+    `${MARK}'; Start-Process calc; '`,
+    `$(${MARK})`,
+    `\`${MARK}\``,
+    `${MARK} | rm -rf / ; echo`,
+    `%COMSPEC% /c ${MARK}`,
+    `${MARK}\r\nnet user x y /add`,
+    `..\\..\\${MARK}`,
+    `-EncodedCommand ${MARK}`,
+  ];
+  const FIELDS = ['name', 'fn', 'mode', 'model', 'confirm', 'realmail', 'pid', 'pids', 'port', 'ports', 'command', 'args', 'cwd', 'file', 'script', 'configuration', 'startport', 'store', 'env'];
+  const ACTIONS = [
+    'tools', 'app-start', 'app-stop', 'port-find', 'port-free', 'ports-reserve', 'ports-unreserve', 'shortcut', 'shortcut-remove',
+    'terminal', 'firebase-login', 'secret-set', 'deploy-functions', 'prod-logs', 'start', 'stop', 'pull', 'install', 'smoke', 'checks', 'open-key', 'open-env', 'open-folder',
+  ];
+  /** Everything a string could hide in: itself, and what it decodes to when it is base64 of a script. */
+  const seen = (value) => {
+    const text = String(value);
+    const out = [text];
+    if (/^[A-Za-z0-9+/=]{16,}$/.test(text)) {
+      const decoded = Buffer.from(text, 'base64').toString('utf16le');
+      out.push(decoded);
+      for (const match of decoded.matchAll(/(?:'|-EncodedCommand )([A-Za-z0-9+/=]{16,})'/g)) out.push(Buffer.from(match[1], 'base64').toString('utf16le'));
+    }
+    return out;
+  };
+
+  for (const platform of ['win32', 'linux']) {
+    test(`fuzzed bodies on ${platform}`, async () => {
+      const argv = [];
+      const record = (file, args) => argv.push(file, ...args);
+      const harmless = (lists) => {
+        const walk = (value) => {
+          if (Array.isArray(value)) return value.map((step) => (record(step.file, step.args), { file: process.execPath, args: ['-e', ''], cwd: os.tmpdir(), label: step.label }));
+          return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, walk(inner)]));
+        };
+        return walk(lists);
+      };
+      const root = makeRoot();
+      write(root, 'node_modules/@angular/cli/bin/ng.js', '');
+      write(root, 'scripts/console-shortcut.ps1', '# stand-in');
+      write(root, 'functions/.secret.local', `ANTHROPIC_API_KEY=${PATTERN_KEY}\n`);
+      write(root, 'functions/lib/index.js', '');
+      const make = standIn();
+      const children = [];
+      const ctx = await startConsole({
+        root,
+        platform,
+        portFreeWaitMs: 20,
+        jobSteps: (r) => harmless(defaultJobSteps(r)),
+        commandSteps: (r) => harmless(defaultCommandSteps(r)),
+        launch: async (file, args) => (record(file, args), true),
+        runTool: async (file, args) => {
+          record(file, args);
+          // taskkill says "access denied" (1), which is what leads to the administrator step; that one is declined.
+          return { code: /taskkill/.test(file) ? 1 : 1223, stdout: '', stderr: '' };
+        },
+        findListeners: async () => ({ ok: true, listeners: [{ port: 4000, pid: 4242, name: 'java' }] }),
+        kill: (pid, signal) => record('kill', [String(pid), signal]),
+        spawnApp: (args) => {
+          record('ng', args);
+          const child = make(args);
+          children.push(child);
+          return child;
+        },
+        spawnStack: (mode) => {
+          record('local-dev', [mode]);
+          return spawn(process.execPath, [path.join(root, 'scripts', 'local-dev.mjs')], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], detached: !IS_WINDOWS });
+        },
+      });
+      try {
+        const settle = async () => {
+          await waitFor(async () => (await ctx.api.state()).job?.state !== 'running', 'the job to end');
+          const state = await ctx.api.state();
+          if (state.app.state !== 'stopped') {
+            await ctx.api.act({ action: 'app-stop' });
+            await waitFor(async () => (await ctx.api.state()).app.state === 'stopped', 'the app to stop');
+          }
+          if (state.stack.state !== 'stopped') {
+            await ctx.api.act({ action: 'stop' });
+            await waitFor(async () => (await ctx.api.state()).stack.state === 'stopped', 'the stack to stop');
+          }
+        };
+        let round = 0;
+        for (const action of ACTIONS) {
+          for (const valid of [{}, { name: 'ui' }, { fn: 'generateSubtasks' }, { confirm: true }, { mode: 'emulators' }]) {
+            const nasty = NASTY[round++ % NASTY.length];
+            const body = Object.fromEntries(FIELDS.map((field, i) => [field, i % 3 === 0 ? [nasty] : i % 3 === 1 ? nasty : { [nasty]: nasty }]));
+            const res = await ctx.api.act({ ...body, ...valid, action, [nasty]: nasty });
+            assert.ok([200, 400, 409].includes(res.status), `${action}: ${res.status}`);
+            await settle();
+          }
+        }
+        assert.ok(argv.length > 40, `commands were really built (${argv.length} words)`);
+        for (const word of argv) for (const text of seen(word)) assert.ok(!text.includes(MARK), `request text reached a command: ${text.slice(0, 200)}`);
+        const said = argv.flatMap(seen).join('\n');
+        // The run did reach the interesting commands, so the absence above means something.
+        for (const expected of platform === 'win32'
+          ? ["$psi.Verb = 'runas'", 'excludedportrange', '/PID', 'firebase-tools@15 deploy --only functions', 'console-shortcut.ps1', 'functions:log']
+          : ['x-terminal-emulator', 'firebase-tools@15 deploy --only functions', 'functions:log', 'SIGTERM', 'serve']) {
+          assert.ok(said.includes(expected), `${expected} was exercised`);
+        }
+      } finally {
+        await ctx.consoleServer.close();
+        for (const child of children) if (!exited(child)) child.kill('SIGKILL');
+      }
+    });
+  }
+
+  test('an unknown action stays unknown, however it is spelled', async () => {
+    const ctx = await startConsole();
+    try {
+      for (const action of ['Terminal', 'terminal ', 'deploy', 'port-kill', 'elevate', 'run', 'exec', '__proto__', 'constructor', 'toString', ['terminal'], { action: 'terminal' }]) {
+        const res = await ctx.api.act({ action });
+        assert.equal(res.status, 400, JSON.stringify(action));
+        assert.deepEqual(res.json, { ok: false, error: 'Unknown action.' });
+      }
+      assert.deepEqual(ctx.launched, []);
+    } finally {
+      await ctx.consoleServer.close();
+    }
+  });
 });
