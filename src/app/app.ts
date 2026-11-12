@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavbarComponent } from './core/layout/navbar.component';
 import { DialogComponent } from './shared/components/dialog.component';
 import { KeyboardShortcutsHelpComponent } from './shared/components/keyboard-shortcuts-help.component';
+import { EmulatorBannerComponent } from './shared/components/emulator-banner.component';
 import { AuthService } from './core/auth/auth.service';
 import { initOmniFlexEffects } from './core/theme/omniflex-effects';
 import { initGlitchFx, destroyGlitchFx } from './core/theme/glitch-fx';
@@ -21,6 +22,7 @@ import { DEFAULT_VERSION } from './core/constants';
     NavbarComponent,
     DialogComponent,
     KeyboardShortcutsHelpComponent,
+    EmulatorBannerComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.css'

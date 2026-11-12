@@ -24,7 +24,8 @@ export const appConfig: ApplicationConfig = {
     provideAuth(() => {
       const auth = getAuth();
       if (emulators) {
-        connectAuthEmulator(auth, `http://${emulators.host}:${emulators.authPort}`);
+        // The SDK's own warning strip is replaced by <app-emulator-banner> (brand-styled).
+        connectAuthEmulator(auth, `http://${emulators.host}:${emulators.authPort}`, { disableWarnings: true });
       }
       return auth;
     }),
