@@ -2,23 +2,18 @@ import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
-import { getAuth, provideAuth } from '@angular/fire/auth';
-import { getFirestore, provideFirestore } from '@angular/fire/firestore';
-import { getFunctions, provideFunctions } from '@angular/fire/functions';
-import { getStorage, provideStorage } from '@angular/fire/storage';
+import { connectAuthEmulator, getAuth, provideAuth } from '@angular/fire/auth';
+import { connectFirestoreEmulator, getFirestore, provideFirestore } from '@angular/fire/firestore';
+import { connectFunctionsEmulator, getFunctions, provideFunctions } from '@angular/fire/functions';
+import { connectStorageEmulator, getStorage, provideStorage } from '@angular/fire/storage';
 
 import { routes } from './app.routes';
+import { environment } from '../environments/environment';
 
-// Firebase configuration for OmniTask
-const firebaseConfig = {
-  apiKey: "AIzaSyAzNb5uJAOMNv5NMO-jWP2QUuxJXy5TmXc",
-  authDomain: "omnitask-475422.firebaseapp.com",
-  projectId: "omnitask-475422",
-  storageBucket: "omnitask-475422.firebasestorage.app",
-  messagingSenderId: "172130002005",
-  appId: "1:172130002005:web:bf5ace48b76a7f725260dc",
-  measurementId: "G-KJ2YXHPWY6"
-};
+// Firebase configuration for OmniTask. Production values by default; the
+// `local` build configuration swaps in the Emulator Suite (see
+// src/environments/environment.local.ts and docs/local-development.md).
+const { firebase: firebaseConfig, emulators } = environment;
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,9 +21,34 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(),
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
-    provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore()),
-    provideFunctions(() => getFunctions()),
-    provideStorage(() => getStorage())
-  ]
+    provideAuth(() => {
+      const auth = getAuth();
+      if (emulators) {
+        // The SDK's own warning strip is replaced by <app-emulator-banner> (brand-styled).
+        connectAuthEmulator(auth, `http://${emulators.host}:${emulators.authPort}`, { disableWarnings: true });
+      }
+      return auth;
+    }),
+    provideFirestore(() => {
+      const firestore = getFirestore();
+      if (emulators) {
+        connectFirestoreEmulator(firestore, emulators.host, emulators.firestorePort);
+      }
+      return firestore;
+    }),
+    provideFunctions(() => {
+      const functions = getFunctions();
+      if (emulators) {
+        connectFunctionsEmulator(functions, emulators.host, emulators.functionsPort);
+      }
+      return functions;
+    }),
+    provideStorage(() => {
+      const storage = getStorage();
+      if (emulators) {
+        connectStorageEmulator(storage, emulators.host, emulators.storagePort);
+      }
+      return storage;
+    }),
+  ],
 };

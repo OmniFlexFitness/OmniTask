@@ -41,9 +41,10 @@ This file is read by every Antigravity agent operating in this workspace. It enc
 
 ### Tooling
 - **Version control**: Git, hosted on GitHub at `OmniFlexFitness/OmniTask`
-- **Package manager**: npm (lockfile NOT committed; see `.gitignore`)
-- **Local dev**: `npm install && ng serve` → `http://localhost:4200`
-- **Firebase emulators**: `firebase emulators:start` for offline Firestore/Functions testing
+- **Package manager**: Yarn 1 for the web app (`yarn.lock` committed, `package-lock.json` gitignored, `packageManager` pinned in `package.json`); npm for `functions/` (`functions/package-lock.json` committed)
+- **Local dev**: `yarn install && yarn dev:local` → `http://localhost:4200` (fully local: emulators + functions + app; see `docs/local-development.md`). `ng serve` alone talks to production Firebase.
+- **Firebase emulators**: `yarn emulators` (Auth, Firestore, Functions, Storage under the offline-only project `demo-omnitask`)
+- **AI features**: Claude API via `functions/src/ai/claude.ts`; secret `ANTHROPIC_API_KEY` (never commit it; locally it lives in gitignored `functions/.secret.local`)
 
 ---
 

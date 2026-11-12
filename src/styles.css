@@ -1777,3 +1777,7 @@ textarea:focus {
   }
 }
 
+
+/* Room for the fixed emulator banner (app-emulator-banner) so it never covers content. */
+body.has-emulator-banner { padding-bottom: 52px; }
+@media (max-width: 640px) { body.has-emulator-banner { padding-bottom: 84px; } }

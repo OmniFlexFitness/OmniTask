@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LinkError = exports.deleteTaskRelationship = exports.upsertTaskRelationship = exports.upsertTaskFieldValue = exports.deleteTaskActors = exports.upsertTaskActor = exports.recordOutboundEvent = exports.finishDelivery = exports.claimDelivery = exports.deleteTaskLink = exports.recordOutboundSync = exports.updateTaskLink = exports.claimIssueGuard = exports.createLinkTransactional = exports.findLinkByIssue = exports.getTaskLink = exports.taskLinkRef = exports.deleteConnection = exports.updateConnectionSettings = exports.getConnection = exports.setConnectionState = exports.updateFieldDefinitionCache = exports.upsertConnection = exports.deleteUserToken = exports.getUserRefreshToken = exports.storeUserToken = exports.COLLECTIONS = void 0;
+exports.LinkError = exports.deleteTaskRelationship = exports.upsertTaskRelationship = exports.upsertTaskFieldValue = exports.deleteTaskActors = exports.replaceTaskActorsForIssue = exports.upsertTaskActor = exports.recordOutboundEvent = exports.finishDelivery = exports.claimDelivery = exports.deleteTaskLink = exports.recordOutboundSync = exports.updateTaskLink = exports.claimIssueGuard = exports.createLinkTransactional = exports.findLinkByIssue = exports.getTaskLink = exports.taskLinkRef = exports.deleteConnection = exports.updateConnectionSettings = exports.getConnection = exports.setConnectionState = exports.updateFieldDefinitionCache = exports.upsertConnection = exports.deleteUserToken = exports.getUserRefreshToken = exports.storeUserToken = exports.COLLECTIONS = void 0;
 /**
  * Firestore access for the GitHub integration. Centralizes collection names and
  * the transactional reverse-uniqueness guard so the rest of the code never
@@ -226,19 +226,27 @@ async function recordOutboundEvent(taskId, eventType, status, error) {
     });
 }
 exports.recordOutboundEvent = recordOutboundEvent;
-// --- Phase 2 metadata (field values, relationships, assignees) ---
-async function upsertTaskActor(taskId, login, avatarUrl) {
+async function upsertTaskActor(taskId, login, avatarUrl, role = 'assignee') {
     const docId = `${taskId}__${login.toLowerCase()}`;
     const payload = {
         taskId,
         login,
         avatarUrl,
-        role: 'assignee',
+        role,
         updatedAt: firestore_1.FieldValue.serverTimestamp(),
     };
     await db().collection(exports.COLLECTIONS.actors).doc(docId).set(payload, { merge: true });
 }
 exports.upsertTaskActor = upsertTaskActor;
+async function replaceTaskActorsForIssue(taskId, actors) {
+    const keep = new Set(actors.map((a) => a.login.toLowerCase()));
+    await Promise.all(actors.map((a) => upsertTaskActor(taskId, a.login, a.avatarUrl, a.role)));
+    const snap = await db().collection(exports.COLLECTIONS.actors).where('taskId', '==', taskId).get();
+    await Promise.all(snap.docs
+        .filter((doc) => !keep.has(String(doc.data().login ?? '').toLowerCase()))
+        .map((doc) => doc.ref.delete()));
+}
+exports.replaceTaskActorsForIssue = replaceTaskActorsForIssue;
 async function deleteTaskActors(taskId, login) {
     await db()
         .collection(exports.COLLECTIONS.actors)

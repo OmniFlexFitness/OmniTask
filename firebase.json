@@ -48,10 +48,37 @@
                 "node_modules",
                 ".git",
                 "firebase-debug.log",
-                "firebase-debug.log.*"
+                "firebase-debug.log.*",
+                "*.local",
+                ".secret.local.example",
+                "scripts"
             ]
         }
     ],
+    "emulators": {
+        "singleProjectMode": true,
+        "auth": {
+            "host": "127.0.0.1",
+            "port": 9099
+        },
+        "firestore": {
+            "host": "127.0.0.1",
+            "port": 8080
+        },
+        "functions": {
+            "host": "127.0.0.1",
+            "port": 5001
+        },
+        "storage": {
+            "host": "127.0.0.1",
+            "port": 9199
+        },
+        "ui": {
+            "enabled": true,
+            "host": "127.0.0.1",
+            "port": 4000
+        }
+    },
     "extensions": {
         "firestore-send-email": "firebase/firestore-send-email@0.2.4",
         "delete-user-data": "firebase/delete-user-data@0.1.25",

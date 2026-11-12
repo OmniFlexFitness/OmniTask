@@ -3,6 +3,14 @@ import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Subtask } from '../models/domain.model';
 
 /**
+ * Client-side deadline for the AI callables. Must match `timeoutSeconds` in
+ * functions/src/index.ts (AI_CALLABLE_OPTIONS): the function may retry a slow
+ * Claude request once (55s x 2), and the Firebase default of 70s would give
+ * up before that retry could return.
+ */
+const AI_CALLABLE_TIMEOUT_MS = 120_000;
+
+/**
  * Response types for Vertex AI functions
  */
 export interface GenerateSubtasksResponse {
@@ -73,7 +81,7 @@ export class VertexAiService {
       const generateSubtasksFn = httpsCallable<
         { taskTitle: string; taskDescription?: string; projectContext?: string },
         GenerateSubtasksResponse
-      >(this.functions, 'generateSubtasks');
+      >(this.functions, 'generateSubtasks', { timeout: AI_CALLABLE_TIMEOUT_MS });
 
       const result = await generateSubtasksFn({ taskTitle, taskDescription, projectContext });
       return result.data.subtasks;
@@ -105,7 +113,7 @@ export class VertexAiService {
       const suggestPriorityFn = httpsCallable<
         { taskTitle: string; taskDescription?: string; dueDate?: string },
         SuggestPriorityResponse
-      >(this.functions, 'suggestTaskPriority');
+      >(this.functions, 'suggestTaskPriority', { timeout: AI_CALLABLE_TIMEOUT_MS });
 
       const result = await suggestPriorityFn({ taskTitle, taskDescription, dueDate });
       return { priority: result.data.priority, reasoning: result.data.reasoning };
@@ -137,7 +145,7 @@ export class VertexAiService {
       const suggestDueDateFn = httpsCallable<
         { taskTitle: string; taskDescription?: string; projectDeadline?: string },
         SuggestDueDateResponse
-      >(this.functions, 'suggestDueDate');
+      >(this.functions, 'suggestDueDate', { timeout: AI_CALLABLE_TIMEOUT_MS });
 
       const result = await suggestDueDateFn({ taskTitle, taskDescription, projectDeadline });
       return {
@@ -173,7 +181,7 @@ export class VertexAiService {
       const enhanceDescriptionFn = httpsCallable<
         { taskTitle: string; taskDescription: string; projectContext?: string },
         EnhanceDescriptionResponse
-      >(this.functions, 'enhanceTaskDescription');
+      >(this.functions, 'enhanceTaskDescription', { timeout: AI_CALLABLE_TIMEOUT_MS });
 
       const result = await enhanceDescriptionFn({ taskTitle, taskDescription, projectContext });
       return {

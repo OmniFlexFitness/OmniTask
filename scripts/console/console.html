@@ -1,0 +1,1715 @@
+<title>OmniTask Build Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;500;600;700&display=swap">
+
+<style>
+/* OmniTask Build Console.
+   One file, two homes: published as a claude.ai Artifact (copy mode) and served
+   on the laptop by scripts/launch-console.mjs (live mode, buttons run things).
+
+   Look: the running OmniTask app, not an approximation of it. Every recipe below
+   names the app rule it is lifted from (S:n = src/styles.css line n). Dark only,
+   as the app is. One rule throughout: coloured things glow, neutral things do not.
+   Layout: sticky app bar, then one console column: stack control and ports first,
+   the state of the work, then the steps in the order they are run. */
+:root {
+  color-scheme: dark;
+  /* S:8-12 */
+  --default-font: 'Rajdhani', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Orbitron', 'Rajdhani', sans-serif;
+  --font-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  /* S:16-25, S:42-49 */
+  --of-color-bg-primary: #050810;
+  --of-color-bg-secondary: #0a0f1e;
+  --cyber-blue: #00d2ff;
+  --cyber-purple: #e040fb;
+  /* .theme-dark, S:170-222 */
+  --fg: rgb(240, 246, 255);
+  --blue: rgb(80, 190, 255);
+  --cyan: rgb(0, 210, 255);
+  --magenta: rgb(165, 100, 255);
+  --green: rgb(140, 230, 150);
+  --bold-color: hsl(285 100% 78%);
+  --bg_highlight: rgb(40, 44, 76);
+  --bg_highlight_dark: rgb(12, 16, 48);
+  --omni-radius: 12px;
+  --omni-border: rgba(255, 255, 255, 0.1);
+  --omni-neon-blue: 0 0 16px rgba(0, 115, 255, 0.85), 0 0 36px rgba(0, 210, 255, 0.5);
+  /* app values that have no token in the app */
+  --panel: rgba(2, 6, 23, 0.9);            /* .ofx-panel, S:109 */
+  --panel-glow: rgba(0, 210, 255, 0.45);   /* S:113 */
+  --text-2: #cbd5e1;
+  --text-3: #94a3b8;
+  --glow-heading: 0 0 14px color-mix(in srgb, currentColor 35%, transparent), 0 0 18px color-mix(in srgb, currentColor 25%, transparent), 0 1px 0 rgba(0, 0, 0, 0.35);
+  --glow-heading-sm: 0 1px 0 rgba(0, 0, 0, 0.25), 0 0 10px color-mix(in srgb, currentColor 25%, transparent);
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+/* State hues as the app pairs them: text = 400 step, tint and glow = 500 step. */
+.sev-ok   { --sev: #34d399; --sev-rgb: 16, 185, 129; }
+.sev-warn { --sev: #fbbf24; --sev-rgb: 245, 158, 11; }
+.sev-bad  { --sev: #fb7185; --sev-rgb: 244, 63, 94; }
+.sev-info { --sev: #00d2ff; --sev-rgb: 0, 210, 255; }
+.sev-idle { --sev: #94a3b8; --sev-rgb: 148, 163, 184; }
+/* Chips and toggles take the OmniFlex Design System's own palette and layered glows
+   (tokens.css: of-mint, of-warning, of-danger, of-neon-blue; components/Buttons badge recipe). */
+.sev-ok   { --chip: 5, 242, 219; }
+.sev-warn { --chip: 245, 158, 11; }
+.sev-bad  { --chip: 255, 51, 85; }
+.sev-info { --chip: 68, 126, 242; --chip-ink: 142, 178, 255; }
+.sev-idle { --chip: 148, 163, 184; }
+
+* { box-sizing: border-box; }
+html { scroll-padding-top: 76px; }
+
+/* Dashboard shell: #050810 under the 40px cyber grid (S:881-886). */
+body {
+  margin: 0;
+  background-color: #050810;
+  background-image:
+    linear-gradient(rgba(0, 210, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 210, 255, 0.022) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--fg);
+  font: 400 16px/1.5 var(--default-font);
+  -webkit-font-smoothing: antialiased;
+}
+/* Paints the phone's top inset so nothing scrolls into view above the sticky bar. */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: #050810; }
+
+.sheet { max-width: 920px; margin: 0 auto; padding-block: 8px 88px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+
+/* Heading ladder as the app renders it (S:240-304): Rajdhani, coloured by level, glowing. */
+h1, h2, h3, h4 { margin: 0; font-family: var(--default-font); font-weight: 700; letter-spacing: .25px; line-height: 1.2; text-wrap: balance; }
+h1 { color: var(--magenta); font-size: clamp(1.7rem, 4.6vw, 2.15rem); text-shadow: var(--glow-heading); }
+h2 { color: var(--blue); font-size: 1.8rem; text-shadow: var(--glow-heading); }
+h3 { color: var(--green); font-size: 1.3rem; text-transform: uppercase; text-shadow: var(--glow-heading); }
+h3.step-title { color: var(--cyan); font-size: 1.2rem; text-transform: none; text-shadow: var(--glow-heading-sm); }
+p { margin: 0; }
+a { color: var(--blue); text-decoration: none; transition: color .15s ease, text-shadow .15s ease, filter .15s ease; }
+a:hover { color: var(--magenta); text-shadow: var(--omni-neon-blue); filter: brightness(1.08); }   /* S:306-317 */
+p a, li a, td a { text-decoration: underline; text-decoration-color: rgba(80, 190, 255, 0.4); text-underline-offset: 3px; }
+strong { color: var(--bold-color); font-weight: 700; text-shadow: 0 0 10px rgba(165, 100, 255, 0.45); }   /* S:331-336 */
+em { font-style: normal; color: var(--fg); font-weight: 600; }
+:where(input, textarea, select, button, a, summary, [tabindex]:not([tabindex="-1"])):focus-visible { outline: 2px solid #00d2ff; outline-offset: 2px; }   /* S:75-79 */
+::selection { background: rgba(0, 210, 255, 0.4); color: #fff; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { border-radius: 4px; background: linear-gradient(180deg, rgba(0, 210, 255, 0.5), rgba(165, 100, 255, 0.5)); box-shadow: 0 0 6px rgba(0, 210, 255, 0.4); }
+
+/* Inline code and command text: the app's code look (S:418-434). */
+code, pre { font-family: var(--font-monospace); }
+code { font-size: .82em; padding: .12rem .4rem; border-radius: 6px; background: var(--bg_highlight_dark); border: 1px solid rgba(255, 255, 255, 0.08); color: #f5fdff; text-shadow: 0 0 8px rgba(78, 179, 255, 0.5); overflow-wrap: anywhere; }
+
+.eyebrow { font: 600 10px/1.5 var(--default-font); letter-spacing: .25em; text-transform: uppercase; color: rgba(34, 211, 238, 0.8); }
+.lbl, .field label, .swname, .command-bar .label, .done { font: 600 11px/1.5 var(--default-font); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
+
+/* ── App bar: the navbar (core/layout/navbar.component.html:2-47) ── */
+.masthead {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; background: rgba(5, 8, 16, 0.95);
+  border-top: 3px solid rgb(6, 182, 212);
+}
+.masthead::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: rgba(6, 182, 212, 0.5); box-shadow: 0 0 12px rgba(0, 210, 255, 0.5); }
+.masthead-in { max-width: 920px; margin: 0 auto; min-height: 56px; padding-block: 8px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 24px; }
+.lockup { display: inline-flex; align-items: center; gap: 12px; }
+.brand-mark { position: relative; display: inline-flex; flex: none; }
+.brand-mark::before { content: ""; position: absolute; inset: -4px; border-radius: 9999px; background: #251247; opacity: .8; }
+.brand-mark img { position: relative; display: block; width: 32px; height: 32px; object-fit: contain; }
+.brand-text { display: flex; flex-direction: column; }
+.brand-eyebrow { font: 600 8px/12px var(--default-font); letter-spacing: .25em; text-transform: uppercase; color: rgba(34, 211, 238, 0.8); }
+.brand-word { font: 700 18px/24px var(--default-font); letter-spacing: -0.45px; color: #fff; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); }
+.repo { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; font: 500 13px/16px var(--default-font); color: var(--text-3); overflow-wrap: anywhere; }
+.repo .sep { opacity: .5; }
+.live-dot { flex: none; width: 8px; height: 8px; border-radius: 9999px; background: #64748b; }
+.live-dot.is-on { background: #34d399; box-shadow: 0 0 10px rgba(52, 211, 153, 0.8); }   /* navbar.component.html:218 */
+.live-dot.is-lost { background: #fb7185; box-shadow: 0 0 10px rgba(244, 63, 94, 0.8); }
+.mode { font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg); }
+
+/* ── Hero: the My Tasks identity block ── */
+.opening { padding: 32px 0 4px; }
+.opening h1 { max-width: 22ch; margin-top: 6px; }
+.opening p.lead { margin-top: 12px; max-width: 62ch; font-size: 17px; color: var(--text-2); }
+
+/* ── Segmented switch: the dashboard view switcher (S:1111-1113) ── */
+.switches { display: flex; flex-wrap: wrap; gap: 14px 32px; margin-top: 24px; }
+.switch-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 5px; border-radius: 999px; background: rgba(5, 5, 16, 0.72); border: 1px solid rgba(255, 255, 255, 0.10); box-shadow: inset 0 0 14px rgba(var(--seg), 0.10), 0 0 12px rgba(var(--seg), 0.12); --seg: 68, 126, 242; }
+.seg.alt { --seg: 101, 11, 255; }
+.seg button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px 6px 12px; border-radius: 999px; border: 1px solid transparent; background: transparent; color: var(--text-3);
+  font: 600 11px/1.5 'Fira Code', var(--font-monospace); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; transition: color .2s, border-color .2s, box-shadow .2s, background .2s; }
+.seg button::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #334155; transition: background .2s, box-shadow .2s; }
+.seg button:hover { color: #fff; border-color: rgba(var(--seg), 0.45); box-shadow: 0 0 6px rgba(var(--seg), 0.45), inset 0 0 8px rgba(var(--seg), 0.12); }
+.seg button[aria-pressed="true"] { color: #fff; border-color: rgb(var(--seg)); background: rgba(var(--seg), 0.22); text-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 6px rgb(var(--seg)), 0 0 16px rgba(var(--seg), 0.85), 0 0 34px rgba(var(--seg), 0.35), inset 0 0 12px rgba(var(--seg), 0.30); }
+.seg button[aria-pressed="true"]::before { background: #05f2db; box-shadow: 0 0 6px #05f2db, 0 0 12px #05f2db; }
+
+/* ── Panels: .ofx-panel (S:108-117) ── */
+.ports, .state, .panel, .action {
+  position: relative; padding: 20px; border-radius: 16px; background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 14px 48px rgba(0, 0, 0, 0.55), 0 0 22px var(--panel-glow); min-width: 0;
+}
+.ports, .state, .panel.wide { margin-top: 28px; }
+.ports { padding: 24px; border-color: rgba(0, 210, 255, 0.35); }
+.ports::before, .action.is-main::before { content: ""; position: absolute; inset: 0 16px auto 16px; height: 1px; background: rgba(0, 210, 255, 0.5); box-shadow: 0 0 10px rgba(0, 210, 255, 0.6); }
+.actions, .adv-body { display: grid; gap: 24px; margin-top: 20px; }
+.panel > h3 { margin-bottom: 12px; }
+.panel p, .panel li { font-size: 16px; line-height: 1.5; color: var(--text-2); max-width: 70ch; }
+.panel p + p { margin-top: 10px; }
+.panel ul { margin: 10px 0 0; padding-left: 20px; }
+.panel li + li { margin-top: 6px; }
+
+/* ── Buttons ── */
+/* Ghost: .ofx-ghost-button (S:165-167) with the cyan outline button's hover glow. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font: 600 14px/20px var(--default-font); color: rgba(207, 250, 254, 0.9); background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15); transition: all .15s; text-decoration: none;
+}
+.btn:hover { color: rgba(207, 250, 254, 0.95); background: rgba(255, 255, 255, 0.1); text-shadow: none; filter: none; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15), 0 0 12px rgba(0, 210, 255, 0.5); }
+/* Primary: .ofx-neon-button (S:613-650): outline, tint, outer + inset glow, text glow, sweep on hover. */
+.btn-neon {
+  --n: 0, 210, 255; position: relative; overflow: hidden; padding: 7px 22px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: rgb(var(--n)); background: rgba(var(--n), 0.08); border: 2px solid rgb(var(--n)); text-shadow: 0 0 10px rgba(var(--n), 0.7);
+  box-shadow: 0 0 10px rgba(var(--n), 0.3), 0 0 20px rgba(var(--n), 0.1), inset 0 0 12px rgba(var(--n), 0.08); transition: all .25s ease;
+}
+.btn-neon::before { content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(var(--n), 0.25), transparent); transition: left .5s ease; pointer-events: none; }
+.btn-neon:hover { color: rgb(var(--n)); background: rgba(var(--n), 0.16); transform: translateY(-1px); text-shadow: 0 0 10px rgba(var(--n), 0.7); box-shadow: 0 0 18px rgba(var(--n), 0.6), 0 0 34px rgba(var(--n), 0.3), inset 0 0 18px rgba(var(--n), 0.18); }
+.btn-neon:hover::before { left: 100%; }
+.btn-rose { --n: 251, 113, 133; }      /* destructive: the same recipe in the app's rose */
+.btn-purple { --n: 224, 64, 251; }     /* .ofx-neon-button-purple (S:657) */
+.btn-sm { padding: 4px 12px; font-size: 12px; line-height: 16px; border-width: 1.5px; }
+.btn:disabled, .btn[aria-disabled="true"] { opacity: .4; cursor: not-allowed; box-shadow: none; text-shadow: none; transform: none; }
+.btn:disabled::before { display: none; }
+.btn:disabled:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-neon:disabled:hover { background: rgba(var(--n), 0.08); }
+.links, .controls-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+
+/* ── Stack control (live mode) ── */
+.deck-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.deck-state { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.deck-state .since { font-size: 13px; color: var(--text-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.notice { margin-top: 16px; }
+
+/* ── Port tiles: .kpi tiles (features/dashboard/components/project-overview.component.css:8-25) ── */
+.port-grid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.port { display: flex; flex-direction: column; min-width: 0; padding: 0; border-radius: 8px; background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(0, 210, 255, 0.04), 0 6px 20px rgba(0, 0, 0, 0.35); transition: all .2s ease; }
+.port:hover { border-color: rgba(0, 210, 255, 0.2); box-shadow: 0 0 20px rgba(0, 210, 255, 0.1); }
+/* The tile opens the service; the row under it carries the full address to copy. */
+.port-link, .port-link:hover { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; padding: 10px 12px 6px; color: inherit; text-decoration: none; text-shadow: none; filter: none; border-radius: 8px 8px 0 0; }
+a.port-link:hover .no { text-shadow: 0 0 10px currentColor, 0 0 22px currentColor; }
+a.port-link:hover .nm { color: var(--text-2); }
+.port-url { display: flex; align-items: center; gap: 6px; padding: 0 8px 8px 12px; min-width: 0; }
+.port-url code { flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; font-size: 10.5px; color: var(--text-3); text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.copy.mini { padding: 2px 8px; font-size: 10px; line-height: 14px; border-radius: 6px; }
+.port .nm { order: -1; display: flex; align-items: center; gap: 6px; font: 700 10px/1.5 var(--default-font); letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
+.port .no { font: 700 1.35rem/1.1 var(--font-display); color: #00d2ff; text-shadow: 0 0 10px currentColor; font-variant-numeric: tabular-nums; }
+.port .dt { font-size: 13px; line-height: 1.4; color: var(--text-3); overflow-wrap: anywhere; }
+.port .led { flex: none; width: 7px; height: 7px; border-radius: 9999px; background: #475569; }
+.port.is-open { border-color: rgba(16, 185, 129, 0.35); box-shadow: 0 0 14px rgba(16, 185, 129, 0.25), inset 0 0 10px rgba(16, 185, 129, 0.06); }
+.port.is-open .led { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.9); }
+.port.is-open .no { color: #34d399; }
+/* The one hop that leaves the laptop: .cyber-border-glow in the app's purple (S:1318-1337). */
+.port.is-out { grid-column: span 2; background: rgba(224, 64, 251, 0.06); border: 1px solid rgba(224, 64, 251, 0.4); box-shadow: 0 0 10px rgba(224, 64, 251, 0.25), inset 0 0 10px rgba(224, 64, 251, 0.08); }
+.port.is-out:hover { border-color: rgba(224, 64, 251, 0.7); box-shadow: 0 0 18px rgba(224, 64, 251, 0.5), inset 0 0 18px rgba(224, 64, 251, 0.15); }
+.port.is-out .no { font: 500 15px/1.5 var(--font-monospace); color: #e040fb; text-shadow: 0 0 10px rgba(224, 64, 251, 0.7); }
+.port.is-out .port-link { padding-bottom: 10px; }
+.ports-key { margin-top: 14px; font-size: 15px; color: var(--text-3); max-width: 70ch; }
+
+/* ── Status rows (.task-row) and tags (.cyber-badge, S:1038-1044) ── */
+.state-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; }
+.state-head .when { font-size: 12px; color: var(--text-3); }
+.state-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+.state-list li { display: grid; grid-template-columns: 8px 9.5rem minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid transparent; background: rgba(2, 6, 23, 0.4); font-size: 15px; color: var(--text-2); transition: all .2s; }
+.state-list li::before { content: ""; align-self: start; margin-top: .45em; width: 8px; height: 8px; border-radius: 9999px; color: var(--sev); background: currentColor; box-shadow: 0 0 6px currentColor; }
+.state-list li:hover { background: rgba(10, 15, 30, 0.75); border-color: rgba(0, 210, 255, 0.25); box-shadow: 0 0 12px rgba(0, 210, 255, 0.15); }
+.state-list .what { color: #f1f5f9; font-weight: 600; }
+.tag, .verdict .chip {
+  --c: var(--chip, 148, 163, 184); --ink: var(--chip-ink, var(--c));
+  display: inline-flex; align-items: center; gap: 7px; margin-right: 8px; padding: 3px 11px 3px 9px; border-radius: 14px; white-space: normal; overflow-wrap: anywhere; min-width: 0;
+  font: 600 10.5px/1.5 'Fira Code', var(--font-monospace); letter-spacing: .14em; text-transform: uppercase; color: rgb(var(--ink));
+  background: rgba(5, 5, 16, 0.62); border: 1px solid rgba(var(--c), 0.8); text-shadow: 0 0 6px rgba(var(--c), 0.75);
+  box-shadow: 0 0 6px rgba(var(--c), 0.55), 0 0 16px rgba(var(--c), 0.28), inset 0 0 10px rgba(var(--c), 0.14); vertical-align: 1px;
+}
+.tag::before, .verdict .chip::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: rgb(var(--c)); box-shadow: 0 0 6px rgb(var(--c)), 0 0 12px rgb(var(--c)); }
+.sev-idle .tag, .tag.sev-idle, .verdict.sev-idle .chip { box-shadow: none; text-shadow: none; border-color: rgba(255, 255, 255, 0.18); }
+.sev-idle .tag::before, .tag.sev-idle::before, .verdict.sev-idle .chip::before { box-shadow: none; background: #475569; }
+.chips .tag { margin-right: 0; }
+
+/* ── Sections and step cards ── */
+.section-title { margin-top: 48px; }
+.section-lede { margin-top: 6px; font-size: 16px; color: var(--text-3); max-width: 66ch; }
+.action { display: grid; gap: 14px; }
+.action-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.action-head .step-title { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.action-head .says { flex: 1 1 240px; min-width: 0; font-size: 15px; color: var(--text-3); }
+/* Number mark: .pv-badge (features/tasks/components/point-value-badge.css:6-41). */
+.mark {
+  --pv-color: #00d2ff; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 9999px;
+  font: 700 12px/1 var(--default-font); letter-spacing: .02em; color: #fff; border: 1.5px solid var(--pv-color); font-variant-numeric: tabular-nums;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 60%), radial-gradient(circle at 70% 80%, color-mix(in srgb, var(--pv-color) 70%, transparent), transparent 70%), color-mix(in srgb, var(--pv-color) 18%, #0a0f1e);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pv-color) 70%, transparent), 0 0 14px color-mix(in srgb, var(--pv-color) 55%, transparent), 0 0 26px color-mix(in srgb, var(--pv-color) 30%, transparent), inset 0 0 8px color-mix(in srgb, var(--pv-color) 35%, transparent);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--pv-color) 70%, transparent);
+}
+.action.is-once { border-color: rgba(0, 210, 255, 0.2); box-shadow: 0 14px 48px rgba(0, 0, 0, 0.55), 0 0 16px rgba(0, 210, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+/* The one command: the board's in-progress column, the only thing that pulses. */
+.action.is-main { border-color: rgba(0, 210, 255, 0.45); box-shadow: 0 0 28px rgba(0, 210, 255, 0.28), inset 0 0 24px rgba(0, 210, 255, 0.1); animation: pulse-progress 3s ease-in-out infinite; }
+.action.is-main .mark { --pv-color: #e040fb; }
+.action.is-done { border-color: rgba(255, 255, 255, 0.05); box-shadow: 0 14px 48px rgba(0, 0, 0, 0.55); animation: none; }
+.action.is-done::before { display: none; }
+.action.is-done .mark { --pv-color: #10b981; }
+.action.is-done .step-title { color: #34d399; }
+.done { display: inline-flex; align-items: center; gap: 6px; flex: none; cursor: pointer; }
+/* Custom squares that glow when checked (my-tasks-list.component.css:47-71). */
+.done input, .toggle input {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; width: 1.15rem; height: 1.15rem; border-radius: .25rem; border: 1px solid rgba(148, 163, 184, 0.5);
+  background: transparent center / 80% no-repeat; cursor: pointer; transition: all .15s ease;
+}
+.done input:not(:disabled):hover { border-color: rgb(16, 185, 129); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+.done input:checked { background-color: rgba(16, 185, 129, 0.2); border-color: rgb(16, 185, 129); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E"); }
+.done input:disabled { cursor: default; }
+.done input:disabled:not(:checked) { opacity: .5; }
+.done:has(input:disabled) { cursor: default; }
+.aside, .expect { font-size: 15px; line-height: 1.5; color: var(--text-3); max-width: 70ch; }
+.aside b { font-weight: 700; color: #fbbf24; text-shadow: 0 0 10px rgba(245, 158, 11, 0.45); }
+.aside.danger b { color: #fb7185; text-shadow: 0 0 10px rgba(244, 63, 94, 0.45); }
+
+/* ── Command block ── */
+.command { border-radius: var(--omni-radius); background: var(--bg_highlight_dark); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 44px rgba(124, 92, 255, 0.08); min-width: 0; }
+.command.boxed { margin-top: 14px; }
+.command-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 8px 8px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.command-bar .label { min-width: 0; }
+.command-bar .tools { display: inline-flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+/* Wraps rather than scrolls: a command you cannot see the end of reads as truncated.
+   The glow is half the app's, because these run to several long lines. */
+pre { margin: 0; padding: 1rem 1.1rem; font-size: 13px; line-height: 1.7; color: #f5fdff; text-shadow: 0 0 8px rgba(78, 179, 255, 0.25); white-space: pre-wrap; overflow-wrap: anywhere; }
+.copy { flex: none; padding: 5px 12px; border-radius: 8px; font: 600 12px/16px var(--default-font); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; cursor: pointer;
+  color: #67e8f9; background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.4); transition: all .15s ease; }
+.copy:hover { background: rgba(6, 182, 212, 0.2); box-shadow: 0 0 12px rgba(0, 210, 255, 0.5); }
+.copy.is-copied { color: rgb(220, 252, 231); background: rgba(16, 185, 129, 0.22); border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 0 12px rgba(16, 185, 129, 0.5); }
+.copy:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+
+/* ── Live log ── */
+.log { max-height: 380px; min-height: 120px; overflow: auto; padding: 12px 14px; font: 400 12.5px/1.6 var(--font-monospace); color: #dbeafe; white-space: pre-wrap; overflow-wrap: anywhere; }
+.log { border-radius: 0 0 11px 11px; }
+.log:focus-visible { outline-offset: -2px; }
+.log .l-job { color: #c4b5fd; text-shadow: 0 0 8px rgba(139, 92, 246, 0.25); }
+.log .l-console { color: var(--text-3); }
+.log .l-app { color: #93c5fd; }
+.log .l-cmd { color: #67e8f9; text-shadow: 0 0 8px rgba(0, 210, 255, 0.4); }
+.log .l-up { color: #34d399; text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+.log .l-err { color: #fda4af; text-shadow: 0 0 8px rgba(244, 63, 94, 0.45); }
+.log .l-empty { color: var(--text-3); }
+
+/* ── Tinted frames: .cyber-border-glow with the state hue (S:1318-1331) ── */
+.warn-line, .verdict {
+  padding: 12px 16px; border-radius: 8px; font-size: 15px; color: var(--text-2); background: rgba(var(--sev-rgb, 245, 158, 11), 0.1);
+  border: 1px solid rgba(var(--sev-rgb, 245, 158, 11), 0.4); box-shadow: 0 0 10px rgba(var(--sev-rgb, 245, 158, 11), 0.25), inset 0 0 10px rgba(var(--sev-rgb, 245, 158, 11), 0.08); transition: all .25s ease;
+}
+.warn-line { margin-top: 20px; }
+.warn-line b { font-weight: 700; color: var(--sev, #fbbf24); text-shadow: 0 0 10px rgba(var(--sev-rgb, 245, 158, 11), 0.45); }
+.verdicts { display: grid; gap: 8px; margin-top: 14px; }
+.verdict:hover { border-color: rgba(var(--sev-rgb, 245, 158, 11), 0.7); box-shadow: 0 0 18px rgba(var(--sev-rgb, 245, 158, 11), 0.5), inset 0 0 18px rgba(var(--sev-rgb, 245, 158, 11), 0.15); }
+.verdict p { margin-top: 6px; }
+
+/* ── Divider (the app's hr, S:364-383) and the disclosure ── */
+hr { position: relative; height: 1px; margin: 44px 0 24px; border: 0; background: rgba(255, 255, 255, 0.15); overflow: visible; }
+hr::after { content: ""; position: absolute; left: 50%; top: -1px; transform: translateX(-50%); width: 80px; height: 2px; border-radius: 999px; background: var(--cyan); box-shadow: 0 0 10px rgba(0, 210, 255, 0.6); }
+details.adv > summary { list-style: none; display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  font: 600 12px/16px var(--default-font); letter-spacing: .05em; text-transform: uppercase; color: rgb(193, 157, 255); background: rgba(130, 37, 230, 0.1); border: 1px solid rgba(130, 37, 230, 0.4);
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.6); box-shadow: 0 0 10px rgba(139, 92, 246, 0.25); transition: all .2s; }
+details.adv > summary::-webkit-details-marker { display: none; }
+details.adv > summary::before { content: "+"; font-size: 15px; line-height: 1; }
+details.adv[open] > summary::before { content: "\2212"; }
+details.adv > summary:hover { color: rgb(220, 198, 255); background: rgba(130, 37, 230, 0.2); box-shadow: 0 0 14px rgba(139, 92, 246, 0.5); }
+
+/* ── Fields: .ofx-input rest and focus (S:143-153) ── */
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px 20px; margin-top: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+input[type="text"], select, textarea {
+  width: 100%; padding: 11px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background-color: rgba(15, 23, 42, 0.6); color: #f1f5f9;
+  font: 400 14px/1.4 var(--font-monospace); transition: all .2s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), 0 0 0 1px rgba(0, 210, 255, 0.08), 0 10px 30px rgba(8, 12, 26, 0.75), 0 0 16px rgba(0, 210, 255, 0.08);
+}
+input[type="text"]:focus, select:focus, textarea:focus { outline: none; border-color: rgb(34, 211, 238);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 2px rgba(0, 210, 255, 0.25), 0 10px 30px rgba(8, 12, 26, 0.75), 0 0 24px rgba(0, 210, 255, 0.2), 0 0 40px rgba(165, 100, 255, 0.1); }
+input[readonly] { color: var(--text-3); }
+textarea { min-height: 96px; resize: vertical; }
+::placeholder { color: var(--text-3); }
+select { appearance: none; -webkit-appearance: none; padding-right: 40px; background-repeat: no-repeat; background-position: right 12px center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d2ff' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); }
+select option { background-color: #0a0f1e; color: #e2e8f0; }
+.toggle { display: flex; align-items: flex-start; gap: 12px; margin-top: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: background .2s; }
+.toggle:hover { background: rgba(255, 255, 255, 0.04); }
+.toggle input { width: 20px; height: 20px; border-color: #64748b; margin-top: 1px; }
+.toggle input:checked { background-color: #06b6d4; border-color: #06b6d4; box-shadow: 0 0 14px rgba(6, 182, 212, 0.5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E"); }
+.toggle .t-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toggle .t-note { font-size: 14px; line-height: 1.45; color: var(--text-3); max-width: 58ch; }
+
+/* ── Tables as the app renders them (S:395-416) ── */
+.table-wrap { overflow-x: auto; border: 1px solid var(--omni-border); border-radius: var(--omni-radius); background: rgba(255, 255, 255, 0.03); }
+table { width: 100%; min-width: 580px; border-collapse: separate; border-spacing: 0; font-size: 15px; color: var(--text-2); }
+th, td { text-align: left; vertical-align: top; padding: .7rem .9rem; border-bottom: 1px solid var(--bg_highlight); line-height: 1.45; }
+thead th { font: 700 12px/16px var(--default-font); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; color: #fff; background: rgba(165, 100, 255, 0.1); text-shadow: 0 0 8px rgba(0, 210, 255, 0.35); }
+tbody tr { transition: background-color .15s; }
+tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
+tbody tr:last-child td { border-bottom: 0; }
+td:first-child { color: #fff; font-weight: 500; }
+
+footer { margin-top: 48px; text-align: center; font-size: 14px; color: var(--text-3); }
+footer p { max-width: 74ch; margin: 0 auto; }
+footer .build-line { display: block; margin-top: 10px; font-size: .6875rem; letter-spacing: .05em; }
+
+/* Motion: the board's in-progress pulse and the navbar lockup's hover glitch. Nothing else moves. */
+@keyframes pulse-progress {
+  0%, 100% { box-shadow: 0 0 28px rgba(0, 210, 255, 0.28), inset 0 0 24px rgba(0, 210, 255, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(0, 210, 255, 0.45), inset 0 0 34px rgba(0, 210, 255, 0.2); }
+}
+[data-fx-glitch-hover]:hover { animation: fx-glitch-hover .45s steps(12, end); }
+@keyframes fx-glitch-hover {
+  0% { clip-path: inset(0 0 0 0); text-shadow: none; filter: none; transform: translateX(0); }
+  12% { clip-path: inset(44% 0 42% 0); transform: translateX(-2px); text-shadow: 2px 0 rgba(0, 210, 255, 0.85), -2px 0 rgba(255, 42, 160, 0.85); filter: brightness(1.1); }
+  16% { clip-path: inset(0 0 0 0); transform: translateX(1px); text-shadow: -1px 0 rgba(0, 210, 255, 0.6), 1px 0 rgba(255, 42, 160, 0.6); filter: none; }
+  32% { clip-path: inset(12% 0 70% 0); transform: translateX(-1px); text-shadow: 2px 0 rgba(0, 210, 255, 0.8), -2px 0 rgba(255, 42, 160, 0.8); filter: hue-rotate(8deg); }
+  36% { clip-path: inset(0 0 0 0); transform: translateX(0); text-shadow: none; filter: none; }
+  58% { clip-path: inset(65% 0 8% 0); transform: translateX(2px); text-shadow: -2px 0 rgba(0, 210, 255, 0.75), 2px 0 rgba(255, 42, 160, 0.75); filter: hue-rotate(-10deg) brightness(1.08); }
+  62% { clip-path: inset(0 0 0 0); transform: translateX(0); text-shadow: 1px 0 rgba(0, 210, 255, 0.3), -1px 0 rgba(255, 42, 160, 0.3); }
+  100% { clip-path: inset(0 0 0 0); text-shadow: none; filter: none; transform: translateX(0); }
+}
+
+@media (max-width: 720px) {
+  .port-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .state-list li { grid-template-columns: 8px minmax(0, 1fr); }
+  .state-list .what { grid-column: 2; }
+  .state-list li > span:last-child { grid-column: 2; }
+  .action-head .says { flex-basis: 100%; }
+  .ports, .state, .panel, .action { padding: 16px; }
+  h2 { font-size: 1.55rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .btn-neon:hover { transform: none; }
+  .btn-neon::before { display: none; }
+}
+</style>
+
+<header class="masthead"><div class="masthead-in">
+  <span class="lockup" data-fx-glitch-hover>
+    <span class="brand-mark"><img alt="" width="32" height="32" src="data:image/png;base64,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"></span>
+    <span class="brand-text"><span class="brand-eyebrow">OmniFlex</span><span class="brand-word">OmniTask</span></span>
+  </span>
+  <span class="repo">
+    <i class="live-dot" id="mode-dot"></i><span class="mode" id="mode-text">Copy mode</span>
+    <span class="sep">/</span><span id="repo-line">C:\Antigravity\OmniTask</span>
+    <span class="sep">/</span><span id="branch-line">feature/local-dev-claude-ai</span>
+  </span>
+</div></header>
+
+<div class="sheet">
+
+  <section class="opening">
+    <p class="eyebrow">OmniTask // Build Console</p>
+    <h1>Run all of OmniTask on the laptop.</h1>
+    <p class="lead">
+      One command starts the app, sign-in, the database, file storage and the Cloud Functions on
+      this machine. Nothing touches the production Firebase project. The AI buttons call Claude
+      with your own key, which is the only request that leaves the laptop.
+    </p>
+  </section>
+
+  <div class="switches">
+    <div class="switch-group">
+      <span class="lbl">Commands for</span>
+      <div class="seg" role="group" aria-label="Shell">
+        <button type="button" id="shell-ps" aria-pressed="true">PowerShell</button>
+        <button type="button" id="shell-bash" aria-pressed="false">Git Bash</button>
+      </div>
+    </div>
+    <div class="switch-group" id="branch-switch">
+      <span class="lbl">Run from</span>
+      <div class="seg alt" role="group" aria-label="Branch">
+        <button type="button" id="src-pr" aria-pressed="true">PR #213 branch</button>
+        <button type="button" id="src-live" aria-pressed="false">live</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- stack control + what runs where -->
+  <section class="ports" aria-labelledby="ports-title">
+    <div class="deck-head">
+      <p class="eyebrow" id="ports-title">What runs where, once the stack is up</p>
+      <div class="deck-state sev-idle" id="deck-state" hidden>
+        <span class="tag" id="stack-tag">Stopped</span><span class="since" id="stack-since"></span>
+      </div>
+    </div>
+
+    <div class="controls-row" id="deck-controls" hidden>
+      <button class="btn btn-neon" type="button" data-action="start" data-mode="full">Start stack</button>
+      <button class="btn" type="button" data-action="start" data-mode="emulators">Backend only</button>
+      <button class="btn btn-neon btn-rose" type="button" data-action="stop">Stop</button>
+      <button class="btn" type="button" data-action="open-folder">Open folder</button>
+      <button class="btn" type="button" data-action="terminal">Terminal here</button>
+      <button class="btn" type="button" data-action="quit" data-confirm="Quit the console?">Quit console</button>
+    </div>
+    <p class="warn-line sev-bad notice" id="notice" role="alert" hidden></p>
+    <div class="chips" id="chips" hidden></div>
+
+    <ul class="port-grid">
+      <li class="port" data-name="app" data-port="4200"><a class="port-link" id="open-app" href="http://localhost:4200" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>The app</span><span class="no">:4200</span><span class="dt">Angular dev server, local configuration</span></a><span class="port-url"><code id="url-app">http://localhost:4200</code><button class="copy mini" type="button" data-copy="url-app">Copy</button></span></li>
+      <li class="port" data-name="auth" data-port="9099"><a class="port-link" id="open-auth" href="http://127.0.0.1:9099" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Sign-in</span><span class="no">:9099</span><span class="dt">Auth emulator, fake Google popup</span></a><span class="port-url"><code id="url-auth">http://127.0.0.1:9099</code><button class="copy mini" type="button" data-copy="url-auth">Copy</button></span></li>
+      <li class="port" data-name="firestore" data-port="8080"><a class="port-link" id="open-firestore" href="http://127.0.0.1:8080" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Database</span><span class="no">:8080</span><span class="dt">Firestore emulator</span></a><span class="port-url"><code id="url-firestore">http://127.0.0.1:8080</code><button class="copy mini" type="button" data-copy="url-firestore">Copy</button></span></li>
+      <li class="port" data-name="storage" data-port="9199"><a class="port-link" id="open-storage" href="http://127.0.0.1:9199" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>File storage</span><span class="no">:9199</span><span class="dt">Storage emulator</span></a><span class="port-url"><code id="url-storage">http://127.0.0.1:9199</code><button class="copy mini" type="button" data-copy="url-storage">Copy</button></span></li>
+      <li class="port" data-name="functions" data-port="5001"><a class="port-link" id="open-functions" href="http://127.0.0.1:5001" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Cloud Functions</span><span class="no">:5001</span><span class="dt">Functions emulator; email is captured, not sent</span></a><span class="port-url"><code id="url-functions">http://127.0.0.1:5001</code><button class="copy mini" type="button" data-copy="url-functions">Copy</button></span></li>
+      <li class="port" data-name="ui" data-port="4000"><a class="port-link" id="open-ui" href="http://127.0.0.1:4000" target="_blank" rel="noopener"><span class="nm"><i class="led" hidden></i>Emulator UI</span><span class="no">:4000</span><span class="dt">Browse data, users and function logs</span></a><span class="port-url"><code id="url-ui">http://127.0.0.1:4000</code><button class="copy mini" type="button" data-copy="url-ui">Copy</button></span></li>
+      <li class="port is-out"><span class="port-link"><span class="nm">Claude API</span><span class="no">api.anthropic.com</span><span class="dt">Called by the four AI functions with the key in functions/.secret.local</span></span></li>
+    </ul>
+    <p class="ports-key">Click a tile to open that service; its address underneath is ready to copy. The emulator tiles open their page in the Emulator UI.</p>
+    <p class="ports-key" style="margin-top:6px">Everything runs under the offline-only Firebase project <code>demo-omnitask</code>. The Claude API is the one hop that leaves the laptop.</p>
+    <nav class="links" aria-label="Quick links">
+      <a class="btn btn-neon" id="link-app" href="http://localhost:4200" target="_blank" rel="noopener">Open local app</a>
+      <a class="btn" id="link-ui" href="http://127.0.0.1:4000" target="_blank" rel="noopener">Emulator UI</a>
+      <a class="btn" href="https://github.com/OmniFlexFitness/OmniTask/pull/213" target="_blank" rel="noopener">PR #213</a>
+      <a class="btn" href="https://github.com/OmniFlexFitness/OmniTask/actions" target="_blank" rel="noopener">GitHub Actions</a>
+      <a class="btn" href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">Claude API keys</a>
+      <a class="btn" href="https://omnitask.omniflexfitness.com" target="_blank" rel="noopener">Production app</a>
+    </nav>
+  </section>
+
+  <!-- live output -->
+  <section class="panel wide" id="log-panel" aria-labelledby="log-title" hidden>
+    <div class="state-head">
+      <h3 id="log-title">Live output</h3>
+      <span class="deck-state sev-idle" id="job-state"><span class="tag" id="job-tag">Idle</span></span>
+    </div>
+    <div class="command boxed">
+      <div class="command-bar">
+        <span class="label">Stack and job output from this machine</span>
+        <span class="tools">
+          <button class="copy" type="button" data-copy="log">Copy</button>
+          <button class="copy" type="button" id="log-clear">Clear view</button>
+        </span>
+      </div>
+      <div class="log" id="log" tabindex="0" aria-live="off"><div class="l-empty">Nothing yet. Start the stack or run a check.</div></div>
+    </div>
+  </section>
+
+  <!-- run it as a program (copy mode) -->
+  <section class="panel wide" id="install-panel" aria-labelledby="install-title">
+    <h3 id="install-title">Run it as a program</h3>
+    <p>
+      Here on claude.ai this page writes commands for you to paste. The same page ships in the repository
+      as a local program: run this once and <em>OmniTask Build Console</em> appears on the Desktop and in the
+      Start menu. Opened from there it runs in its own window, and Start, Stop, Install and the checks
+      become buttons with their output streaming into the page.
+    </p>
+    <div class="command boxed">
+      <div class="command-bar"><span class="label" id="lbl-shortcut">PowerShell · once</span><span class="tools"><button class="copy" type="button" data-copy="cmd-shortcut">Copy</button></span></div>
+      <pre id="cmd-shortcut"></pre>
+    </div>
+    <p class="expect" style="margin-top:12px">No administrator rights. It listens on <code>127.0.0.1:4310</code> only, and closes by itself once its window is closed and nothing is running. To open it without the shortcut: <code>yarn console</code>.</p>
+  </section>
+
+  <!-- state -->
+  <section class="state" aria-labelledby="state-title">
+    <div class="state-head">
+      <h3 id="state-title">Where the work stands</h3>
+      <span class="when">checked from GitHub · 9 Nov 2026</span>
+    </div>
+    <ul class="state-list">
+      <li class="sev-warn"><span class="what">Pull request</span><span><span class="tag">needs review</span><a href="https://github.com/OmniFlexFitness/OmniTask/pull/213" target="_blank" rel="noopener">#213</a> is open against <code>live</code>. An approving review is the only thing it waits on once its checks are green.</span></li>
+      <li class="sev-ok"><span class="what">Claude, live call</span><span><span class="tag">passed</span>The PR check made a real request through the new code: <code>model=claude-opus-5-5</code>, answered in 1.9 s.</span></li>
+      <li class="sev-warn"><span class="what">Production</span><span><span class="tag">old code</span><code>live</code> still runs the Vertex AI Gemini version of the AI functions. The Claude version reaches production when #213 is merged and the deploy finishes.</span></li>
+      <li class="sev-ok"><span class="what">GitHub secret</span><span><span class="tag">set</span><code>ANTHROPIC_API_KEY</code> is in the repository secrets. The first deploy after the merge copies it into Secret Manager.</span></li>
+      <li class="sev-info"><span class="what">CI-only key</span><span><span class="tag">optional</span><code>ANTHROPIC_API_KEY_CI</code> was not among the repository secrets when last seen. Until it exists, the PR check uses the key above. See Ship it.</span></li>
+      <li class="sev-info" id="laptop-row"><span class="what">The laptop</span><span id="laptop-text"><span class="tag">not checked</span>On claude.ai this page cannot see your machine. Steps 00 to 04 set it up; step 06 proves the key works.</span></li>
+    </ul>
+  </section>
+
+  <p class="warn-line sev-warn" id="branch-warn" hidden></p>
+
+  <!-- steps -->
+  <h2 class="section-title">Get it running</h2>
+  <p class="section-lede">In order, the first time. After that, step 04 is the only one you need.</p>
+
+  <div class="actions">
+
+    <section class="action is-once" data-step="00">
+      <div class="action-head">
+        <span class="mark">00</span>
+        <h3 class="step-title">Check the tools</h3>
+        <span class="says">Once. Node, Java, Yarn and Git.</span>
+        <label class="done"><input type="checkbox" id="done-00">Done</label>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="tools" hidden>Check now</button><button class="copy" type="button" data-copy="cmd-tools">Copy</button></span></div>
+        <pre id="cmd-tools">node -v
+java -version
+yarn -v
+git --version</pre>
+      </div>
+      <p class="expect">Expect Node <code>v20</code> or newer and Java <code>21</code> or newer. The database and storage emulators are Java programs. Missing Java: install <a href="https://adoptium.net/temurin/releases/" target="_blank" rel="noopener">Temurin JDK 21</a>, then open a new terminal. Missing Yarn: <code>npm install -g yarn</code>.</p>
+    </section>
+
+    <section class="action" data-step="01">
+      <div class="action-head">
+        <span class="mark">01</span>
+        <h3 class="step-title">Get the code</h3>
+        <span class="says">Fetch, move to the branch, fast-forward.</span>
+        <label class="done"><input type="checkbox" id="done-01">Done</label>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-pull">PowerShell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="pull" hidden>Pull now</button><button class="copy" type="button" data-copy="cmd-pull">Copy</button></span></div>
+        <pre id="cmd-pull"></pre>
+      </div>
+      <div class="command" data-copy-only>
+        <div class="command-bar"><span class="label">Only if the folder does not exist yet</span><span class="tools"><button class="copy" type="button" data-copy="cmd-clone">Copy</button></span></div>
+        <pre id="cmd-clone"></pre>
+      </div>
+    </section>
+
+    <section class="action" data-step="02">
+      <div class="action-head">
+        <span class="mark">02</span>
+        <h3 class="step-title">Install</h3>
+        <span class="says">The app's packages and the Cloud Functions' own. A few minutes the first time.</span>
+        <label class="done"><input type="checkbox" id="done-02">Done</label>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-install">PowerShell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="install" hidden>Install now</button><button class="copy" type="button" data-copy="cmd-install">Copy</button></span></div>
+        <pre id="cmd-install"></pre>
+      </div>
+      <p class="expect">Run it again after any pull that changes <code>package.json</code> or a lockfile.</p>
+    </section>
+
+    <section class="action" data-step="03">
+      <div class="action-head">
+        <span class="mark">03</span>
+        <h3 class="step-title">Add the Claude key</h3>
+        <span class="says">Once. Your <code>omnitask-local</code> key goes in a file git never sees.</span>
+        <label class="done"><input type="checkbox" id="done-03">Done</label>
+      </div>
+      <p class="aside danger">
+        This creates <code>functions/.secret.local</code> and opens it in Notepad. Replace the word
+        <code>placeholder</code> on the <code>ANTHROPIC_API_KEY=</code> line with the key, save and close.
+        Leave the other lines as <code>placeholder</code>. <b>Never paste the key into a chat, a commit or this page.</b>
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-key">PowerShell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="open-key" hidden>Open the file</button><button class="copy" type="button" data-copy="cmd-key">Copy</button></span></div>
+        <pre id="cmd-key"></pre>
+      </div>
+    </section>
+
+    <section class="action is-main" data-step="04">
+      <div class="action-head">
+        <span class="mark">04</span>
+        <h3 class="step-title">Start the stack</h3>
+        <span class="says">The one command. Leave it running.</span>
+        <label class="done"><input type="checkbox" id="done-04">Done</label>
+      </div>
+      <p class="aside">
+        It checks the tools, builds the functions, starts the four emulators, waits for them, then
+        starts the app. The first run also fetches the Firebase tools and the emulator programs, which can take
+        ten minutes or more on a slow connection. Later starts take under a minute.
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-start">PowerShell · stays open</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="start" data-mode="full" hidden>Start now</button><button class="copy" type="button" data-copy="cmd-start">Copy</button></span></div>
+        <pre id="cmd-start"></pre>
+      </div>
+      <p class="expect">Expect <code>OmniTask local stack is up.</code> followed by the two addresses.</p>
+    </section>
+
+    <section class="action" data-step="05">
+      <div class="action-head">
+        <span class="mark">05</span>
+        <h3 class="step-title">Open it and sign in</h3>
+        <span class="says">No real Google account is involved.</span>
+        <label class="done"><input type="checkbox" id="done-05">Done</label>
+      </div>
+      <p class="aside">
+        Open <a id="link-app-step" href="http://localhost:4200" target="_blank" rel="noopener">http://localhost:4200</a> and press
+        <em>Continue with Google</em>. The popup is the emulator's stand-in: it takes any email and asks for no password.
+        <b>Type your OmniFlex admin email there.</b> The security rules treat that one address as the super admin
+        (it is written in <code>firestore.rules</code>), locally exactly as in production. Then open <em>Workspace</em>
+        in the top bar: its first visit creates three sample projects. Any other address becomes an ordinary member:
+        the rules refuse the sample data, so Workspace starts empty with a seeding error, though projects can still be
+        created by hand. Accounts exist only in the emulator.
+      </p>
+    </section>
+
+    <section class="action" data-step="06">
+      <div class="action-head">
+        <span class="mark">06</span>
+        <h3 class="step-title">Prove the key works</h3>
+        <span class="says">One real Claude request.</span>
+        <label class="done"><input type="checkbox" id="done-06">Done</label>
+      </div>
+      <p class="aside">
+        It reads the key out of <code>functions/.secret.local</code>, so you never type it, and sends one small
+        request through the same code the AI buttons use. It costs a fraction of a cent.
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-smoke">PowerShell · second window</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="smoke" hidden>Test the key</button><button class="copy" type="button" data-copy="cmd-smoke">Copy</button></span></div>
+        <pre id="cmd-smoke"></pre>
+      </div>
+      <p class="expect">Expect <code>ai-smoke OK: model=claude-opus-5-5</code>. Anything else: paste it into Read an error under Advanced.</p>
+    </section>
+
+    <section class="action" data-step="07">
+      <div class="action-head">
+        <span class="mark">07</span>
+        <h3 class="step-title">Stop</h3>
+        <span class="says" id="stop-says">Ctrl+C in the window from step 04.</span>
+        <label class="done"><input type="checkbox" id="done-07">Done</label>
+      </div>
+      <p class="aside">
+        Press it once and wait a few seconds. The emulators save your local projects, tasks and accounts into
+        <code>.emulator-data/</code> on the way out, and the next start loads them back.
+        <b>Closing the terminal window instead skips the save</b> and can leave the ports held.
+      </p>
+      <div class="controls-row" data-live hidden style="margin-top:0">
+        <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="stop">Stop the stack</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- manage -->
+  <h2 class="section-title">Day to day</h2>
+  <p class="section-lede">What you reach for once it has run once.</p>
+
+  <div class="actions">
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">A</span>
+        <h3 class="step-title">Start with empty data</h3>
+        <span class="says">Deletes the saved local database and accounts.</span>
+      </div>
+      <p class="aside danger"><b>Stop the stack first.</b> This removes only the emulator's saved copy on this laptop. Production is not involved.</p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-reset">PowerShell</span><span class="tools"><button class="btn btn-neon btn-rose btn-sm" type="button" data-action="reset-data" data-confirm="Delete saved data?" hidden>Delete saved data</button><button class="copy" type="button" data-copy="cmd-reset">Copy</button></span></div>
+        <pre id="cmd-reset"></pre>
+      </div>
+    </section>
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">B</span>
+        <h3 class="step-title">Backend and app in separate windows</h3>
+        <span class="says">Restart one without the other.</span>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-emu">Window 1 · emulators</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="start" data-mode="emulators" hidden>Start backend</button><button class="copy" type="button" data-copy="cmd-emu">Copy</button></span></div>
+        <pre id="cmd-emu"></pre>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-app">Window 2 · the app</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="app-start" hidden>Start app</button><button class="btn btn-neon btn-rose btn-sm" type="button" data-action="app-stop" hidden>Stop app</button><button class="copy" type="button" data-copy="cmd-app">Copy</button></span></div>
+        <pre id="cmd-app"></pre>
+      </div>
+    </section>
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">C</span>
+        <h3 class="step-title">Run the checks</h3>
+        <span class="says">The same ones the pull request runs, before you push.</span>
+      </div>
+      <p class="aside">
+        <b>If you changed anything in <code>functions/src</code>, commit the rebuilt <code>functions/lib</code> with it.</b>
+        The deploy ships the committed <code>lib</code> folder and does not build it.
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-checks">PowerShell · several minutes</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="checks" hidden>Run checks</button><button class="copy" type="button" data-copy="cmd-checks">Copy</button></span></div>
+        <pre id="cmd-checks"></pre>
+      </div>
+    </section>
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">D</span>
+        <h3 class="step-title">Free a stuck port</h3>
+        <span class="says">When a start says a port is taken.</span>
+      </div>
+      <p class="aside">The first line lists what is listening on the stack's ports, with a process id at the end of each row. Put that id in the second line.</p>
+      <div class="command">
+        <div class="command-bar"><span class="label" id="lbl-portfind">Find it</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="port-find" hidden>Find now</button><button class="copy" type="button" data-copy="cmd-portfind">Copy</button></span></div>
+        <pre id="cmd-portfind"></pre>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label">Stop it · replace 1234</span><span class="tools"><button class="copy" type="button" data-copy="cmd-portkill">Copy</button></span></div>
+        <pre id="cmd-portkill"></pre>
+      </div>
+      <div data-live hidden>
+        <p class="aside">Or free one here. It ends whatever is listening on that port. If that program runs as administrator, Windows asks for your approval when you press the button.</p>
+        <div class="controls-row" style="margin-top:10px">
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="app" data-confirm="End it?">Free the app port</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="auth" data-confirm="End it?">Free sign-in</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="firestore" data-confirm="End it?">Free database</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="storage" data-confirm="End it?">Free storage</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="functions" data-confirm="End it?">Free functions</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="ui" data-confirm="End it?">Free Emulator UI</button>
+          <button class="btn btn-neon btn-rose btn-sm" type="button" data-action="port-free" data-name="hub" data-confirm="End it?">Free the hub</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="action is-once" data-windows>
+      <div class="action-head">
+        <span class="mark">E</span>
+        <h3 class="step-title">Keep Windows off these ports</h3>
+        <span class="says">Optional. Needs administrator approval, once.</span>
+      </div>
+      <p class="aside">
+        Hyper-V, WSL and Docker let Windows reserve blocks of ports at each start, and a block can land on one the
+        stack uses. The stack already moves to a free port when that happens. This tells Windows to leave the usual
+        ports alone for good, so the numbers never change. <b>Pressing the button brings up the Windows administrator prompt.</b>
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label">PowerShell · run as administrator</span><span class="tools"><button class="btn btn-neon btn-purple btn-sm" type="button" data-action="ports-reserve" hidden>Reserve them · admin</button><button class="btn btn-sm" type="button" data-action="ports-unreserve" data-confirm="Undo it?" hidden>Undo · admin</button><button class="copy" type="button" data-copy="cmd-reserve">Copy</button></span></div>
+        <pre id="cmd-reserve"></pre>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ship -->
+  <h2 class="section-title">Ship it</h2>
+  <p class="section-lede">
+    Production deploys itself. A merge into <code>live</code> starts the
+    <em>Deploy to Cloud Run &amp; Firebase</em> workflow, which ships the web app to Cloud Run and deploys
+    hosting, Firestore rules and functions. Nothing on this page pushes to <code>live</code>.
+  </p>
+
+  <div class="actions">
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">S1</span>
+        <h3 class="step-title">Merge the pull request</h3>
+        <span class="says">On GitHub, once it is reviewed.</span>
+      </div>
+      <p class="aside">
+        Review and merge <a href="https://github.com/OmniFlexFitness/OmniTask/pull/213" target="_blank" rel="noopener">#213</a>,
+        then watch the run under <a href="https://github.com/OmniFlexFitness/OmniTask/actions" target="_blank" rel="noopener">Actions</a>.
+        If the deploy fails, read its log and fix forward with a new pull request.
+        <b>Do not push retry commits to <code>live</code></b>; that ships untested code.
+      </p>
+    </section>
+
+    <section class="action is-once">
+      <div class="action-head">
+        <span class="mark">S2</span>
+        <h3 class="step-title">Give CI its own key</h3>
+        <span class="says">Optional. Keeps the production key away from pull-request runs.</span>
+      </div>
+      <p class="aside">
+        Create a second key with a low spend limit, then add it at
+        <a href="https://github.com/OmniFlexFitness/OmniTask/settings/secrets/actions" target="_blank" rel="noopener">Settings, Secrets, Actions</a>
+        as a repository secret named exactly this. The PR check uses it when present and falls back to
+        <code>ANTHROPIC_API_KEY</code> when not.
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label">Secret name</span><span class="tools"><button class="copy" type="button" data-copy="cmd-ciname">Copy</button></span></div>
+        <pre id="cmd-ciname">ANTHROPIC_API_KEY_CI</pre>
+      </div>
+    </section>
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">S3</span>
+        <h3 class="step-title">Change the production key</h3>
+        <span class="says">Rotate it, or replace a placeholder.</span>
+      </div>
+      <p class="aside">
+        The first line signs you in to Firebase. The second asks for the new key and stores it in Secret
+        Manager without echoing it. The third redeploys the functions so they pick it up. Use a key made for
+        production, for example <code>omnitask-prod</code>, not the laptop's. Each of these asks you something, so
+        from this console each opens in its own terminal window.
+      </p>
+      <div class="command">
+        <div class="command-bar"><span class="label">Any shell</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="firebase-login" hidden>1 · Sign in</button><button class="btn btn-neon btn-sm" type="button" data-action="secret-set" hidden>2 · Set the key</button><button class="btn btn-neon btn-rose btn-sm" type="button" data-action="deploy-functions" data-confirm="Deploy to production?" hidden>3 · Deploy</button><button class="copy" type="button" data-copy="cmd-rotate">Copy</button></span></div>
+        <pre id="cmd-rotate"></pre>
+      </div>
+    </section>
+
+    <section class="action">
+      <div class="action-head">
+        <span class="mark">S4</span>
+        <h3 class="step-title">Read production's AI logs</h3>
+        <span class="says">When an AI button fails for real users.</span>
+      </div>
+      <div class="command">
+        <div class="command-bar"><span class="label">Any shell · signed in to Firebase</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="prod-logs" hidden>Read logs</button><button class="copy" type="button" data-copy="cmd-prodlog">Copy</button></span></div>
+        <pre id="cmd-prodlog"></pre>
+      </div>
+      <div class="controls" style="margin-top:0">
+        <div class="field">
+          <label for="prodfn">Function</label>
+          <select id="prodfn">
+            <option value="generateSubtasks" selected>generateSubtasks</option>
+            <option value="suggestTaskPriority">suggestTaskPriority</option>
+            <option value="suggestDueDate">suggestDueDate</option>
+            <option value="enhanceTaskDescription">enhanceTaskDescription</option>
+          </select>
+        </div>
+      </div>
+      <p class="expect">Lines from the AI code start with <code>[claude]</code>. Sign in to Firebase first (S3, step 1).</p>
+    </section>
+
+  </div>
+
+  <!-- advanced -->
+  <hr>
+  <details class="adv">
+    <summary>Advanced settings</summary>
+    <div class="adv-body">
+
+      <div class="panel">
+        <h3>Options</h3>
+        <p id="options-note">Changing these rewrites the commands above. They are remembered in this browser only.</p>
+        <div class="controls">
+          <div class="field">
+            <label for="repo">Repository folder</label>
+            <input type="text" id="repo" value="C:\Antigravity\OmniTask" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="branch">Branch</label>
+            <input type="text" id="branch" value="feature/local-dev-claude-ai" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+        <div class="controls-row" data-live data-windows hidden>
+          <button class="btn btn-sm" type="button" data-action="shortcut">Reinstall the shortcuts</button>
+          <button class="btn btn-sm" type="button" data-action="shortcut-remove" data-confirm="Remove both?">Remove the shortcuts</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Local overrides</h3>
+        <p>
+          These live in <code>functions/.env.local</code>, which only the emulator reads and git ignores. They
+          never reach production: the deploy runs from a clean checkout, so the production model is the
+          constant <code>DEFAULT_CLAUDE_MODEL</code> in <code>functions/src/ai/claude.ts</code>.
+        </p>
+        <div class="controls">
+          <div class="field">
+            <label for="model">Claude model, locally</label>
+            <select id="model">
+              <option value="claude-opus-5-5" selected>claude-opus-5-5 · the default</option>
+              <option value="claude-sonnet-5-5">claude-sonnet-5-5 · faster, lower cost</option>
+              <option value="claude-haiku-5-5">claude-haiku-5-5 · fastest, lowest cost</option>
+            </select>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="realmail">
+          <span class="t-text">
+            <span class="swname">Send real email from the emulator</span>
+            <span class="t-note">Off, every task change is rendered and logged as [mail-sink] instead of sent. On, it goes out over Gmail to the assignees and the admin inbox, and needs NODEMAILER_SMTP_PASSWORD in .secret.local.</span>
+          </span>
+        </label>
+        <div class="command boxed">
+          <div class="command-bar"><span class="label" id="lbl-env">functions/.env.local · contents</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="set-env" hidden>Save to the file</button><button class="copy" type="button" data-copy="cmd-env">Copy</button></span></div>
+          <pre id="cmd-env"></pre>
+        </div>
+        <div class="command boxed">
+          <div class="command-bar"><span class="label" id="lbl-envopen">Open the file</span><span class="tools"><button class="btn btn-neon btn-sm" type="button" data-action="open-env" hidden>Open the file</button><button class="copy" type="button" data-copy="cmd-envopen">Copy</button></span></div>
+          <pre id="cmd-envopen"></pre>
+        </div>
+        <p style="margin-top:14px">Restart the stack after saving. Only <code>claude-opus-5-5</code> is covered by the automated live check; run step 06 after switching models.</p>
+      </div>
+
+      <div class="panel">
+        <h3>Read an error</h3>
+        <p>Paste what the terminal, the AI dialog or step 06 printed. It is matched against the failures this stack is known to have, in your browser; nothing is sent anywhere.</p>
+        <div class="field" style="margin-top:14px">
+          <label for="diag">Output to read</label>
+          <textarea id="diag" spellcheck="false" autocomplete="off" placeholder="e.g. Error: spawn ...\functions\node_modules\.bin\firebase-functions EACCES"></textarea>
+        </div>
+        <div class="verdicts" id="verdicts" aria-live="polite">
+          <div class="verdict sev-idle"><span class="chip">Waiting</span><p>Paste some output above.</p></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>What picks up a change</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>What you changed</th><th>What happens</th></tr></thead>
+            <tbody>
+              <tr><td><code>src/**</code></td><td>The app rebuilds and the browser reloads on save.</td></tr>
+              <tr><td><code>functions/src/**</code></td><td>The watcher recompiles into <code>functions/lib</code> and the emulator reloads the functions. Commit <code>lib</code> with the change.</td></tr>
+              <tr><td><code>functions/.secret.local</code>, <code>.env.local</code></td><td>Read at startup only. Restart the stack.</td></tr>
+              <tr><td><code>firestore.rules</code>, <code>storage.rules</code></td><td>Restart the stack to be sure the emulators have the new rules.</td></tr>
+              <tr><td><code>package.json</code>, <code>functions/package.json</code></td><td>Run step 02 again, then restart the stack.</td></tr>
+              <tr><td>A port in <code>firebase.json</code></td><td>Change the same port in <code>src/environments/environment.local.ts</code>, then restart.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Local and production, side by side</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Concern</th><th>Production</th><th>Local</th></tr></thead>
+            <tbody>
+              <tr><td>Firebase project</td><td><code>omnitask-475422</code></td><td><code>demo-omnitask</code>, offline only</td></tr>
+              <tr><td>App configuration</td><td><code>environment.ts</code></td><td><code>environment.local.ts</code>, swapped in by the local configuration</td></tr>
+              <tr><td>Claude key</td><td>Secret Manager, <code>ANTHROPIC_API_KEY</code></td><td><code>functions/.secret.local</code></td></tr>
+              <tr><td>Claude model</td><td><code>DEFAULT_CLAUDE_MODEL</code> in code</td><td>Same, or <code>ANTHROPIC_MODEL</code> in <code>.env.local</code></td></tr>
+              <tr><td>Email</td><td>Sent over Gmail SMTP</td><td>Captured and logged</td></tr>
+              <tr><td>Super admin</td><td colspan="2">The one address in <code>firestore.rules</code>, in both. Locally, type it into the fake Google popup.</td></tr>
+              <tr><td>Who can use the console</td><td>Not applicable</td><td>Anyone signed in to this computer. Its checks keep other websites out, not other programs on the same machine.</td></tr>
+              <tr><td>Plain <code>ng serve</code> or <code>yarn start</code></td><td colspan="2">Talks to <em>production</em> Firebase. Use step 04 or <code>yarn start:local</code> for local work.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>What does not run locally</h3>
+        <ul>
+          <li><em>Google features</em>: Tasks sync, Contacts, Sheets and Calendar. The emulator's Google token is fake, and Google's own services reject it.</li>
+          <li><em>GitHub Issues integration</em>: needs the GitHub App secrets.</li>
+          <li><em>Scheduled functions</em> (<code>scheduledGoogleTasksSync</code>, <code>checkScheduledReminders</code>): not loaded, because the Pub/Sub emulator is not started.</li>
+          <li><em>Firebase Extensions</em>: image resize, user-data deletion, speech-to-text and the others are production-only.</li>
+          <li><em>The Flutter mobile app</em>: not wired to the emulators yet.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>When it misbehaves</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr><td>AI dialog: AI features are not configured</td><td>The key line still says <code>placeholder</code>, or the stack was not restarted</td><td>Step 03, then restart the stack</td></tr>
+              <tr><td>AI dialog: the model is not available to this API key</td><td>The key's workspace cannot use that model</td><td>Pick another under Local overrides</td></tr>
+              <tr><td>AI dialog: too long for the AI assistant</td><td>Title over 300 characters, or description over 8,000</td><td>Shorten the text</td></tr>
+              <tr><td>No sample projects, or Failed to seed data</td><td>Sample projects are created on the first visit to Workspace, and only for an admin; the rules refuse them for an ordinary member</td><td>Sign in with the admin email (step 05) and open Workspace, or create a project by hand</td></tr>
+              <tr><td>Blank page at <code>localhost:4200</code></td><td>Packages are older than the lockfile</td><td>Step 02, then restart the stack</td></tr>
+              <tr><td><code>Java ... was not found on PATH</code></td><td>No JDK, or a terminal opened before it was installed</td><td>Install JDK 21, open a new terminal</td></tr>
+              <tr><td><code>spawn ... firebase-functions EACCES</code></td><td>A stale <code>functions/node_modules</code> from before it left git</td><td>Step 02</td></tr>
+              <tr><td><code>Unable to access secret environment variables</code></td><td>A blank value in <code>.secret.local</code></td><td>Put <code>placeholder</code> on every line you do not use</td></tr>
+              <tr><td><code>Unable to parse JSON ... upstream</code></td><td>An HTTP proxy is catching the emulators' own local calls</td><td>Use step 04, which works around it, not a hand-typed <code>firebase emulators:start</code></td></tr>
+              <tr><td>A port is taken</td><td>An earlier run was closed without stopping</td><td>Free a stuck port</td></tr>
+              <tr><td>A port shows a different number than usual</td><td>Windows reserved the usual one for this session (Hyper-V, WSL and Docker do this), so the stack moved</td><td>Nothing: the app and the links follow. It can change after a restart</td></tr>
+              <tr><td>Local app shows production data</td><td>Started with <code>ng serve</code> or <code>yarn start</code></td><td>Stop it; use step 04</td></tr>
+              <tr><td>Yesterday's local data is gone</td><td>The terminal window was closed, so nothing was saved</td><td>Stop with the Stop button or Ctrl+C</td></tr>
+              <tr><td>Git Bash: <code>cd: C:AntigravityOmniTask</code></td><td>Unquoted backslashes; bash read them as escapes</td><td>Switch Commands for to Git Bash</td></tr>
+              <tr><td>Odd template or schema errors after a big change</td><td>Angular's build cache</td><td>Delete <code>.angular/cache</code>, restart</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </details>
+
+  <footer>
+    <p id="footer-text">
+      On claude.ai this page writes commands and reads error text; it runs sandboxed and cannot reach the laptop.
+      Opened from its shortcut it is served on this machine by <code>scripts/launch-console.mjs</code>, and its
+      buttons run a fixed list of actions. The full guide is <code>docs/local-development.md</code>.
+    </p>
+    <span class="build-line">OmniFlex Fitness · OmniTask Build Console · local project demo-omnitask · production omnitask-475422 · rev 2026-11-09</span>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DEFAULT_REPO = "C:\\Antigravity\\OmniTask";
+  var PR_BRANCH = "feature/local-dev-claude-ai";
+  var LIVE_BRANCH = "live";
+  var DEFAULT_MODEL = "claude-opus-5-5";
+  var CLONE_URL = "https://github.com/OmniFlexFitness/OmniTask.git";
+  var PROJECT = "omnitask-475422";
+  var PORTS = [4200, 5001, 8080, 9099, 9199, 4000, 4400];
+  var STORE = "omnitask-build-console-v1";
+
+  /* Present only when scripts/launch-console.mjs serves this page on the laptop. */
+  var LIVE = (typeof window.__OMNITASK_CONSOLE__ === "object" && window.__OMNITASK_CONSOLE__ &&
+    typeof window.__OMNITASK_CONSOLE__.token === "string") ? window.__OMNITASK_CONSOLE__ : null;
+
+  function $(id) { return document.getElementById(id); }
+  function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+
+  function toWin(p) { return String(p || "").trim().replace(/[\\\/]+$/, ""); }
+  function toPosix(win) {
+    var s = toWin(win).replace(/\\/g, "/");
+    var m = s.match(/^([A-Za-z]):\/(.*)$/);
+    if (m) s = "/" + m[1].toLowerCase() + "/" + m[2];
+    return s;
+  }
+  /* A path is left bare only when every character is harmless to the shell; anything else is
+     single-quoted, where neither shell expands or splits it. */
+  function psQuote(p) { return /^[A-Za-z0-9_.:\\\/-]+$/.test(p) ? p : "'" + p.replace(/'/g, "''") + "'"; }
+  function shQuote(p) { return /^[A-Za-z0-9_.\/-]+$/.test(p) ? p : "'" + p.replace(/'/g, "'\\''") + "'"; }
+  function cleanBranch(b) {
+    var s = String(b || "").trim();
+    return /^[A-Za-z0-9._\/-]+$/.test(s) ? s : PR_BRANCH;
+  }
+
+  /* The two shells differ in path form and in how a value is read out of a
+     file, so each command is written out for each rather than substituted. */
+  var SHELLS = {
+    powershell: {
+      name: "PowerShell",
+      repo: function (o) { return psQuote(toWin(o.repo)); },
+      key: function () {
+        return "if (!(Test-Path functions\\.secret.local)) { Copy-Item functions\\.secret.local.example functions\\.secret.local }\n" +
+          "notepad functions\\.secret.local";
+      },
+      smoke: function () {
+        return "$env:ANTHROPIC_API_KEY = (@(Get-Content functions\\.secret.local) -match '^ANTHROPIC_API_KEY=')[0] -replace '^ANTHROPIC_API_KEY=',''\n" +
+          "node functions\\scripts\\ai-smoke.mjs";
+      },
+      reset: function (o) { return "Remove-Item -Recurse -Force " + psQuote(toWin(o.repo) + "\\.emulator-data"); },
+      portfind: function () {
+        return "Get-NetTCPConnection -State Listen -LocalPort " + PORTS.join(",") +
+          " -ErrorAction SilentlyContinue | Select-Object LocalPort, OwningProcess";
+      },
+      portkill: function () { return "Stop-Process -Id 1234 -Force"; },
+      envopen: function () { return "notepad functions\\.env.local"; }
+    },
+    bash: {
+      name: "Git Bash",
+      repo: function (o) { return shQuote(toPosix(o.repo)); },
+      key: function () {
+        return "[ -f functions/.secret.local ] || cp functions/.secret.local.example functions/.secret.local\n" +
+          "notepad 'functions\\.secret.local'";
+      },
+      smoke: function () {
+        return "ANTHROPIC_API_KEY=\"$(grep '^ANTHROPIC_API_KEY=' functions/.secret.local | cut -d= -f2- | tr -d '\\r')\" node functions/scripts/ai-smoke.mjs";
+      },
+      reset: function (o) { return "rm -rf " + shQuote(toPosix(o.repo) + "/.emulator-data"); },
+      portfind: function () {
+        return "netstat -ano | grep LISTENING | grep -E ':(" + PORTS.join("|") + ") '";
+      },
+      portkill: function () { return "taskkill //PID 1234 //F"; },
+      envopen: function () { return "notepad 'functions\\.env.local'"; }
+    }
+  };
+
+  function build(o) {
+    var sh = SHELLS[o.shell];
+    var repo = sh.repo(o);
+    var cd = "cd " + repo + "\n";
+    var git = "git -C " + repo;
+    var fb = "npx --yes firebase-tools@15";
+
+    var env = [];
+    if (o.model !== DEFAULT_MODEL) env.push("ANTHROPIC_MODEL=" + o.model);
+    if (o.realmail) env.push("EMULATOR_SEND_REAL_EMAIL=true");
+
+    return {
+      "cmd-pull": git + " fetch origin\n" + git + " switch " + o.branch + "\n" + git + " pull --ff-only",
+      "cmd-clone": "git clone " + CLONE_URL + " " + repo,
+      "cmd-install": cd + "yarn install\nnpm --prefix functions ci",
+      "cmd-key": cd + sh.key(o),
+      "cmd-start": cd + "yarn dev:local",
+      "cmd-smoke": cd + sh.smoke(o),
+      "cmd-reset": sh.reset(o),
+      "cmd-emu": cd + "yarn emulators",
+      "cmd-app": cd + "yarn start:local",
+      "cmd-checks": cd + "npm --prefix functions run build\nnpm --prefix functions test\nyarn lint\nyarn build\n" +
+        "yarn test --no-watch --no-progress --browsers=ChromeHeadless\nnode --test scripts/launch-console.test.mjs",
+      "cmd-portfind": sh.portfind(o),
+      "cmd-portkill": sh.portkill(o),
+      "cmd-rotate": fb + " login\n" + fb + " functions:secrets:set ANTHROPIC_API_KEY --project " + PROJECT + "\n" +
+        cd + fb + " deploy --only functions --project " + PROJECT,
+      "cmd-env": env.length ? env.join("\n") : "",
+      "cmd-envopen": cd + sh.envopen(o),
+      "cmd-shortcut": cd + "yarn console:shortcut",
+      "cmd-prodlog": fb + " functions:log --only " + (o.prodfn || "generateSubtasks") + " --project " + PROJECT,
+      "cmd-reserve": [4200, 9099, 8080, 9199, 5001, 4000, 4400].map(function (p) {
+        return "netsh interface ipv4 add excludedportrange protocol=tcp startport=" + p + " numberofports=1 store=persistent";
+      }).join("\n")
+    };
+  }
+
+  /* ── reading an error ──────────────────────────────────────────────────
+     Each entry: a pattern over the pasted text, a severity, and the fix. */
+  var KNOWN = [
+    { re: /ai-smoke OK/i, sev: "ok", title: "The key works",
+      fix: "Claude answered through the same code the AI buttons use. Nothing to fix." },
+    { re: /AI features are not configured|ANTHROPIC_API_KEY is missing or invalid/i, sev: "bad", title: "No usable key",
+      fix: "The ANTHROPIC_API_KEY line in functions/.secret.local is blank, still says placeholder, or holds a key Anthropic rejected. Redo step 03, then restart the stack." },
+    { re: /ANTHROPIC_API_KEY is not set; nothing to test/i, sev: "warn", title: "The check did not see the key",
+      fix: "Run both lines of step 06 in the same window. The first line loads the key for that window only." },
+    { re: /is not available to this API key/i, sev: "bad", title: "Model not available to this key",
+      fix: "Choose another model under Local overrides, save functions/.env.local and restart the stack. In production the model is DEFAULT_CLAUDE_MODEL in functions/src/ai/claude.ts." },
+    { re: /too long for the AI assistant/i, sev: "warn", title: "Input over the limit",
+      fix: "AI calls accept a title up to 300 characters and a description or project context up to 8,000. Shorten the text." },
+    { re: /too many requests|rate.?limit|(?:status|code|HTTP|error)\D{0,3}429\b/i, sev: "warn", title: "Rate limited",
+      fix: "Wait a minute and try again. If it keeps happening, check the key's workspace limits in the Claude Console." },
+    { re: /Could not reach Claude|ENOTFOUND|ECONNRESET|ETIMEDOUT/i, sev: "warn", title: "No route to the Claude API",
+      fix: "Check the internet connection. The Claude API is the one part of the stack that is not on the laptop." },
+    { re: /took too long to respond|deadline-exceeded/i, sev: "warn", title: "Claude timed out",
+      fix: "Try again. The function already retried once before giving up." },
+    { re: /declined this request/i, sev: "warn", title: "Claude declined the request",
+      fix: "A safety check refused that text. Rephrase the task and try again." },
+    { re: /\bEACCES\b[^\n]*firebase-functions|firebase-functions[^\n]*\bEACCES\b/, sev: "bad", title: "Stale functions/node_modules",
+      fix: "Run step 02 again (it reinstalls the functions packages), then start again." },
+    { re: /Unable to parse JSON[\s\S]*upstream/i, sev: "bad", title: "A proxy is catching local calls",
+      fix: "The Firebase CLI sends even its own local requests through HTTP_PROXY / HTTPS_PROXY. Start with step 04 (yarn dev:local) or yarn emulators, which remove those variables for the emulators." },
+    { re: /Unable to access secret environment variables/i, sev: "warn", title: "A blank secret",
+      fix: "A line in functions/.secret.local has no value, so the emulator went looking in Google Cloud. Put the word placeholder on every line you do not use." },
+    { re: /java[^\n]*(not found|not recognized)|JDK 21\+\) is required|Unsupported java version|java: command not found/i, sev: "bad", title: "Java is missing or too old",
+      fix: "Install Temurin JDK 21 or newer, then open a new terminal so PATH is refreshed." },
+    { re: /yarn[^\n]*(not recognized|command not found)/i, sev: "bad", title: "Yarn is not installed",
+      fix: "Run: npm install -g yarn   then open a new terminal." },
+    { re: /EADDRINUSE|port[^\n]*(taken|already in use|is not open)|address already in use|forbidden by its access permissions|listen EACCES/i, sev: "bad", title: "A port cannot be opened",
+      fix: "Either something from an earlier run still holds it (use Free a stuck port under Day to day), or Windows has reserved it for this session, which Hyper-V, WSL and Docker do. Current versions of the stack move to a free port by themselves in the second case: pull the latest code and start again." },
+    { re: /Failed to update Vite client|@vite\/client/i, sev: "bad", title: "The dev server's packages are out of step",
+      fix: "node_modules is older than the lockfile. Run step 02 again, then restart the stack." },
+    { re: /Directory "[^"]*emulator-data" does not exist/i, sev: "warn", title: "No saved data to import",
+      fix: "Start with yarn dev:local or yarn emulators. They skip the import until a first run has saved something." },
+    { re: /Emulators did not become ready/i, sev: "warn", title: "The emulators did not come up in time",
+      fix: "Scroll up for the first error. If there is none, pull the latest code and start again: older copies of the launcher timed out while the Firebase tools were still downloading on a first run." },
+    { re: /Cannot find module[^\n]*lib[\\\/]ai[\\\/]claude/i, sev: "bad", title: "The functions are not built",
+      fix: "Run: npm --prefix functions run build" },
+    { re: /Cannot find module/i, sev: "warn", title: "A package is missing",
+      fix: "Usually stale installs after switching branches. Run step 02 again." },
+    { re: /error TS\d+/i, sev: "bad", title: "TypeScript error in the functions",
+      fix: "Fix the file and line it names in functions/src. The watcher rebuilds as soon as it compiles." },
+    { re: /PERMISSION_DENIED|Missing or insufficient permissions|No matching allow statements/i, sev: "warn", title: "The security rules said no",
+      fix: "Locally the same rules apply as in production. Sample projects are created on the first visit to Workspace, and the rules refuse them for an ordinary account: sign in with the admin email (step 05) and open Workspace, or create a project by hand. If you are the admin, sign out and back in; an expired local session looks the same." },
+    { re: /local changes[^\n]*would be overwritten/i, sev: "warn", title: "Uncommitted edits block the switch",
+      fix: "Run git stash, switch branches, then decide what to keep." },
+    { re: /Not possible to fast-forward|diverg/i, sev: "warn", title: "The branch has diverged",
+      fix: "Your local branch has commits the remote does not, and the reverse. Pull by hand and decide how to combine them." },
+    { re: /requested "node" version "20" doesn't match|outdated version of firebase-functions|punycode/i, sev: "info", title: "Harmless warning",
+      fix: "The emulator prints this on every start. It does not affect the stack." }
+  ];
+
+  function diagnose(text) {
+    var hits = [];
+    if (!text.trim()) return hits;
+    for (var i = 0; i < KNOWN.length; i++) {
+      if (KNOWN[i].re.test(text)) hits.push(KNOWN[i]);
+    }
+    /* "Cannot find module" is the generic form of the built-functions case. */
+    var specific = hits.some(function (h) { return h.title === "The functions are not built"; });
+    if (specific) hits = hits.filter(function (h) { return h.title !== "A package is missing"; });
+    return hits;
+  }
+
+  function renderVerdicts(text) {
+    var box = $("verdicts");
+    var hits = diagnose(text);
+    box.textContent = "";
+    function add(sev, chip, body) {
+      var d = document.createElement("div");
+      d.className = "verdict sev-" + (sev || "idle");
+      var c = document.createElement("span"); c.className = "chip"; c.textContent = chip;
+      var p = document.createElement("p"); p.textContent = body;
+      d.appendChild(c); d.appendChild(p); box.appendChild(d);
+    }
+    if (!text.trim()) { add("", "Waiting", "Paste some output above."); return; }
+    if (!hits.length) {
+      add("", "No match", "Nothing here matches a failure this stack is known to have. The first line that says Error is usually the one that matters; the troubleshooting table below covers the rest.");
+      return;
+    }
+    hits.forEach(function (h) { add(h.sev, h.title, h.fix); });
+  }
+
+  /* ── state ─────────────────────────────────────────────────────────── */
+  var state = { shell: "powershell", repo: DEFAULT_REPO, branch: PR_BRANCH, model: DEFAULT_MODEL, realmail: false, done: {} };
+  /* What the laptop reports, in live mode. */
+  var live = { s: null, seq: 0, lost: "", synced: false, derived: {}, smokeOk: false, logLines: 0, dirty: { model: false, realmail: false } };
+
+  function load() {
+    try {
+      var raw = window.localStorage.getItem(STORE);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (s && typeof s === "object") {
+        if (s.shell === "powershell" || s.shell === "bash") state.shell = s.shell;
+        if (typeof s.repo === "string" && s.repo.trim()) state.repo = s.repo;
+        if (typeof s.branch === "string") state.branch = cleanBranch(s.branch);
+        if (typeof s.model === "string" && /^claude-[a-z0-9-]+$/.test(s.model)) state.model = s.model;
+        state.realmail = s.realmail === true;
+        if (s.done && typeof s.done === "object") state.done = s.done;
+      }
+    } catch (e) { /* storage unavailable: defaults stand */ }
+  }
+  function save() {
+    try { window.localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  function options() {
+    var repo = toWin(state.repo) || DEFAULT_REPO;
+    var branch = cleanBranch(state.branch);
+    if (LIVE) {
+      repo = toWin(LIVE.repo) || repo;
+      if (live.s && live.s.git && live.s.git.branch) branch = cleanBranch(live.s.git.branch);
+    }
+    return { shell: state.shell, repo: repo, branch: branch, model: state.model, realmail: state.realmail, prodfn: $("prodfn").value };
+  }
+
+  function render() {
+    var o = options();
+    var sh = SHELLS[o.shell];
+    var cmds = build(o);
+    /* An empty override file is a real answer, not a blank box. */
+    var envEmpty = !cmds["cmd-env"];
+    if (envEmpty) cmds["cmd-env"] = "(nothing to override; the file is not needed)";
+    /* Written only when it changed: rewriting the node would drop a selection on every poll. */
+    Object.keys(cmds).forEach(function (id) {
+      var el = $(id);
+      if (el && el.textContent !== cmds[id]) el.textContent = cmds[id];
+    });
+    document.querySelector('[data-copy="cmd-env"]').disabled = envEmpty;
+
+    $("shell-ps").setAttribute("aria-pressed", String(o.shell === "powershell"));
+    $("shell-bash").setAttribute("aria-pressed", String(o.shell === "bash"));
+    $("src-pr").setAttribute("aria-pressed", String(o.branch === PR_BRANCH));
+    $("src-live").setAttribute("aria-pressed", String(o.branch === LIVE_BRANCH));
+
+    ["lbl-pull", "lbl-install", "lbl-key", "lbl-reset"].forEach(function (id) { $(id).textContent = sh.name; });
+    $("lbl-start").textContent = sh.name + " · stays open";
+    $("lbl-smoke").textContent = sh.name + " · second window";
+    $("lbl-checks").textContent = sh.name + " · several minutes";
+    $("lbl-emu").textContent = "Window 1 · emulators · " + sh.name;
+    $("lbl-app").textContent = "Window 2 · the app · " + sh.name;
+    $("lbl-portfind").textContent = "Find it · " + sh.name;
+    $("lbl-envopen").textContent = "Open the file · " + sh.name;
+    $("lbl-shortcut").textContent = sh.name + " · once";
+
+    $("repo-line").textContent = o.shell === "bash" ? toPosix(o.repo) : o.repo;
+    $("branch-line").textContent = o.branch;
+
+    var warn = $("branch-warn");
+    var noStack = LIVE ? !!(live.s && live.s.setup && live.s.setup.hasLocalDev === false) : (o.branch !== PR_BRANCH);
+    if (!noStack) {
+      warn.hidden = true;
+    } else {
+      warn.hidden = false;
+      warn.textContent = "";
+      var b = document.createElement("b");
+      b.textContent = LIVE ? "This branch has no local stack. " : "Not the PR branch. ";
+      warn.appendChild(b);
+      warn.appendChild(document.createTextNode(
+        "The local stack (yarn dev:local, functions/.secret.local.example, the Claude code) exists on " +
+        PR_BRANCH + " and reaches " + LIVE_BRANCH + " only when #213 is merged. Until then, steps 03 to 06 fail on " + o.branch + "."));
+    }
+
+    each(".action[data-step]", function (sec) {
+      var id = sec.getAttribute("data-step");
+      var derived = Object.prototype.hasOwnProperty.call(live.derived, id);
+      var on = derived ? live.derived[id] : state.done[id] === true;
+      sec.classList.toggle("is-done", on);
+      var box = $("done-" + id);
+      if (box) { box.checked = on; box.disabled = derived; box.parentNode.title = derived ? "Detected from this laptop" : ""; }
+    });
+
+    var repoInput = $("repo"), branchInput = $("branch");
+    if (LIVE) {
+      repoInput.value = o.repo; branchInput.value = o.branch;
+    } else {
+      if (repoInput.value !== state.repo && document.activeElement !== repoInput) repoInput.value = state.repo;
+      if (branchInput.value !== state.branch && document.activeElement !== branchInput) branchInput.value = state.branch;
+    }
+    $("model").value = state.model;
+    $("realmail").checked = state.realmail;
+  }
+
+  function set(patch) {
+    Object.keys(patch).forEach(function (k) { state[k] = patch[k]; });
+    save(); render();
+  }
+
+  /* ── copy ──────────────────────────────────────────────────────────── */
+  function selectText(el) {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+  }
+  function flash(btn, label) {
+    var was = btn.getAttribute("data-label") || btn.textContent;
+    btn.setAttribute("data-label", was);
+    btn.textContent = label;
+    btn.classList.add("is-copied");
+    window.setTimeout(function () { btn.textContent = was; btn.classList.remove("is-copied"); }, 1600);
+  }
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target.closest ? ev.target.closest(".copy[data-copy]") : null;
+    if (!btn || btn.disabled) return;
+    var el = $(btn.getAttribute("data-copy"));
+    if (!el) return;
+    var text = el.id === "log" ? el.innerText : el.textContent;
+    var fallback = function () { selectText(el); flash(btn, "Selected · Ctrl+C"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash(btn, "Copied"); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  /* ── live mode: the laptop answers ─────────────────────────────────────
+     Every request carries the per-run token the launcher wrote into this page.
+     The page only ever names an action; the launcher owns what each one runs. */
+  var ACTION_LABEL = { start: "Start", stop: "Stop", pull: "Pull", install: "Install", smoke: "Key test", checks: "Checks",
+    "open-key": "Open key file", "open-env": "Open overrides", "set-env": "Save overrides", "reset-data": "Delete saved data",
+    "open-folder": "Open folder", quit: "Quit", tools: "Tool check", "app-start": "Start app", "app-stop": "Stop app",
+    "port-find": "Port check", "port-free": "Free a port", "ports-reserve": "Reserve ports", "ports-unreserve": "Release ports",
+    shortcut: "Shortcuts", "shortcut-remove": "Remove shortcuts", terminal: "Terminal", "firebase-login": "Firebase sign-in",
+    "secret-set": "Set production key", "deploy-functions": "Deploy functions", "prod-logs": "Production logs" };
+  var JOB_ACTIONS = { start: 1, pull: 1, install: 1, smoke: 1, checks: 1, tools: 1, "app-start": 1, "port-find": 1, "port-free": 1,
+    "ports-reserve": 1, "ports-unreserve": 1, shortcut: 1, "shortcut-remove": 1, "prod-logs": 1 };
+  var WINDOW_ACTIONS = { terminal: 1, "firebase-login": 1, "secret-set": 1, "deploy-functions": 1 };
+
+  function call(path, body) {
+    var opt = { method: body ? "POST" : "GET", cache: "no-store", headers: { "X-Console-Token": LIVE.token } };
+    if (body) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+    return fetch(path, opt).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, body: j }; });
+    });
+  }
+
+  function setNotice(text, sev) {
+    var n = $("notice");
+    n.className = "warn-line notice sev-" + (sev || "bad");
+    n.textContent = text || "";
+    n.hidden = !text;
+  }
+
+  function lost(kind) {
+    live.lost = kind;
+    $("mode-dot").className = "live-dot is-lost";
+    $("mode-text").textContent = "Disconnected";
+    setNotice(kind === "restarted"
+      ? "The console was restarted, so this window holds an old pass. Reload it (Ctrl+R)."
+      : "The console on this laptop is not answering. Open it again from the OmniTask Build Console shortcut.");
+    each("[data-action]", function (b) { b.disabled = true; });
+  }
+
+  function jobRunning(s) { return !!(s.job && s.job.state === "running"); }
+
+  /* Why an action cannot run right now, or "" when it can. Mirrors the launcher's own checks. */
+  function blocked(action, s) {
+    var st = s.stack.state, setup = s.setup;
+    switch (action) {
+      case "start":
+        if (!setup.hasLocalDev) return "This branch has no local stack.";
+        if (st === "external") return "The stack is already running outside the console.";
+        if (st !== "stopped") return "The stack is already " + st + ".";
+        if (jobRunning(s)) return "Wait for the running job to finish.";
+        return "";
+      case "stop":
+        return (st === "starting" || st === "running") ? "" : (st === "external" ? "It was started outside the console; stop it in its own terminal." : "Nothing is running.");
+      case "pull": case "install":
+        if (st !== "stopped") return "Stop the stack first.";
+        return jobRunning(s) ? "Wait for the running job to finish." : "";
+      case "smoke":
+        if (setup.secretFile !== "set") return "Add the Claude key first (step 03).";
+        if (!setup.functionsBuilt) return "Install first (step 02) so the functions are built.";
+        return jobRunning(s) ? "Wait for the running job to finish." : "";
+      case "checks":
+        return jobRunning(s) ? "Wait for the running job to finish." : "";
+      case "reset-data":
+        if (st !== "stopped") return "Stop the stack first.";
+        return setup.savedData ? "" : "There is no saved data.";
+      case "tools": case "port-find": case "prod-logs": case "shortcut": case "shortcut-remove": case "port-free": case "ports-reserve": case "ports-unreserve":
+        return jobRunning(s) ? "Wait for the running job to finish." : "";
+      case "app-start":
+        if (!setup.hasLocalDev) return "This branch has no local stack.";
+        if (s.stack.mode === "full" && st !== "stopped") return "The stack is already running the app.";
+        if (s.app && s.app.state !== "stopped") return "The app is already " + s.app.state + ".";
+        return "";
+      case "app-stop":
+        return (s.app && (s.app.state === "running" || s.app.state === "starting")) ? "" : "The app was not started from here.";
+      default:
+        return "";
+    }
+  }
+
+  /* Windows can reserve a port for the session; the stack then moves to a free one and reports it.
+     Tiles, addresses and links follow the port actually in use. Clicking a tile opens the service:
+     the app itself, or that emulator's page in the Emulator UI. */
+  var UI_PAGE = { auth: "/auth", firestore: "/firestore", storage: "/storage", functions: "/functions", ui: "/" };
+  function paintPorts(list) {
+    var ui = 4000;
+    list.forEach(function (p) { if (p.name === "ui" && typeof p.port === "number") ui = p.port; });
+    list.forEach(function (p) {
+      var tile = document.querySelector('.port[data-name="' + p.name + '"]');
+      if (!tile || typeof p.port !== "number") return;
+      tile.classList.toggle("is-open", p.open === true);
+      var no = tile.querySelector(".no"), shown = ":" + p.port;
+      if (no.textContent !== shown) no.textContent = shown;
+      var moved = typeof p.default === "number" && p.default !== p.port;
+      var raw = "http://" + (p.name === "app" ? "localhost" : "127.0.0.1") + ":" + p.port;
+      var open = p.name === "app" ? raw : "http://127.0.0.1:" + ui + UI_PAGE[p.name];
+      var link = $("open-" + p.name), code = $("url-" + p.name);
+      if (link.getAttribute("href") !== open) link.setAttribute("href", open);
+      link.title = "Open " + open + (moved ? " (moved from " + p.default + ": that port could not be opened on this machine)" : "");
+      if (code.textContent !== raw) code.textContent = raw;
+      if (p.name === "app") {
+        $("link-app").href = raw;
+        var stepLink = $("link-app-step"); stepLink.href = raw;
+        if (stepLink.textContent !== raw) stepLink.textContent = raw;
+      }
+      if (p.name === "ui") $("link-ui").href = raw;
+    });
+  }
+
+  function chip(sev, text) {
+    var t = document.createElement("span");
+    t.className = "tag sev-" + sev; t.textContent = text;
+    return t;
+  }
+  function major(v) { var m = /(\d+)/.exec(String(v || "")); return m ? parseInt(m[1], 10) : 0; }
+  function ago(iso) {
+    var t = Date.parse(iso || ""); if (!t) return "";
+    var s = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (s < 90) return s + " s";
+    if (s < 5400) return Math.round(s / 60) + " min";
+    return Math.round(s / 3600) + " h";
+  }
+
+  var STACK_VIEW = {
+    stopped: ["idle", "Stopped"], starting: ["warn", "Starting"], running: ["ok", "Running"],
+    stopping: ["warn", "Stopping"], external: ["warn", "Running outside the console"]
+  };
+
+  function applyState(s) {
+    if (!s || !s.stack || !s.setup) return;
+    var first = !live.synced;
+    live.s = s;
+    if (live.lost) { live.lost = ""; setNotice(""); }
+    $("mode-dot").className = "live-dot is-on";
+    $("mode-text").textContent = "Live on this laptop";
+
+    /* The two override controls follow functions/.env.local on every poll, unless the person has
+       changed one here and not saved it yet. Saving then sends only what they changed, so a line
+       edited by hand in the file is never overwritten by a stale value from this page. */
+    if (s.setup.env) {
+      if (!live.dirty.model && typeof s.setup.env.model === "string" && /^claude-[a-z0-9-]+$/.test(s.setup.env.model)) state.model = s.setup.env.model;
+      if (!live.dirty.realmail) state.realmail = s.setup.env.realmail === true;
+    }
+    if (first) {
+      live.synced = true;
+      if (LIVE.platform && LIVE.platform !== "win32") state.shell = "bash";
+    }
+
+    var view = STACK_VIEW[s.stack.state] || ["idle", s.stack.state];
+    /* The launcher reports "running" once the app's dev server is started; the first compile takes longer. */
+    var appOpen = (s.ports || []).some(function (p) { return (p.name === "app" || p.port === 4200) && p.open === true; });
+    var compiling = s.stack.state === "running" && s.stack.mode === "full" && !appOpen;
+    if (compiling) view = ["warn", "Backend up · app still compiling"];
+    $("deck-state").className = "deck-state sev-" + view[0];
+    $("stack-tag").textContent = view[1] + (s.stack.mode === "emulators" && s.stack.state !== "stopped" ? " · backend only" : "");
+    var since = "";
+    if (s.stack.state === "running" && s.stack.since) since = "up " + ago(s.stack.since);
+    else if (s.stack.state === "stopped" && s.stack.lastExit && typeof s.stack.lastExit.code === "number" && s.stack.lastExit.code !== 0) since = "last run exited with code " + s.stack.lastExit.code;
+    $("stack-since").textContent = since;
+
+    paintPorts(s.ports || []);
+
+    var chips = $("chips"); chips.textContent = "";
+    var t = s.tools || {};
+    chips.appendChild(chip(major(t.node) >= 20 ? "ok" : "bad", t.node ? "Node " + String(t.node).replace(/^v/, "") : "Node missing"));
+    chips.appendChild(chip(major(t.java) >= 21 ? "ok" : (t.java ? "warn" : "bad"), t.java ? "Java " + t.java : "Java missing"));
+    chips.appendChild(chip(t.yarn ? "ok" : "bad", t.yarn ? "Yarn " + t.yarn : "Yarn missing"));
+    chips.appendChild(chip(s.setup.rootDeps && s.setup.functionsDeps ? "ok" : "warn", s.setup.rootDeps && s.setup.functionsDeps ? "Packages installed" : "Packages missing"));
+    chips.appendChild(chip(s.setup.secretFile === "set" ? "ok" : "warn",
+      s.setup.secretFile === "set" ? "Claude key set" : (s.setup.secretFile === "placeholder" ? "Claude key not added" : "No key file yet")));
+    chips.appendChild(chip(s.setup.savedData ? "info" : "idle", s.setup.savedData ? "Saved data present" : "No saved data"));
+    if (s.git && s.git.branch) {
+      var g = s.git.branch + (s.git.head ? " @ " + s.git.head : "");
+      if (s.git.behind) g += " · " + s.git.behind + " behind";
+      if (s.git.dirty) g += " · " + s.git.dirty + " changed";
+      chips.appendChild(chip(s.git.behind ? "warn" : "info", g));
+    }
+
+    /* Steps the laptop can answer for itself. */
+    live.derived = {
+      "00": major(t.node) >= 20 && major(t.java) >= 21 && !!t.yarn,
+      "02": !!(s.setup.rootDeps && s.setup.functionsDeps),
+      "03": s.setup.secretFile === "set",
+      "04": (s.stack.state === "running" && !compiling) || s.stack.state === "external"
+    };
+    if (s.job && s.job.action === "smoke" && s.job.state === "ok") live.smokeOk = true;
+    if (live.smokeOk) live.derived["06"] = true;
+
+    var job = s.job, jv = ["idle", "Idle"];
+    if (job) {
+      var name = ACTION_LABEL[job.action] || job.action;
+      jv = job.state === "running" ? ["warn", name + " · running"] : (job.state === "ok" ? ["ok", name + " · done"] : ["bad", name + " · failed" + (typeof job.exitCode === "number" ? " (" + job.exitCode + ")" : "")]);
+    }
+    $("job-state").className = "deck-state sev-" + jv[0];
+    $("job-tag").textContent = jv[1];
+
+    each("[data-action]", function (b) {
+      var why = blocked(b.getAttribute("data-action"), s);
+      b.disabled = !!why;
+      b.title = why;
+    });
+    var win = !(s.setup.platformSupports && s.setup.platformSupports.elevation === false) && LIVE.platform === "win32";
+    each("[data-windows]", function (el) { if (el.hasAttribute("data-live") || el.classList.contains("action")) el.hidden = !win; });
+
+    var laptop = $("laptop-text"); laptop.textContent = "";
+    var ready = live.derived["00"] && live.derived["02"] && live.derived["03"];
+    $("laptop-row").className = ready ? "sev-ok" : "sev-warn";
+    laptop.appendChild(chip(ready ? "ok" : "warn", ready ? "ready" : "setup needed"));
+    laptop.appendChild(document.createTextNode(ready
+      ? "Tools, packages and the Claude key are in place on this machine."
+      : "Something in steps 00 to 03 is not done yet. The chips at the top say which."));
+
+    render();
+  }
+
+  function act(btn, ev) {
+    var action = btn.getAttribute("data-action");
+    var body = { action: action };
+    if (action === "start") body.mode = btn.getAttribute("data-mode") === "emulators" ? "emulators" : "full";
+    if (action === "set-env") {
+      var both = !live.dirty.model && !live.dirty.realmail;
+      if (both || live.dirty.model) body.model = state.model;
+      if (both || live.dirty.realmail) body.realmail = state.realmail;
+    }
+    if (action === "reset-data" || action === "deploy-functions") body.confirm = true;
+    if (action === "port-free") body.name = btn.getAttribute("data-name");
+    if (action === "prod-logs") body.fn = $("prodfn").value;
+
+    /* confirm() never shows inside an artifact frame. The second click must be a separate, deliberate
+       one: a double-click or a held Enter lands inside the first second and is ignored. */
+    var ask = btn.getAttribute("data-confirm");
+    if (ask) {
+      var armedAt = parseInt(btn.getAttribute("data-armed") || "0", 10);
+      if (!armedAt) {
+        var label = btn.textContent;
+        btn.setAttribute("data-armed", String(Date.now())); btn.textContent = ask + " Click again";
+        window.setTimeout(function () { btn.removeAttribute("data-armed"); btn.textContent = label; }, 5000);
+        return;
+      }
+      if (Date.now() - armedAt < 1000 || (ev && ev.detail > 1)) return;
+    }
+    btn.disabled = true;
+    setNotice("");
+    call("/api/action", body).then(function (res) {
+      if (res.body && res.body.state) applyState(res.body.state);
+      if (res.status === 401) { lost("restarted"); return; }
+      if (!res.body || res.body.ok !== true) {
+        setNotice((res.body && res.body.error) || ("The console refused that (HTTP " + res.status + ")."));
+      } else if (action === "quit") {
+        lost("quit");
+        setNotice("The console has stopped. You can close this window.", "info");
+      } else if (action === "set-env") {
+        live.dirty.model = false; live.dirty.realmail = false;
+        setNotice("Saved functions/.env.local. Restart the stack for it to take effect.", "info");
+      }
+      if (res.body && res.body.ok === true && WINDOW_ACTIONS[action]) {
+        setNotice("Opened in its own terminal window. Look for it on the taskbar.", "info");
+      }
+      if (res.body && res.body.ok === true && JOB_ACTIONS[action]) {
+        var panel = $("log-panel"); if (panel.scrollIntoView) panel.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+    }, function () { lost("gone"); });
+  }
+
+  function appendLog(payload) {
+    if (!payload || !Array.isArray(payload.lines)) return;
+    var box = $("log");
+    var stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    if (payload.lines.length && (live.logLines === 0)) box.textContent = "";
+    payload.lines.forEach(function (l) {
+      var d = document.createElement("div");
+      var text = String(l.text == null ? "" : l.text);
+      var cls = "l-" + (l.src === "job" ? "job" : (l.src === "console" ? "console" : (l.src === "app" ? "app" : "stack")));
+      if (/^\$ /.test(text)) cls = "l-cmd";
+      else if (/stack is up\.|Emulators are up\.|ai-smoke OK/.test(text)) cls = "l-up";
+      else if (/\berror\b|FAILED|EADDRINUSE|exited unexpectedly/i.test(text)) cls = "l-err";
+      d.className = cls; d.textContent = text || " ";
+      box.appendChild(d); live.logLines++;
+    });
+    while (box.childNodes.length > 1500) box.removeChild(box.firstChild);
+    if (typeof payload.next === "number") live.seq = payload.next;
+    if (stick) box.scrollTop = box.scrollHeight;
+  }
+
+  function pollState() {
+    if (live.lost === "quit") return;
+    call("/api/state").then(function (res) {
+      if (res.status === 200) applyState(res.body);
+      else if (res.status === 401) lost("restarted");
+    }, function () { if (live.lost !== "quit") lost("gone"); }).then(function () {
+      var s = live.s, busy = s && (s.stack.state === "starting" || s.stack.state === "stopping" || jobRunning(s));
+      window.setTimeout(pollState, busy ? 1000 : 2500);
+    });
+  }
+  function pollLog() {
+    if (live.lost === "quit") return;
+    call("/api/log?after=" + live.seq).then(function (res) {
+      if (res.status === 200) appendLog(res.body);
+    }, function () { /* pollState reports a lost connection */ }).then(function () {
+      window.setTimeout(pollLog, 1000);
+    });
+  }
+
+  function goLive() {
+    $("mode-text").textContent = "Connecting";
+    ["deck-state", "deck-controls", "chips", "log-panel"].forEach(function (id) { $(id).hidden = false; });
+    $("install-panel").hidden = true;
+    $("branch-switch").hidden = true;
+    $("ports-title").textContent = "Stack control";
+    each("[data-action]", function (b) { b.hidden = false; b.disabled = true; });
+    each("[data-live]", function (el) { el.hidden = false; });
+    each("[data-copy-only]", function (el) { el.hidden = true; });
+    each(".port .led", function (el) { el.hidden = false; });
+    $("repo").readOnly = true; $("branch").readOnly = true;
+    $("options-note").textContent = "This console is serving the folder below, on the branch that is checked out there.";
+    $("stop-says").textContent = "The Stop button, or Ctrl+C if you started it in a terminal.";
+    $("footer-text").textContent = "This window is served on this laptop by scripts/launch-console.mjs. Its buttons run a fixed list of actions in the folder shown at the top; nothing here reaches production. The full guide is docs/local-development.md.";
+    $("log-clear").addEventListener("click", function () { $("log").textContent = ""; live.logLines = 0; });
+    document.addEventListener("click", function (ev) {
+      var btn = ev.target.closest ? ev.target.closest("[data-action]") : null;
+      if (btn && !btn.disabled) act(btn, ev);
+    });
+    pollState();
+    pollLog();
+  }
+
+  /* ── wiring ────────────────────────────────────────────────────────── */
+  $("shell-ps").addEventListener("click", function () { set({ shell: "powershell" }); });
+  $("shell-bash").addEventListener("click", function () { set({ shell: "bash" }); });
+  $("src-pr").addEventListener("click", function () { set({ branch: PR_BRANCH }); });
+  $("src-live").addEventListener("click", function () { set({ branch: LIVE_BRANCH }); });
+  $("repo").addEventListener("input", function (e) { if (!LIVE) set({ repo: e.target.value }); });
+  $("branch").addEventListener("input", function (e) { if (!LIVE) set({ branch: e.target.value }); });
+  $("model").addEventListener("change", function (e) { live.dirty.model = true; set({ model: e.target.value }); });
+  $("realmail").addEventListener("change", function (e) { live.dirty.realmail = true; set({ realmail: e.target.checked }); });
+  $("diag").addEventListener("input", function (e) { renderVerdicts(e.target.value); });
+  $("prodfn").addEventListener("change", render);
+  each(".done input", function (box) {
+    box.addEventListener("change", function () {
+      var done = {};
+      Object.keys(state.done).forEach(function (k) { done[k] = state.done[k]; });
+      done[box.id.replace("done-", "")] = box.checked;
+      set({ done: done });
+    });
+  });
+
+  /* The sticky bar wraps to more lines on a phone, so its height is measured, not assumed. */
+  var bar = document.querySelector(".masthead");
+  function padForBar() { document.documentElement.style.scrollPaddingTop = (bar.offsetHeight + 16) + "px"; }
+  padForBar();
+  if (window.ResizeObserver) new ResizeObserver(padForBar).observe(bar);
+
+  load();
+  render();
+  paintPorts([["app", 4200], ["auth", 9099], ["firestore", 8080], ["storage", 9199], ["functions", 5001], ["ui", 4000]]
+    .map(function (d) { return { name: d[0], port: d[1], default: d[1], open: false }; }));
+  if (LIVE) goLive();
+})();
+</script>

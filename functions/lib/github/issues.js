@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseIssueRef = exports.setIssueState = exports.getIssue = exports.createIssue = void 0;
+exports.parseIssueRef = exports.isValidSecurityAlertUrl = exports.createIssueComment = exports.setIssueState = exports.getIssue = exports.createIssue = void 0;
 /**
  * Issue REST operations (spec §8.1, §8.7, §15). Phase 1: create, patch state,
  * patch title/body, and read a single issue.
@@ -43,6 +43,27 @@ async function setIssueState(token, owner, repo, issueNumber, state) {
 }
 exports.setIssueState = setIssueState;
 /** Parse an issue reference from a full URL or `owner/repo#number` shorthand. */
+async function createIssueComment(token, owner, repo, issueNumber, body) {
+    await (0, app_1.githubRequest)(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+        method: 'POST',
+        token,
+        body: { body },
+    });
+}
+exports.createIssueComment = createIssueComment;
+/** GitHub security alert URLs we allow referencing from OmniTask (spec §8.6). */
+function isValidSecurityAlertUrl(url) {
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname !== 'github.com')
+            return false;
+        return /\/security\/(dependabot|advisories|code-scanning)\//.test(parsed.pathname);
+    }
+    catch {
+        return false;
+    }
+}
+exports.isValidSecurityAlertUrl = isValidSecurityAlertUrl;
 function parseIssueRef(input) {
     const trimmed = input.trim();
     const urlMatch = trimmed.match(/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)/i);

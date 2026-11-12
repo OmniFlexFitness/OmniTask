@@ -1,0 +1,28 @@
+{
+  "_comment": "Local-only fixture data for the Firebase Emulator Suite (see docs/local-development.md). scripts/local-dev.mjs makes sure this account exists in the Auth emulator and this profile in the Firestore emulator on every local start. It is never used against the production project.",
+  "uid": "local-bertin-kenol",
+  "email": "bertin.kenol@omniflexfitness.com",
+  "displayName": "Bertin Kenol",
+  "photoURL": "assets/images/logo.png",
+  "domain": "omniflexfitness.com",
+  "role": "admin",
+  "permissions": {
+    "canCreateProjects": true,
+    "canCreateTasks": true,
+    "canDeleteProjects": true,
+    "canDeleteTasks": true,
+    "canInviteMembers": true,
+    "isSuperAdmin": true
+  },
+  "jobTitle": "Founder, OmniFlex Fitness",
+  "timezone": "America/New_York",
+  "emailNotificationsEnabled": true,
+  "dashboardSettings": {
+    "defaultMyTasksView": "overview",
+    "compactMode": false,
+    "accentColor": "#00d2ff"
+  },
+  "google": {
+    "rawId": "108374920561837402915"
+  }
+}

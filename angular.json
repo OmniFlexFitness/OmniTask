@@ -60,6 +60,28 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.ts"
+                }
+              ]
+            },
+            "local-remapped": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local-remapped.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -75,6 +97,12 @@
             },
             "development": {
               "buildTarget": "omni-task:build:development"
+            },
+            "local": {
+              "buildTarget": "omni-task:build:local"
+            },
+            "local-remapped": {
+              "buildTarget": "omni-task:build:local-remapped"
             }
           },
           "defaultConfiguration": "development"
