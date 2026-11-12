@@ -86,11 +86,32 @@ jobs:
           docker build -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/omnitask/${{ env.SERVICE_NAME }}:latest .
 
       - name: Push Docker image
+        id: push
+        # Temporary no-billing mode (issue #214): when Google Cloud billing is
+        # off, Artifact Registry rejects the push with "requires billing to be
+        # enabled". That one error switches the run to a Spark-plan deploy
+        # (Hosting + Firestore only). Any other push failure still fails the
+        # job. When billing is back the push succeeds and the full path runs.
         run: |
-          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/omnitask/${{ env.SERVICE_NAME }}:${{ steps.version.outputs.version }}
-          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/omnitask/${{ env.SERVICE_NAME }}:latest
+          set +e
+          IMAGE=${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/omnitask/${{ env.SERVICE_NAME }}
+          : > push.log
+          for TAG in ${{ steps.version.outputs.version }} latest; do
+            docker push "$IMAGE:$TAG" 2>&1 | tee -a push.log
+            code=${PIPESTATUS[0]}
+            if [ $code -ne 0 ]; then
+              if grep -q "requires billing to be enabled" push.log; then
+                echo "billing_blocked=true" >> "$GITHUB_OUTPUT"
+                echo "::warning title=Google Cloud billing is off::Image push was rejected because billing is not enabled. Skipping Cloud Run and Functions; deploying Firebase Hosting and Firestore only (see issue 214)."
+                exit 0
+              fi
+              exit $code
+            fi
+          done
+          echo "billing_blocked=false" >> "$GITHUB_OUTPUT"
 
       - name: Deploy to Cloud Run
+        if: steps.push.outputs.billing_blocked != 'true'
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/omnitask/${{ env.SERVICE_NAME }}:${{ steps.version.outputs.version }} \
@@ -114,15 +135,18 @@ jobs:
         run: yarn build
 
       - name: Install Firebase Functions dependencies
+        if: steps.push.outputs.billing_blocked != 'true'
         run: |
           cd functions
           npm ci
           cd ..
 
       - name: Enable Required APIs for Firebase Extensions
+        if: steps.push.outputs.billing_blocked != 'true'
         run: gcloud services enable firebaseinstallations.googleapis.com aiplatform.googleapis.com --project ${{ env.PROJECT_ID }}
 
       - name: Ensure Functions secrets exist
+        if: steps.push.outputs.billing_blocked != 'true'
         # The GitHub Issues integration functions bind these secrets via
         # defineSecret(). `firebase deploy --non-interactive` aborts the whole
         # deploy if any bound secret is missing in Secret Manager
@@ -177,6 +201,9 @@ jobs:
           done
 
       - name: Deploy to Firebase (Hosting, Firestore, Functions)
+        env:
+          # Without billing only the Spark-plan products can deploy.
+          DEPLOY_ONLY: ${{ steps.push.outputs.billing_blocked == 'true' && 'hosting,firestore' || 'hosting,firestore,functions' }}
         # Creating ~28 gen2 functions at once intermittently trips Cloud Run
         # container startup healthchecks ("failed to start and listen on
         # PORT=8080 within timeout") on a shifting subset of functions. Firebase
@@ -188,7 +215,8 @@ jobs:
           attempts=4
           for i in $(seq 1 $attempts); do
             echo "::group::Firebase deploy attempt $i/$attempts"
-            npx firebase-tools deploy --only hosting,firestore,functions \
+            echo "Deploying: $DEPLOY_ONLY"
+            npx firebase-tools deploy --only "$DEPLOY_ONLY" \
               --project ${{ env.PROJECT_ID }} --non-interactive --force
             code=$?
             echo "::endgroup::"
@@ -220,7 +248,12 @@ jobs:
 
       - name: Output deployment URLs
         run: |
-          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
-          echo "🚀 Cloud Run: $URL"
+          if [ "${{ steps.push.outputs.billing_blocked }}" = "true" ]; then
+            echo "⚠️ Google Cloud billing is off: Cloud Run and Cloud Functions were NOT deployed (issue 214)."
+            echo "⚠️ AI features, GitHub integration, email and scheduled jobs are unavailable until billing is re-enabled."
+          else
+            URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region ${{ env.REGION }} --format 'value(status.url)')
+            echo "🚀 Cloud Run: $URL"
+          fi
           echo "🔥 Firebase Hosting: https://omnitask-475422.web.app"
           echo "📦 Version: ${{ steps.version.outputs.version }}"
