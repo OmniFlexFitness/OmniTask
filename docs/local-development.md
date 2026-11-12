@@ -109,6 +109,47 @@ Either way the account exists only in the emulator. No real Google account is
 touched, and no mail is sent unless you turned on real email (see
 [Email in the emulator](#email-in-the-emulator)).
 
+### The built-in local profile
+
+Every local start makes sure one account exists, so you do not have to type
+an address into the fake popup or promote anyone to admin by hand:
+
+- **Who:** `bertin.kenol@omniflexfitness.com`, shown in the popup's account
+  list as **Bertin Kenol**. Pick it instead of **Add new account**.
+- **What is created:** the account in the Auth emulator (verified, with a
+  Google identity so the popup lists it) and its profile document
+  `users/<uid>` in the Firestore emulator: name, email, domain, role `admin`,
+  all permissions including super-admin, job title, time zone, email
+  notifications on and the default dashboard settings. The avatar is the
+  OmniFlex logo (`assets/images/logo.png`, the one the navbar uses) instead of
+  a letter placeholder. Opening **Workspace** creates the sample projects.
+- **Where the data lives:** `scripts/local-user.json`, committed, plain data.
+  `scripts/local-user.mjs` applies it to the running emulators over loopback
+  HTTP once `Emulators are up.` is printed, and the script then prints
+  `Local profile ready: Bertin Kenol (...)`. It is fixture data for the
+  Emulator Suite only: nothing in it is read by, or sent to, the production
+  project.
+- **Existing data is respected.** If `.emulator-data/` already holds an
+  account with that address (with a random uid, from before this existed), its
+  uid is kept and only the name, photo and verified flag are brought in line.
+  The profile is updated field by field. Name, photo, role and permissions
+  always follow the fixture; job title, time zone, notification setting and
+  dashboard settings are only a starting value, so changes you make in the app
+  survive a restart, as do `lastLoginAt`, pinned projects, sheet ids, tokens and
+  everything else; `createdAt` is only set when missing.
+- **Add new account with the same address** makes the emulator replace the
+  name and photo until the next start. Pick the listed account instead. A start that finds
+  everything in place writes nothing. If the emulators cannot be reached, or
+  answer an error, a warning is printed and the stack carries on.
+- **To change it:** edit `scripts/local-user.json` and restart. To change a
+  field that is not in the file, change it in the Emulator UI.
+- **To turn it off:** set `OMNITASK_NO_LOCAL_USER=1` for the start (for
+  example `OMNITASK_NO_LOCAL_USER=1 yarn dev:local`), or delete
+  `scripts/local-user.json`; nothing is seeded then, and nothing already in
+  `.emulator-data/` is removed.
+
+Tests: `node --test scripts/local-user.test.mjs`.
+
 ### Stopping, and where the data goes
 
 Ctrl+C stops everything. Firestore and Auth data is exported to

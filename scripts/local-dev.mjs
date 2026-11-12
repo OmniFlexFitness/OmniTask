@@ -15,6 +15,10 @@
  *      .emulator-data/
  *   5. `ng serve --configuration local` (points the app at the emulators)
  *
+ * Once the emulators are up, the built-in local profile (scripts/local-user.json,
+ * applied by scripts/local-user.mjs) is added to them if it is not there yet;
+ * OMNITASK_NO_LOCAL_USER=1 skips that.
+ *
  * Before any of that the ports of the stack are tested. Windows reserves
  * blocks of ports for Hyper-V, WSL and Docker, different ones after every
  * boot, and a port inside such a block cannot be opened although nothing
@@ -46,6 +50,8 @@ import { connect as netConnect, createServer } from 'node:net';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { loadLocalUser, seedLocalUser } from './local-user.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const FUNCTIONS_DIR = join(ROOT, 'functions');
@@ -1093,6 +1099,32 @@ async function waitForEmulators(timeoutMs = 180_000) {
   return null;
 }
 
+/**
+ * Make sure the built-in local profile (scripts/local-user.json) exists in the
+ * running emulators, on the ports of this run. Started before the "... up."
+ * line is printed and awaited after it, so it can never delay that line.
+ * Never rejects. Skipped silently without the file, or with
+ * OMNITASK_NO_LOCAL_USER=1 (used to build test data without the profile).
+ */
+async function seedBuiltInProfile() {
+  if (process.env.OMNITASK_NO_LOCAL_USER === '1') return;
+  try {
+    const user = loadLocalUser();
+    if (!user) return;
+    const result = await seedLocalUser({
+      authPort: ports.auth,
+      firestorePort: ports.firestore,
+      projectId: LOCAL_PROJECT_ID,
+      user,
+      log,
+      warn,
+    });
+    if (result.ok && !shuttingDown) log(`Local profile ready: ${user.displayName} (${user.email})`);
+  } catch (err) {
+    warn(`Local profile was not set up: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 async function main() {
   await preparePorts();
 
@@ -1162,11 +1194,14 @@ async function main() {
     return;
   }
 
+  const seeding = seedBuiltInProfile();
+
   if (EMULATORS_ONLY) {
     console.log(`
 \x1b[32mEmulators are up.\x1b[0m  Emulator UI: http://127.0.0.1:${ports.ui}
   Run \`${appServeCommand()}\` in another terminal for the app. Ctrl+C stops and exports to ${EXPORT_DIR}/.
 ${remapSummary()}`);
+    await seeding;
     return;
   }
 
@@ -1182,6 +1217,7 @@ ${remapSummary()}`);
   any email works. Accounts are local-only.
   Press Ctrl+C to stop (emulator data is saved to ${EXPORT_DIR}/).
 ${remapSummary()}`);
+  await seeding;
 }
 
 main().catch((err) => {

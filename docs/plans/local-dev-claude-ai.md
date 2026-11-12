@@ -315,3 +315,83 @@ port test on `::1`, which this machine has no IPv6 loopback to exercise.
 **Rollback.** Revert the commit. Nothing is persisted outside the repository;
 delete `.local-dev-ports.json`, `.local-dev-firebase.json` and
 `src/environments/environment.local-remapped.ts` if a killed run left them.
+
+## Addendum: built-in local profile
+
+### Scope
+
+Every local start makes sure the owner's account exists in the emulators:
+`bertin.kenol@omniflexfitness.com` in Auth (with a `google.com` identity, so
+the fake Google popup lists it) and its profile in Firestore `users/<uid>`,
+with the OmniFlex logo as the avatar. Built from the profile this address has
+today (thin: uid, email, displayName filled in by the popup, empty photoURL,
+domain, admin role, all permissions, createdAt, lastLoginAt) plus what the
+`UserProfile` model offers without inventing data: display name, job title,
+time zone, email notifications and the default dashboard settings. No bio,
+phone, manager, sheet ids or tokens.
+
+### Files affected
+
+- `scripts/local-user.json` (new): the fixture, with a `_comment` that says it
+  is local-only.
+- `scripts/local-user.mjs` (new): pure builders plus `seedLocalUser()`; plain
+  ESM, no side effects on import.
+- `scripts/local-user.test.mjs` (new): builders, a fake in-process pair of
+  emulator APIs, failure paths. Covered by `node --test scripts/*.test.mjs`.
+- `scripts/local-dev.mjs`: starts the seeding when the emulators are ready,
+  prints one line, `OMNITASK_NO_LOCAL_USER=1` skips it. Both "... up." lines
+  are unchanged.
+- `docs/local-development.md`: section "The built-in local profile".
+
+Nothing under `src/` changed: `AuthService.updateUserData` already merges the
+Auth account's name and photo into the document on sign-in, and the account
+carries the fixture's, so the seeded document and the signed-in one agree.
+
+### How it works
+
+Over loopback HTTP with `Authorization: Bearer owner` (project owner, bypasses
+security rules; nothing reaches a real project):
+
+1. Auth emulator, `accounts:lookup` by email. Missing: `accounts:batchCreate`
+   with the fixed uid, `emailVerified`, name, photo and a `google.com` entry
+   (`providerId`, `rawId`, `federatedId`, `email`, `displayName`, `photoUrl`).
+   Present: keep its uid and its Google raw id, `accounts:update` the name,
+   photo and verified flag and upsert the provider entry; nothing is sent when
+   it already matches. The popup builds its account list and the id token it
+   signs in with from that provider entry, so the raw id there is the one a
+   sign-in produces.
+2. Firestore emulator, `GET` the document, then `PATCH` with an update mask
+   naming only the fixture fields that differ (`uid`, `email`, `displayName`,
+   `photoURL`, `domain`, `role`, `permissions`, `jobTitle`, `timezone`,
+   `emailNotificationsEnabled`), plus `createdAt` and `dashboardSettings` only
+   when absent. `lastLoginAt` and every field the fixture does not name are
+   never in a mask. An empty mask means no request.
+3. Failures are warnings, never exceptions: an unreachable or erroring
+   emulator leaves the stack running.
+
+The seeding is started before `Emulators are up.` is printed and awaited after
+it, so it cannot delay or alter that line.
+
+### Test plan
+
+`node --test scripts/*.test.mjs`, and on Linux with
+`node scripts/local-dev.mjs --emulators-only`: a fresh start; stop with SIGINT
+and start again; an export made with `OMNITASK_NO_LOCAL_USER=1` holding a
+different-uid account and a thin profile, then a normal start; and in a browser
+with the full stack, the popup's account list, landing signed in as admin and
+the logo avatar.
+
+### Findings from the real emulator
+
+- `accounts:batchCreate` answers `{"error": []}` on success; an empty list is
+  not a failure.
+- The restart changes the account's `validSince`; that is the emulator's own
+  import, not the seeding.
+- Sign-in from the popup updates the account and the document from the same
+  provider entry, so a second sign-in changes nothing the seeding set.
+
+### Rollback
+
+Revert the commit. Accounts and profiles already created live in
+`.emulator-data/`; delete that folder (or the document and account in the
+Emulator UI) to remove them.
